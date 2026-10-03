@@ -1,0 +1,20 @@
+---
+name: Bug report
+about: Something doesn't work as documented
+labels: bug
+---
+
+**What happened**
+
+**What you expected**
+
+**How to reproduce**
+
+1.
+2.
+
+**Setup**
+
+- Quaso version (shown on the admin page, or `quaso --version` for the CLI):
+- Setup: Docker Compose / Cloudflare / VM with Cloudflare storage / `bun run dev`
+- Browser, or Node/Bun version for the CLI:

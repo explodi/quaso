@@ -1,0 +1,48 @@
+# SPDX-License-Identifier: MIT
+# The Cloudflare package (packages/cloudflare), which `bun run check` leaves out: its
+# generated types and the workerd fixture are up to date, it type-checks, its tests pass in
+# workerd (Vitest with Cloudflare's Workers pool, run by Bun), its dependencies have
+# permissive licences, and the Worker bundles as a production deploy would. No Cloudflare
+# account is needed, and nothing is deployed.
+name: Cloudflare
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cloudflare:
+    name: Cloudflare package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+      - run: bun install --frozen-lockfile
+      - name: worker-configuration.d.ts matches wrangler.jsonc
+        working-directory: packages/cloudflare
+        run: bun run wrangler types --strict-vars false --check
+      - name: Type checks
+        working-directory: packages/cloudflare
+        run: |
+          bun run tsc --noEmit
+          cd ../.. && bun run typecheck
+      - name: The workerd fixture matches local storage
+        run: bun run cf:fixtures --check
+      - name: Tests in workerd
+        run: bun run cf:test
+      - name: Licences, with the Cloudflare package's dependencies installed
+        run: bun run scripts/check_licenses.ts
+      - name: Bundle the Worker (wrangler deploy --dry-run)
+        run: bun run cf:build
+      - name: The bundle's size
+        run: ls -l packages/cloudflare/dist/worker.js && gzip -c packages/cloudflare/dist/worker.js | wc -c

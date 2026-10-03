@@ -1,0 +1,61 @@
+{
+    "main": {
+        "title": "Ember Delve",
+        "newRun": "Nowa wyprawa",
+        "continue": "Kontynuuj",
+        "options": "Opcje",
+        "credits": "Twórcy",
+        "quit": "Wyjdź na pulpit",
+        "version": "v{{version}}"
+    },
+    "pause": {
+        "title": "Pauza",
+        "resume": "Wznów",
+        "restart": "$t(main.newRun)",
+        "abandon": "Porzuć wyprawę",
+        "abandonConfirm": "Porzucić tę wyprawę? Zachowasz {{percent}}% żarów."
+    },
+    "options": {
+        "audio": {
+            "master": "Głośność ogólna",
+            "music": "Muzyka",
+            "sfx": "Efekty dźwiękowe",
+            "muteUnfocused": "Wycisz, gdy okno jest w tle"
+        },
+        "video": {
+            "fullscreen": "Pełny ekran",
+            "vsync": "V-Sync",
+            "uiScale": "Skala interfejsu: {{value}}×"
+        },
+        "difficulty": {
+            "label": "Poziom trudności",
+            "levels": [
+                "Fabularny",
+                "Normalny",
+                "Trudny",
+                "Piekło"
+            ],
+            "default": 1
+        }
+    },
+    "results": {
+        "victory": "Zwycięstwo!",
+        "defeat": "Pokonany przez {{enemy}} na piętrze {{floor}}.",
+        "floors_one": "Ukończono {{count}} piętro",
+        "floors_few": "Ukończono {{count}} piętra",
+        "floors_many": "Ukończono {{count}} pięter",
+        "floors_other": "Ukończono {{count}} piętra",
+        "rank_ordinal_other": "{{count}}. miejsce w dzisiejszym rankingu",
+        "embers_one": "+{{count}} żar",
+        "embers_few": "+{{count}} żary",
+        "embers_many": "+{{count}} żarów",
+        "embers_other": "+{{count}} żaru"
+    },
+    "credits": {
+        "lines": [
+            "Projekt i kod: zespół Ember Delve",
+            "Muzyka: napisana dla tej gry",
+            "Dziękujemy za grę!"
+        ]
+    }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "quaso-demo-game",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "demo": "node src/i18n.js"
+  },
+  "dependencies": {
+    "i18next": "25.5.2"
+  },
+  "devDependencies": {
+    "@quaso/cli": "1.0.0-rc.1"
+  }
+}

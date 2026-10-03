@@ -1,0 +1,18 @@
+{
+  "name": "@quaso/cli",
+  "version": "1.0.0-rc.1",
+  "license": "MIT",
+  "exports": {
+    ".": "./main.ts"
+  },
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "@quaso/core": "workspace:*",
+    "js-yaml": "4.3.2"
+  },
+  "devDependencies": {
+    "@quaso/runtime": "workspace:*",
+    "@types/js-yaml": "4.0.9"
+  }
+}

@@ -1,0 +1,493 @@
+/* SPDX-License-Identifier: MIT */
+/*
+ * The project website's styles: the layout, the landing page and the frame around the
+ * documentation. The Markdown styles and shared foundations use Quaso's palette.
+ * Light and dark themes follow the visitor's system setting.
+ */
+
+@import "../../packages/web/src/styles/theme.css";
+@import "../../packages/web/src/styles/base.css";
+@import "../../packages/web/src/styles/foundations.css";
+@import "../../packages/web/src/styles/components.css";
+
+:root {
+  --bg-subtle: var(--surface-alt);
+  --primary-bg: var(--primary);
+  --code-bg: var(--surface-alt);
+  --width: 72rem;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
+}
+
+main:focus {
+  outline: none;
+}
+
+a {
+  color: var(--link);
+  text-underline-offset: 0.15em;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  background: var(--code-bg);
+  border-radius: 0;
+  padding: 0.1em 0.35em;
+}
+
+.container {
+  width: 100%;
+  max-width: var(--width);
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  left: 16px;
+  top: -4rem;
+  z-index: 10;
+  padding: 0.5rem 1rem;
+  background: var(--bg);
+  border: 2px solid var(--focus);
+  border-radius: var(--radius);
+}
+
+.skip-link:focus {
+  top: 0.5rem;
+}
+
+/* Header and footer */
+
+.site-header {
+  border-bottom: 1px solid var(--border);
+}
+
+.site-header-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--fg);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.site-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-nav a {
+  color: var(--fg-muted);
+  text-decoration: none;
+}
+
+.site-nav a:hover,
+.site-nav a[aria-current] {
+  color: var(--fg);
+  text-decoration: underline;
+}
+
+.site-footer {
+  border-top: 1px solid var(--border);
+  color: var(--fg-muted);
+  font-size: 0.875rem;
+}
+
+/* Landing page */
+
+.hero {
+  padding: 3rem 0;
+  text-align: center;
+}
+.hero-stage {
+  position: relative;
+  padding: 4rem 2rem 3rem;
+  background: var(--surface-alt);
+  border: 2px solid var(--fg);
+  box-shadow: 8px 8px 0 var(--border);
+}
+.hero-pattern {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 60%;
+  height: 2rem;
+  clip-path: polygon(0 0, 100% 0, 100% 50%, 85% 50%, 85% 100%, 0 100%);
+}
+.hero-stage > .quaso-mascot {
+  display: block;
+  width: 10rem;
+  height: 7rem;
+  margin: 0 auto 1rem;
+}
+
+.status {
+  display: inline-block;
+  margin: 0 0 1rem;
+  padding: 0.125rem 0.75rem;
+  border: 1px solid var(--accent-fg);
+  border-radius: 0;
+  color: var(--accent-fg);
+  background: var(--accent-alt);
+  font: 0.75rem / 1.6 var(--mono);
+}
+
+.hero h1.heading {
+  font-size: clamp(3.5rem, 8vw, 7rem);
+  margin: 1.5rem auto;
+  max-width: 62rem;
+}
+.hero .lead {
+  max-width: 39rem;
+  margin: 1.5rem auto;
+  font-size: 1.125rem;
+  line-height: 1.7;
+  color: var(--fg-muted);
+}
+.hero .actions {
+  justify-content: center;
+}
+.hero-product {
+  max-width: 64rem;
+  margin: 3.5rem auto 0;
+}
+.hero-product img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.hero-product figcaption {
+  margin-top: 1rem;
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
+
+.section {
+  padding: 4rem 0;
+}
+
+.section-subtle {
+  background: var(--bg-subtle);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.section h2 {
+  margin-top: 0;
+  font-size: clamp(2rem, 3.5vw, 3rem);
+  margin-bottom: 1.5rem;
+}
+
+.steps,
+.features,
+.cards {
+  display: grid;
+  gap: 1.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.steps {
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  counter-reset: step;
+}
+
+.steps > li {
+  counter-increment: step;
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.steps h3 .heading-ink::before {
+  content: counter(step) ". ";
+  color: var(--fg-muted);
+}
+
+.steps h3,
+.features h3,
+.cards h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.75rem;
+}
+
+.steps p,
+.features p,
+.cards p {
+  margin: 0 0 0.75rem;
+}
+
+.state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.state::before {
+  content: "";
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 0;
+  background: currentColor;
+}
+
+.state-red {
+  color: var(--state-red);
+}
+
+.state-green {
+  color: var(--state-green);
+}
+
+.state-blue {
+  color: var(--state-blue);
+}
+
+.features {
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
+.cards {
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  margin-top: 1.5rem;
+}
+
+.cards > li {
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.guides {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 1.5rem;
+}
+
+.guides h3 {
+  margin: 0 0 0.5rem;
+  font-size: var(--heading-compact);
+}
+
+.guides ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.guides li {
+  margin-bottom: 0.75rem;
+}
+
+.guide-summary {
+  display: block;
+  color: var(--fg-muted);
+  font-size: 0.875rem;
+}
+
+.soon {
+  color: var(--fg-muted);
+  font-size: 0.875rem;
+  font-weight: normal;
+}
+
+/* Documentation pages */
+
+.docs-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2rem;
+  padding-top: 2rem;
+  padding-bottom: 3rem;
+}
+
+@media (min-width: 60rem) {
+  .docs-layout {
+    grid-template-columns: minmax(0, 1fr) 15rem;
+    gap: 3rem;
+  }
+}
+
+.markdown-body {
+  background: transparent;
+}
+
+.docs-source {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.875rem;
+}
+
+.docs-nav {
+  align-self: start;
+  font-size: 0.9375rem;
+}
+
+@media (min-width: 60rem) {
+  .docs-nav {
+    position: sticky;
+    top: 1rem;
+  }
+}
+
+.docs-nav h2 {
+  margin: 0 0 0.75rem;
+  color: var(--fg-muted);
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.docs-nav ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-left: 1px solid var(--border);
+}
+
+.docs-nav a {
+  display: block;
+  margin-left: -1px;
+  padding: 0.25rem 0 0.25rem 0.75rem;
+  border-left: 2px solid transparent;
+  color: var(--fg-muted);
+  text-decoration: none;
+}
+
+.docs-nav a:hover {
+  color: var(--fg);
+}
+
+.docs-nav a[aria-current="page"] {
+  border-left-color: var(--link);
+  color: var(--fg);
+  font-weight: 600;
+}
+
+/* Real application screenshots, readable as full-width images on small screens. */
+.screenshots {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 28rem), 1fr));
+  gap: 1.5rem;
+}
+.screenshots figure {
+  margin: 0;
+}
+.screenshots img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.screenshots figcaption {
+  margin-top: 0.5rem;
+  color: var(--fg-muted);
+}
+
+.site-footer {
+  padding: 1.5rem 0;
+}
+.section > .container > p {
+  margin-bottom: 1rem;
+  line-height: 1.7;
+}
+.site-header .brand {
+  font-size: inherit;
+  flex: none;
+}
+.docs-nav h2.heading {
+  font-size: var(--heading-compact);
+  letter-spacing: normal;
+  text-transform: none;
+}
+@media (max-width: 40rem) {
+  .site-header-inner {
+    gap: 0.75rem;
+  }
+  .site-header nav {
+    width: 100%;
+  }
+  .hero {
+    padding-top: 1.5rem;
+  }
+  .hero-stage {
+    padding: 3rem 1rem 2rem;
+  }
+  .hero h1.heading {
+    font-size: clamp(3rem, 12vw, 4.5rem);
+  }
+  .hero .lead {
+    font-size: 1rem;
+  }
+  .section {
+    padding: 2.5rem 0;
+  }
+  .hero-product {
+    margin-top: 2rem;
+  }
+}

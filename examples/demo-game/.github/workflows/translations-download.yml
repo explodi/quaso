@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: MIT
+name: Prepare translations for release
+on:
+  workflow_dispatch:
+  # Call this during release preparation, then merge its PR before tagging.
+  workflow_call:
+    secrets:
+      QUASO_API_KEY:
+        required: true
+permissions:
+  contents: write
+  pull-requests: write
+concurrency:
+  group: translations-download
+  cancel-in-progress: false
+jobs:
+  download:
+    runs-on: ubuntu-latest
+    env:
+      QUASO_HOSTNAME: ${{ vars.QUASO_HOSTNAME }}
+      QUASO_API_KEY: ${{ secrets.QUASO_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install
+      - run: npx quaso download
+      - run: npx quaso status --fail-on untranslated
+      - uses: peter-evans/create-pull-request@v7
+        with:
+          branch: translations/update
+          commit-message: "Update translations from Quaso"
+          title: "Update translations from Quaso"
+          body: "Downloaded accepted translations; no untranslated strings remain. Review and merge before the release."
+          add-paths: src/locales/**

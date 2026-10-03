@@ -1,0 +1,30 @@
+{
+  "main": {
+    "title": "Main menu",
+    "newGame": "New game",
+    "playAgain": "$t(common:play) again",
+    "options": "Options",
+    "quit": "Quit",
+    "back": "$t(common:back)"
+  },
+  "options": {
+    "music": "Music volume",
+    "effects": "Sound effects",
+    "language": "Language",
+    "subtitles": "Show subtitles"
+  },
+  "pause": {
+    "title": "Paused",
+    "resume": "Resume",
+    "confirmQuit": "Quit now? You will lose your progress since the last campfire."
+  },
+  "gameOver": {
+    "title": "Game over",
+    "score": "Score: {{score}}",
+    "newRecord": "New record, {{name}}!",
+    "place_ordinal_one": "You finished {{count}}st",
+    "place_ordinal_two": "You finished {{count}}nd",
+    "place_ordinal_few": "You finished {{count}}rd",
+    "place_ordinal_other": "You finished {{count}}th"
+  }
+}

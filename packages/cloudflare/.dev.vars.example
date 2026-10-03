@@ -1,0 +1,29 @@
+# SPDX-License-Identifier: MIT
+# Secrets for local runs (bun run cf:dev): copy this file to .dev.vars, which git ignores,
+# and fill it in. For the first deploy of an environment, the same format in a file such as
+# .dev.vars.production (also ignored):
+#   bun run cf:deploy --env production --secrets-file .dev.vars.production
+# Later, change one with: wrangler secret put <NAME> --env <env>
+
+# openssl rand -hex 32
+SECRET_KEY=
+# openssl rand -hex 32; the server in the container sends it to the internal API.
+SERVICE_TOKEN=
+# For LLM translation; it stays with the Durable Object. Empty: LLM translation is off.
+GEMINI_API_KEY=
+
+# Optional, passed to the server as they are. Deployed, set them with wrangler secret put;
+# wrangler dev only loads the three above from this file.
+# SETUP_KEY=
+# EMAIL_PROVIDER=
+# EMAIL_API_KEY=
+# EMAIL_FROM=
+# GITHUB_CLIENT_ID=
+# GITHUB_CLIENT_SECRET=
+# DISCORD_CLIENT_ID=
+# DISCORD_CLIENT_SECRET=
+# TURNSTILE_SITE_KEY=
+# TURNSTILE_SECRET_KEY=
+# LOG_LEVEL=info
+# Only when the website is served from another origin:
+# CORS_ORIGINS=https://yourgame.com

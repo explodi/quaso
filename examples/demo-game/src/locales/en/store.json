@@ -1,0 +1,11 @@
+{
+  "title": "Quaso Quest",
+  "subtitle": "A cozy puzzle adventure",
+  "description": "Guide a little lantern through 20 glowing levels. Solve puzzles, collect coins and find the hidden paths.",
+  "features": [
+    "20 handcrafted levels",
+    "Relaxing music",
+    "Play offline"
+  ],
+  "whatsNew": "Version {{version}}: new levels and fixes."
+}

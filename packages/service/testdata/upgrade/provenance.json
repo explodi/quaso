@@ -1,0 +1,11 @@
+{
+  "commit": "a290bab",
+  "schemaVersion": 1,
+  "clock": "2026-09-24T12:00:00.000Z",
+  "description": "Created by the unmodified Sprint 2 service in a detached historical worktree. seedDemo uploaded and imported the demo, then upgrade.json was uploaded, imported as blue in German, and its English hello changed. Export and status are the historical service responses. The database contains only synthetic demo data.",
+  "schema3": {
+    "commit": "c855ab9",
+    "clock": "2026-09-24T12:00:00.000Z",
+    "description": "Created with the unmodified Milestone M1 service; synthetic seedDemo accounts, translations, pending suggestions and changed source text. No production data or credentials. Schema 2 was introduced alongside schema 3 in this commit and never shipped separately."
+  }
+}

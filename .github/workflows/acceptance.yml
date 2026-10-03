@@ -1,0 +1,145 @@
+# SPDX-License-Identifier: MIT
+# Only synthetic staging data belongs in these instances: the suite writes test files/accounts.
+name: Acceptance
+
+on:
+  push:
+    branches: [main, master]
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Also used by nightly.yml, so cold-start measurements never overlap staging writes.
+concurrency:
+  group: quaso-staging-checks
+  cancel-in-progress: false
+
+jobs:
+  configuration:
+    name: Check optional staging configuration
+    runs-on: ubuntu-latest
+    outputs:
+      staging: ${{ steps.config.outputs.staging }}
+      mixed: ${{ steps.config.outputs.mixed }}
+    steps:
+      - id: config
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          STAGING_URL: ${{ vars.STAGING_URL }}
+          ADMIN_EMAIL: ${{ secrets.STAGING_ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.STAGING_ADMIN_PASSWORD }}
+          SERVICE_TOKEN: ${{ secrets.STAGING_SERVICE_TOKEN }}
+          SECRET_KEY: ${{ secrets.STAGING_SECRET_KEY }}
+        shell: python
+        run: |
+          import os
+          staging = all(os.environ.get(name) for name in (
+              "CF_TOKEN", "STAGING_URL", "ADMIN_EMAIL", "ADMIN_PASSWORD"))
+          mixed = staging and all(os.environ.get(name) for name in ("SERVICE_TOKEN", "SECRET_KEY"))
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write(f"staging={str(staging).lower()}\nmixed={str(mixed).lower()}\n")
+          if not staging:
+              print("Cloudflare staging checks skipped: optional staging credentials are not configured.")
+          elif not mixed:
+              print("Mixed-storage checks skipped: optional storage credentials are not configured.")
+
+  compose:
+    name: Production image with local SQLite
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      COMPOSE_FILE: ${{ github.workspace }}/deploy/compose.yaml:${{ github.workspace }}/deploy/compose.acceptance.yaml
+      COMPOSE_PROJECT_NAME: quaso-acceptance-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+      - run: bun install --frozen-lockfile
+      - run: bun run puppeteer browsers install chrome
+      - run: bun run build:cli
+      - run: docker compose build quaso
+      - run: docker compose up -d --wait --wait-timeout 120 quaso
+      - name: Claim the disposable instance and run acceptance checks
+        env:
+          QUASO_SETUP_KEY: acceptance-only-setup-key-not-for-deployment
+        run: bun run acceptance --url http://127.0.0.1:8000 --compose-dir deploy
+      - name: Beta 2 workflow on the production image with Gemini stubbed
+        run: bun scripts/docker_workflow.ts quaso:acceptance
+      - name: Diagnostic logs (setup links redacted)
+        if: failure()
+        run: >-
+          docker compose logs --no-color quaso |
+          sed -E 's#(/setup\?token=)[^"[:space:]]+#\1[redacted]#g'
+      - name: Remove this disposable stack and its volume
+        if: always()
+        run: docker compose down -v --remove-orphans
+
+  cloudflare-staging:
+    name: Cloudflare staging
+    needs: configuration
+    if: needs.configuration.outputs.staging == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      STAGING_URL: ${{ vars.STAGING_URL }}
+      QUASO_ADMIN_EMAIL: ${{ secrets.STAGING_ADMIN_EMAIL }}
+      QUASO_ADMIN_PASSWORD: ${{ secrets.STAGING_ADMIN_PASSWORD }}
+      QUASO_SETUP_KEY: ${{ secrets.STAGING_SETUP_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+      - run: bun install --frozen-lockfile
+      - run: bun run puppeteer browsers install chrome
+      - run: bun run build:cli
+      # The staging Worker/domain/bucket and its secrets must already be configured.
+      - run: bun run cf:deploy --env staging
+      - name: Wait for the deployed service
+        run: curl --fail --retry 12 --retry-all-errors --retry-delay 5 "$STAGING_URL/healthz"
+      - name: Run the HTTP, CLI and browser acceptance checks
+        run: bun run acceptance --url "$STAGING_URL"
+
+  vm-with-cloudflare-storage:
+    name: Docker server with Cloudflare storage
+    needs: [configuration, cloudflare-staging]
+    if: needs.configuration.outputs.mixed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      STAGING_URL: ${{ vars.STAGING_URL }}
+      SERVICE_TOKEN: ${{ secrets.STAGING_SERVICE_TOKEN }}
+      SECRET_KEY: ${{ secrets.STAGING_SECRET_KEY }}
+      QUASO_ADMIN_EMAIL: ${{ secrets.STAGING_ADMIN_EMAIL }}
+      QUASO_ADMIN_PASSWORD: ${{ secrets.STAGING_ADMIN_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+      - run: bun install --frozen-lockfile
+      - run: bun run puppeteer browsers install chrome
+      - run: bun run build:cli
+      - run: bun run docker
+      - name: Start the server with remote storage
+        run: |
+          docker run -d --name quaso-mixed --read-only --tmpfs /tmp \
+            -p 127.0.0.1:8000:8000 \
+            -e SERVICES_URL="${STAGING_URL%/}/internal" -e SERVICE_TOKEN -e SECRET_KEY \
+            -e PUBLIC_URL=http://127.0.0.1:8000 quaso:dev
+          curl --fail --retry 12 --retry-all-errors --retry-delay 5 http://127.0.0.1:8000/healthz
+      - run: bun run acceptance --url http://127.0.0.1:8000
+      - name: Diagnostic logs (setup links redacted)
+        if: failure()
+        run: >-
+          docker logs quaso-mixed 2>&1 |
+          sed -E 's#(/setup\?token=)[^"[:space:]]+#\1[redacted]#g'
+      - name: Stop the disposable server
+        if: always()
+        run: docker rm -f quaso-mixed

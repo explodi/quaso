@@ -1,0 +1,11 @@
+{
+  "title": "Quaso Quest",
+  "subtitle": "Ein gemütliches Rätselabenteuer",
+  "description": "Führe eine kleine Laterne durch 20 leuchtende Level. Löse Rätsel, sammle Münzen und finde die verborgenen Wege.",
+  "features": [
+    "20 handgemachte Level",
+    "Entspannende Musik",
+    "Offline spielbar"
+  ],
+  "whatsNew": "Version {{version}}: neue Level und Fehlerbehebungen."
+}

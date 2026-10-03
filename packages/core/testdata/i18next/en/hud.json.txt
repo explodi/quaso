@@ -1,0 +1,22 @@
+{
+	"health": "HP {{current}}/{{max}}",
+	"ammo": "{{current}}/{{total}}",
+	"objective": "Objective: {{text}}",
+	"combo_one": "{{count}} hit",
+	"combo_other": "{{count}}-hit combo!",
+	"keys": {
+		"interact": "Press {{key}} to interact",
+		"reload": "Reload",
+		"map": "$t(menus:options.label) / $t(hud.keys.reload)"
+	},
+	"toasts": [
+		"Checkpoint reached",
+		"Inventory full",
+		"New area discovered: {{area}}"
+	],
+	"minimap": {
+		"zoom": 1.25,
+		"visible": true,
+		"markers": []
+	}
+}

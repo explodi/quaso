@@ -1,0 +1,14 @@
+{
+  "sourceLanguage": "en",
+  "languages": ["de", "es", "fr", "it", "ja", "ko", "pl", "pt-PT", "tr", "zh-Hans"],
+  "languageMapping": {
+    "pt-PT": "pt",
+    "zh-Hans": "zh"
+  },
+  "files": [
+    {
+      "source": "src/locales/en/**/*.json",
+      "translation": "src/locales/{lang}/{path}"
+    }
+  ]
+}

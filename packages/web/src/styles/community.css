@@ -1,0 +1,119 @@
+/* SPDX-License-Identifier: MIT */
+/* Terminology and community discussions share the site's cards and form controls. */
+.community-filters {
+  display: grid;
+  grid-template-columns: minmax(12rem, 2fr) minmax(10rem, 1fr);
+  gap: 1rem;
+  margin-block: 1.5rem;
+}
+.community-records {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.community-record {
+  padding: 1.2rem;
+  border-block-end: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+.community-record:last-child {
+  border-block-end: 0;
+}
+.community-record-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+.community-record h2.heading,
+.community-record h3.heading {
+  font-size: var(--heading-compact);
+  margin: 0;
+}
+.community-record p {
+  margin-block: 0.6rem;
+}
+.community-record .actions {
+  margin-block-start: 0.9rem;
+}
+.community-text {
+  white-space: pre-wrap;
+}
+.glossary-list {
+  display: grid;
+  gap: 1rem;
+}
+.glossary-list .community-record {
+  border: 1px solid var(--border);
+}
+.language-requests {
+  grid-column: 1 / -1;
+}
+.language-requests .card-head {
+  align-items: center;
+  flex-wrap: wrap;
+}
+.vote-count,
+.source-issue-label {
+  color: var(--warning);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.comment-form {
+  border-block-start: 1px solid var(--border);
+  margin-block-start: 1.5rem;
+  padding-block-start: 1.5rem;
+}
+.glossary-definitions > div {
+  padding-block: 0.8rem;
+  border-block-end: 1px solid var(--border);
+}
+.glossary-definitions dt {
+  font-weight: 700;
+}
+.glossary-definitions dd {
+  margin: 0.3rem 0 0;
+}
+.glossary-highlight {
+  position: relative;
+  text-decoration: underline dotted var(--link) 2px;
+  text-underline-offset: 0.2em;
+  cursor: help;
+  border-radius: 0;
+}
+.glossary-highlight:focus {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+.glossary-tooltip {
+  display: none;
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-end: 100%;
+  z-index: 10;
+  width: max-content;
+  max-width: min(20rem, 75vw);
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  padding: 0.6rem 0.8rem;
+  background: var(--surface);
+  color: var(--fg);
+  box-shadow: var(--shadow);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  white-space: normal;
+  text-decoration: none;
+}
+.glossary-highlight:hover .glossary-tooltip,
+.glossary-highlight:focus .glossary-tooltip {
+  display: block;
+}
+@media (max-width: 600px) {
+  .community-filters {
+    grid-template-columns: 1fr;
+  }
+  .community-record {
+    padding: 1rem;
+  }
+}

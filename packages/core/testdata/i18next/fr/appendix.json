@@ -1,0 +1,124 @@
+{
+  "title": "Guide de terrain",
+  "subtitle": "",
+  "spacer": " ",
+  "intro": "Tout ce que vous apprenez en chemin finit dans ce guide.",
+  "play": "Jouer",
+  "playAgain": "$t(play) à nouveau",
+  "back": "$t(common:back)",
+  "backOrQuit": "$t(common:back) $t(common:quit)",
+  "coinsLabel": "$t(inventory.coins, {\"count\": {{total}}})",
+  "collected": "Vous avez ramassé $t(inventory.coins, {\"count\": {{total}}}) aujourd’hui.",
+  "inventory": {
+    "coins": "Pièces",
+    "coins_one": "{{count}} pièce",
+    "coins_many": "{{count}} de pièces",
+    "coins_other": "{{count}} pièces",
+    "gems_one": "{{count}} gemme",
+    "gems_many": "{{count}} gems",
+    "gems_other": "{{count}} gemmes",
+    "leftovers_other": "Restes"
+  },
+  "messages_zero": "Aucun nouveau message",
+  "messages_one": "Un nouveau message",
+  "messages_many": "{{count}} de nouveaux messages",
+  "messages_other": "{{count}} nouveaux messages",
+  "lap_one": "{{count}} tour",
+  "lap_many": "{{count}} de tours",
+  "lap_other": "{{count}} tours",
+  "lap_ordinal_one": "{{count}}er tour",
+  "lap_ordinal_other": "{{count}}e tour",
+  "place_ordinal_one": "Vous terminez {{count}}er",
+  "place_ordinal_other": "Vous terminez {{count}}e",
+  "greeting_male": "Bon retour, monsieur.",
+  "greeting_female": "Bon retour, madame.",
+  "ally_male_one": "Il voyage avec {{count}} allié.",
+  "ally_male_many": "Il voyage avec {{count}} d’alliés.",
+  "ally_male_other": "Il voyage avec {{count}} alliés.",
+  "ally_female_one": "Elle voyage avec {{count}} allié.",
+  "ally_female_many": "Elle voyage avec {{count}} d’alliés.",
+  "ally_female_other": "Elle voyage avec {{count}} alliés.",
+  "hints": [
+    "Maintenez Maj pour courir.",
+    "Appuyez sur {{key}} pour ouvrir la carte.",
+    "$t(common:tip)"
+  ],
+  "tutorial": [
+    {
+      "title": "Se déplacer",
+      "body": "Utilisez le stick gauche ou ZQSD pour vous déplacer."
+    },
+    {
+      "title": "Commerce",
+      "body": "Les marchands paient plus cher les objets rares.",
+      "offers_one": "{{count}} offre",
+      "offers_many": "{{count}} offers",
+      "offers_other": "{{count}} offers"
+    },
+    {}
+  ],
+  "biomes": [
+    [
+      "Forêt",
+      "Marais"
+    ],
+    [
+      "Désert",
+      [
+        "Dunes",
+        "Oasis"
+      ]
+    ],
+    []
+  ],
+  "stats": {
+    "version": 3,
+    "ratio": 1.50,
+    "scale": 1e3,
+    "drift": -0.25,
+    "limit": 2E+5,
+    "zero": 0,
+    "thresholds": [
+      10,
+      2.50,
+      100
+    ],
+    "beta": true,
+    "hardcore": false,
+    "legacy": null
+  },
+  "extras": {},
+  "tags": [],
+  "file.save": "Enregistrer le fichier",
+  "v1.2": {
+    "changelog": "Le ferry vers l’île du nord a été réparé."
+  },
+  "chapters": {
+    "10": "Le Sommet",
+    "2": "Le Camp de base",
+    "1": "Le Départ",
+    "1.5": "Le Détour"
+  },
+  "menu": {
+    "player_one": "Joueur 1",
+    "player_two": "Joueur 2",
+    "player_other": "Autres joueurs",
+    "resume": "Reprendre"
+  },
+  "unicode": {
+    "emoji": "Trésor trouvé 🎉💎",
+    "family": "👩‍👩‍👧 Mode famille",
+    "flags": "Fabriqué en 🇺🇦 et au 🇵🇹",
+    "combining": "Café pour Amélie, mañana",
+    "surrogates": "𝒳 marque l’endroit 𝄞",
+    "cjk": "旅の記録",
+    "rtl": "مرحبا بالمسافر",
+    "nbsp": "Encore 10 km",
+    "zeroWidth": "no​break",
+    "quotes": "Elle a dit « cours » et est partie \\o/",
+    "escapes": "Ligne un\nLigne deux\tTabulée \u0001"
+  },
+  "日本語": "Japonais",
+  "emoji_🎉": "C’est la fête",
+  "ключ": "Clé russe"
+}

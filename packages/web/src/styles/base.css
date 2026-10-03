@@ -1,0 +1,416 @@
+/* SPDX-License-Identifier: MIT */
+/*
+ * The basics: box sizing, type, spacing, the page frame, focus rings and utilities.
+ * Colours come from theme.css (generated from tokens.ts).
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* Focusing or scrolling to an element keeps it clear of the sticky header (WCAG 2.4.11).
+     The layout measures the header, which wraps onto two rows on narrow screens. */
+  scroll-padding-top: calc(var(--header-block-size, var(--header-height)) + var(--space-2));
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font);
+  font-size: var(--text-md);
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+ul,
+ol,
+dl,
+dd,
+figure,
+blockquote {
+  margin: 0;
+}
+
+h1 {
+  font-size: var(--text-xl);
+  line-height: 1.25;
+  font-weight: 650;
+}
+
+h2 {
+  font-size: var(--text-lg);
+  line-height: 1.3;
+  font-weight: 620;
+}
+
+h3 {
+  font-size: var(--text-md);
+  font-weight: 620;
+}
+
+h1:focus,
+main:focus {
+  outline: none;
+}
+
+a {
+  color: var(--link);
+  text-underline-offset: 0.15em;
+}
+
+code,
+kbd {
+  font-family: var(--mono);
+  font-size: 0.9em;
+}
+
+code {
+  background: var(--surface-alt);
+  padding: 0.05em 0.3em;
+  border-radius: 0;
+}
+
+kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 0.05em 0.4em;
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: 0;
+  background: var(--surface);
+  text-align: center;
+  line-height: 1.4;
+}
+
+img,
+svg {
+  vertical-align: middle;
+}
+
+.icon {
+  flex: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+/* Visible focus everywhere, for keyboard users (WCAG 2.4.7, 2.4.11). */
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--selected);
+}
+
+.sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.muted {
+  color: var(--fg-muted);
+}
+
+.small {
+  font-size: var(--text-sm);
+}
+
+.pad {
+  padding: var(--space-4);
+}
+
+/* --- The frame. */
+
+.skip-link {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  z-index: 100;
+  padding: var(--space-2) var(--space-3);
+  background: var(--primary);
+  color: var(--primary-fg);
+  border-radius: var(--radius-small);
+  transform: translateY(-200%);
+}
+
+.skip-link:focus {
+  transform: none;
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-fill {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: var(--header-height);
+  padding: var(--space-2) var(--space-4);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--fg);
+  font-weight: 650;
+  text-decoration: none;
+  min-width: 0;
+  min-height: var(--control-height);
+  flex: 1;
+}
+
+.brand-logo {
+  color: var(--primary);
+  border-radius: 0;
+}
+
+.brand-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex: none;
+  min-width: 0;
+}
+
+.nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.nav .nav-primary {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-height);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-small);
+  color: var(--fg-muted);
+  text-decoration: none;
+  font-weight: 520;
+  white-space: nowrap;
+}
+
+.nav-link:hover {
+  background: var(--hover);
+  color: var(--fg);
+}
+
+.nav-link[aria-current="page"],
+.nav-link.is-current {
+  color: var(--fg);
+  background: var(--surface-alt);
+  font-weight: 650;
+}
+
+.nav-overflow-primary,
+.nav .nav-overflow-mobile,
+.nav-menu-label {
+  display: none;
+}
+
+.nav-group + .nav-group {
+  border-top: 1px solid var(--border);
+  margin-top: var(--space-1);
+  padding-top: var(--space-1);
+}
+
+.nav-group .menu-caption {
+  border: 0;
+  font-size: var(--text-xs);
+  margin: 0;
+}
+
+@media (max-width: 70rem) {
+  .nav .nav-primary,
+  .nav-more-label {
+    display: none;
+  }
+  .nav .nav-overflow-mobile {
+    display: inline-flex;
+  }
+  .nav-overflow-primary,
+  .nav-menu-label {
+    display: block;
+  }
+}
+
+.header-end {
+  margin-inline-start: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: none;
+}
+
+.banner {
+  padding: var(--space-2) var(--space-4);
+  background: var(--danger-bg);
+  color: var(--fg);
+  border-bottom: 1px solid var(--border);
+}
+
+.main {
+  flex: 1;
+  width: 100%;
+}
+
+.main-fill {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.footer {
+  padding: var(--space-5) var(--space-4);
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+  text-align: center;
+  border-top: 1px solid var(--border);
+}
+
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-4);
+  list-style: none;
+  padding: 0;
+  margin-bottom: var(--space-2);
+}
+
+.page {
+  width: 100%;
+  max-width: var(--page-width);
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-4) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.page.narrow {
+  max-width: 48rem;
+}
+
+.page-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  justify-content: space-between;
+}
+
+.heading-tag {
+  margin-inline-start: var(--space-2);
+  padding: 0.1em 0.45em;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--fg-muted);
+  background: var(--surface-alt);
+  border-radius: 0;
+  vertical-align: middle;
+}
+
+.breadcrumb a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  text-decoration: none;
+}
+
+@media (max-width: 40rem) {
+  .header {
+    flex-wrap: wrap;
+    padding: var(--space-2) var(--space-3);
+    gap: var(--space-2);
+  }
+  .header-end {
+    gap: var(--space-1);
+  }
+  .header .user-name,
+  .header .user-button > .icon {
+    display: none;
+  }
+  .header .user-button > .icon:first-child {
+    display: block;
+  }
+  .header .nav-overflow {
+    position: static;
+  }
+  .header .nav-overflow .menu {
+    inset-inline: var(--space-3);
+    width: auto;
+    max-width: none;
+  }
+}
+
+/* Respect reduced motion: no animations or smooth scrolling. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

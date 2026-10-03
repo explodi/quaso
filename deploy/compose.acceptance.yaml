@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: MIT
+# Disposable local/CI acceptance instance. Use with compose.yaml and a distinct project name.
+# Uses a synthetic setup key; no development login, public proxy or operator .env.
+# COMPOSE_FILE must stay exported so the suite's restart uses this same stack.
+services:
+  quaso:
+    image: quaso:acceptance
+    pull_policy: never
+    env_file: !reset []
+    environment:
+      PORT: "8000"
+      DATA_DIR: /data
+      PUBLIC_URL: http://127.0.0.1:${QUASO_ACCEPTANCE_PORT:-8000}
+      SECRET_KEY: acceptance-only-secret-key-not-for-deployment
+      QUASO_DEV: "0"
+      SETUP_KEY: acceptance-only-setup-key-not-for-deployment
+      GEMINI_API_KEY: ""
+      SERVICES_URL: ""
+      TRUST_PROXY: "false"
+    ports: ["127.0.0.1:${QUASO_ACCEPTANCE_PORT:-8000}:8000"]
+    restart: "no"
+  caddy:
+    profiles: [acceptance-disabled]

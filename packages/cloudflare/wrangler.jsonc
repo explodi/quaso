@@ -1,0 +1,180 @@
+// SPDX-License-Identifier: MIT
+// Local development defaults and named deployment environments.
+// D1 IDs are placeholders; provision instance storage before deploying.
+// Only the container controller is a Durable Object; the server owns service logic.
+// Secrets are set with Wrangler, never committed here.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "quaso",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true,
+  },
+  "alias": {
+    "@quaso/core": "../core/mod.ts",
+    "@quaso/service": "../service/mod.ts",
+  },
+  "workers_dev": false,
+  "preview_urls": false,
+  "version_metadata": { "binding": "CF_VERSION_METADATA" },
+  "containers": [
+    {
+      "class_name": "QuasoContainer",
+      "image": "../../deploy/Dockerfile",
+      "image_build_context": "../..",
+      "max_instances": 1,
+      "instance_type": "basic",
+    },
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "QUASO_CONTAINER",
+        "class_name": "QuasoContainer",
+      },
+    ],
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["QuasoContainer"],
+    },
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "quaso-dev",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+    },
+  ],
+  "r2_buckets": [
+    {
+      "binding": "BACKUPS",
+      "bucket_name": "quaso-dev-store",
+    },
+  ],
+  "vars": {
+    "PUBLIC_URL": "http://localhost:8787",
+    "LOCATION_HINT": "",
+    "GEMINI_MODEL": "",
+    "LLM_CONCURRENCY": "4",
+    "LLM_MONTHLY_TOKEN_BUDGET": "",
+    "CONTAINER_SLEEP_AFTER": "10m",
+    "BACKUP_RETENTION_DAYS": "30",
+  },
+  "secrets": {
+    "required": ["SECRET_KEY"],
+  },
+  "env": {
+    "staging": {
+      "name": "quaso-staging",
+      "version_metadata": { "binding": "CF_VERSION_METADATA" },
+      "workers_dev": false,
+      "preview_urls": false,
+      "containers": [
+        {
+          "class_name": "QuasoContainer",
+          "image": "../../deploy/Dockerfile",
+          "image_build_context": "../..",
+          "max_instances": 1,
+          "instance_type": "basic",
+        },
+      ],
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "QUASO_CONTAINER",
+            "class_name": "QuasoContainer",
+          },
+        ],
+      },
+      "migrations": [
+        {
+          "tag": "v1",
+          "new_sqlite_classes": ["QuasoContainer"],
+        },
+      ],
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "quaso-staging",
+          "database_id": "00000000-0000-0000-0000-000000000000",
+        },
+      ],
+      "r2_buckets": [
+        {
+          "binding": "BACKUPS",
+          "bucket_name": "quaso-staging-store",
+        },
+      ],
+      "vars": {
+        "PUBLIC_URL": "https://staging.translate.yourgame.com",
+        "LOCATION_HINT": "",
+        "GEMINI_MODEL": "",
+        "LLM_CONCURRENCY": "4",
+        "LLM_MONTHLY_TOKEN_BUDGET": "",
+        "CONTAINER_SLEEP_AFTER": "5m",
+        "BACKUP_RETENTION_DAYS": "30",
+      },
+      "secrets": {
+        "required": ["SECRET_KEY"],
+      },
+    },
+    "production": {
+      "name": "quaso-production",
+      "version_metadata": { "binding": "CF_VERSION_METADATA" },
+      "workers_dev": false,
+      "preview_urls": false,
+      "containers": [
+        {
+          "class_name": "QuasoContainer",
+          "image": "../../deploy/Dockerfile",
+          "image_build_context": "../..",
+          "max_instances": 1,
+          "instance_type": "basic",
+        },
+      ],
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "QUASO_CONTAINER",
+            "class_name": "QuasoContainer",
+          },
+        ],
+      },
+      "migrations": [
+        {
+          "tag": "v1",
+          "new_sqlite_classes": ["QuasoContainer"],
+        },
+      ],
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "quaso-production",
+          "database_id": "00000000-0000-0000-0000-000000000000",
+        },
+      ],
+      "r2_buckets": [
+        {
+          "binding": "BACKUPS",
+          "bucket_name": "quaso-production-store",
+        },
+      ],
+      "vars": {
+        "PUBLIC_URL": "https://translate.yourgame.com",
+        "LOCATION_HINT": "",
+        "GEMINI_MODEL": "",
+        "LLM_CONCURRENCY": "4",
+        "LLM_MONTHLY_TOKEN_BUDGET": "",
+        "CONTAINER_SLEEP_AFTER": "10m",
+        "BACKUP_RETENTION_DAYS": "30",
+      },
+      "secrets": {
+        "required": ["SECRET_KEY"],
+      },
+    },
+  },
+}

@@ -1,0 +1,5 @@
+{
+  "build": "Build tower",
+  "move": "Move cabin",
+  "upgrade": "Upgrade tower"
+}

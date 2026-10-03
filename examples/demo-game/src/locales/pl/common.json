@@ -1,0 +1,32 @@
+{
+  "appName": "Quaso Quest",
+  "play": "Graj",
+  "back": "Wstecz",
+  "continue": "Kontynuuj",
+  "saved": "Gra zapisana.",
+  "loading": "Wczytywanie…",
+  "greeting": "Witaj ponownie, {{name}}!",
+  "coins_one": "{{count}} moneta",
+  "coins_few": "{{count}} monety",
+  "coins_many": "{{count}} monet",
+  "coins_other": "{{count}} monety",
+  "lives_one": "Zostało {{count}} życie",
+  "lives_few": "Zostały {{count}} życia",
+  "lives_many": "Zostało {{count}} żyć",
+  "lives_other": "Zostało {{count}} życia",
+  "items_zero": "Plecak jest pusty",
+  "items_one": "{{count}} przedmiot w plecaku",
+  "items_few": "{{count}} przedmioty w plecaku",
+  "items_many": "{{count}} przedmiotów w plecaku",
+  "items_other": "{{count}} przedmiotu w plecaku",
+  "level": "Poziom {{current}} z {{total}}",
+  "companion": "Twój towarzysz idzie za tobą.",
+  "companion_cat": "Twój kot idzie za tobą.",
+  "companion_dog": "Twój pies idzie za tobą.",
+  "hints": [
+    "Skocz dwa razy, aby dosięgnąć wysokich półek.",
+    "Latarnie odsłaniają ukryte ścieżki.",
+    "Odpocznij przy ognisku, aby zapisać grę."
+  ],
+  "maxLevel": 20
+}

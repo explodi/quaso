@@ -1,0 +1,13 @@
+{
+  "main": {
+    "title": "Menu principal",
+    "newGame": "Nouvelle partie",
+    "playAgain": "$t(common:play) encore",
+    "quit": "Quitter"
+  },
+  "gameOver": {
+    "title": "Partie terminée",
+    "place_ordinal_one": "Tu as fini {{count}}er",
+    "place_ordinal_other": "Tu as fini {{count}}e"
+  }
+}

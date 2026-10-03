@@ -1,0 +1,121 @@
+{
+  "title": "Field Guide",
+  "subtitle": "",
+  "spacer": " ",
+  "intro": "Everything you learn on the road ends up in this guide.",
+  "play": "Play",
+  "playAgain": "$t(play) again",
+  "back": "$t(common:back)",
+  "backOrQuit": "$t(common:back) $t(common:quit)",
+  "coinsLabel": "$t(inventory.coins, {\"count\": {{total}}})",
+  "collected": "You collected $t(inventory.coins, {\"count\": {{total}}}) today.",
+  "inventory": {
+    "coins": "Coins",
+    "coins_one": "{{count}} coin",
+    "coins_other": "{{count}} coins",
+    "gems_one": "{{count}} gem",
+    "gems_other": "{{count}} gems",
+    "leftovers_other": "Leftovers"
+  },
+  "messages_zero": "No new messages",
+  "messages_one": "One new message",
+  "messages_other": "{{count}} new messages",
+  "lap_one": "{{count}} lap",
+  "lap_other": "{{count}} laps",
+  "lap_ordinal_one": "{{count}}st lap",
+  "lap_ordinal_two": "{{count}}nd lap",
+  "lap_ordinal_few": "{{count}}rd lap",
+  "lap_ordinal_other": "{{count}}th lap",
+  "place_ordinal_one": "You finished {{count}}st",
+  "place_ordinal_two": "You finished {{count}}nd",
+  "place_ordinal_few": "You finished {{count}}rd",
+  "place_ordinal_other": "You finished {{count}}th",
+  "greeting_male": "Welcome back, sir.",
+  "greeting_female": "Welcome back, madam.",
+  "ally_male_one": "He travels with {{count}} ally.",
+  "ally_male_other": "He travels with {{count}} allies.",
+  "ally_female_one": "She travels with {{count}} ally.",
+  "ally_female_other": "She travels with {{count}} allies.",
+  "hints": [
+    "Hold Shift to run.",
+    "Press {{key}} to open the map.",
+    "$t(common:tip)"
+  ],
+  "tutorial": [
+    {
+      "title": "Moving",
+      "body": "Use the left stick or WASD to move."
+    },
+    {
+      "title": "Trading",
+      "body": "Merchants pay more for rare items.",
+      "offers_one": "{{count}} offer",
+      "offers_other": "{{count}} offers"
+    },
+    {}
+  ],
+  "biomes": [
+    [
+      "Forest",
+      "Swamp"
+    ],
+    [
+      "Desert",
+      [
+        "Dunes",
+        "Oasis"
+      ]
+    ],
+    []
+  ],
+  "stats": {
+    "version": 3,
+    "ratio": 1.50,
+    "scale": 1e3,
+    "drift": -0.25,
+    "limit": 2E+5,
+    "zero": 0,
+    "thresholds": [
+      10,
+      2.50,
+      100
+    ],
+    "beta": true,
+    "hardcore": false,
+    "legacy": null
+  },
+  "extras": {},
+  "tags": [],
+  "file.save": "Save file",
+  "v1.2": {
+    "changelog": "Fixed the ferry to the north island."
+  },
+  "chapters": {
+    "10": "The Summit",
+    "2": "Base Camp",
+    "1": "Trailhead",
+    "1.5": "The Detour"
+  },
+  "menu": {
+    "player_one": "Player One",
+    "player_two": "Player Two",
+    "player_other": "Other players",
+    "resume": "Resume"
+  },
+  "unicode": {
+    "emoji": "Treasure found 🎉💎",
+    "family": "👩‍👩‍👧 Family mode",
+    "flags": "Made in 🇺🇦 and 🇵🇹",
+    "combining": "Café for Amélie, mañana",
+    "surrogates": "𝒳 marks the spot 𝄞",
+    "cjk": "旅の記録",
+    "rtl": "مرحبا بالمسافر",
+    "nbsp": "10 km to go",
+    "zeroWidth": "no​break",
+    "quotes": "She said \"run\" and left \\o/",
+    "escapes": "Line one\nLine two\tTabbed \u0001"
+  },
+  "日本語": "Japanese",
+  "emoji_🎉": "Party time",
+  "ключ": "Russian key"
+}

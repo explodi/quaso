@@ -1,0 +1,87 @@
+/* SPDX-License-Identifier: MIT */
+/* Documentation uses the same semantic colors as the product. */
+.markdown-body {
+  color: var(--fg);
+  font: 1rem / 1.7 var(--font);
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.markdown-body > :first-child {
+  margin-top: 0;
+}
+.markdown-body :is(p, ul, ol, dl, blockquote, table, pre, details) {
+  margin: 0 0 1.25rem;
+}
+.markdown-body :is(h1, h2, h3, h4) {
+  margin: 2rem 0 1rem;
+  line-height: 1.15;
+  scroll-margin-top: 2rem;
+}
+.markdown-body h1 {
+  font-size: var(--heading-1);
+}
+.markdown-body h2 {
+  font-size: var(--heading-2);
+}
+.markdown-body h3 {
+  font-size: var(--heading-3);
+}
+.markdown-body h4 {
+  font-size: var(--heading-4);
+}
+.markdown-body :is(ul, ol) {
+  padding-inline-start: 1.5rem;
+}
+.markdown-body li > :is(ul, ol, p) {
+  margin-bottom: 0.5rem;
+}
+.markdown-body li + li {
+  margin-top: 0.3rem;
+}
+.markdown-body pre {
+  overflow: auto;
+  padding: 1rem;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+}
+.markdown-body pre code {
+  padding: 0;
+  background: transparent;
+}
+.markdown-body blockquote {
+  color: var(--fg-muted);
+  padding-inline-start: 1rem;
+  border-inline-start: 3px solid var(--brand);
+}
+.markdown-body table {
+  display: block;
+  width: 100%;
+  overflow: auto;
+  border-collapse: collapse;
+}
+.markdown-body th,
+.markdown-body td {
+  text-align: start;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+}
+.markdown-body th {
+  background: var(--surface-alt);
+}
+.markdown-body img {
+  max-width: 100%;
+  height: auto;
+}
+.markdown-body hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 2rem 0;
+}
+.markdown-body summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.markdown-body input[type="checkbox"] {
+  accent-color: var(--primary);
+}

@@ -1,0 +1,2 @@
+# Golden files must keep their exact bytes: no line ending conversion.
+* -text

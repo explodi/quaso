@@ -1,0 +1,29 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "**Translating the strings**\n\nI keep the placeholders and give the German plural forms.",
+            "thought": true
+          },
+          {
+            "text": "{\"translations\": [{\"id\": \"s1\", \"text\": \"Willkommen zurück, {{name}}!\"}, {\"id\": \"s2\", \"forms\": {\"one\": \"{{count}} Münze\", \"other\": \"{{count}} Münzen\"}}]}"
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 812,
+    "candidatesTokenCount": 64,
+    "totalTokenCount": 1180,
+    "promptTokensDetails": [{ "modality": "TEXT", "tokenCount": 812 }],
+    "thoughtsTokenCount": 304
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "o1TTaJqFJPGrkdUPq6Wd6Ac"
+}

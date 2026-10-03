@@ -1,0 +1,142 @@
+{
+  "title": "دليل الميدان",
+  "subtitle": "",
+  "spacer": " ",
+  "intro": "كل ما تتعلمه على الطريق ينتهي في هذا الدليل.",
+  "play": "العب",
+  "playAgain": "$t(play) مرة أخرى",
+  "back": "$t(common:back)",
+  "backOrQuit": "$t(common:back) $t(common:quit)",
+  "coinsLabel": "$t(inventory.coins, {\"count\": {{total}}})",
+  "collected": "جمعت اليوم $t(inventory.coins, {\"count\": {{total}}}).",
+  "inventory": {
+    "coins": "العملات",
+    "coins_zero": "لا عملات",
+    "coins_one": "عملة واحدة",
+    "coins_two": "عملتان",
+    "coins_few": "{{count}} عملات",
+    "coins_many": "{{count}} عملة",
+    "coins_other": "{{count}} عملة",
+    "gems_zero": "{{count}} gems",
+    "gems_one": "{{count}} gem",
+    "gems_two": "{{count}} gems",
+    "gems_few": "{{count}} gems",
+    "gems_many": "{{count}} gems",
+    "gems_other": "{{count}} gems",
+    "leftovers_other": "البقايا"
+  },
+  "messages_zero": "لا توجد رسائل جديدة",
+  "messages_one": "رسالة جديدة واحدة",
+  "messages_two": "رسالتان جديدتان",
+  "messages_few": "{{count}} رسائل جديدة",
+  "messages_many": "{{count}} رسالة جديدة",
+  "messages_other": "{{count}} رسالة جديدة",
+  "lap_zero": "لا لفات",
+  "lap_one": "لفة واحدة",
+  "lap_two": "لفتان",
+  "lap_few": "{{count}} لفات",
+  "lap_many": "{{count}} لفة",
+  "lap_other": "{{count}} لفة",
+  "lap_ordinal_other": "اللفة رقم {{count}}",
+  "place_ordinal_other": "أنهيت في المركز {{count}}",
+  "greeting_male": "مرحبًا بعودتك يا سيدي.",
+  "greeting_female": "مرحبًا بعودتك يا سيدتي.",
+  "ally_male_zero": "لا يرافقه أي حليف.",
+  "ally_male_one": "يرافقه حليف واحد.",
+  "ally_male_two": "يرافقه حليفان.",
+  "ally_male_few": "يرافقه {{count}} حلفاء.",
+  "ally_male_many": "يرافقه {{count}} حليفًا.",
+  "ally_male_other": "يرافقه {{count}} حليف.",
+  "ally_female_zero": "لا يرافقها أي حليف.",
+  "ally_female_one": "يرافقها حليف واحد.",
+  "ally_female_two": "يرافقها حليفان.",
+  "ally_female_few": "يرافقها {{count}} حلفاء.",
+  "ally_female_many": "يرافقها {{count}} حليفًا.",
+  "ally_female_other": "يرافقها {{count}} حليف.",
+  "hints": [
+    "اضغط مطولًا على Shift للركض.",
+    "اضغط {{key}} لفتح الخريطة.",
+    "$t(common:tip)"
+  ],
+  "tutorial": [
+    {
+      "title": "الحركة",
+      "body": "استخدم العصا اليسرى أو WASD للتحرك."
+    },
+    {
+      "title": "التجارة",
+      "body": "يدفع التجار أكثر مقابل العناصر النادرة.",
+      "offers_zero": "لا عروض",
+      "offers_one": "عرض واحد",
+      "offers_two": "عرضان",
+      "offers_few": "{{count}} عروض",
+      "offers_many": "{{count}} عرضًا",
+      "offers_other": "{{count}} عرض"
+    },
+    {}
+  ],
+  "biomes": [
+    [
+      "غابة",
+      "مستنقع"
+    ],
+    [
+      "صحراء",
+      [
+        "كثبان",
+        "واحة"
+      ]
+    ],
+    []
+  ],
+  "stats": {
+    "version": 3,
+    "ratio": 1.50,
+    "scale": 1e3,
+    "drift": -0.25,
+    "limit": 2E+5,
+    "zero": 0,
+    "thresholds": [
+      10,
+      2.50,
+      100
+    ],
+    "beta": true,
+    "hardcore": false,
+    "legacy": null
+  },
+  "extras": {},
+  "tags": [],
+  "file.save": "حفظ الملف",
+  "v1.2": {
+    "changelog": "تم إصلاح العبّارة المتجهة إلى الجزيرة الشمالية."
+  },
+  "chapters": {
+    "10": "القمة",
+    "2": "المخيم الأساسي",
+    "1": "بداية الدرب",
+    "1.5": "المنعطف"
+  },
+  "menu": {
+    "player_one": "اللاعب الأول",
+    "player_two": "اللاعب الثاني",
+    "player_other": "لاعبون آخرون",
+    "resume": "استئناف"
+  },
+  "unicode": {
+    "emoji": "عثرت على كنز 🎉💎",
+    "family": "👩‍👩‍👧 وضع العائلة",
+    "flags": "Made in 🇺🇦 and 🇵🇹",
+    "combining": "Café for Amélie, mañana",
+    "surrogates": "𝒳 marks the spot 𝄞",
+    "cjk": "旅の記録",
+    "rtl": "مرحبا بالمسافر",
+    "nbsp": "باقي 10 كم",
+    "zeroWidth": "no​break",
+    "quotes": "قالت \"اركض\" ثم غادرت \\o/",
+    "escapes": "السطر الأول\nالسطر الثاني\tمع مسافة \u0001"
+  },
+  "日本語": "اليابانية",
+  "emoji_🎉": "وقت الحفلة",
+  "ключ": "مفتاح روسي"
+}

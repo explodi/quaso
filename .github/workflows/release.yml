@@ -1,0 +1,175 @@
+# SPDX-License-Identifier: MIT
+# A release (design §5.10, §5.12, S4.1): on a tag such as v1.4.2, publishes the CLI to npm
+# and the Docker image to the GitHub Container Registry. The tag must match the version in
+# packages/cli/package.json and packages/core/package.json.
+#
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check the version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+      - run: bun install --frozen-lockfile
+      - id: version
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          for package in cli core; do
+            found="$(jq -r .version "packages/$package/package.json")"
+            if [ "$found" != "$version" ]; then
+              echo "::error::packages/$package/package.json has version $found, but the tag is $GITHUB_REF_NAME"
+              exit 1
+            fi
+          done
+          canonical="$(bun --eval 'import { VERSION } from "./packages/core/src/version.ts"; console.log(VERSION)')"
+          if [ "$canonical" != "$version" ]; then
+            echo "::error::The canonical version $canonical does not match $version"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  validate:
+    name: Validate the complete application
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+      - run: bun install --frozen-lockfile
+      - run: bun run check
+      - run: bun run build
+      - run: bun run test:binary
+      - run: bun run puppeteer browsers install chrome
+      - run: bun run e2e
+      - run: bun run site:build
+      - run: bun run cf:check
+      - run: bun run docker:smoke
+      - run: bun run docker:workflow
+
+  test:
+    # Published npm versions cannot be replaced: test the exact release bundle first.
+    name: Build and test the CLI
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+      - run: bun install --frozen-lockfile
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      # Fails when packages/cli/src/version.ts differs from packages/cli/package.json.
+      - run: bun run build:cli
+      - run: bun run scripts/cli_e2e.ts --runtime node
+      - run: bun run scripts/cli_e2e.ts --runtime bun
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cli-npm
+          path: packages/cli/dist
+          if-no-files-found: error
+
+  npm:
+    name: Publish the CLI to npm
+    needs: [check, test, validate]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: https://registry.npmjs.org
+      # The package the test job built and tested, byte for byte.
+      - uses: actions/download-artifact@v4
+        with:
+          name: cli-npm
+          path: dist
+      - name: Publish
+        working-directory: dist
+        # A version such as 1.5.0-rc.1 goes to the "next" tag, not "latest".
+        run: >-
+          npm publish --provenance --access public
+          ${{ contains(needs.check.outputs.version, '-') && '--tag next' || '' }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  docker:
+    name: Publish the Docker image
+    needs: [check, test, validate]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/quaso
+          # 1.4.2, 1.4 and 1 for v1.4.2, and latest; pre-releases only get their own version.
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+          flavor: |
+            latest=auto
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  notes:
+    name: Publish release notes
+    needs: [check, npm, docker]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+      - run: bun install --frozen-lockfile
+      - name: Write notes and upgrade steps
+        env:
+          RELEASE_VERSION: ${{ needs.check.outputs.version }}
+        run: bun run scripts/release_notes.ts > release-notes.md
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          args=()
+          if [[ "$RELEASE_VERSION" == *-* ]]; then args+=(--prerelease); fi
+          gh release create "v$RELEASE_VERSION" --verify-tag --title "Quaso $RELEASE_VERSION" --notes-file release-notes.md "${args[@]}"

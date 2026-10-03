@@ -1,0 +1,27 @@
+{
+  "main": {
+    "title": "Hauptmenü",
+    "newGame": "Neues Spiel",
+    "playAgain": "Noch einmal: $t(common:play)",
+    "options": "Optionen",
+    "quit": "Beenden",
+    "back": "$t(common:back)"
+  },
+  "options": {
+    "music": "Musiklautstärke",
+    "effects": "Soundeffekte",
+    "language": "Sprache",
+    "subtitles": "Untertitel anzeigen"
+  },
+  "pause": {
+    "title": "Pause",
+    "resume": "Fortsetzen",
+    "confirmQuit": "Jetzt beenden? Dein Fortschritt seit dem letzten Lagerfeuer geht verloren."
+  },
+  "gameOver": {
+    "title": "Spiel vorbei",
+    "score": "Punkte: {{score}}",
+    "newRecord": "Neuer Rekord, {{name}}!",
+    "place_ordinal_other": "Du bist {{count}}. geworden"
+  }
+}

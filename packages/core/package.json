@@ -1,0 +1,13 @@
+{
+  "name": "@quaso/core",
+  "version": "1.0.0-rc.1",
+  "license": "MIT",
+  "exports": {
+    ".": "./mod.ts"
+  },
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@quaso/runtime": "workspace:*"
+  }
+}

@@ -1,0 +1,129 @@
+{
+  "title": "Przewodnik terenowy",
+  "subtitle": "",
+  "spacer": " ",
+  "intro": "Wszystko, czego nauczysz się w drodze, trafia do tego przewodnika.",
+  "play": "Graj",
+  "playAgain": "$t(play) jeszcze raz",
+  "back": "$t(common:back)",
+  "backOrQuit": "$t(common:back) $t(common:quit)",
+  "coinsLabel": "$t(inventory.coins, {\"count\": {{total}}})",
+  "collected": "Dziś zebrano $t(inventory.coins, {\"count\": {{total}}}).",
+  "inventory": {
+    "coins": "Monety",
+    "coins_one": "{{count}} moneta",
+    "coins_few": "{{count}} monety",
+    "coins_many": "{{count}} monet",
+    "coins_other": "{{count}} monety",
+    "gems_one": "{{count}} klejnot",
+    "gems_few": "{{count}} klejnoty",
+    "gems_many": "{{count}} klejnotów",
+    "gems_other": "{{count}} klejnotu",
+    "leftovers_other": "Resztki"
+  },
+  "messages_zero": "Brak nowych wiadomości",
+  "messages_one": "Jedna nowa wiadomość",
+  "messages_few": "{{count}} nowe wiadomości",
+  "messages_many": "{{count}} nowych wiadomości",
+  "messages_other": "{{count}} nowej wiadomości",
+  "lap_one": "{{count}} okrążenie",
+  "lap_few": "{{count}} okrążenia",
+  "lap_many": "{{count}} okrążeń",
+  "lap_other": "{{count}} okrążenia",
+  "lap_ordinal_other": "{{count}}. okrążenie",
+  "place_ordinal_other": "Zajmujesz {{count}}. miejsce",
+  "greeting_male": "Witaj ponownie, panie.",
+  "greeting_female": "Witaj ponownie, pani.",
+  "ally_male_one": "Podróżuje z {{count}} sojusznikiem.",
+  "ally_male_few": "Podróżuje z {{count}} sojusznikami.",
+  "ally_male_many": "He travels with {{count}} allies.",
+  "ally_male_other": "Podróżuje z {{count}} sojusznika.",
+  "ally_female_one": "She travels with {{count}} ally.",
+  "ally_female_few": "She travels with {{count}} allies.",
+  "ally_female_many": "She travels with {{count}} allies.",
+  "ally_female_other": "She travels with {{count}} allies.",
+  "hints": [
+    "Przytrzymaj Shift, aby biec.",
+    "Naciśnij {{key}}, aby otworzyć mapę.",
+    "$t(common:tip)"
+  ],
+  "tutorial": [
+    {
+      "title": "Poruszanie się",
+      "body": "Użyj lewej gałki lub WASD, aby się poruszać."
+    },
+    {
+      "title": "Handel",
+      "body": "Merchants pay more for rare items.",
+      "offers_one": "{{count}} oferta",
+      "offers_few": "{{count}} oferty",
+      "offers_many": "{{count}} ofert",
+      "offers_other": "{{count}} oferty"
+    },
+    {}
+  ],
+  "biomes": [
+    [
+      "Las",
+      "Bagno"
+    ],
+    [
+      "Pustynia",
+      [
+        "Wydmy",
+        "Oaza"
+      ]
+    ],
+    []
+  ],
+  "stats": {
+    "version": 3,
+    "ratio": 1.50,
+    "scale": 1e3,
+    "drift": -0.25,
+    "limit": 2E+5,
+    "zero": 0,
+    "thresholds": [
+      10,
+      2.50,
+      100
+    ],
+    "beta": true,
+    "hardcore": false,
+    "legacy": null
+  },
+  "extras": {},
+  "tags": [],
+  "file.save": "Zapisz plik",
+  "v1.2": {
+    "changelog": "Naprawiono prom na północną wyspę."
+  },
+  "chapters": {
+    "10": "Szczyt",
+    "2": "Obóz bazowy",
+    "1": "Początek szlaku",
+    "1.5": "Objazd"
+  },
+  "menu": {
+    "player_one": "Gracz pierwszy",
+    "player_two": "Gracz drugi",
+    "player_other": "Pozostali gracze",
+    "resume": "Wznów"
+  },
+  "unicode": {
+    "emoji": "Znaleziono skarb 🎉💎",
+    "family": "👩‍👩‍👧 Tryb rodzinny",
+    "flags": "Made in 🇺🇦 and 🇵🇹",
+    "combining": "Café for Amélie, mañana",
+    "surrogates": "𝒳 marks the spot 𝄞",
+    "cjk": "旅の記録",
+    "rtl": "مرحبا بالمسافر",
+    "nbsp": "Jeszcze 10 km",
+    "zeroWidth": "no​break",
+    "quotes": "Powiedziała „biegnij” i odeszła \\o/",
+    "escapes": "Wiersz pierwszy\nWiersz drugi\tZ tabulatorem \u0001"
+  },
+  "日本語": "japoński",
+  "emoji_🎉": "Czas na imprezę",
+  "ключ": "Rosyjski klucz"
+}

@@ -1,0 +1,60 @@
+{
+    "main": {
+        "title": "Ember Delve",
+        "newRun": "Nouvelle partie",
+        "continue": "Continuer",
+        "options": "Options",
+        "credits": "Crédits",
+        "quit": "Quitter vers le bureau",
+        "version": "v{{version}}"
+    },
+    "pause": {
+        "title": "Pause",
+        "resume": "Reprendre",
+        "restart": "$t(main.newRun)",
+        "abandon": "Abandonner la partie",
+        "abandonConfirm": "Abandonner cette partie ? Vous gardez {{percent}} % de vos braises."
+    },
+    "options": {
+        "audio": {
+            "master": "Volume principal",
+            "music": "Musique",
+            "sfx": "Effets sonores",
+            "muteUnfocused": "Couper le son quand la fenêtre est en arrière-plan"
+        },
+        "video": {
+            "fullscreen": "Plein écran",
+            "vsync": "Synchro verticale",
+            "uiScale": "Échelle de l’interface : {{value}}×"
+        },
+        "difficulty": {
+            "label": "Difficulté",
+            "levels": [
+                "Histoire",
+                "Normal",
+                "Difficile",
+                "Enfer"
+            ],
+            "default": 1
+        }
+    },
+    "results": {
+        "victory": "Victoire !",
+        "defeat": "Vaincu par {{enemy}} à l’étage {{floor}}.",
+        "floors_one": "{{count}} étage terminé",
+        "floors_many": "{{count}} d’étages terminés",
+        "floors_other": "{{count}} étages terminés",
+        "rank_ordinal_one": "Classé {{count}}er au tableau du jour",
+        "rank_ordinal_other": "Classé {{count}}e au tableau du jour",
+        "embers_one": "+{{count}} braise",
+        "embers_many": "+{{count}} embers",
+        "embers_other": "+{{count}} braises"
+    },
+    "credits": {
+        "lines": [
+            "Conception et code : l’équipe d’Ember Delve",
+            "Musique : composée pour ce jeu",
+            "Merci d’avoir joué !"
+        ]
+    }
+}

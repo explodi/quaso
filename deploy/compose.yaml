@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: MIT
+# Quaso with Docker Compose on a VM (design §5.12, the default deployment):
+#   1. Point your domain (such as translate.yourgame.com) at the VM.
+#   2. Copy compose.yaml, Caddyfile and .env.example here, and rename .env.example to .env.
+#   3. In .env, set QUASO_DOMAIN and SETUP_KEY; enter the Gemini API key in Settings after setup.
+#   4. docker compose up -d
+#   5. Open https://your-domain/setup and enter SETUP_KEY.
+# Caddy serves QUASO_DOMAIN over HTTPS, with an automatic certificate, and passes requests
+# to Quaso. Upgrades: docker compose pull && docker compose up -d
+services:
+  quaso:
+    # Replace <org> with the organization that publishes the image. To build the image
+    # yourself instead, in a clone of the repository: name it locally (such as quaso:local)
+    # and run `docker compose build`; the build section points at the repository.
+    image: ghcr.io/<org>/quaso:1
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    env_file: .env
+    volumes: ["quaso-data:/data"]
+    restart: unless-stopped
+    # On a stop, Quaso finishes the requests in flight for up to 10 seconds, then closes
+    # the database; Docker waits longer than that before it kills the process.
+    stop_grace_period: 30s
+    # Nothing is written outside /data, except temporary files.
+    read_only: true
+    tmpfs: ["/tmp"]
+  caddy:
+    image: caddy:2
+    ports: ["80:80", "443:443", "443:443/udp"]
+    environment: ["QUASO_DOMAIN=${QUASO_DOMAIN}"]
+    volumes: ["./Caddyfile:/etc/caddy/Caddyfile:ro", "caddy-data:/data", "caddy-config:/config"]
+    restart: unless-stopped
+    depends_on: [quaso]
+volumes:
+  quaso-data:
+  caddy-data:
+  caddy-config:

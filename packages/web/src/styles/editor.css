@@ -1,0 +1,687 @@
+/* SPDX-License-Identifier: MIT */
+/* The editor: three panes (files, strings, translation) filling the window. */
+
+.editor {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.editor-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.editor-back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  text-decoration: none;
+  font-size: var(--text-sm);
+}
+
+.editor-title {
+  margin: 0;
+}
+
+.editor-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.editor-progress .bar {
+  width: 8rem;
+}
+
+.editor-bar-end {
+  margin-inline-start: auto;
+  display: flex;
+  gap: var(--space-1);
+}
+
+.files-toggle {
+  display: none;
+}
+
+.editor-panes {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(12rem, 17rem) minmax(18rem, 1fr) minmax(22rem, 1.25fr);
+  /* One row as tall as the window allows: each pane scrolls on its own. */
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.pane {
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border-inline-end: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.pane:last-child {
+  border-inline-end: 0;
+}
+
+.pane-title {
+  padding: var(--space-2) var(--space-3);
+  color: var(--fg-muted);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pane-title-row {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+}
+
+.pane-title-row .pane-title {
+  flex: 1;
+  border-bottom: 0;
+}
+
+.files-close {
+  display: none;
+}
+
+.pane-title .muted {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.pane-files {
+  overflow-y: auto;
+  background: var(--bg);
+}
+
+.pane-files .tree-wrap {
+  padding: var(--space-2);
+}
+
+.pane-files .tree-row {
+  padding: var(--space-1) var(--space-2);
+}
+
+.pane-files .tree-stats .bar {
+  width: 2.5rem;
+  min-width: 2.5rem;
+}
+
+.pane-files .tree-percent {
+  min-width: 2.5rem;
+}
+
+.pane-panel {
+  overflow-y: auto;
+  padding: var(--space-4);
+  gap: var(--space-4);
+}
+
+@media (max-width: 64rem) {
+  .editor-panes {
+    grid-template-columns: minmax(16rem, 1fr) minmax(20rem, 1.3fr);
+  }
+  .files-toggle,
+  .files-close {
+    display: inline-flex;
+  }
+  .pane-files {
+    display: none;
+  }
+  .pane-files.is-open {
+    display: flex;
+    position: fixed;
+    z-index: 25;
+    top: 0;
+    bottom: 0;
+    inset-inline-start: 0;
+    width: min(22rem, 90vw);
+    box-shadow: var(--shadow);
+  }
+}
+
+@media (max-width: 44rem) {
+  .app-fill {
+    height: auto;
+    min-height: 100vh;
+  }
+  .editor-panes {
+    display: flex;
+    flex-direction: column;
+  }
+  .pane-strings {
+    height: 50vh;
+    border-inline-end: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .pane-panel {
+    overflow: visible;
+  }
+}
+
+/* --- The string list. */
+
+.strings-pane-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.strings-tools {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.state-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.visually-hidden-input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+}
+
+.filter-chip-body {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-height);
+  gap: var(--space-1);
+  padding: 0.1rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.filter-chip-body:hover {
+  background: var(--hover);
+}
+
+.filter-chip.is-checked .filter-chip-body {
+  background: var(--selected);
+  border-color: var(--border-strong);
+  font-weight: 600;
+}
+
+.visually-hidden-input:focus-visible + .filter-chip-body {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.filter-count {
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+}
+
+.strings-order {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--text-sm);
+}
+
+.strings-order label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.queue-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.strings-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-1) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--text-sm);
+}
+
+.bulk-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--selected);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--text-sm);
+  font-weight: 560;
+}
+
+.bulk-note {
+  width: 100%;
+  font-weight: 400;
+  color: var(--fg-muted);
+}
+
+.string-row {
+  display: flex;
+  align-items: stretch;
+  height: 100%;
+  border-bottom: 1px solid var(--border);
+}
+
+.string-row.is-current {
+  background: var(--selected);
+}
+
+.string-row.is-current .string-key {
+  font-weight: 650;
+}
+
+.string-row.is-checked:not(.is-current) {
+  background: var(--hover);
+}
+
+/* Keep the checkbox's touch target separate from the row's navigation link. */
+.row-check-target {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--control-height);
+  min-height: var(--control-height);
+  padding-inline: var(--space-3) var(--space-2);
+  cursor: pointer;
+}
+
+.row-link {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.row-link:hover {
+  background: var(--hover);
+}
+
+.row-link:focus-visible {
+  outline-offset: -2px;
+}
+
+.row-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.row-source,
+.row-key {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row-key {
+  display: flex;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+
+.row-key code {
+  background: none;
+  padding: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.row-kind,
+.row-file {
+  flex: none;
+}
+
+.row-kind {
+  padding: 0 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 0;
+}
+
+/* --- The translation panel. */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.panel-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.panel-key {
+  overflow-wrap: anywhere;
+}
+
+.panel-key code {
+  background: none;
+  padding: 0;
+}
+
+.panel-file {
+  font-size: var(--text-sm);
+}
+
+.panel-description {
+  padding: var(--space-2) var(--space-3);
+  border-inline-start: 3px solid var(--border-strong);
+  background: var(--surface-alt);
+  border-radius: var(--radius-small);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.panel-limit {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+
+.panel-label {
+  color: var(--fg-muted);
+}
+
+.panel-source,
+.panel-edit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.source {
+  font-size: var(--text-lg);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.source-forms {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.source-forms div {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.source-forms dt,
+.form-name {
+  min-width: 3.5rem;
+  color: var(--fg-muted);
+  font-family: var(--mono);
+  font-size: var(--text-sm);
+}
+
+.source-forms dd {
+  overflow-wrap: anywhere;
+}
+
+.panel-hint {
+  font-size: var(--text-sm);
+}
+
+.form-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.input-label {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-weight: 560;
+}
+
+.form-examples {
+  color: var(--fg-muted);
+  font-weight: 400;
+  font-size: var(--text-sm);
+}
+
+.input-english {
+  font-size: var(--text-sm);
+}
+
+.form-input .textarea {
+  font-size: var(--text-md);
+}
+
+.length {
+  align-self: flex-end;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.length-over {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.checks {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* Empty, the list stays in the page (it is a live region) but takes no room: the negative
+   margin takes back its container's gap. */
+.checks:empty {
+  margin-block-start: calc(-1 * var(--space-1));
+}
+
+.panel-edit > .checks:empty {
+  margin-block-start: calc(-1 * var(--space-2));
+}
+
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.check .icon {
+  margin-top: 0.15rem;
+}
+
+.check-error {
+  color: var(--danger);
+}
+
+.check-warning {
+  color: var(--warning);
+}
+
+.panel-actions,
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.conflict-text {
+  padding: var(--space-2) var(--space-3);
+  border-inline-start: 3px solid var(--warning);
+  background: var(--surface);
+  white-space: pre-wrap;
+}
+
+.translation-text {
+  font-family: var(--font);
+  line-height: 1.65;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  background: var(--surface-alt);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.plural-forms {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.plural-form {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.signin-prompt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  color: var(--fg);
+}
+
+.panel-tabs {
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-2);
+}
+
+/* --- History, suggestions, other languages. */
+
+.history,
+.suggestions,
+.other-languages {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.history-item,
+.suggestion,
+.other-language {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.history-head,
+.suggestion-head,
+.other-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.history-colours {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.arrow-right {
+  transform: scaleX(-1);
+  color: var(--fg-muted);
+}
+
+.history-values {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.history-values p,
+.suggestion-value,
+.other-value {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.value-label {
+  display: inline-block;
+  min-width: 3.5rem;
+  color: var(--fg-muted);
+}
+
+.before .value-text {
+  text-decoration: line-through;
+  text-decoration-color: var(--fg-muted);
+}
+
+.history-comment {
+  font-style: italic;
+  color: var(--fg-muted);
+}
+
+.status {
+  margin-inline-start: auto;
+  padding: 0 0.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  font-size: var(--text-xs);
+}
+
+.status-pending {
+  border-color: var(--warning);
+  color: var(--warning);
+}
+
+.status-approved {
+  border-color: var(--success);
+  color: var(--success);
+}
+
+/* Reviewed suggestions are told apart by their status pill, not faded: fading the muted
+   text would take it below 4.5:1. */

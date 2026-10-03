@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: MIT
+# Not sent to `docker build`: dependencies and build output (the image builds its own),
+# local data, secrets, git history and internal plans. Local data and secrets are matched in
+# every folder (`**/`): `wrangler deploy` builds the image from the repository's root, next
+# to packages/cloudflare/.dev.vars*. scripts/dockerignore_test.ts checks these rules.
+**/node_modules
+**/dist
+**/.quaso
+**/.wrangler
+**/.env
+**/.env.*
+**/.dev.vars
+**/.dev.vars.*
+!**/.env.example
+!**/.dev.vars.example
+.git
+plans
+coverage

@@ -1,0 +1,85 @@
+# SPDX-License-Identifier: MIT
+# Every push and pull request: formatting, lint, types, headers, licences and tests
+# (`bun run check`), plus the builds and the optional packages' tests.
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: bun run check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+      - run: bun install --frozen-lockfile
+      - run: bun run check
+
+  build:
+    name: Build the website and the server binary
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+      - run: ./dist/quaso version
+      - run: bun run test:binary
+
+  e2e:
+    name: Browser tests (Puppeteer)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+      - run: bun install --frozen-lockfile
+      # Puppeteer installs Chromium before the browser tests.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/puppeteer
+          key: puppeteer-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+      - run: bun run build:web
+      - run: bun run puppeteer browsers install chrome
+      - run: bun run e2e
+
+  cli:
+    # S4.1 and S4.11: the CLI's bundle on every system and runtime it supports, against a
+    # development server (Bun runs the server either way).
+    name: CLI (${{ matrix.os }}, ${{ matrix.runtime.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        runtime:
+          - { name: node 22, command: node, node: "22" }
+          - { name: node 24, command: node, node: "24" }
+          - { name: bun, command: bun }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+      - run: bun install --frozen-lockfile
+      - if: matrix.runtime.command == 'node'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.runtime.node }}
+      - run: bun run build:cli
+      - run: bun run scripts/cli_e2e.ts --runtime ${{ matrix.runtime.command }}

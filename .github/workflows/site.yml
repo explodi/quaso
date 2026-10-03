@@ -1,0 +1,66 @@
+# SPDX-License-Identifier: MIT
+# Builds the project website (site/, with the Markdown in docs/) and publishes it to GitHub
+# Pages. The repository's Pages settings must use "GitHub Actions" as the source.
+# Private repositories build it to catch errors; public repositories also deploy it.
+name: Website
+
+on:
+  push:
+    branches: [main, master]
+    tags: ["v*"]
+    paths:
+      - "site/**"
+      - "docs/**"
+      - "packages/web/src/styles/**"
+      - "packages/web/src/assets/**"
+      - "packages/web/src/components/**"
+      - "packages/web/public/fonts/**"
+      - "package.json"
+      - "bun.lock"
+      - ".bun-version"
+      - ".github/workflows/site.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; a newer push waits instead of cancelling one in progress.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build the website
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+      - run: bun install --frozen-lockfile
+      - id: pages
+        if: ${{ !github.event.repository.private }}
+        uses: actions/configure-pages@v6
+      - run: bun run site:build
+        env:
+          # The path the site is served under, such as /quaso, for 404.html.
+          BASE_PATH: ${{ steps.pages.outputs.base_path }}
+      - if: ${{ !github.event.repository.private }}
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site/dist
+
+  deploy:
+    name: Publish to GitHub Pages
+    needs: build
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

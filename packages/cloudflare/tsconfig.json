@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "es2024",
+    "lib": ["es2024"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "types": ["./worker-configuration.d.ts", "@cloudflare/vitest-pool-workers/types", "node"],
+    "paths": {
+      "@quaso/core": ["../core/mod.ts"],
+      "@quaso/service": ["../service/mod.ts"],
+      "@quaso/service/sql-cases": ["../service/src/testing/sql_cases.ts"]
+    }
+  },
+  "include": ["src", "test", "worker-configuration.d.ts"]
+}

@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: MIT
+name: Upload source strings
+on:
+  push:
+    branches: [main, master]
+    paths: ["src/locales/en/**", "quaso.config.json"]
+permissions:
+  contents: read
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    env:
+      QUASO_HOSTNAME: ${{ vars.QUASO_HOSTNAME }}
+      QUASO_API_KEY: ${{ secrets.QUASO_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      # Use npm ci after committing your game's package-lock.json.
+      - run: npm install
+      - run: npx quaso upload

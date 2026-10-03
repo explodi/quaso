@@ -1,0 +1,8 @@
+{
+  "extends": "../tsconfig.json",
+  "include": ["worker.ts", "../worker-configuration.d.ts", "contract_worker.ts"],
+  "exclude": ["server.ts"],
+  "compilerOptions": {
+    "types": ["../worker-configuration.d.ts"]
+  }
+}

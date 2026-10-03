@@ -1,0 +1,55 @@
+{
+  "appName": "Wayfarer",
+  "nav": {
+    "home": "Home",
+    "trips": "Trips",
+    "explore": "Explore",
+    "settings": "Settings",
+    "signIn": "Sign in",
+    "signOut": "Sign out"
+  },
+  "greeting": "Hello, {{name}}!",
+  "greeting_morning": "Good morning, {{name}}!",
+  "greeting_evening": "Good evening, {{name}}!",
+  "trip": {
+    "title": "Your trips",
+    "empty": "You have no trips yet. $t(trip.cta)",
+    "cta": "Plan your first one!",
+    "count_one": "{{count}} trip",
+    "count_other": "{{count}} trips",
+    "daysLeft_zero": "Leaving today",
+    "daysLeft_one": "Leaving tomorrow",
+    "daysLeft_other": "Leaving in {{count}} days",
+    "updated": "Updated {{date, relativetime}}",
+    "budget": "Budget: {{amount, currency(EUR)}}"
+  },
+  "invite_one": "{{name}} invited {{count}} friend",
+  "invite_other": "{{name}} invited {{count}} friends",
+  "invite_male_one": "He invited {{count}} friend",
+  "invite_male_other": "He invited {{count}} friends",
+  "invite_female_one": "She invited {{count}} friend",
+  "invite_female_other": "She invited {{count}} friends",
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "confirmDelete": "Delete “{{- name}}”? This can’t be undone.",
+    "share": "Share",
+    "copied": "Link copied to the clipboard."
+  },
+  "errors": {
+    "required": "This field is required.",
+    "minLength": "Use at least {{min}} characters.",
+    "network": "We couldn’t reach the server. Check your connection and try again.",
+    "notFound": "$t(errors.generic)",
+    "generic": "Something went wrong."
+  },
+  "footer": {
+    "copyright": "© {{year}} Wayfarer",
+    "links": [
+      "Privacy",
+      "Terms",
+      "Contact"
+    ]
+  }
+}

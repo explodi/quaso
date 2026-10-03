@@ -1,0 +1,13 @@
+plans/
+node_modules/
+**/dist/
+**/worker-configuration.d.ts
+bun.lock
+.quaso/
+.wrangler/
+**/testdata/
+examples/demo-game/src/locales/
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+packages/cloudflare/test/fixtures/

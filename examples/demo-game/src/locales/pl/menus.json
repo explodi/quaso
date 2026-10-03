@@ -1,0 +1,27 @@
+{
+  "main": {
+    "title": "Menu główne",
+    "newGame": "Nowa gra",
+    "playAgain": "$t(common:play) jeszcze raz",
+    "options": "Opcje",
+    "quit": "Wyjdź",
+    "back": "$t(common:back)"
+  },
+  "options": {
+    "music": "Głośność muzyki",
+    "effects": "Efekty dźwiękowe",
+    "language": "Język",
+    "subtitles": "Pokaż napisy"
+  },
+  "pause": {
+    "title": "Pauza",
+    "resume": "Wznów",
+    "confirmQuit": "Wyjść teraz? Stracisz postępy od ostatniego ogniska."
+  },
+  "gameOver": {
+    "title": "Koniec gry",
+    "score": "Wynik: {{score}}",
+    "newRecord": "Nowy rekord, {{name}}!",
+    "place_ordinal_other": "Zajmujesz {{count}}. miejsce"
+  }
+}

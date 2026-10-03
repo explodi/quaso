@@ -1,0 +1,1 @@
+{"title":"Ember Delve","short":"A fast roguelike about digging too deep.","features":["Procedural caves","Daily runs","Couch co-op for 2 players"],"rating":"PEGI 12","price":null,"keywords_one":"{{count}} keyword","keywords_other":"{{count}} keywords"}

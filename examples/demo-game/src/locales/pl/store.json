@@ -1,0 +1,11 @@
+{
+  "title": "Quaso Quest",
+  "subtitle": "Przytulna przygoda z łamigłówkami",
+  "description": "Poprowadź małą latarenkę przez 20 świecących poziomów. Rozwiązuj łamigłówki, zbieraj monety i odkrywaj ukryte ścieżki.",
+  "features": [
+    "20 ręcznie tworzonych poziomów",
+    "Relaksująca muzyka",
+    "Gra offline"
+  ],
+  "whatsNew": "Wersja {{version}}: nowe poziomy i poprawki."
+}

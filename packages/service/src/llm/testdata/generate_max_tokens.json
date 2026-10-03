@@ -1,0 +1,24 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "{\"translations\": [{\"id\": \"s1\", \"text\": \"Willkommen zurück, {{name}}!\"}, {\"id\": \"s2\", \"forms\": {\"one\": \"{{count}} Mün"
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "MAX_TOKENS",
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 812,
+    "candidatesTokenCount": 40,
+    "totalTokenCount": 8192,
+    "thoughtsTokenCount": 7340
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "s1TTaLKzGvOrkdUPsIWf8Q4"
+}

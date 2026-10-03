@@ -1,0 +1,16 @@
+{
+  "name": "@quaso/server",
+  "version": "1.0.0-rc.1",
+  "license": "MIT",
+  "exports": {
+    ".": "./main.ts"
+  },
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "@quaso/core": "workspace:*",
+    "@quaso/service": "workspace:*",
+    "@quaso/runtime": "workspace:*",
+    "dotenv": "17.2.3"
+  }
+}

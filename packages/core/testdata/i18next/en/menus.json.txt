@@ -1,0 +1,60 @@
+{
+    "main": {
+        "title": "Ember Delve",
+        "newRun": "New run",
+        "continue": "Continue",
+        "options": "Options",
+        "credits": "Credits",
+        "quit": "Quit to desktop",
+        "version": "v{{version}}"
+    },
+    "pause": {
+        "title": "Paused",
+        "resume": "Resume",
+        "restart": "$t(main.newRun)",
+        "abandon": "Abandon run",
+        "abandonConfirm": "Abandon this run? You keep {{percent}}% of your embers."
+    },
+    "options": {
+        "audio": {
+            "master": "Master volume",
+            "music": "Music",
+            "sfx": "Sound effects",
+            "muteUnfocused": "Mute when the window is in the background"
+        },
+        "video": {
+            "fullscreen": "Fullscreen",
+            "vsync": "V-Sync",
+            "uiScale": "Interface scale: {{value}}×"
+        },
+        "difficulty": {
+            "label": "Difficulty",
+            "levels": [
+                "Story",
+                "Normal",
+                "Hard",
+                "Inferno"
+            ],
+            "default": 1
+        }
+    },
+    "results": {
+        "victory": "Victory!",
+        "defeat": "Defeated by {{enemy}} on floor {{floor}}.",
+        "floors_one": "{{count}} floor cleared",
+        "floors_other": "{{count}} floors cleared",
+        "rank_ordinal_one": "Ranked {{count}}st on today’s board",
+        "rank_ordinal_two": "Ranked {{count}}nd on today’s board",
+        "rank_ordinal_few": "Ranked {{count}}rd on today’s board",
+        "rank_ordinal_other": "Ranked {{count}}th on today’s board",
+        "embers_one": "+{{count}} ember",
+        "embers_other": "+{{count}} embers"
+    },
+    "credits": {
+        "lines": [
+            "Design and code: the Ember Delve team",
+            "Music: written for this game",
+            "Thank you for playing!"
+        ]
+    }
+}

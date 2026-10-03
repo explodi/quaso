@@ -1,0 +1,65 @@
+{
+  "appName": "Wayfarer",
+  "nav": {
+    "home": "Strona główna",
+    "trips": "Podróże",
+    "explore": "Explore",
+    "settings": "Ustawienia",
+    "signIn": "Sign in",
+    "signOut": "Wyloguj się"
+  },
+  "greeting": "Cześć, {{name}}!",
+  "greeting_morning": "Dzień dobry, {{name}}!",
+  "greeting_evening": "Good evening, {{name}}!",
+  "trip": {
+    "title": "Twoje podróże",
+    "empty": "Nie masz jeszcze żadnych podróży. $t(trip.cta)",
+    "cta": "Zaplanuj pierwszą!",
+    "count_one": "{{count}} podróż",
+    "count_few": "{{count}} podróże",
+    "count_many": "{{count}} trips",
+    "count_other": "{{count}} podróży",
+    "daysLeft_zero": "Leaving today",
+    "daysLeft_one": "Wyjazd jutro",
+    "daysLeft_few": "Wyjazd za {{count}} dni",
+    "daysLeft_many": "Wyjazd za {{count}} dni",
+    "daysLeft_other": "Wyjazd za {{count}} dnia",
+    "updated": "Zaktualizowano {{date, relativetime}}",
+    "budget": "Budget: {{amount, currency(EUR)}}"
+  },
+  "invite_one": "{{name}} zaprasza {{count}} znajomego",
+  "invite_few": "{{name}} zaprasza {{count}} znajomych",
+  "invite_many": "{{name}} zaprasza {{count}} znajomych",
+  "invite_other": "{{name}} zaprasza {{count}} znajomego",
+  "invite_male_one": "Zaprosił {{count}} znajomego",
+  "invite_male_few": "Zaprosił {{count}} znajomych",
+  "invite_male_many": "Zaprosił {{count}} znajomych",
+  "invite_male_other": "Zaprosił {{count}} znajomego",
+  "invite_female_one": "She invited {{count}} friend",
+  "invite_female_few": "She invited {{count}} friends",
+  "invite_female_many": "She invited {{count}} friends",
+  "invite_female_other": "Zaprosiła {{count}} znajomego",
+  "actions": {
+    "save": "Zapisz",
+    "cancel": "Anuluj",
+    "delete": "Usuń",
+    "confirmDelete": "Usunąć „{{- name}}”? Tej operacji nie można cofnąć.",
+    "share": "Udostępnij",
+    "copied": "Link copied to the clipboard."
+  },
+  "errors": {
+    "required": "To pole jest wymagane.",
+    "minLength": "Użyj co najmniej {{min}} znaków.",
+    "network": "Nie udało się połączyć z serwerem. Sprawdź połączenie i spróbuj ponownie.",
+    "notFound": "$t(errors.generic)",
+    "generic": "Coś poszło nie tak."
+  },
+  "footer": {
+    "copyright": "© {{year}} Wayfarer",
+    "links": [
+      "Prywatność",
+      "Warunki",
+      "Kontakt"
+    ]
+  }
+}

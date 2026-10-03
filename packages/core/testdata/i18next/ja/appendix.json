@@ -1,0 +1,108 @@
+{
+  "title": "フィールドガイド",
+  "subtitle": "",
+  "spacer": " ",
+  "intro": "旅で学んだことはすべてこのガイドに記録されます。",
+  "play": "プレイ",
+  "playAgain": "もう一度$t(play)",
+  "back": "$t(common:back)",
+  "backOrQuit": "$t(common:back) $t(common:quit)",
+  "coinsLabel": "$t(inventory.coins, {\"count\": {{total}}})",
+  "collected": "今日は$t(inventory.coins, {\"count\": {{total}}})を集めました。",
+  "inventory": {
+    "coins": "コイン",
+    "coins_other": "コイン{{count}}枚",
+    "gems_other": "{{count}} gems",
+    "leftovers_other": "残り物"
+  },
+  "messages_zero": "新着メッセージはありません",
+  "messages_other": "新着メッセージが{{count}}件あります",
+  "lap_other": "{{count}}周",
+  "lap_ordinal_other": "{{count}}周目",
+  "place_ordinal_other": "{{count}}位でゴール",
+  "greeting_male": "おかえりなさいませ、旦那様。",
+  "greeting_female": "おかえりなさいませ、奥様。",
+  "ally_male_other": "彼は{{count}}人の仲間と旅をしている。",
+  "ally_female_other": "彼女は{{count}}人の仲間と旅をしている。",
+  "hints": [
+    "Shiftを押し続けると走ります。",
+    "{{key}}でマップを開きます。",
+    "$t(common:tip)"
+  ],
+  "tutorial": [
+    {
+      "title": "移動",
+      "body": "左スティックまたはWASDで移動します。"
+    },
+    {
+      "title": "交易",
+      "body": "商人は珍しいアイテムを高く買い取ります。",
+      "offers_other": "{{count}}件のオファー"
+    },
+    {}
+  ],
+  "biomes": [
+    [
+      "森",
+      "沼"
+    ],
+    [
+      "砂漠",
+      [
+        "砂丘",
+        "オアシス"
+      ]
+    ],
+    []
+  ],
+  "stats": {
+    "version": 3,
+    "ratio": 1.50,
+    "scale": 1e3,
+    "drift": -0.25,
+    "limit": 2E+5,
+    "zero": 0,
+    "thresholds": [
+      10,
+      2.50,
+      100
+    ],
+    "beta": true,
+    "hardcore": false,
+    "legacy": null
+  },
+  "extras": {},
+  "tags": [],
+  "file.save": "ファイルを保存",
+  "v1.2": {
+    "changelog": "北の島へのフェリーを修正しました。"
+  },
+  "chapters": {
+    "10": "山頂",
+    "2": "ベースキャンプ",
+    "1": "登山口",
+    "1.5": "寄り道"
+  },
+  "menu": {
+    "player_one": "プレイヤー1",
+    "player_two": "プレイヤー2",
+    "player_other": "その他のプレイヤー",
+    "resume": "再開"
+  },
+  "unicode": {
+    "emoji": "宝物を見つけた🎉💎",
+    "family": "👩‍👩‍👧 ファミリーモード",
+    "flags": "Made in 🇺🇦 and 🇵🇹",
+    "combining": "Café for Amélie, mañana",
+    "surrogates": "𝒳 marks the spot 𝄞",
+    "cjk": "旅の記録",
+    "rtl": "مرحبا بالمسافر",
+    "nbsp": "残り10 km",
+    "zeroWidth": "no​break",
+    "quotes": "彼女は「走れ」と言って去った \\o/",
+    "escapes": "一行目\n二行目\tタブ \u0001"
+  },
+  "日本語": "日本語",
+  "emoji_🎉": "パーティーの時間",
+  "ключ": "ロシア語のキー"
+}

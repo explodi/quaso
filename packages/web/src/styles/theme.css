@@ -1,0 +1,171 @@
+/* SPDX-License-Identifier: MIT */
+/*
+ * The theme's colours. Generated from tokens.ts: change them there, then run
+ * bun run design:tokens
+ * The light theme is the default; the dark one follows the system setting unless the
+ * visitor picked a theme (data-theme on <html>).
+ */
+
+:root {
+  --paper-0: #ffffff;
+  --paper-50: #f4f4f1;
+  --paper-100: #eeebf1;
+  --paper-200: #d7d0de;
+  --paper-300: #c4b6ce;
+  --paper-400: #93829f;
+  --paper-500: #74657f;
+  --paper-600: #62546c;
+  --ink-500: #594366;
+  --ink-600: #493257;
+  --ink-700: #3b2648;
+  --ink-800: #30173d;
+  --ink-900: #291634;
+  --ink-950: #261230;
+  --lime-50: #f0f7dc;
+  --lime-300: #e3ff97;
+  --lime-400: #d7ff64;
+  --lime-500: #c5ee50;
+  --lime-700: #546b16;
+  --mint-50: #e7faf5;
+  --mint-300: #80e5dc;
+  --mint-700: #18665e;
+  --mint-950: #163a38;
+  --vermilion-50: #fdeceb;
+  --vermilion-300: #ffa36f;
+  --vermilion-400: #f7703f;
+  --vermilion-500: #c23b09;
+  --vermilion-600: #ad4424;
+  --vermilion-700: #b42318;
+  --vermilion-950: #3a1714;
+  --amber-50: #fff4d9;
+  --amber-300: #e8b14a;
+  --amber-700: #8a5300;
+  --amber-950: #33260c;
+  --teal-50: #e7f6ed;
+  --teal-200: #62e3c6;
+  --teal-300: #56d38c;
+  --teal-700: #116a3a;
+  --teal-800: #00665a;
+  --teal-950: #10291b;
+  --blue-50: #e8effd;
+  --blue-200: #86a9f8;
+  --blue-300: #6cb6ff;
+  --blue-600: #0b62d6;
+  --blue-700: #0a54b4;
+  --blue-800: #1d3794;
+  --blue-950: #1d2d4a;
+  --violet-50: #ede7ff;
+  --violet-200: #cdbdff;
+  --violet-700: #4b2aa8;
+  --violet-950: #2f2552;
+  color-scheme: light;
+  --brand: var(--ink-950);
+  --brand-soft: var(--lime-50);
+  --accent: var(--lime-400);
+  --accent-alt: var(--mint-300);
+  --accent-fg: var(--ink-950);
+  --bg: var(--paper-50);
+  --surface: var(--paper-0);
+  --surface-alt: var(--paper-100);
+  --hover: var(--paper-100);
+  --selected: var(--lime-50);
+  --fg: var(--ink-950);
+  --fg-muted: var(--paper-600);
+  --border: var(--paper-200);
+  --border-strong: var(--paper-400);
+  --link: var(--violet-700);
+  --focus: var(--violet-700);
+  --primary: var(--lime-400);
+  --primary-hover: var(--lime-500);
+  --primary-fg: var(--ink-950);
+  --danger: var(--vermilion-700);
+  --danger-bg: var(--vermilion-50);
+  --warning: var(--amber-700);
+  --warning-bg: var(--amber-50);
+  --success: var(--teal-700);
+  --success-bg: var(--teal-50);
+  --state-red: var(--vermilion-500);
+  --state-green: var(--teal-800);
+  --state-blue: var(--blue-800);
+  --bar-track: var(--paper-200);
+  --mark-bg: var(--violet-50);
+  --mark-fg: var(--violet-700);
+  --shadow: 4px 4px 0 var(--border);
+  --backdrop: color-mix(in srgb, var(--ink-950) 48%, transparent);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --brand: var(--lime-400);
+    --brand-soft: var(--ink-800);
+    --accent: var(--lime-400);
+    --accent-alt: var(--mint-300);
+    --accent-fg: var(--ink-950);
+    --bg: var(--ink-950);
+    --surface: var(--ink-900);
+    --surface-alt: var(--ink-800);
+    --hover: var(--ink-700);
+    --selected: var(--blue-950);
+    --fg: var(--paper-50);
+    --fg-muted: var(--paper-300);
+    --border: var(--ink-600);
+    --border-strong: var(--paper-400);
+    --link: var(--mint-300);
+    --focus: var(--mint-300);
+    --primary: var(--lime-400);
+    --primary-hover: var(--lime-300);
+    --primary-fg: var(--ink-950);
+    --danger: var(--vermilion-300);
+    --danger-bg: var(--vermilion-950);
+    --warning: var(--amber-300);
+    --warning-bg: var(--amber-950);
+    --success: var(--teal-300);
+    --success-bg: var(--teal-950);
+    --state-red: var(--vermilion-400);
+    --state-green: var(--teal-200);
+    --state-blue: var(--blue-200);
+    --bar-track: var(--ink-600);
+    --mark-bg: var(--violet-950);
+    --mark-fg: var(--violet-200);
+    --shadow: 4px 4px 0 var(--ink-950);
+    --backdrop: color-mix(in srgb, var(--ink-950) 72%, transparent);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --brand: var(--lime-400);
+  --brand-soft: var(--ink-800);
+  --accent: var(--lime-400);
+  --accent-alt: var(--mint-300);
+  --accent-fg: var(--ink-950);
+  --bg: var(--ink-950);
+  --surface: var(--ink-900);
+  --surface-alt: var(--ink-800);
+  --hover: var(--ink-700);
+  --selected: var(--blue-950);
+  --fg: var(--paper-50);
+  --fg-muted: var(--paper-300);
+  --border: var(--ink-600);
+  --border-strong: var(--paper-400);
+  --link: var(--mint-300);
+  --focus: var(--mint-300);
+  --primary: var(--lime-400);
+  --primary-hover: var(--lime-300);
+  --primary-fg: var(--ink-950);
+  --danger: var(--vermilion-300);
+  --danger-bg: var(--vermilion-950);
+  --warning: var(--amber-300);
+  --warning-bg: var(--amber-950);
+  --success: var(--teal-300);
+  --success-bg: var(--teal-950);
+  --state-red: var(--vermilion-400);
+  --state-green: var(--teal-200);
+  --state-blue: var(--blue-200);
+  --bar-track: var(--ink-600);
+  --mark-bg: var(--violet-950);
+  --mark-fg: var(--violet-200);
+  --shadow: 4px 4px 0 var(--ink-950);
+  --backdrop: color-mix(in srgb, var(--ink-950) 72%, transparent);
+}

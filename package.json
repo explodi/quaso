@@ -1,0 +1,70 @@
+{
+  "name": "quaso-workspace",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "devDependencies": {
+    "@typescript-eslint/parser": "8.71.0",
+    "eslint": "10.11.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "@types/bun": "1.4.2",
+    "typescript": "5.9.3",
+    "prettier": "3.6.2",
+    "puppeteer": "24.40.0",
+    "@eslint/js": "10.0.1",
+    "typescript-eslint": "8.71.0",
+    "@quaso/runtime": "workspace:*"
+  },
+  "packageManager": "bun@1.4.2",
+  "engines": {
+    "bun": ">=1.4.2"
+  },
+  "workspaces": [
+    "packages/*",
+    "site"
+  ],
+  "scripts": {
+    "dev": "bun run scripts/dev.ts",
+    "design:tokens": "bun run scripts/generate_theme.ts",
+    "dev:reset": "bun run scripts/dev.ts --reset",
+    "test": "bun test packages/core packages/service packages/server packages/cli packages/web/src scripts site",
+    "test:llm": "bun run scripts/llm_eval.ts",
+    "check": "bun run fmt:check && bun run lint && bun run typecheck && bun scripts/check_headers.ts && bun scripts/check_portability.ts && bun scripts/check_licenses.ts && bun run test",
+    "typecheck": "tsc --noEmit",
+    "build": "bun run build:web && bun run build:server",
+    "build:web": "cd packages/web && bun run vite build",
+    "build:server": "bun run scripts/build_server.ts",
+    "build:cli": "bun run scripts/build_cli.ts",
+    "docker": "docker build -f deploy/Dockerfile -t quaso:dev .",
+    "docker:smoke": "bun run docker && bun run scripts/docker_smoke.ts",
+    "e2e": "bun test e2e/ --timeout 60000",
+    "site": "cd site && bun run vite",
+    "site:build": "bun run site/build.ts",
+    "site:preview": "bun run site:build && cd site && bun run vite preview",
+    "cli": "bun run scripts/cli_dev.ts",
+    "cf:install": "cd packages/cloudflare && bun install",
+    "cf:dev": "cd packages/cloudflare && bun run wrangler dev",
+    "cf:test": "cd packages/cloudflare && bun run vitest run",
+    "cf:types": "cd packages/cloudflare && bun run wrangler types --strict-vars false",
+    "cf:fixtures": "bun run packages/cloudflare/scripts/fixtures.ts",
+    "cf:build": "cd packages/cloudflare && bun run wrangler deploy --dry-run --outdir dist --env production --containers-rollout none",
+    "cf:check": "cd packages/cloudflare && bun run types:check && bun run typecheck && cd ../.. && bun run cf:fixtures --check && bun run cf:test && bun run cf:build",
+    "cf:deploy": "cd packages/cloudflare && bun run scripts/deploy.ts",
+    "cf:setup": "bun run packages/cloudflare/scripts/setup.ts",
+    "cf:restore": "bun run packages/cloudflare/scripts/restore.ts",
+    "lint:react": "bun run eslint packages/web/src site/src --max-warnings 0",
+    "release": "bun run scripts/release.ts",
+    "check:config": "bun run scripts/check_config_docs.ts",
+    "acceptance": "bun run build:cli && bun scripts/acceptance.ts",
+    "workflow": "bun run build:cli && bun scripts/workflow.ts",
+    "fmt": "prettier --write .",
+    "fmt:check": "prettier --check .",
+    "lint": "eslint . --max-warnings 0",
+    "test:binary": "bun scripts/test_binary.ts",
+    "docker:workflow": "bun run build:cli && bun run scripts/docker_workflow.ts"
+  },
+  "overrides": {
+    "miniflare": "5.20260921.0-alpha",
+    "undici": "7.29.1"
+  }
+}

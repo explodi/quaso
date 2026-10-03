@@ -1,0 +1,48 @@
+{
+  "files": ["buildings.json", "common.json", "menu.json", "toolbox.json", "tutorial/steps.json"],
+  "languages": ["de", "es", "fr", "it", "ja", "ko", "pl", "pt-PT", "tr", "zh-Hans"],
+  "languageMapping": {
+    "pt-PT": "pt",
+    "zh-Hans": "zh"
+  },
+  "initial": {
+    "strings": 10,
+    "words": 20,
+    "spanishProofreadStrings": 10,
+    "otherProofreadStrings": 2
+  },
+  "updated": {
+    "strings": 15,
+    "words": 31,
+    "addedStrings": 5,
+    "changedStrings": 1,
+    "newWords": 10,
+    "spanishToDo": 6
+  },
+  "newKeys": [
+    {
+      "file": "buildings.json",
+      "key": "upgrade"
+    },
+    {
+      "file": "common.json",
+      "key": "reward"
+    },
+    {
+      "file": "menu.json",
+      "key": "resume"
+    },
+    {
+      "file": "toolbox.json",
+      "key": "repair"
+    },
+    {
+      "file": "tutorial/steps.json",
+      "key": "complete"
+    }
+  ],
+  "changedKey": {
+    "file": "menu.json",
+    "key": "map"
+  }
+}
