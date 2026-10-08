@@ -108,7 +108,7 @@ jobs:
           path: dist
       - name: Publish
         working-directory: dist
-        # npm trusts this workflow (npm trust github @quaso/cli --file release.yml): it
+        # npm trusts this workflow (npm trust github <package> --file release.yml): it
         # authenticates with the job's OIDC token and adds provenance by itself.
         # A version such as 1.5.0-rc.1 goes to the "next" tag, not "latest".
         run: >-

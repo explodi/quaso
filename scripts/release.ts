@@ -91,12 +91,15 @@ export async function prepareRelease(
   const lockPath = join(root, "deno.lock");
   const lock = await fs.readFile(lockPath, "utf8");
   files.set("deno.lock", lock.replace(/("version"\s*:\s*")[^"]+"/g, `$1${version}"`));
+  const cliName: string = JSON.parse(files.get("packages/cli/package.json")!).name;
   const examplePath = "examples/demo-game/package.json";
   const example = await fs.readFile(join(root, examplePath), "utf8");
-  if (!JSON.parse(example).devDependencies?.["@quaso/cli"]) {
-    throw new Error(`${examplePath} has no @quaso/cli pin`);
-  }
-  files.set(examplePath, example.replace(/("@quaso\/cli"\s*:\s*")[^"]+"/, `$1${version}"`));
+  const pinned = JSON.parse(example).devDependencies?.[cliName];
+  if (!pinned) throw new Error(`${examplePath} has no ${cliName} pin`);
+  files.set(
+    examplePath,
+    example.replace(`"${cliName}": "${pinned}"`, `"${cliName}": "${version}"`),
+  );
   const versionPath = "packages/core/src/version.ts";
   const source = await fs.readFile(join(root, versionPath), "utf8");
   if (!/export const VERSION = "[^"]+";/.test(source)) throw new Error("Missing canonical VERSION");

@@ -37,5 +37,8 @@ test("all released metadata matches the canonical runtime version", async () => 
   const example = JSON.parse(
     await fs.readFile(new URL("../examples/demo-game/package.json", import.meta.url), "utf8"),
   );
-  assertEquals(example.devDependencies["@quaso/cli"], VERSION);
+  const cli = JSON.parse(
+    await fs.readFile(new URL("../packages/cli/package.json", import.meta.url), "utf8"),
+  );
+  assertEquals(example.devDependencies[cli.name], VERSION);
 });
