@@ -241,7 +241,7 @@ Administrators choose a section in **Settings**:
 
 **Admin** shows the release version, storage mode, schema/revision, translator and job health,
 recent errors and last backup. It is a diagnostic page for administrators. On Cloudflare, operators
-use the protected internal API for point-in-time recovery; its instructions are in the
+rewind the database with D1 Time Travel; its instructions are in the
 [deployment guide](deploy-cloudflare.md#backups-and-recovery).
 
 ## Glossary, comments and language requests
