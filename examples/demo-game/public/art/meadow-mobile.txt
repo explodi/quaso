@@ -1,0 +1,164 @@
+# meadow-mobile: 120×135 hand-arranged portrait Quaso palette scene
+# Source: meadow.txt; border, bakery, pond and picnic regions retain native pixels.
+# Every feature is relocated on the text grid; no raster resampling.
+. transparent
+K #261230 plum
+w #45283c wine
+d #306082 denim
+c #5fcde4 cyan
+j #37946e jade
+m #80e5dc mint
+M #4b692f moss
+k #8f974a khaki
+g #6abe30 green
+l #99e550 leaf
+L #d7ff64 lime
+a #e8b14a amber
+C #663931 cocoa
+b #8f563b brown
+e #c48755 caramel
+t #d9a066 tan
+s #eec39a sand
+f #f8eed1 cream
+h #c86822 crust
+o #f59628 orange
+B #ffe59a butter
+r #d95763 rose
+p #ec7895 pink
+W #ffffff white
+#   0    4    8    12   …
+000  kkkk kkkk kkkk kkkk kkkk kMMM MKho ooKK llll llll KMMM MMgg gggg gggg MMgg gggg gMMM MKKj jjKK KKKK KKKK Kjjj jjjl KKMM MMMM MMMM MMMM MMMM MMMK jggg
+001  Mkkk kkkk kkkk kkkk kkkk MMMM Koho oohK Klll llll KMMM MMMg gggg gggg MMgg gggg gMMM MKKj jjKC CCCC CCCC Kjjj jjjl lKKM MKMM MMMM MMMM MMMM MMKK gggg
+002  MMMk kkkM kkkk kMMk kkMM MMKK ooho ooho KKll lllK MMMM MMMM gggg ggMM Mggg ggMg gMMM MKjj jKCC bbbb bbCC CKjj jjjj llKK KKMM MMMM MMMM MMMM MKKg gggg
+003  MMMM MkkM MMMM MMMM MMMM CKKe ooha aaho oKKl lllK MMMM MgMM MMgg MMgg gggg ggMM MMMM MKjj KCbb Cbbb bbbC CKKj jjjj llll llKK MMMM MMMM MMMM MKKg gggg
+004  MMMM MMMM MMMM MMMM MMMM Kebe ebha aaho oeKK lllK MMMM MggM MMMM gggg gggg gggM MMMM KKjj Kwww KKbb CKCC CKKj jjjl llll lgKK KKKK MMMM MMKM KKgg gggg
+005  KMMM MMMM MMMM MMMM MMKK ooho boho oohb ooho KKlK KMMM Mggg gMMM gggg ggMg ggMM MMMK Kjjj jKKK KKCC KKKK Kjjj jjjl llll ljjj jjjK KKKK KKKK KMgg gggg
+006  KMMM MMMM MMMM MMMM MKKe oohh ooho ooho hoho oKKK KMMM MMgg gggM gggg gggM MMMM MMMK jjjj jjjj jjKK Kjjj jjjj jjll ljll jjjj jjKK bCCC CCCC KMgg gggg
+007  KKKK MMMM MMMK MMMM KKeo ohho ooho ooho ohho ooKK KMMM MMMM gggg gggM gggM MMMM MMKK lllj jjjj jjjj jjjj jjjj jlll jgll jjjj jKKb CCbb bCCK KMgg gggg
+008  jKjK KKKK KKKK KKKK ohoo bhho ooho ooho oohb ooho KKKM MMMg gggg ggMM MMMM MMMM MKKK llll jjjj jjjj jjjj jjjl ljlj glll jjjj jKKK KKKb bCKK MMMg gggg
+009  jKKK bCCC CCCC CKKo ohoh oobo ohha aahh ooho hoho eKKM MMMM MMMg MMMM MMMM MMMM MKKl llll lllj jjjj jjjj llll ljlj jggl ljjj jjjj jjKK bCKK MMMg gggg
+010  jMKw bCbb bCCC KKeo ohho oobo boha aaho boho ohho oeKK MMMM MMgM MMMM MMMM MMMK KKll llll llll llll llll llll llll ljll lljj jjjj jjjK KKKK MMMM Mggg
+011  jMKK KKKb bCCK Khoo bboo oohh ooha aaho ohho oobb oohK KMMM MMMM MMMM MMMM KKKK Klll llll llll llll llll llll llll llll lllj jjjj jjjj jjKM MMMM gggg
+012  MMKj jjKK bbKK ohoh oboo ohho ooha oaho ooho oobo hoho KKMM MMMM MMMM MMMK KKKl llll llll lllj llll lllj llll llll llll llll jjjj jjjj jjKM MMMM MMgg
+013  MMKj jjjK KKoo ohho ohoo boho ohho oaho oohb ooho ohho oeKM MMMM MMMM MKKK llll llll llll jljj jlgg jljj jljj lllj jljj llll llll jjjj jjKM MMMM gMMM
+014  MMKK jjjj jKoo ohoo ohhh ooho hoho oohh ooho bhho ooho ooKM MMMM MKKK KKjj jlll llll lllg KljC Klgj jgjK jjjK gljK jjjK jjll llll llll llKM MMMM ggMM
+015  MMMK Kjjj jKoo bboo ohho oohh ooho aaho bobo ohho oohh ooKK KKKM KKCK jjjj jjll llll ljgK KKjK KMjK KKKK KKKK KjjK KjKK Kjjl llll ljll llKM MMMM gggM
+016  MMMK Kjjj jKob oboo hhoo ohho ooho oaho obho oohh ooho hoKK KKKM CCCK jjjj jjll llll ljKw wwww Cwww wwwC Cwww wwww wwww wKjl lllj ljlj llKM MMMM MMgg
+017  MMMK Klll lKbo obob ohoo hoho oohh hhho oohh ooho hoho obKl llKK CCCC Kjjj jjjl llll llKw wwww wwCw wwww wwCC wwww wwww wKll lllj jjlj llKK MMMM MMgg
+018  MMMK Klll lKoo ohho ohoh ooho hhhh hhhh ooho hoho obbo ooKl jjjK CbCC KKjj jjjl llll jjKw mmmm mmmj jmmm mjjm mmmm mmmm wKjg llll llll lllK KMMM MMMM
+019  MMMK llll lKoo hhoo ohbo oohh hhKK KKbh hoho ohho oobb ooKl jjjj KCCC KKjj jjjl llll jKKm mddd dddd dddd dddd dddd dddm mKjl llll llll llll KMMM MMMM
+020  MMMK llll lKeh ohoo hhoo oohh hKss ssKh hhho oobo oobo hoKj jjjj KKKK jjjj jjll llll jKwd dddd dddd dddd dddd dddd dddd mKjl llll llll llll KMMM MMMM
+021  MMKK llll lKbo ohoh ohoo obbb Ksss sssK hhhh oobb hoho ohKj jjjj jjjj jjjj jlll jljj jKwd ddjc cccc cccc cccc cccc cddd jKKl jlll jlll llll KKMM MMMM
+022  MKKl llll lKoo obbo ohoh hbKK sssf fsss KKhh hobo ohho ooKl jjjj jjjj jjjj jlgj jgjj KKmd jjjc cccc cccc cccc cccc cccd dKKj jjlj jjll llll lKKM MMMM
+023  MKll llll lKoo hboo ohhh hKss ssff ffss ssKb hhho ooho ooKl jjjj jjjj jjll lllK KjKK Kwmd cccc cmmm mmcc cccc cccc cccc dmwK KKjj KKll llll llKK KMMM
+024  MKll llll lKoh hhoo ohhh Ksss ffff ffff sssK hhho oohh hoKl ljjj Kjll llll gKKw wwww wmmd cccm mjcc cccc cccc cccc cccc dmww wwww CKKl llll llll KKKM
+025  KKll llll lKbo oboo bbKK sssf ffff ffff fsss KKhh ooho bbKl lljj WKll lllj gKww wwww mmdd ccmj jjmc cccc cccc cccc cccc ddcw wwww CwKl llll llll llKK
+026  Klll llll lKoo ohhh bKss sfff ffff ffff fffs ssKb hhho ooKl lllj WKll llll KKww mmmm mddj cmcc jmcc cccc cccc cccc cccc dddm mmmm wwKj Mlll llll lllK
+027  llll llll lKoo ohhh Ksss ffff ffff ffff ffff sssK hhho ooKl llll WKll llll KKmm dddd dddc cccc mccc cccc cccc cccc cccc cddd dddd mmKK llll llll llKK
+028  llll llll lKoo hhKK sssf ffff ffff ffff ffff fsss KKhb ooKl llll Klll lljl lKmd dddd ddjc cccc cccc cccc cccc cccc cmcc cccd dddd dmKg llll llll lKKg
+029  llll lKKK MKhh hKss sfff ffff ffff ffff ffff fffs ssKh hhKK KKKl llll lllj gKdd cccc cccc cccc cccc cccc cccc cccc cjmm cccc ccdd ddKg jjll llll KKgg
+030  llll Kkkk CKKK Ksts ffff ffff ffff ffff ffff ffff sssK KKKM kkkK llll lllg KKcj cccc cccc cccc cccc cccc cccc cccc cccc mccc cccc ccKM llll llll Kggg
+031  lllK kkkk kCKK sstf ffff fffK KKKK KKKK ffff ffff fsss KKMk kkkk llll llll KKmj cccc cccc cccc cccc cccc cccc cccc cccc cccc cccc cmKK jlll lllK Kggg
+032  llKj jkkk kkMK sstf ffff ffKb bbbb bbbb KffK KKKK Ktss KMkk kkkk llll lljl lKmc cccc cccc cccc cccc cccc cccc cccc cccc cccc cccc cmKK llll llKK gggg
+033  llKj kjkk kkMK fBtf ffff ffKb KKKK KKKb KffK mmem KtBB KMkk kkkk llll llgj lKmc cccc cccc cccc cccc cccc cccc cccc cccc cccc cccc cmKl ljll llKM gggg
+034  llKM Mkkj jjMK fBtf ffff ffKb Keee eeKb KffK mmem KtBB KMMj jkkM llll lllj KKmc cccc cccc cccc cccc cccc cccc cccc cccc cccc cccc cmKg jlll lKKg gggg
+035  llKK MMkk MMKK fBtf ffff ffKb Keee eeKb KffK ttes KtBB KKMM jjjM llll lllj KKmc cccc cccc cccc cccc cccc cccc cccc cccc cccc cccc ccKK jlll lKMg gggg
+036  lllK KMMM MKlK BBtf ffff ffKb Krre eeKb KffK mmes KsfB KlKM MMMK llll lljl lKmc cccc cccc cccc cccc cccc cccc cccc cccc cccc cccc cmKK llll lKMg gggg
+037  llll lKKK KKlK BBtf ffff ffKb Krre eeKb KffK KKKK Ktff KlKK KKKl glll lllj lKmc cjjj jjcc mmmc cccc cccc cccc cccc cccc cccc cccc cmKl ljll lKMg gggg
+038  llll Kgll gKlK Bftf ffff ffKb Kerr eBKb Kffe eeee etff KlKk llgK glll llll KKmj jKKj jccc cccm mjcc cccc cccc cccc cccc cccc cccc cmKK jlll MKMj gggg
+039  lllK llll llKK fBtf ffff ffKb Kerr reKb Kfff ffff ftBB KKgl llll glll llll KlKj KlKd KKcc cccc cmcc cccc cccc cccc cccc cccc cccc ccKK llll wKMM jjgg
+040  llKg llll llgK fBtt tttt ttKb Keee eeKb Kttt tttt ttBB Kjgl lgll glll llll lllK lllK ljKj jccc cmcc cccc cccc cccc cccc cccm mccc ccKl lllK KMMM Mjgg
+041  llKg ggll llgK BBts ssss ssKb Keee eeKb Ksss ssss stBB Kjjg gglg glll llll llll llll llgK jjcc cccc cccc cccc cccc cccc cmmj cccc cmKl lllK MMMM MMMg
+042  llKM gggl lgMK KBts Bsss ssKb Keee eeKb Ksss ssss stfK KMgg gggg glll llll llll llll llgK cccc cccc cccc cccc cccc cccc mmcc cccc jmKl lllK MMMM ggMM
+043  llKM jjgj jjMK KKKK KKKK KKKK KKKK KKKK KKKK KKKK KKKK KMMM gMMg glll llll llll llll ljwK cccc cccc cccc cccc cccc cccc cccj mmcc jmKl lllK MMMM ggMM
+044  KllK KMMM MMKl llll llll llgg gggg gggg ggll llll llll lKMM MMMK glll llll lllg llll ljlK mccc cccc cccc cccc cccc ccmm cccm mccc jmKl lllK KMMM gggg
+045  Klll KKKK KKll llll llll llgg gggg gggg ggll llll llll llKK KKKK glll llll lllj jlll llKK mccc cccc cccc cccc cccc cccc cccc cccc cmKl lllK MMMM Mjgg
+046  Klll llll llll llll llll llgg ggff ffgg ggll llll llll llll llll glll llll ljlj ljll ljgK mccc cccc cccc cccc cccc cccc cccc cccc jmKl lllK MMMM Mjgg
+047  Klll llll llll llll llll llgg ggga aaag ggll llll llll llll llll glll llll ljll ljll lllK jmjc cKcc ccKj jKcc cccc cKKj jKKc ccmK mmKl lllK KMMM MMMj
+048  Klll llll llll llll llll llgg gggg gggg ggll llll llll llll llll glll llll llll llll llll KKcd KlKc KglK KlKc cccc dKlK KlKj cmKl lKll llgg KKMM MMMj
+049  Klll llll llll llll llll llgg gggg gggg ggll llll llll llll llll glll llll llll llll llll lKKK lljK lKll KllK KKKK Klll KllK KKll ljll llgg gKMM MMMM
+050  Klll llll llll llll llll llgg gggg gggg ggll llll llll llll llll glll llll llll llll llll llll llll llll llll llll llll llll llll llll llgg gKKM MMMK
+051  llll llll llll llll llll llgg gggg gfff fgll llll llll llll llll glll llll llll llll llll llll llll llll llll llll llll llll llll llll llgg ggKM MMMK
+052  llll llll llll llll llll llgg gggg ggaa aall llll llll llll llll glll llll llll llll llll llll llll llll llll llll llll llll llll llll llgg ggKK MMKg
+053  llll llll llll llll llll llgg gggg gggg ggll llll llll llll llll glll jlll llll llll llll llll llll llll llll llll llll llll llll llll llgg gggK KKgg
+054  MKKl llll llll llll llll llgg gggg gggg gggl llll llll llll llll gglj llll llll llll llll llll llll llll llll llll llll llll llll llll llgg gggg KKgg
+055  KWWK llll llll llll llll lggg gggg gggg gggl llll llll llll llll ggjl jlll llll llll llll llll llll lllj lljl llll llll llll llll llll lggg gggK Kggg
+056  fffK Mlll llll llll llll gggg gggg gggg gfff flll llll llll llll ggjl jljl llll llll llll llll llll lllj ljll llll llll llll llll lllg gggg gggK gggg
+057  LLWW Klll llll llll llll gggg gggg gggg ggaa aall llll llll llll gggg gjll llll llll llll llll llll lljl ljll llll llll llll llll llgg gggg ggKK gggg
+058  BWWW Klll lllg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg glll llll llll llll llll llll llll llll llll KKKK llgg ggKK gKKg gKKg gggg
+059  WKWK gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg glll llll llll llll llll llll llll llll lllK ppKp Klgg gKpp KppK gKMg gggg
+060  gggK KWWK wKgg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK pppp pKgK Mggg
+061  gggg CKKw kMgg ggjg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK KpBp KKgK MMgg
+062  gggg MMMM MggC wKfM gggg gggM gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK pppp pKgK MMMg
+063  gggg gggg ggKW WKWW KggM ggMg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK ppKp pKKK MMMM
+064  gKKM KKgg gMKW LLjt Kggj jgjg jggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg KKjK KgKM MMMM
+065  KWWK WWKg gKWW LBWK gggg gggj jggg gggg gggg gggg gggg gggg gggg gggg ggjg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg ggKM MMMj
+066  btWW WbKg gKWW WWWK gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg jggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gKKK KgKM MMMg
+067  WWBB LWWK gKKW KWKg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg ggjg gggj gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg KpKp pKKM MMMg
+068  WWBL BWWK gggK Cgwg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gjMg jgjj gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg ggKK wpsp KKKM MMMj
+069  KtWW WKKg gggg Mjjg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg ggjg ggjM gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg ggKK pprp pKKM MMMM
+070  KWWw WKgg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg ggKg KwKp KgKM jMMM
+071  gKKw KgKK gKKg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg ggKg ggKM KgKK MMMM
+072  ggMM MKWW KWWK gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg ggKK KgKK gggK KMMM
+073  gggg jKbW fWbK gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg ggKp pKpp Kggg KMMM
+074  gggg KWWL LLWW Kggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg ggKp pppp Kggg KMMM
+075  gggg KWWL LLWW Kggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg ggKK rspK Cggg KKMM
+076  gggg gKwW WstK gggg gggg gggg gggg gggj gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg ggKp pppp Kggg gKKM
+077  gggg gMwW KWKj gggg gggg gggg gggg ggMg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg ggKp pKpp Kggg ggKK
+078  Kggg ggMw dKMg gggg gggg gggg gggg gjMg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK KMKK gggg gggK
+079  Kggg gggg gggg gggg gggg gggg gggg gjjM gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg
+080  Kggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg
+081  Kggg ggKK KKKg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg
+082  Kggg gKMk kkKK gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK
+083  KKjg Kjkk kkkK gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK KKKK KKKK KKKK KKKK KKKK KKKK KKKK KKKK Kggg ggKC
+084  KKKK Mkkk kkkj Kggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK tttf BBBt tttB BBtt tfft tttB BBBf fttt Kggg gKkk
+085  MCKK Mkkk kkkj Kggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK tttB BBBo ootB BBtt tfBt ttoB BBBB Btot Kggg gKkk
+086  MMKK MMkk kgMM Kggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK tttB BBBo tttB BBtt tBBt tttf BBBB Boot Kggg gkkk
+087  MMKK dMMk kjjC Kggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK pppt ttor rppt ttpr rttp pppt tttt trpp Kggg gkkk
+088  MMKg KdMM MMwK gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK pprt ottp pppt torr rttp pppt tooo orpp Kggg gkkk
+089  MKKg gKKK KKKg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK rrrt tttp pppt torr rttp pprt tttt tppp Kggg gkkk
+090  MKKg gKKK KKKK KKgg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK tttB BBBt tttB BBtt tfft tttB BBBB Bttt Kggg gkkk
+091  MKKK KlLL LLLL LlKK KKgg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK tttB BBBt tttB BBtt tfBt tttB BBBB Bttt Kggg gkkk
+092  Kkll lLLL LLLL LLll lKKg gggg gKKK KKgg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK tttB BBBt tttB BBtt tBBt tttB BBBB Bttt Kggg gkkk
+093  KllL LLLL LLLL LLLL llKK Kggg KppK ppKg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK tttB BBBt tttB BBtt tBBt tttB BBBB Bttt Kggg gkkk
+094  llLL LLLL LLLL LLLL Llll KKgg jKpB pKKg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK pprt tttp pppt ttrr rttr pppt tttt trrr Kggg gkkk
+095  lLLL LLLL LLLL LLLL LLLl lKgg Kppp ppKg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK pprt ottp pppt oorr rttp pppt ttoo orrr Kggg gkMk
+096  LLLL LLLL LLLL LLLL LLLL llKg KppK ppKg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK rrro tttp ppro otrp pttp pppt oooo trrr Kggg gMMk
+097  LLLL LLLL LLLL LLLL LLLL llKK lKKK KKgg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK tttB BBBt tttB BBtt tfBt ttoB BBBB Bttt Kggg gkMM
+098  LLLL LLLL LLLL LLLL LLLL lllK gggM Mggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK tttB BBBo ootB BBtt tBBt ttoB BBBB Bttt Kggg gkMM
+099  LLLL LLLL LLLL LLLL LLLL lllK Kggg gKKg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK tttB BBBo ootB BBtt tBBt oooB BBBB Bttt Kggg gkkk
+100  LLLL LLLL LLLL LLLL LLLL llll KKgg Kppg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK tttB BBBt tttB BBtt tBBo ottB BBBB Bttt Kggg gMkk
+101  LLLL LLLL LLLL LLLL LLLL llll gKgg Kppg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK prro ottp pppt ttrr rttr rppt tttt tppp Kggg gMkk
+102  LLLL LLLL LLLL LLLL LLLl llll lKMg KKpg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK prro ottp pppt oorr rttp pppt tttt trpp Kggg gMMk
+103  lLLL LLLL LLLL LLLL LLLl llll lgKg Kppg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK rrrt tttp pprt torr rttp pppt tttt trrr Kggg gMMM
+104  Llll lLLL LLLL LLLL Llll llll lgKg Kppg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK tttB BBBt ttoB BBoo oBft tttB BBBB Btot Kggg gMMM
+105  KKll lLLL LLLl llll llll llll ggKl gKKg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK tttB BBBo ootB BBto tBBt tttB BBBB Bott Kggg gMMK
+106  gKKl llll llll llll llll llgl ggKK gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK tttB BBBo ootB BBtt tBBt tttB BBBB Bttt Kggg gKKg
+107  lgKK llll llll llll llll gggl ggKK gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK tttB BBBo ottB BBtt tBBt ottB BBBB Bttt Kggg glll
+108  lggg Klll llll llll llll gKKK KKKK KKKg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK pprt ooor pppt ttpp pttr rrro tttt tppp Kggg glll
+109  llgg gKll llll llll llKK Kkkk kkaa atKg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK rrro ottp pppt ttpp pttr rrro ottt tppr Kggg glll
+110  llgg ggKl llll llll lKwk kkkk kkkk kkkg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK rrrt tttp pppt ttrr rttr rprt tttt trpp Kggg glll
+111  llgg gggK llll lllK Kbka kkkk kkkk kkkg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK KKKK KKKK KKKK KKKK KKKK KKKK KKKK KKKK Kggg glll
+112  llgg gggg Klll llKK kkaa kkkk aaaa akkg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg glll
+113  llgg gggg KKll lKKk kkgk kgga gakg aggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg glll
+114  lggg gggg gKKl KCkk kggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggK gggg glll llll
+115  lggg gggg gMKK Kkkk aaaa agga gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg ggKK gggg glll llll
+116  lggg gggg gggK KMkk kaaa aaaa aggg gggg ggkk kkkk kkKl gKKK KMgg gggg gggg gggg gggg gggg gggg gggg gggg gggg gKKg gggg ggll llll llll llll lllg gggg
+117  gggg gggg gggM Kkkk kaaa aaaa aagg gggg ggkk akkk kkKK ggMM Mggg gggg gggg gggg gggg jggg gggg gggg gggg gggg gKgg gggg gggl llll llll llll lllg gggg
+118  gggg gggg ggMM KKkk kaaa aaaa aagg gggg ggkg kkkk kkkK gggg ggKK KKgg gggg gggg gggg jgjg gggg gggg gggg gggg KKgg gggg gggl llll llll llll llgg gggg
+119  gggg gggg ggMM MKkk kaaa aaaa gaga ggkg gggk kkkk kkkM Kggg gjll llKK KKgg gggg ggjg jgjg gggg gggg gKKK KKgg KMgg gggg gggg gggl llll lllg gggg gggg
+120  gggg gggg gMMM MKkk kkka aggg gggg kkkg gaak kkkk kkkk KKgg KdLL LLll lgKK gggg gggj gggg gggg ggKK KMkk kkKK KMgg gggg gggg gggl llll llgg gggg gggg
+121  gggg gMgg MMMM MKkk kkkk aaag gggg kkka aaak kkkk kkkk MKgK jgLL LLLL lllK KKgg gggg gggg gggg KKKM kkkk kkkK MMMg gggg gggg gggg gggg gggg gggg gggg
+122  gggg gMMM MMMM MKKk kkkk kkak aggg ggkk kkkk kkkk kkkk MKKM ggLL LLLL LLll lgKg gggg gggg gggK KMkk kkkk kkkK MMMg gggg gggg gggg gggg gggg gggg gggg
+123  ggMM MMMM ggMM MMKk kkkk kkkk kaag aakk kkkk kkkk kkkC MKKM ggLL LLLL LLLl llgK gggg gggg ggKK Mkkk kkkk kkkK MMMM Mggg gggg gggg gggg gggg gggg ggMM
+124  gMMM MMgg ggMM MMKk kkkk kkkk kkkk kkkk kkkk kkkk kkCC CKjg ggLL LLLL LLLL lllg Kggg gggg gKCk kkkk kkkk kkKK MMMM MMgg gggg gggg gggg gggg gggg ggMM
+125  MMMM MMgg gMMM MMKk kkkk kkkk kkkk kkkk kkkk kkMk kkMC KMgg ggLL LLLL LLLL llll KKgg gggg KCkk kkkk kkkk kkKM MMMM MMMM gggg gggg gggg gggg ggMM MMMM
+126  MMMM jggg MMMM MMKM kkkk kkkk kkkk kkkk kkkk kkMM kkMM KMMM ggLL LLLL LLLL Llll lKKg gggg KMkk kkkk kkkk kkKM MMMM gggM gggg gggg gggg gggg gMMM MMMg
+127  MMMg gggg MMMM MMKC kkkk kkkk kkkk kkkk kkkk MMMM kkMK MMMM ggLL LLLL LLLL Llll llKg gggK Mkkk kkkk kkkk kkKM MMMM gggM MMMg gggg gggg gggg MMMM MMMg
+128  gggg gggM MMMM MMKC kkkk kkkk kkkk kkkk kkkM MMMk MMMK MMMM ggLL LLLL LLLL llll llKK ggKM Mkkk kkkk kkkk kkKM MMMM gMMg gjMM MMgg gggg ggMM MMMM Mggg
+129  Mggg MMMM MMMM MKKM MMMk kkkk kkkk kkkk kMMM MMkk MMMK jMMM MgLL LLLL LLLL llll lllK gKKM kkkk kkkk kkkk kkKM MMMM MMMg ggjM MMMM gggg gMMM MMMg gggg
+130  MMMM MMMM MMMM KKkk kMMM MMkk kkkk kMkk MMMM Mkkk MMKM gMMM MMLL LLLL LLLl llll lllg KKMM kkkk kkkk kkkk kkKM MMMM MMMM gggM MMMM MMMM MMMM MMgg ggMM
+131  MMMM MMMM MMMM KMkk kMMM MMkk kkkM MMkk MMMC kkkk MMKM gggM MMLL LLLL LLll llll lllg KKMM kkkk kkkk kkkk kkKK MMMM MMMM gggM MMMM MMMM MMMM MMgg gMMM
+132  MMMM MMMM MMMM KMkk kkMM MMMM MMCC CkkM MMkk kkCM MMKM gggM MMLL LLLL Llll llll lllg gKMM MMkk kkkk kkkk kkkK MMMM MMMM MMMM MMMM MMMM MMMM MMMM MMMM
+133  MMMM MMMM MMMK KMMM MkkM MMMM MMkk kkMM MMkk kMMM MKKM gggM MMLL LLLL Llll llll lllg gKMM MMkk kkkk kkkk kkkK KMMM MMMM MMMM MMMM MMMM MMMM MMMM MMMM
+134  MMMM MMMM MMKK MMMM MMMM MMMM MMMM MMMM MMMM MMMM MKjM Mggg MMLL llll llll llll llgg gKKM MMMk kkkk kkkk kkkk KMMM MMMM MMMM MMMM MMMM MMMM MMMM MMMM

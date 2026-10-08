@@ -2,7 +2,7 @@
 import * as fs from "node:fs/promises";
 /**
  * The opt-in LLM evaluation (S0.6, S5.8; design open question 4), `deno task test:llm`:
- * translates the demo game's strings (`examples/demo-game/`) into German, Polish and
+ * translates the development fixture's strings into German, Polish and
  * Japanese with each model, through the service's own batching, prompts, checks and
  * retries (an in-memory service with the Gemini provider), so the numbers are production's.
  * It prints, per model and language, the share of strings that passed the quality checks on
@@ -12,7 +12,6 @@ import * as fs from "node:fs/promises";
  *   deno task test:llm [--models gemini-flash-latest,gemini-2.5-pro] [--languages de,pl,ja]
  *                      [--out .quaso/llm-eval.json] [--concurrency 4]
  */
-import { fileURLToPath as fromFileUrl } from "node:url";
 import { dirname } from "node:path";
 import {
   createGeminiProvider,
@@ -249,7 +248,7 @@ if (import.meta.main) {
     process.exit(2);
   }
   console.error(
-    `Translating ${fromFileUrl(new URL("../examples/demo-game/", import.meta.url))} into ${options.languages.join(
+    `Translating ${demoDir()} into ${options.languages.join(
       ", ",
     )} with ${options.models.join(", ")}…`,
   );

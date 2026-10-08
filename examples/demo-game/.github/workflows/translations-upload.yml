@@ -3,7 +3,7 @@ name: Upload source strings
 on:
   push:
     branches: [main, master]
-    paths: ["src/locales/en/**", "quaso.config.json"]
+    paths: ["src/locales/fr/**", "quaso.config.json"]
 permissions:
   contents: read
 jobs:
@@ -17,6 +17,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      # Use npm ci after committing your game's package-lock.json.
-      - run: npm install
+      - run: npm ci
       - run: npx quaso upload

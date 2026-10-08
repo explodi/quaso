@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
 import * as fs from "node:fs/promises";
-import { assertEquals, assertStringIncludes, assertThrows } from "@std/assert";
+import { assertEquals, assertMatch, assertStringIncludes, assertThrows } from "@std/assert";
 import { releaseNotes } from "./release_notes.ts";
+import { validateVersion } from "./release.ts";
 import { VERSION } from "../packages/core/src/version.ts";
 import { VERSION as CLI_VERSION } from "../packages/cli/src/version.ts";
 import { VERSION as SERVER_VERSION } from "../packages/server/src/version.ts";
@@ -38,11 +39,21 @@ test("the root package.json holds the only version, and every artifact reports i
     const file = new URL(`../${path}`, import.meta.url);
     assertEquals(JSON.parse(await fs.readFile(file, "utf8")).version, undefined, path);
   }
+});
+
+test("the example pins its CLI independently with a matching lockfile", async () => {
   const example = JSON.parse(
     await fs.readFile(new URL("../examples/demo-game/package.json", import.meta.url), "utf8"),
   );
   const cli = JSON.parse(
     await fs.readFile(new URL("../packages/cli/package.json", import.meta.url), "utf8"),
   );
-  assertEquals(example.devDependencies[cli.name], VERSION);
+  const lock = JSON.parse(
+    await fs.readFile(new URL("../examples/demo-game/package-lock.json", import.meta.url), "utf8"),
+  );
+  const pinned = example.devDependencies[cli.name];
+  assertEquals(validateVersion(pinned), pinned);
+  assertEquals(lock.packages[""].devDependencies[cli.name], pinned);
+  assertEquals(lock.packages[`node_modules/${cli.name}`].version, pinned);
+  assertMatch(lock.packages[`node_modules/${cli.name}`].integrity, /^sha512-/);
 });

@@ -8,8 +8,12 @@ before a stable tag. A schema upgrade must have documented recovery steps even i
 
 The `version` in the root `package.json` is the only version. Nothing else declares one: core
 imports it, the server, CLI, website and Worker report it, and the npm package and the Docker image
-are published with it (CI fails if either reports another). The release script changes it there,
-and updates the demo game's pin of the published CLI.
+are published with it (CI fails if either reports another). The release script changes it there.
+
+Quaso Quest pins an already published CLI independently, so its locked install keeps working while
+the next release is being prepared. After publishing a CLI update, run
+`npm install --save-dev --save-exact @quaso-i18n/cli@<version>` in `examples/demo-game`, test the game,
+and commit both its `package.json` and `package-lock.json`.
 
 ```sh
 deno task release 1.0.0-rc.1

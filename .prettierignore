@@ -7,6 +7,7 @@ deno.lock
 .wrangler/
 **/testdata/
 examples/demo-game/src/locales/
+packages/server/src/testing/fixtures/translation-project/src/locales/
 AGENTS.md
 CLAUDE.md
 GEMINI.md

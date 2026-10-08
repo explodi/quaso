@@ -1,14 +1,24 @@
 {
-  "name": "quaso-demo-game",
+  "name": "quaso-quest",
   "private": true,
   "type": "module",
   "scripts": {
-    "demo": "node src/i18n.js"
+    "dev": "vite --host 127.0.0.1",
+    "demo": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node --test test/*.test.js",
+    "quaso:setup": "node scripts/setup.mjs",
+    "quaso": "node --env-file=.env.quaso node_modules/@quaso-i18n/cli/quaso.mjs"
   },
   "dependencies": {
     "i18next": "25.5.2"
   },
   "devDependencies": {
-    "@quaso-i18n/cli": "1.0.0-rc.2"
+    "@quaso-i18n/cli": "1.0.0-rc.2",
+    "vite": "8.3.4"
+  },
+  "engines": {
+    "node": ">=22.12"
   }
 }

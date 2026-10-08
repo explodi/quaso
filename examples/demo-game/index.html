@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f8f5e9" />
+    <meta
+      name="description"
+      content="Un chat, un croissant et une aventure pur beurre. Un petit jeu à traduire avec Quaso."
+    />
+    <link rel="icon" type="image/png" href="/art/quaso-0.png" />
+    <title>Quaso Quest</title>
+  </head>
+  <body>
+    <div id="app">
+      <header class="site-header">
+        <a class="brand" href="./" aria-label="Quaso Quest"
+          ><img src="/art/quaso-0.png" alt="" /><span
+            >quaso<span class="brand-dot">.</span></span
+          ></a
+        >
+        <span class="header-note" data-i18n="edition"></span>
+        <div class="header-controls">
+          <label class="language-picker"
+            ><span aria-hidden="true">◎</span><span class="sr-only" data-i18n="language"></span
+            ><select id="language">
+              <option value="fr">Français</option>
+              <option value="en">English</option>
+              <option value="de">Deutsch</option>
+            </select></label
+          >
+          <button id="sound" class="icon-button" aria-pressed="false">
+            <span aria-hidden="true">♪</span>
+          </button>
+        </div>
+      </header>
+      <main>
+        <section class="intro" aria-labelledby="title">
+          <div>
+            <p class="eyebrow">
+              <span class="little-star">✦</span> <span data-i18n="eyebrow"></span>
+            </p>
+            <h1 id="title">
+              Quaso <span>Quest<span class="title-spark">✧</span></span>
+            </h1>
+            <p class="tagline" data-i18n="tagline"></p>
+          </div>
+          <div class="pur-beurre">
+            <span aria-hidden="true">✦</span><span data-i18n="seal.line1"></span
+            ><strong data-i18n="seal.line2"></strong><span data-i18n="seal.line3"></span>
+          </div>
+        </section>
+        <section class="game-shell" aria-labelledby="place-title">
+          <div id="world" class="world" tabindex="0" role="region">
+            <div class="world-heading">
+              <span class="location-dot"></span>
+              <div>
+                <span class="eyebrow" data-i18n="game:chapter"></span>
+                <h2 id="place-title" data-i18n="game:place"></h2>
+              </div>
+            </div>
+            <div class="world-tools">
+              <span id="score" class="score-pill"></span
+              ><button id="pause" class="icon-button" hidden>
+                <span aria-hidden="true">Ⅱ</span>
+              </button>
+            </div>
+            <div id="run-stats" class="run-stats" hidden>
+              <div class="timer-block">
+                <span data-i18n="game:time.label"></span><strong id="timer"></strong>
+              </div>
+              <span id="hearts"></span>
+            </div>
+            <div id="combo-meter" class="combo-meter" hidden>
+              <strong id="combo-label"></strong>
+              <div class="combo-track"><div id="combo-fill"></div></div>
+            </div>
+            <div class="ambient" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            <div id="pickups" aria-hidden="true"></div>
+            <div id="bees" aria-hidden="true"></div>
+            <button id="dog" class="actor dog">
+              <span class="quest-mark" aria-hidden="true">!</span><img src="/art/dog.png" alt="" />
+            </button>
+            <button id="player" class="actor player">
+              <span class="actor-shadow"></span><img src="/art/quaso-0.png" alt="" />
+            </button>
+            <div id="destination" class="destination" hidden aria-hidden="true"></div>
+            <div id="effects" aria-hidden="true"></div>
+            <div id="welcome" class="dialog welcome">
+              <div class="dialog-mascot">
+                <img src="/art/quaso-0.png" alt="" /><span aria-hidden="true">✦</span>
+              </div>
+              <div>
+                <p class="eyebrow" data-i18n="game:welcome.kicker"></p>
+                <h2 data-i18n="game:welcome.title"></h2>
+                <p data-i18n="game:welcome.body"></p>
+                <p class="welcome-rule" data-i18n="game:welcome.rule"></p>
+                <button id="start" class="primary-button">
+                  <span data-i18n="game:welcome.start"></span
+                  ><span aria-hidden="true">→</span></button
+                ><span class="tiny-note" data-i18n="game:welcome.note"></span>
+              </div>
+            </div>
+            <div id="pause-panel" class="dialog pause-panel" hidden>
+              <span class="dialog-symbol" aria-hidden="true">☾</span>
+              <h2 data-i18n="game:pause.title"></h2>
+              <p data-i18n="game:pause.body"></p>
+              <button id="resume" class="primary-button" data-i18n="game:pause.resume"></button>
+            </div>
+            <div id="win-panel" class="dialog win-panel" hidden>
+              <span id="medal-stars" class="win-stars" aria-hidden="true"></span>
+              <p class="eyebrow" data-i18n="game:win.kicker"></p>
+              <h2 id="medal-title"></h2>
+              <p id="medal-tip"></p>
+              <p id="result" class="result"></p>
+              <p id="time-bonus" class="time-bonus"></p>
+              <button id="again" class="primary-button">
+                <span data-i18n="game:win.again"></span><span aria-hidden="true">↻</span>
+              </button>
+            </div>
+            <div id="lose-panel" class="dialog lose-panel" hidden>
+              <span class="dialog-symbol" aria-hidden="true">×</span>
+              <p class="eyebrow" data-i18n="game:lose.kicker"></p>
+              <h2 data-i18n="game:lose.title"></h2>
+              <p id="loss-reason"></p>
+              <p class="tiny-note" data-i18n="game:lose.tip"></p>
+              <button id="retry" class="primary-button">
+                <span data-i18n="game:lose.retry"></span><span aria-hidden="true">↻</span>
+              </button>
+            </div>
+            <button id="dash" class="dash-button" hidden>
+              <span aria-hidden="true">↯</span><span data-i18n="game:dash"></span>
+            </button>
+            <div id="speech" class="speech" hidden></div>
+          </div>
+          <div class="quest-bar">
+            <div class="quest-icon"><img src="/art/butter.png" alt="" /></div>
+            <div class="quest-copy">
+              <span class="eyebrow" data-i18n="game:quest.label"></span
+              ><strong id="objective"></strong>
+            </div>
+            <div class="quest-progress">
+              <span id="collected"></span>
+              <div class="progress-track"><div id="progress-fill"></div></div>
+            </div>
+          </div>
+        </section>
+        <div class="below-game">
+          <p class="controls">
+            <span
+              ><kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd>
+              <span data-i18n="controls.move"></span></span
+            ><span
+              ><kbd data-i18n="controls.space"></kbd> <span data-i18n="controls.dash"></span></span
+            ><span class="click-hint" data-i18n="controls.click"></span>
+          </p>
+          <span id="best" class="best"></span>
+        </div>
+        <p class="language-notice" id="language-notice" hidden data-i18n="translation.fallback"></p>
+        <footer>
+          <p><span aria-hidden="true">♡</span> <span data-i18n="footer"></span></p>
+          <details class="translation-help">
+            <summary data-i18n="translation.title"></summary>
+            <div>
+              <p data-i18n="translation.body"></p>
+              <code>src/locales/fr/ → t("game:welcome.title")</code>
+              <p data-i18n="translation.workflow"></p>
+              <code>npm run quaso -- upload<br />npm run quaso -- download</code
+              ><a
+                href="https://github.com/explodi/quaso/tree/main/examples/demo-game"
+                target="_blank"
+                rel="noreferrer"
+                data-i18n="translation.readme"
+              ></a>
+            </div>
+          </details>
+        </footer>
+      </main>
+      <p id="announcer" class="sr-only" aria-live="polite" aria-atomic="true"></p>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,81 @@
+{
+  "chapter": "CHAPITRE 01 · LE GOÛTER",
+  "place": "La prairie du beurre",
+  "world": "La prairie. Déplacez Quaso avec les flèches, ZQSD, WASD, ou cliquez dans l'herbe. Espace pour foncer, Échap pour faire une pause.",
+  "welcome": {
+    "kicker": "PETIT CHAT, GRANDE FAIM",
+    "title": "Le goûter n'attend pas !",
+    "body": "Ramasse {{total}} noisettes de beurre et rejoins Biscotte en {{seconds}} secondes. Attention aux abeilles : tu as trois vies !",
+    "start": "C'est parti !",
+    "note": "Le défi ultime : {{gold}} points, zéro piqûre.",
+    "rule": "Fonce pour esquiver. Enchaîne les noisettes en moins de 2 secondes pour grimper jusqu’à ×5."
+  },
+  "quest": {
+    "label": "LA MISSION DU JOUR",
+    "collect": "Du beurre pour Biscotte !",
+    "return": "Retourne voir Biscotte au pique-nique !",
+    "done": "Le bonheur est dans le beurre.",
+    "progress": "{{current}} / {{total}}",
+    "butter_zero": "Aucune noisette de beurre. Pour l'instant !",
+    "butter_one": "{{count}} noisette de beurre dans la poche.",
+    "butter_other": "{{count}} noisettes de beurre dans la poche.",
+    "retry": "Le beurre mérite une deuxième chance."
+  },
+  "score": "{{score}} points",
+  "best": "Record : {{score}}",
+  "dash": "Coup de beurre",
+  "dashReady": "Esquive prête : les abeilles ne peuvent pas te piquer pendant le dash.",
+  "dashWait": "Le beurre se recharge…",
+  "pet": "Caresser Quaso",
+  "dog": "Parler à Monsieur Biscotte",
+  "meows": [
+    "Miaou-so !",
+    "Ronron pur beurre.",
+    "Je suis une viennoiserie de compagnie.",
+    "Ne pas tremper dans le café."
+  ],
+  "biscotte": {
+    "waiting": "J'ai le pain. Tu as le beurre ?",
+    "almost": "Encore {{count}} ! Je surveille les tartines.",
+    "ready": "Par ici, petit croissant !",
+    "thanks": "Un chat qui rapporte du beurre. Quel siècle !"
+  },
+  "combo": "Pur beurre ×{{count}} !",
+  "pickup": "+{{points}}",
+  "return": "La poche est pleine ! Au pique-nique !",
+  "pause": {
+    "button": "Faire une pause",
+    "title": "Pause tartine.",
+    "body": "Même les croissants ont besoin de souffler.",
+    "resume": "On y retourne !"
+  },
+  "win": {
+    "kicker": "MISSION CROUSTILLANTE ACCOMPLIE",
+    "result": "{{score}} points · {{seconds}} secondes · 100 % pur beurre",
+    "again": "Encore une tartine !",
+    "rank1": "Apprenti tartine !",
+    "rank2": "As du croissant !",
+    "rank3": "Légende du beurre !",
+    "tip1": "Le goûter est sauvé ! Enchaîne les noisettes sans attendre pour faire grimper ton combo.",
+    "tip2": "Ça croustille ! Vise {{gold}} points sans piqûre pour décrocher l’or.",
+    "tip3": "Rapide, impeccable, irrésistiblement beurré. Biscotte te confie les clés de la boulangerie.",
+    "bonus": "Dont {{points}} points de bonus chrono."
+  },
+  "time": {
+    "label": "CHRONO",
+    "remaining": "{{count}} s"
+  },
+  "chain": "COMBO ×{{count}} / {{max}}",
+  "hit": "Aïe ! Le croissant contre-attaque. Fonce pour esquiver !",
+  "lose": {
+    "kicker": "ÇA SENT LE PAIN GRILLÉ",
+    "title": "Pas de panique, pas de mie.",
+    "time": "Le thé est froid ! Biscotte te laisse retenter le goûter.",
+    "hearts": "Les abeilles ont gagné cette manche. Elles aussi aiment le beurre.",
+    "tip": "Observe leurs rondes, garde un dash en réserve et vise le prochain morceau.",
+    "retry": "Je remets ça !"
+  },
+  "lives_zero": "Plus de vies",
+  "lives_one": "{{count}} vie restante",
+  "lives_other": "{{count}} vies restantes"
+}

@@ -237,7 +237,7 @@ export async function startServer(options: ServerOptions = {}): Promise<TestServ
   };
 }
 
-/** Uploads the demo game's English files, as `quaso upload` does. */
+/** Uploads the development fixture's English files, as `quaso upload` does. */
 export async function uploadDemo(server: TestServer): Promise<UploadResult> {
   const { config, sources } = await readProjectFiles(demoDir());
   return await server.api<UploadResult>("/sources", {
