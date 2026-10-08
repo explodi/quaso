@@ -66,7 +66,14 @@ async function fill(page: Page, name: string, value: string) {
   }, name);
   await page.keyboard.type(value);
 }
+/** Clicks the button named `name`, once it has rendered (lists load after their section). */
 async function click(page: Page, name: string, scope = "") {
+  await waitFor(
+    page,
+    (name: string, scope: string) =>
+      [...document.querySelectorAll(`${scope} button`)].some((b) => b.textContent?.trim() === name),
+    [name, scope],
+  );
   await page.evaluate(
     (name: string, scope: string) => {
       const button = [...document.querySelectorAll<HTMLButtonElement>(`${scope} button`)].find(
@@ -278,11 +285,6 @@ browserTest(
       section.dispatchEvent(new Event("change", { bubbles: true }));
     });
     // Settings uses a dedicated section so deciding a request never depends on an unrelated form.
-    // The section appears before its requests have loaded.
-    await waitFor(
-      tab.page,
-      () => document.querySelector(".language-requests-admin li button") !== null,
-    );
     await click(tab.page, "Approve language", ".language-requests-admin li");
     await waitFor(
       tab.page,

@@ -155,6 +155,9 @@ browserTest(
       );
       assertStringIncludes(await text(page, "main h1"), language.name);
       // Then the editor, and every string in it.
+      await waitFor(page, () =>
+        [...document.querySelectorAll("a")].some((a) => a.textContent === "Translate all"),
+      );
       await page.evaluate(() => {
         [...document.querySelectorAll<HTMLAnchorElement>("a")]
           .find((a) => a.textContent === "Translate all")!
