@@ -20,6 +20,9 @@ export function sound(kind, pitch = 1) {
     pet: [520, 660, 520],
     win: [523, 659, 784, 1047],
     start: [392, 523],
+    hit: [180, 110],
+    lose: [330, 220, 147],
+    tick: [440],
   };
   (notes[kind] ?? notes.collect).forEach((frequency, index) => {
     const start = audio.currentTime + index * 0.075;
@@ -34,6 +37,19 @@ export function sound(kind, pitch = 1) {
     oscillator.start(start);
     oscillator.stop(start + 0.2);
   });
+}
+
+export function shake(element) {
+  if (reducedMotion.matches) return;
+  element.animate(
+    [
+      { translate: "-4px 0" },
+      { translate: "4px 0" },
+      { translate: "-2px 0" },
+      { translate: "0 0" },
+    ],
+    { duration: 180 },
+  );
 }
 
 export function bounce(element) {

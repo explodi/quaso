@@ -20,8 +20,6 @@ const ALLOWED = new Set([
   "CC0-1.0",
   "Unlicense",
   "Python-2.0",
-  // Self-hosted font assets, distributed with their original licence notices.
-  "OFL-1.1",
   // Data only (such as caniuse-lite), not code.
   "CC-BY-4.0",
 ]);

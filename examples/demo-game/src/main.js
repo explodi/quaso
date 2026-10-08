@@ -1,13 +1,21 @@
 // SPDX-License-Identifier: MIT
-import "@fontsource/fredoka/latin-500.css";
-import "@fontsource/fredoka/latin-600.css";
-import "@fontsource/nunito/latin-400.css";
-import "@fontsource/nunito/latin-700.css";
-import "@fontsource/nunito/latin-800.css";
 import "./style.css";
 import { t, i18next, changeLanguage } from "./i18n.js";
-import { WORLD, PICNIC, BUTTER, newGame, step, dash } from "./game.js";
-import { setSound, sound, bounce, burst, floatText } from "./effects.js";
+import {
+  WORLD,
+  PICNIC,
+  BUTTER,
+  BEES,
+  TIME_LIMIT,
+  COMBO_WINDOW,
+  MAX_COMBO,
+  GOLD_SCORE,
+  hazardsAt,
+  newGame,
+  step,
+  dash,
+} from "./game.js";
+import { setSound, sound, bounce, burst, floatText, shake } from "./effects.js";
 
 const $ = (id) => document.getElementById(id);
 const world = $("world");
@@ -20,8 +28,17 @@ let best = 0;
 let soundEnabled = true;
 let speechTimer;
 let meow = 0;
+let lastSecond = TIME_LIMIT;
+const beeElements = BEES.map(() => {
+  const bee = document.createElement("img");
+  bee.className = "actor bee";
+  bee.src = "/art/bee-0.png";
+  bee.alt = "";
+  $("bees").append(bee);
+  return bee;
+});
 try {
-  best = Number(localStorage.getItem("quaso-best")) || 0;
+  best = Number(localStorage.getItem("quaso-quest-best")) || 0;
   soundEnabled = localStorage.getItem("quaso-sound") !== "false";
 } catch {
   /* Playing still works when browser storage is disabled. */
@@ -30,6 +47,17 @@ try {
 function position(element, x, y) {
   element.style.left = `${(x / WORLD.width) * 100}%`;
   element.style.top = `${(y / WORLD.height) * 100}%`;
+}
+
+function touchedOutside(actor, event) {
+  if (event.pointerType !== "touch") return false;
+  const rect = actor.getBoundingClientRect();
+  return (
+    event.clientX < rect.left ||
+    event.clientX > rect.right ||
+    event.clientY < rect.top ||
+    event.clientY > rect.bottom
+  );
 }
 
 function say(key, options = {}) {
@@ -45,7 +73,11 @@ function say(key, options = {}) {
 function updateText() {
   // This is the entire static translation integration: data-i18n="namespace:key".
   document.querySelectorAll("[data-i18n]").forEach((element) => {
-    element.textContent = t(element.dataset.i18n);
+    element.textContent = t(element.dataset.i18n, {
+      seconds: TIME_LIMIT,
+      total: BUTTER.length,
+      gold: GOLD_SCORE,
+    });
   });
   document.documentElement.lang = i18next.language;
   $("language").value = i18next.language;
@@ -59,11 +91,19 @@ function updateText() {
   $("language-notice").hidden = i18next.language === "fr";
   $("speech").hidden = true;
   updateHud();
+  updateRunHud();
 }
 
 function updateHud() {
   const count = game.collected.size;
-  const objective = game.phase === "won" ? "done" : count === BUTTER.length ? "return" : "collect";
+  const objective =
+    game.phase === "won"
+      ? "done"
+      : game.phase === "lost"
+        ? "retry"
+        : count === BUTTER.length
+          ? "return"
+          : "collect";
   $("objective").textContent = t(`game:quest.${objective}`);
   $("collected").textContent = t("game:quest.progress", { current: count, total: BUTTER.length });
   $("collected").setAttribute("aria-label", t("game:quest.butter", { count }));
@@ -74,7 +114,31 @@ function updateHud() {
     score: game.score,
     seconds: Math.ceil(game.elapsed),
   });
+  $("medal-stars").textContent = "★".repeat(game.stars) + "☆".repeat(3 - game.stars);
+  $("medal-title").textContent = t(`game:win.rank${game.stars || 1}`);
+  $("medal-tip").textContent = t(`game:win.tip${game.stars || 1}`, { gold: GOLD_SCORE });
+  $("time-bonus").textContent = t("game:win.bonus", { points: game.timeBonus });
+  $("loss-reason").textContent = t(`game:lose.${game.lossReason || "time"}`);
   $("dog").classList.toggle("ready", count === BUTTER.length);
+}
+
+function updateRunHud() {
+  const seconds = Math.ceil(game.timeLeft);
+  $("timer").textContent = t("game:time.remaining", { count: seconds });
+  $("hearts").textContent = "♥".repeat(game.hearts) + "♡".repeat(3 - game.hearts);
+  $("hearts").setAttribute("aria-label", t("game:lives", { count: game.hearts }));
+  $("combo-label").textContent = t("game:chain", {
+    count: Math.max(1, game.combo),
+    max: MAX_COMBO,
+  });
+  $("combo-fill").style.width = `${(game.comboTime / COMBO_WINDOW) * 100}%`;
+  $("dash").disabled = game.dashCooldown > 0;
+  $("dash").style.setProperty("--ready", `${100 - (game.dashCooldown / 1.25) * 100}%`);
+  $("dash").title = t(game.dashCooldown > 0 ? "game:dashWait" : "game:dashReady");
+  world.classList.toggle("dangerworld", game.timeLeft <= 10 && game.phase === "playing");
+  if (seconds < lastSecond && seconds <= 10 && seconds > 0 && game.phase === "playing")
+    sound("tick");
+  lastSecond = seconds;
 }
 
 function start() {
@@ -94,14 +158,19 @@ function start() {
   });
   $("welcome").hidden = true;
   $("win-panel").hidden = true;
+  $("lose-panel").hidden = true;
   $("pause-panel").hidden = true;
   $("pause").hidden = false;
   $("dash").hidden = false;
   $("speech").hidden = true;
+  $("run-stats").hidden = false;
+  $("combo-meter").hidden = false;
+  lastSecond = TIME_LIMIT;
   effects.replaceChildren();
   setSound(soundEnabled);
   sound("start");
   updateHud();
+  updateRunHud();
   world.focus({ preventScroll: true });
 }
 
@@ -120,6 +189,7 @@ function pause() {
 
 function doDash() {
   if (!dash(game)) return;
+  updateRunHud();
   sound("dash");
   bounce(player);
   burst(effects, (game.x / WORLD.width) * 100, (game.y / WORLD.height) * 100, { count: 8 });
@@ -141,10 +211,29 @@ function handleEvent(event) {
     $("announcer").textContent = t("game:quest.butter", { count: game.collected.size });
   }
   if (event.type === "return") say("game:return");
+  if (event.type === "hit") {
+    sound("hit");
+    shake(world);
+    bounce($("hearts"));
+    burst(effects, (game.x / WORLD.width) * 100, (game.y / WORLD.height) * 100, {
+      count: 12,
+      colors: ["#ec7895", "#ffffff"],
+    });
+    say("game:hit");
+  }
+  if (event.type === "lose") {
+    sound("lose");
+    $("lose-panel").hidden = false;
+    $("pause").hidden = true;
+    $("dash").hidden = true;
+    $("speech").hidden = true;
+    $("announcer").textContent = t("game:lose.title");
+    $("retry").focus({ preventScroll: true });
+  }
   if (event.type === "win") {
     best = Math.max(best, game.score);
     try {
-      localStorage.setItem("quaso-best", String(best));
+      localStorage.setItem("quaso-quest-best", String(best));
     } catch {
       /* Optional record. */
     }
@@ -154,7 +243,7 @@ function handleEvent(event) {
     $("pause").hidden = true;
     $("dash").hidden = true;
     $("speech").hidden = true;
-    $("announcer").textContent = t("game:win.title");
+    $("announcer").textContent = t(`game:win.rank${game.stars}`);
     $("again").focus({ preventScroll: true });
   }
   updateHud();
@@ -162,6 +251,7 @@ function handleEvent(event) {
 
 $("start").addEventListener("click", start);
 $("again").addEventListener("click", start);
+$("retry").addEventListener("click", start);
 $("pause").addEventListener("click", pause);
 $("resume").addEventListener("click", pause);
 $("dash").addEventListener("click", doDash);
@@ -180,7 +270,8 @@ $("language").addEventListener("change", async (event) => {
   await changeLanguage(event.target.value);
   updateText();
 });
-player.addEventListener("click", () => {
+player.addEventListener("click", (event) => {
+  if (touchedOutside(player, event)) return;
   const lines = t("game:meows", { returnObjects: true });
   say(`game:meows.${meow++ % lines.length}`);
   bounce(player);
@@ -190,7 +281,8 @@ player.addEventListener("click", () => {
     colors: ["#ec7895", "#ffe59a"],
   });
 });
-$("dog").addEventListener("click", () => {
+$("dog").addEventListener("click", (event) => {
+  if (touchedOutside($("dog"), event)) return;
   const remaining = BUTTER.length - game.collected.size;
   const greeting = remaining === BUTTER.length ? "waiting" : remaining ? "almost" : "ready";
   say(`game:biscotte.${game.phase === "won" ? "thanks" : greeting}`, { count: remaining });
@@ -199,7 +291,11 @@ $("dog").addEventListener("click", () => {
   world.focus({ preventScroll: true });
 });
 world.addEventListener("pointerdown", (event) => {
-  if (game.phase !== "playing" || event.target.closest("button, .dialog")) return;
+  if (game.phase !== "playing") return;
+  const control = event.target.closest("button, .dialog");
+  // Mobile browsers may snap a meadow tap to a nearby mascot button.
+  // Keep those taps as movement; petting still works directly on the mascot.
+  if (control && !([player, $("dog")].includes(control) && touchedOutside(control, event))) return;
   const rect = world.getBoundingClientRect();
   game.target = {
     x: Math.max(85, Math.min(875, ((event.clientX - rect.left) / rect.width) * WORLD.width)),
@@ -262,9 +358,12 @@ function frame(now) {
     y: Number(pressed("ArrowDown", "s")) - Number(pressed("ArrowUp", "w", "z")),
   };
   step(game, seconds, direction).forEach(handleEvent);
+  updateRunHud();
+  hazardsAt(game.elapsed).forEach(({ x, y }, index) => position(beeElements[index], x, y));
   position(player, game.x, game.y);
   player.classList.toggle("walking", game.phase === "playing" && game.moving);
   player.classList.toggle("dashing", game.phase === "playing" && game.dashTime > 0);
+  player.classList.toggle("hit", game.phase === "playing" && game.invulnerableTime > 0);
   player.style.setProperty("--facing", game.facing);
   const sprite =
     game.moving && game.phase === "playing" ? Math.floor(now / 110) % 4 : Math.floor(now / 650) % 4;
@@ -272,10 +371,14 @@ function frame(now) {
     playerSprite.src = `/art/quaso-${sprite}.png`;
     lastSprite = sprite;
   }
+  const beeFrame = game.phase === "playing" ? Math.floor(now / 150) % 2 : 0;
+  for (const bee of beeElements) {
+    if (bee.dataset.frame !== String(beeFrame)) {
+      bee.src = `/art/bee-${beeFrame}.png`;
+      bee.dataset.frame = String(beeFrame);
+    }
+  }
   $("destination").hidden = !game.target || game.phase !== "playing";
-  $("dash").disabled = game.dashCooldown > 0;
-  $("dash").style.setProperty("--ready", `${100 - (game.dashCooldown / 1.25) * 100}%`);
-  $("dash").title = t(game.dashCooldown > 0 ? "game:dashWait" : "game:dashReady");
   if (game.dashTime > 0 && game.moving && game.phase === "playing" && now - lastTrail > 60) {
     burst(effects, (game.x / WORLD.width) * 100, (game.y / WORLD.height) * 100, { count: 3 });
     lastTrail = now;

@@ -65,8 +65,19 @@
                 <span aria-hidden="true">Ⅱ</span>
               </button>
             </div>
+            <div id="run-stats" class="run-stats" hidden>
+              <div class="timer-block">
+                <span data-i18n="game:time.label"></span><strong id="timer"></strong>
+              </div>
+              <span id="hearts"></span>
+            </div>
+            <div id="combo-meter" class="combo-meter" hidden>
+              <strong id="combo-label"></strong>
+              <div class="combo-track"><div id="combo-fill"></div></div>
+            </div>
             <div class="ambient" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
             <div id="pickups" aria-hidden="true"></div>
+            <div id="bees" aria-hidden="true"></div>
             <button id="dog" class="actor dog">
               <span class="quest-mark" aria-hidden="true">!</span><img src="/art/dog.png" alt="" />
             </button>
@@ -83,6 +94,7 @@
                 <p class="eyebrow" data-i18n="game:welcome.kicker"></p>
                 <h2 data-i18n="game:welcome.title"></h2>
                 <p data-i18n="game:welcome.body"></p>
+                <p class="welcome-rule" data-i18n="game:welcome.rule"></p>
                 <button id="start" class="primary-button">
                   <span data-i18n="game:welcome.start"></span
                   ><span aria-hidden="true">→</span></button
@@ -96,13 +108,24 @@
               <button id="resume" class="primary-button" data-i18n="game:pause.resume"></button>
             </div>
             <div id="win-panel" class="dialog win-panel" hidden>
-              <span class="win-stars" aria-hidden="true">✦ ★ ✦</span>
+              <span id="medal-stars" class="win-stars" aria-hidden="true"></span>
               <p class="eyebrow" data-i18n="game:win.kicker"></p>
-              <h2 data-i18n="game:win.title"></h2>
-              <p data-i18n="game:win.body"></p>
+              <h2 id="medal-title"></h2>
+              <p id="medal-tip"></p>
               <p id="result" class="result"></p>
+              <p id="time-bonus" class="time-bonus"></p>
               <button id="again" class="primary-button">
                 <span data-i18n="game:win.again"></span><span aria-hidden="true">↻</span>
+              </button>
+            </div>
+            <div id="lose-panel" class="dialog lose-panel" hidden>
+              <span class="dialog-symbol" aria-hidden="true">×</span>
+              <p class="eyebrow" data-i18n="game:lose.kicker"></p>
+              <h2 data-i18n="game:lose.title"></h2>
+              <p id="loss-reason"></p>
+              <p class="tiny-note" data-i18n="game:lose.tip"></p>
+              <button id="retry" class="primary-button">
+                <span data-i18n="game:lose.retry"></span><span aria-hidden="true">↻</span>
               </button>
             </div>
             <button id="dash" class="dash-button" hidden>
@@ -144,7 +167,7 @@
               <p data-i18n="translation.workflow"></p>
               <code>npm run quaso -- upload<br />npm run quaso -- download</code
               ><a
-                href="https://github.com/explodi/quaso/tree/example-game/examples/demo-game"
+                href="https://github.com/explodi/quaso/tree/main/examples/demo-game"
                 target="_blank"
                 rel="noreferrer"
                 data-i18n="translation.readme"

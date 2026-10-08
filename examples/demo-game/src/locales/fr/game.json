@@ -5,9 +5,10 @@
   "welcome": {
     "kicker": "PETIT CHAT, GRANDE FAIM",
     "title": "Le goûter n'attend pas !",
-    "body": "Biscotte a perdu son beurre. Ramasse les 12 noisettes et rapporte-les au pique-nique. Évite de te manger en chemin.",
+    "body": "Ramasse {{total}} noisettes de beurre et rejoins Biscotte en {{seconds}} secondes. Attention aux abeilles : tu as trois vies !",
     "start": "C'est parti !",
-    "note": "Une minute de bonheur. Zéro miettes sur le clavier."
+    "note": "Le défi ultime : {{gold}} points, zéro piqûre.",
+    "rule": "Fonce pour esquiver. Enchaîne les noisettes en moins de 2 secondes pour grimper jusqu’à ×5."
   },
   "quest": {
     "label": "LA MISSION DU JOUR",
@@ -17,12 +18,13 @@
     "progress": "{{current}} / {{total}}",
     "butter_zero": "Aucune noisette de beurre. Pour l'instant !",
     "butter_one": "{{count}} noisette de beurre dans la poche.",
-    "butter_other": "{{count}} noisettes de beurre dans la poche."
+    "butter_other": "{{count}} noisettes de beurre dans la poche.",
+    "retry": "Le beurre mérite une deuxième chance."
   },
   "score": "{{score}} points",
   "best": "Record : {{score}}",
   "dash": "Coup de beurre",
-  "dashReady": "Coup de beurre prêt !",
+  "dashReady": "Esquive prête : les abeilles ne peuvent pas te piquer pendant le dash.",
   "dashWait": "Le beurre se recharge…",
   "pet": "Caresser Quaso",
   "dog": "Parler à Monsieur Biscotte",
@@ -49,9 +51,31 @@
   },
   "win": {
     "kicker": "MISSION CROUSTILLANTE ACCOMPLIE",
-    "title": "T'es une crème !",
-    "body": "Biscotte te nomme officiellement meilleur chat-croissant de la prairie. La concurrence était rude : il y avait une brioche.",
     "result": "{{score}} points · {{seconds}} secondes · 100 % pur beurre",
-    "again": "Encore une tartine !"
-  }
+    "again": "Encore une tartine !",
+    "rank1": "Apprenti tartine !",
+    "rank2": "As du croissant !",
+    "rank3": "Légende du beurre !",
+    "tip1": "Le goûter est sauvé ! Enchaîne les noisettes sans attendre pour faire grimper ton combo.",
+    "tip2": "Ça croustille ! Vise {{gold}} points sans piqûre pour décrocher l’or.",
+    "tip3": "Rapide, impeccable, irrésistiblement beurré. Biscotte te confie les clés de la boulangerie.",
+    "bonus": "Dont {{points}} points de bonus chrono."
+  },
+  "time": {
+    "label": "CHRONO",
+    "remaining": "{{count}} s"
+  },
+  "chain": "COMBO ×{{count}} / {{max}}",
+  "hit": "Aïe ! Le croissant contre-attaque. Fonce pour esquiver !",
+  "lose": {
+    "kicker": "ÇA SENT LE PAIN GRILLÉ",
+    "title": "Pas de panique, pas de mie.",
+    "time": "Le thé est froid ! Biscotte te laisse retenter le goûter.",
+    "hearts": "Les abeilles ont gagné cette manche. Elles aussi aiment le beurre.",
+    "tip": "Observe leurs rondes, garde un dash en réserve et vise le prochain morceau.",
+    "retry": "Je remets ça !"
+  },
+  "lives_zero": "Plus de vies",
+  "lives_one": "{{count}} vie restante",
+  "lives_other": "{{count}} vies restantes"
 }

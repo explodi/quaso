@@ -2,24 +2,27 @@
 
 All runtime art is checked in under `public/art/`. Running or building the game does not require an image-generation service or the original asset collection.
 
-| File                | Size      | Source                                                                                  |
-| ------------------- | --------- | --------------------------------------------------------------------------------------- |
-| `quaso-0.png`       | 40 × 32   | Supplied `quaso-waving/quaso-waving-4.png`                                              |
-| `quaso-1.png`       | 40 × 32   | Supplied `quaso-waving/quaso-waving-5.png`                                              |
-| `quaso-2.png`       | 40 × 32   | Supplied `quaso-waving/quaso-waving-6.png`                                              |
-| `quaso-3.png`       | 40 × 32   | Supplied `quaso-waving/quaso-waving-7.png`                                              |
-| `dog.png`           | 32 × 32   | Supplied `dog/dog-2.png`                                                                |
-| `butter.png`        | 16 × 16   | Hand-authored Quaso-palette grid, rendered and exported with the pixel-art skill        |
-| `meadow.png`        | 240 × 135 | Nano Banana 2.1 candidate 4, snapped to the Quaso palette and finished on its text grid |
-| `meadow-mobile.png` | 120 × 135 | Portrait arrangement of the meadow's existing pixel-grid regions; no resampling         |
+| File                     | Size      | Source                                                                                  |
+| ------------------------ | --------- | --------------------------------------------------------------------------------------- |
+| `quaso-0.png`            | 40 × 32   | Supplied `quaso-waving/quaso-waving-4.png`                                              |
+| `quaso-1.png`            | 40 × 32   | Supplied `quaso-waving/quaso-waving-5.png`                                              |
+| `quaso-2.png`            | 40 × 32   | Supplied `quaso-waving/quaso-waving-6.png`                                              |
+| `quaso-3.png`            | 40 × 32   | Supplied `quaso-waving/quaso-waving-7.png`                                              |
+| `dog.png`                | 32 × 32   | Supplied `dog/dog-2.png`                                                                |
+| `butter.png`             | 16 × 16   | Hand-authored Quaso-palette grid, rendered and exported with the pixel-art skill        |
+| `bee-0.png`, `bee-1.png` | 16 × 16   | Hand-authored Quaso-palette bee with two wing-flap poses                                |
+| `meadow.png`             | 240 × 135 | Nano Banana 2.1 candidate 4, snapped to the Quaso palette and finished on its text grid |
+| `meadow-mobile.png`      | 120 × 135 | Portrait arrangement of the meadow's existing pixel-grid regions; no resampling         |
 
 The supplied sprites came from the project's `.quaso/pixel-art` source collection. They are copied without modification and retain their original transparency. The four Quaso frames animate the cat-croissant mascot inspired by the reference meme. Display sprites with `image-rendering: pixelated` to retain their crisp edges. The meadow fits a 960 × 540 game area at exactly 4× its native grid.
 
 `butter.txt` and `meadow.txt` contain editable source grids. The butter uses five palette colours and passes the skill's pixel lint. The meadow uses 24 colours; the scene's foliage and flowers produce sprite-oriented lint hints, so it was checked visually at 1× and on the review sheet. Three small cream-and-amber stepping stones were added to the meadow grid after selection.
 
+`bee-0.txt` and `bee-1.txt` keep the bee's body and feet in the same position while its wings flap. The six-colour sprite uses a butter-and-amber body, cocoa stripes, plum outline, white eye glint and ice-blue wings. Its deliberate wing joints and large eye are marked in the grids for pixel lint. The game displays the frames at 48 × 48 on desktop and 32 × 32 on phones, exact 3× and 2× scales.
+
 `meadow-mobile.txt` rearranges the same bakery, pond, trees and picnic on a 120 × 135 portrait grid. It keeps each feature's native pixels and palette while preserving the picnic's relative position, so the mobile layout shows the complete scene and Biscotte stays on the blanket. The portrait art displays at exactly 3× in a 360 × 405 play area.
 
-The self-hosted Fredoka and Nunito fonts use the SIL Open Font License. Their original notices ship in `public/licenses/fredoka.txt` and `public/licenses/nunito.txt`.
+The self-hosted Jersey 25 and Jersey 20 fonts are copied from Quaso’s design system and use the SIL Open Font License. The font files and original notices ship together in `public/fonts/`. The interface also shares Quaso’s plum, lime, mint, square borders, and offset shadows; it stays standalone with no design-system runtime dependency.
 
 ## Art workflow
 

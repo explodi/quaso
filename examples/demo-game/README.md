@@ -1,8 +1,8 @@
 # Quaso Quest
 
 A tiny, buttery adventure starring Quaso, a cat who happens to be a croissant. Collect twelve
-pieces of butter, dash through flowers, and bring the picnic back to Monsieur Biscotte. Pet the
-croissant. Listen to the little noises. Try for a better score.
+pieces of butter, dodge the bees, and bring the picnic back to Monsieur Biscotte before the tea gets
+cold. Pet the croissant. Listen to the little noises. Chase a gold medal.
 
 The game starts in **French**. **English and German are supported but deliberately empty**, so you
 can try the complete Quaso translation workflow on a real, playable game.
@@ -20,9 +20,16 @@ npm run dev
 ```
 
 Open <http://127.0.0.1:5173>. Move with the arrows, WASD, or ZQSD; press Space to dash and Escape
-to pause. You can also click or tap the meadow to move. Collect another piece of butter within
-three seconds to build a combo, up to ×3 points. Synthesized sound effects start with the game;
-the sound button toggles them and remembers your preference.
+to pause. You can also click or tap the meadow to move. The rules fit on the start screen:
+
+- Bring all twelve butter pats to Biscotte in 35 seconds, with three lives.
+- Bees follow predictable patrols. A dash passes through them safely; a hit breaks your combo.
+- Collect the next butter pat within two seconds to build a combo, up to ×5 points.
+- Finish quickly for a time bonus. A delivery earns bronze; 4,500 points earns silver; 6,500 points
+  with no bee hits earns gold. Learn a route and time your dashes to beat your record.
+
+Synthesized sound effects start with the game; the sound button toggles them and remembers your
+preference. The interface uses Quaso's own pixel fonts, square controls, and plum/lime/mint palette.
 
 `npm run build` creates a standalone website in `dist/`; `npm run preview` previews it.
 
@@ -82,7 +89,7 @@ source language is French. The setup script always manages the local playground.
 | `src/locales/fr/game.json`           | Dialogue, quest text, plurals, and interpolation.                                      |
 | `src/locales/en/`, `src/locales/de/` | Empty catalogs, filled by `quaso download`.                                            |
 | `quaso.config.json`                  | French source files, target languages, output paths, and a length limit.               |
-| `src/game.js`                        | Small game rules: movement, butter, dash, and the picnic.                              |
+| `src/game.js`                        | Small game rules: movement, patrols, dash, combos, clock, and medals.                  |
 | `src/main.js`                        | Drawing and interaction, with `t("game:…")` calls at the UI boundary.                  |
 | `src/style.css`                      | Layout, responsive UI, and little bounces.                                             |
 | `scripts/setup.mjs`                  | Local Docker setup and the initial CLI upload.                                         |

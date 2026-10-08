@@ -13,7 +13,7 @@
   "controls": {
     "move": "se déplacer",
     "space": "espace",
-    "dash": "foncer",
+    "dash": "foncer / esquiver",
     "click": "ou clique là où tu veux aller"
   },
   "footer": "Un petit jeu fait avec amour et beaucoup de beurre.",
