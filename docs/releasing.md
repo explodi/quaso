@@ -44,7 +44,7 @@ on version tags.
 | Artifact                       | Destination                       | Authentication                                             |
 | ------------------------------ | --------------------------------- | ---------------------------------------------------------- |
 | CLI bundle                     | npm `@quaso/cli`, with provenance | npm trusted publishing (the workflow's OIDC token)         |
-| Server and built website image | Docker Hub `explodi/quaso`        | Repository secrets `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` |
+| Server and built website image | Docker Hub `<image>` (see below)  | Repository secrets `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` |
 | Project website and docs       | GitHub Pages                      | Workflow Pages permission and OIDC                         |
 | Release notes                  | GitHub release for the tag        | Workflow `GITHUB_TOKEN` with contents write permission     |
 
@@ -54,15 +54,17 @@ full version only, and npm uses the `next` distribution tag rather than `latest`
 results and registry visibility after publishing. The Docker Hub repository needs to be public for
 anonymous pulls.
 
-Before the first tag, add `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` to the repository, and enable
+The image is `<GitHub owner>/quaso`, or the repository variable `DOCKERHUB_IMAGE` (such as
+`yourname/quaso`) when your Docker Hub namespace differs. Before the first tag, add
+`DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` to the repository, and enable
 GitHub Pages with **GitHub Actions** as its source. npm needs no secret: `release.yml` is the
 package's trusted publisher, set once after the package's first, manual publish (npm only trusts
 existing packages):
 
 ```sh
-GITHUB_REPOSITORY=explodi/quaso deno task build:cli
+GITHUB_REPOSITORY=<owner>/<repository> deno task build:cli
 cd packages/cli/dist && npm publish --access public --tag next
-npm trust github @quaso/cli --file release.yml --repo explodi/quaso
+npm trust github @quaso/cli --file release.yml --repo <owner>/<repository>
 ```
 
 Then, in the package's **Settings → Publishing access** on npmjs.com, choose **Require two-factor

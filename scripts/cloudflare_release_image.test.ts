@@ -15,7 +15,7 @@ const instance = {
   bucketName: "quaso-example-store",
   locationHint: "weur",
   sleepAfter: "5m",
-  image: "explodi/quaso:1.0.0-beta.2",
+  image: "example/quaso:1.0.0-beta.2",
 };
 const hash = "a".repeat(64);
 const registry = `registry.cloudflare.com/${instance.accountId}/quaso`;
@@ -56,7 +56,7 @@ test("transfers the published amd64 image without building and deploys its manag
       ["image", "rm", target, instance.image],
     ]);
   });
-  expect(instance.image).toBe("explodi/quaso:1.0.0-beta.2");
+  expect(instance.image).toBe("example/quaso:1.0.0-beta.2");
 });
 
 test("failed transfer stops deployment and removes newly created local tags", async () => {

@@ -16,7 +16,7 @@ const instance = {
   bucketName: "quaso-example-store",
   locationHint: "weur",
   sleepAfter: "5m",
-  image: "explodi/quaso:1.0.0-beta.2",
+  image: "example/quaso:1.0.0-beta.2",
 };
 const bookmark = "00000001-00000002-00004e2f-" + "a".repeat(32);
 const previous = "00000002-00000002-00004e2f-" + "b".repeat(32);

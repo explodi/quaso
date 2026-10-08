@@ -17,7 +17,7 @@ const DATABASE = "12345678-1234-1234-1234-123456789abc";
 const NAME = "quaso-staging";
 const ROOT = `/accounts/${ACCOUNT}`;
 const IDENTITY = { loggedIn: true, accounts: [{ id: ACCOUNT, name: "Example account" }] };
-const IMAGE = "explodi/quaso:1.0.0-beta.2";
+const IMAGE = "example/quaso:1.0.0-beta.2";
 const envelope = (result: unknown) => Response.json({ success: true, result });
 
 function harness(directory: string) {
@@ -285,9 +285,9 @@ describe("Cloudflare setup", () => {
   test("does not provision an instance using the incompatible rc.1 release", async () => {
     await expect(
       setup({ ...fixture.options, image: undefined }, fixture.dependencies),
-    ).rejects.toThrow("published Beta 2 image");
+    ).rejects.toThrow("published image with --image");
     await expect(
-      setup({ ...fixture.options, image: "explodi/quaso:1.0.0-rc.1" }, fixture.dependencies),
+      setup({ ...fixture.options, image: "example/quaso:1.0.0-rc.1" }, fixture.dependencies),
     ).rejects.toThrow("incompatible");
     expect(fixture.state.requests.every((request) => request.method === "GET")).toBe(true);
     expect(fixture.state.commands).toEqual([]);

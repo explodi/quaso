@@ -23,7 +23,7 @@ const instance = {
   bucketName: "quaso-example-store",
   locationHint: "weur",
   sleepAfter: "5m",
-  image: "explodi/quaso:1.0.0-beta.2",
+  image: "example/quaso:1.0.0-beta.2",
 };
 const settings = { version: 1 as const, environments: { staging: instance } };
 
