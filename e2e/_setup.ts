@@ -409,9 +409,9 @@ export async function sendKey(
 
 /** Makes the page believe it runs on a Mac (`navigator.platform`), before it loads. */
 export async function emulateMac(page: Page) {
-  const celestial = await page.createCDPSession();
-  const { userAgent } = await celestial.send("Browser.getVersion");
-  await celestial.send("Emulation.setUserAgentOverride", { userAgent, platform: "MacIntel" });
+  // Puppeteer re-applies its own override after each navigation; a raw CDP one doesn't.
+  const userAgent = await page.browser().userAgent();
+  await page.setUserAgent({ userAgent, platform: "MacIntel" });
 }
 
 /** Where the page is: its path and query. */

@@ -278,7 +278,11 @@ browserTest(
       section.dispatchEvent(new Event("change", { bubbles: true }));
     });
     // Settings uses a dedicated section so deciding a request never depends on an unrelated form.
-    await waitFor(tab.page, () => document.querySelector(".language-requests-admin") !== null);
+    // The section appears before its requests have loaded.
+    await waitFor(
+      tab.page,
+      () => document.querySelector(".language-requests-admin li button") !== null,
+    );
     await click(tab.page, "Approve language", ".language-requests-admin li");
     await waitFor(
       tab.page,

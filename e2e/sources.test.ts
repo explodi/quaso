@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
 /// <reference lib="dom" />
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import { browserTest, openTab, press, text, waitFor } from "./_setup.ts";
 
@@ -88,9 +90,9 @@ browserTest(
     );
     assertEquals(await page.$('.tree-item[data-path="common.json"]'), null);
     await page.goto(`${server.url}/sources`, { waitUntil: "networkidle0" });
-    await page.screenshot({ path: "/private/tmp/quaso-sources-desktop.png", fullPage: true });
+    await page.screenshot({ path: join(tmpdir(), "quaso-sources-desktop.png"), fullPage: true });
     await page.setViewport({ width: 360, height: 800 });
-    await page.screenshot({ path: "/private/tmp/quaso-sources-mobile.png", fullPage: true });
+    await page.screenshot({ path: join(tmpdir(), "quaso-sources-mobile.png"), fullPage: true });
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     const accessibility = await page.createCDPSession();
     const { nodes } = await accessibility.send("Accessibility.getFullAXTree");
