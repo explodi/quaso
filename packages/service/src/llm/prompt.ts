@@ -68,6 +68,32 @@ export const RESPONSE_SCHEMA: JsonSchemaObject = {
   required: ["translations"],
 };
 
+/**
+ * The answer's JSON schema for a batch: `RESPONSE_SCHEMA`, with `forms` requiring the
+ * categories every plural string of the batch needs. Models skip forms the prompt asks for
+ * when the schema lets them (French `many`, for 1000000, especially); structured output
+ * enforces a required one. The forms only some strings need stay optional.
+ */
+export function responseSchemaFor(strings: readonly ProviderString[]): JsonSchemaObject {
+  const formSets = strings.flatMap((string) => (string.forms ? [string.forms] : []));
+  if (formSets.length === 0) return RESPONSE_SCHEMA;
+  const required = formSets[0].filter((category) =>
+    formSets.every((set) => set.includes(category)),
+  );
+  const translations = RESPONSE_SCHEMA.properties as Record<string, JsonSchemaObject>;
+  const item = translations.translations.items as JsonSchemaObject;
+  const properties = item.properties as Record<string, JsonSchemaObject>;
+  return {
+    ...RESPONSE_SCHEMA,
+    properties: {
+      translations: {
+        ...translations.translations,
+        items: { ...item, properties: { ...properties, forms: { ...properties.forms, required } } },
+      },
+    },
+  };
+}
+
 /** A string of a batch, as the prompt shows it. */
 export interface PromptString {
   id: number;

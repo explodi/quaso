@@ -11,6 +11,8 @@ import {
   type PromptString,
   renderPrompt,
   renderTemplate,
+  RESPONSE_SCHEMA,
+  responseSchemaFor,
 } from "./prompt.ts";
 
 function context(extra: Partial<PromptContext> = {}): PromptContext {
@@ -284,4 +286,31 @@ test("prompt: a string lists the placeholders the target language may leave out"
     context({ syntax, targetLanguage: "de" }),
   );
   assertEquals(stringLines(german.prompt)[0].optionalPlaceholders, undefined);
+});
+
+/** The `required` of the answer's `forms`, for a batch's strings. */
+function requiredForms(strings: Parameters<typeof responseSchemaFor>[0]): unknown {
+  const schema = responseSchemaFor(strings) as {
+    properties: { translations: { items: { properties: { forms: { required?: unknown } } } } };
+  };
+  return schema.properties.translations.items.properties.forms.required;
+}
+
+test("prompt: the answer's schema requires the plural forms every plural string needs", () => {
+  const cardinal = { id: "s1", kind: "plural" as const, english: { one: "a", other: "b" } };
+  const ordinal = { id: "s2", kind: "ordinal" as const, english: { one: "a", other: "b" } };
+  const text = { id: "s3", kind: "text" as const, english: "c" };
+  assertEquals(requiredForms([{ ...cardinal, forms: ["one", "many", "other"] }, text]), [
+    "one",
+    "many",
+    "other",
+  ]);
+  assertEquals(
+    requiredForms([
+      { ...cardinal, forms: ["one", "many", "other"] },
+      { ...ordinal, forms: ["one", "other"] },
+    ]),
+    ["one", "other"],
+  );
+  assertEquals(responseSchemaFor([text]), RESPONSE_SCHEMA);
 });
