@@ -100,14 +100,25 @@ jobs:
           path: dist
       - name: The package's version is the tag's (and package.json's)
         run: test "$(jq -r .version dist/package.json)" = "${{ needs.check.outputs.version }}"
+      # `latest` is the newest release until a stable version exists. After that, a version
+      # such as 1.5.0-rc.1 goes to `next`, so `npm install` never picks a release candidate.
+      - id: tag
+        name: Choose the npm tag
+        working-directory: dist
+        env:
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          name="$(jq -r .name package.json)"
+          versions="$(npm view "$name" versions --json 2>/dev/null || echo '[]')"
+          stable="$(echo "$versions" | jq '[if type == "array" then .[] else . end | select(contains("-") | not)] | length')"
+          if [[ "$VERSION" == *-* && "$stable" -gt 0 ]]; then tag=next; else tag=latest; fi
+          echo "$name@$VERSION goes to $tag ($stable stable versions published)"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
       - name: Publish
         working-directory: dist
         # npm trusts this workflow (npm trust github <package> --file release.yml): it
         # authenticates with the job's OIDC token and adds provenance by itself.
-        # A version such as 1.5.0-rc.1 goes to the "next" tag, not "latest".
-        run: >-
-          npm publish --access public
-          ${{ contains(needs.check.outputs.version, '-') && '--tag next' || '' }}
+        run: npm publish --access public --tag "${{ steps.tag.outputs.tag }}"
 
   docker:
     name: Publish the Docker image
