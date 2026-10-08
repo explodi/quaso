@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
-import { makeTempDir } from "@quaso/runtime/files";
 import * as fs from "node:fs/promises";
 import { test } from "node:test";
-import { assertRejects } from "@quaso/runtime/assert";
+import { assertRejects } from "@std/assert";
 import { acquireLock, LockBusyError } from "./lock.ts";
 
 test("a second lock on the same folder fails while the first is held", {}, async () => {
-  const dir = await makeTempDir();
+  const dir = await Deno.makeTempDir();
   try {
     const first = await acquireLock(dir);
     const error = await assertRejects(() => acquireLock(dir, 100), LockBusyError);

@@ -1,13 +1,10 @@
 // SPDX-License-Identifier: MIT
-import { serveHttp } from "@quaso/runtime/http";
-import { makeTempDir } from "@quaso/runtime/files";
 import * as fs from "node:fs/promises";
-import { Command } from "@quaso/runtime/command";
 /**
  * The CLI's end-to-end harness (S4.10, S4.11): a real server in this process (the server's
  * app and the real service on an in-memory database, on a random port), temporary copies of
  * `examples/demo-game/`, and the CLI run in-process or as the built bundle under Node or
- * Bun. Test code: it may start processes; the CLI never does.
+ * Deno. Test code: it may start processes; the CLI never does.
  */
 import { cp } from "node:fs/promises";
 import { fileURLToPath as fromFileUrl } from "node:url";
@@ -57,7 +54,7 @@ export async function startServer(options: { llm?: boolean } = {}): Promise<Test
     log: createLogger({ level: "error", write: () => {} }),
     version: "e2e",
   });
-  const server = serveHttp({ hostname: "127.0.0.1", port: 0, onListen() {} }, (request, info) =>
+  const server = Deno.serve({ hostname: "127.0.0.1", port: 0, onListen() {} }, (request, info) =>
     app(request, info),
   );
   return {
@@ -75,9 +72,9 @@ export async function startServer(options: { llm?: boolean } = {}): Promise<Test
 
 /** An address where nothing listens: a port that was just free. */
 export function closedAddress(): string {
-  const listener = Bun.listen({ hostname: "127.0.0.1", port: 0, socket: { data() {} } });
-  const { port } = { port: listener.port };
-  listener.stop();
+  const listener = Deno.listen({ hostname: "127.0.0.1", port: 0 });
+  const port = listener.addr.port;
+  listener.close();
   return `http://127.0.0.1:${port}`;
 }
 
@@ -85,7 +82,7 @@ export function closedAddress(): string {
 export async function tempDir(
   prefix = "quaso-cli-",
 ): Promise<{ dir: string; remove(): Promise<void> }> {
-  const dir = await makeTempDir({ prefix });
+  const dir = await Deno.makeTempDir({ prefix });
   return { dir, remove: () => fs.rm(dir, { recursive: true }).catch(() => {}) };
 }
 
@@ -148,16 +145,16 @@ export function inProcess(): Runner {
   };
 }
 
-/** The built bundle, started with `node` or `bun run`. */
-export function bundled(runtime: "node" | "bun", bundle: string): Runner {
+/** The built bundle, started with `node` or `deno run`. */
+export function bundled(runtime: "node" | "deno", bundle: string): Runner {
   return async (args, options) => {
     const [command, prefix] =
-      runtime === "node" ? ["node", [bundle]] : [process.execPath, ["run", bundle]];
+      runtime === "node" ? ["node", [bundle]] : [Deno.execPath(), ["run", "-A", bundle]];
     const env = { ...process.env };
     for (const name of Object.keys(env)) {
       if (name.startsWith("QUASO_") || name === "FORCE_COLOR") delete env[name];
     }
-    const output = await new Command(command, {
+    const output = await new Deno.Command(command, {
       args: [...prefix, ...args],
       cwd: options.cwd,
       env: { ...env, NO_COLOR: "1", ...options.env },
@@ -178,7 +175,7 @@ export function bundled(runtime: "node" | "bun", bundle: string): Runner {
 /** Whether `node` can be started, and its version. */
 export async function nodeVersion(): Promise<string | null> {
   try {
-    const output = await new Command("node", {
+    const output = await new Deno.Command("node", {
       args: ["--version"],
       stdout: "piped",
       stderr: "null",

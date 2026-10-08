@@ -6,7 +6,7 @@
  * whose answers the browser may cache), failed searches say so, the selection follows the
  * filters, addresses keep what they say, and conflicts on actions retry the action.
  */
-import { assert, assertEquals, assertStringIncludes } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import type { Page } from "puppeteer";
 import type { ProjectInfo, StringsPage } from "@quaso/core";
 import {

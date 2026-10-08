@@ -6,7 +6,7 @@ HTTP/3. Do not expose port 8000 when Caddy is the public entry point.
 
 Throughout these guides, replace `<org>` with the organization publishing your Quaso image and
 repository. The package name `@quaso/cli` must be reserved before the first public release. Until
-images are published, build from a checkout with `bun run docker`, and use `quaso:dev` as the
+images are published, build from a checkout with `deno task docker`, and use `quaso:dev` as the
 image.
 
 ## Five steps
@@ -25,10 +25,10 @@ image.
    chmod 600 .env
    ```
 
-   Replace the image organization in `compose.yaml`. For release-candidate testing, use
-   `ghcr.io/<org>/quaso:1.0.0-rc.1` once published; the `:1` alias is created only for stable
-   releases. The `build` section is for a source checkout; using the published image does not need
-   it.
+   `compose.yaml` uses the official image, `explodi/quaso:latest` on Docker Hub, which follows the
+   main branch. To pin a release, use its version, such as `explodi/quaso:1.0.0-rc.1`; the `:1`
+   alias is created only for stable releases. The `build` section is for a source checkout; using
+   the published image does not need it.
 
 3. Edit `.env`. Set `QUASO_DOMAIN=translate.example.com` and `SETUP_KEY` to the output of
    `openssl rand -hex 16`. Keep `TRUST_PROXY=true`, since Caddy is
@@ -49,7 +49,7 @@ image.
 ## What runs and where data lives
 
 Caddy obtains and renews the HTTPS certificate and proxies requests to Quaso. Quaso is one compiled
-Bun application serving the API and website. Its image runs as user 65532 on a read-only root
+Deno application serving the API and website. Its image runs as user 65532 on a read-only root
 filesystem. The named `quaso-data` volume is mounted at `/data`, containing `quaso.sqlite`, its WAL,
 `secret-key` when generated locally, `quaso.lock`, and `backups/`. Compose prefixes volume names
 with the deployment directory or project name. Caddy has separate certificate and configuration
@@ -58,7 +58,7 @@ volumes. Never run `docker compose down -v` against data you want to keep.
 Without Compose, use an existing reverse proxy for HTTPS:
 
 ```sh
-docker run -d --name quaso --restart unless-stopped   -p 127.0.0.1:8000:8000 -v quaso-data:/data   -e PUBLIC_URL=https://translate.example.com   'ghcr.io/<org>/quaso:1'
+docker run -d --name quaso --restart unless-stopped   -p 127.0.0.1:8000:8000 -v quaso-data:/data   -e PUBLIC_URL=https://translate.example.com   'explodi/quaso:1'
 ```
 
 The loopback binding lets a proxy on this VM reach Quaso. Set `TRUST_PROXY=true` only when a trusted

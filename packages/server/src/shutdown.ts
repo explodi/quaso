@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: MIT
-import type { HttpServer } from "@quaso/runtime/http";
 /**
  * Graceful shutdown (design §5.12): on SIGTERM the server stops taking requests (new ones
  * get 503), lets the ones in flight finish, including bodies still arriving, then closes.
@@ -52,7 +51,7 @@ export class InFlight {
  * connections still open close when the process exits.
  */
 export async function stopServer(
-  server: Pick<HttpServer, "shutdown">,
+  server: Pick<Deno.HttpServer, "shutdown">,
   inFlight: InFlight,
   deadlineMs = SHUTDOWN_DEADLINE_MS,
 ): Promise<boolean> {

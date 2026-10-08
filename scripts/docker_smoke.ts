@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
-import { Command } from "@quaso/runtime/command";
-import { makeTempFile } from "@quaso/runtime/files";
 import * as fs from "node:fs/promises";
 /**
- * `bun run docker:smoke`: acceptance test 1 against the Docker image (S2.10, design
+ * `deno task docker:smoke`: acceptance test 1 against the Docker image (S2.10, design
  * §5.12). On a new volume: an API key from `token create`, a server that becomes healthy,
  * the demo game's English files uploaded with curl, a stop, and a new container on the same
  * volume that still has every string. Also checks that the server runs as a non-root user,
@@ -11,7 +9,7 @@ import * as fs from "node:fs/promises";
  * the same volume refuses to start, and that the log never discloses the configured setup key.
  *
  * Needs Docker and curl. The task builds the image first; to test another one:
- *   bun run scripts/docker_smoke.ts --image ghcr.io/<org>/quaso:1 --port 8124
+ *   deno run -A scripts/docker_smoke.ts --image explodi/quaso:latest --port 8124
  * Everything it creates (containers, the volume) is removed at the end, pass or fail.
  */
 import type { Progress, StatusResult } from "@quaso/core";
@@ -43,7 +41,7 @@ interface Output {
 }
 
 async function run(command: string, args: string[], timeoutMs = 120_000): Promise<Output> {
-  const output = await new Command(command, {
+  const output = await new Deno.Command(command, {
     args,
     stdin: "null",
     signal: AbortSignal.timeout(timeoutMs),
@@ -198,7 +196,7 @@ step("the demo game's English files upload with the key (curl)", async () => {
   const { config, sources } = await readProjectFiles(demoDir());
   languages = config.languages;
   sourceFiles = sources.length;
-  bodyFile = await makeTempFile({ prefix: "quaso-smoke-", suffix: ".json" });
+  bodyFile = await Deno.makeTempFile({ prefix: "quaso-smoke-", suffix: ".json" });
   await fs.writeFile(
     bodyFile,
     JSON.stringify({

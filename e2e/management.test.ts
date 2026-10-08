@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 /// <reference lib="dom" />
 /** Sprint 8 acceptance: real accounts, real writes and real exports through the browser. */
-import { assert, assertEquals, assertMatch, assertStringIncludes } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertMatch, assertStringIncludes } from "@std/assert";
 import type { Page } from "puppeteer";
 import {
   ANONYMOUS,

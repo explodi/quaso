@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 import * as fs from "node:fs/promises";
-import { Command } from "@quaso/runtime/command";
 /**
- * `bun run build:cli` (design §5.10, S4.1, S4.10): bundles the CLI into one JavaScript
- * file for npm, `packages/cli/dist/quaso.mjs`, that runs on Node ≥ 22 and Bun ≥ 1.4.2, and
+ * `deno task build:cli` (design §5.10, S4.1, S4.10): bundles the CLI into one JavaScript
+ * file for npm, `packages/cli/dist/quaso.mjs`, that runs on Node ≥ 22 and Deno ≥ 2.9, and
  * writes the npm package around it (`package.json`, `README.md`, `LICENSE`).
  *
  * The build fails if the bundle could start a process (`child_process`, `Deno.Command`,
@@ -85,13 +84,14 @@ export async function cliVersion(): Promise<string> {
  * found (the file is removed when there are any).
  */
 export async function bundleCli(output: string): Promise<string[]> {
-  const { code, stderr } = await new Command(process.execPath, {
-    args: ["build", "--target=node", "--outfile", output, ENTRY],
+  const { code, stderr } = await new Deno.Command(Deno.execPath(), {
+    // The "deno" platform leaves `node:` imports as they are, which Node runs too.
+    args: ["bundle", "--platform=deno", "--output", output, ENTRY],
     cwd: ROOT,
     stdout: "inherit",
     stderr: "piped",
   }).output();
-  if (code !== 0) return [`bun build failed:\n${new TextDecoder().decode(stderr)}`];
+  if (code !== 0) return [`deno bundle failed:\n${new TextDecoder().decode(stderr)}`];
   let text = await fs.readFile(output, "utf8");
   if (text.startsWith("#!")) text = text.slice(text.indexOf("\n") + 1);
   const problems = checkBundle(text);

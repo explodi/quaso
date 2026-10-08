@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
-import { assertEquals } from "@quaso/runtime/assert";
+import { assertEquals } from "@std/assert";
 import { ANONYMOUS, SYSTEM, type Service } from "@quaso/service";
 import type { QuasoConfig } from "@quaso/core";
 import { realService } from "../packages/server/src/testing/real_service.ts";

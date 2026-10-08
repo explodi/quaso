@@ -2,7 +2,7 @@
 import type { Fetch } from "@quaso/core";
 import { test } from "node:test";
 /** Public routes with the real service: input validation, access, limits and human checks. */
-import { assert, assertEquals } from "@quaso/runtime/assert";
+import { assert, assertEquals } from "@std/assert";
 import { type Actor, ANONYMOUS, SYSTEM } from "@quaso/service";
 import {
   addUser,

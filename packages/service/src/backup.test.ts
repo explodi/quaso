@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { assert, assertEquals, assertRejects, assertStringIncludes } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertRejects, assertStringIncludes } from "@std/assert";
 import type { BackupDocument } from "@quaso/core";
 import { type Actor, ANONYMOUS, SYSTEM } from "./api.ts";
 import {

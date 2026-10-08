@@ -1,15 +1,23 @@
 # SPDX-License-Identifier: MIT
-# The Quaso image (design §5.12): one binary, compiled with `bun build --compile` from the server
+# The Quaso image (design §5.12): one binary, compiled with `deno compile` from the server
 # and the website, on a distroless base, running as a non-root user with its data in /data.
-# Build it from the repository's root: bun run docker
+# Build it from the repository's root: deno task docker
 
-# --- Build: the website with Vite, then the server binary with the website inside.
-FROM oven/bun:1.4.2 AS build
+# --- Build: the website with Vite, then the server binary with the website inside. It runs
+# on the builder's own platform and cross-compiles, so a multi-platform build never emulates.
+FROM --platform=$BUILDPLATFORM denoland/deno:2.9.6 AS build
+ARG TARGETARCH
 WORKDIR /src
 COPY . .
 ENV PUPPETEER_SKIP_DOWNLOAD=true
-RUN bun install --frozen-lockfile
-RUN bun run build
+RUN deno install --frozen-lockfile
+RUN deno task build:web
+RUN case "$TARGETARCH" in \
+      amd64) target=x86_64-unknown-linux-gnu ;; \
+      arm64) target=aarch64-unknown-linux-gnu ;; \
+      *) echo "Unsupported architecture: $TARGETARCH" >&2; exit 1 ;; \
+    esac && \
+    deno task build:server --target "$target"
 # The data folder, owned by the runtime's non-root user (65532) when copied below.
 RUN mkdir -p /out/data
 

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 /// <reference lib="dom" />
-import { assert, assertEquals, assertStringIncludes } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import type { CreateJobResult, JobInfo, JobsResult } from "@quaso/core";
 import { ANONYMOUS, createFakeTranslator, SYSTEM, type Service } from "@quaso/service";
 import type { Page } from "puppeteer";

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { assertEquals } from "@quaso/runtime/assert";
+import { assertEquals } from "@std/assert";
 import type { JobInfo } from "@quaso/core";
 import { jobProgress } from "./JobProgress.tsx";
 import { completionMessage } from "./JobIndicator.tsx";

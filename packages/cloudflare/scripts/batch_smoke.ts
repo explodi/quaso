@@ -2,9 +2,9 @@
 import { mkdtemp, writeFile, rm, mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 
-const root = resolve(import.meta.dir, "../../..");
+const root = resolve(import.meta.dirname!, "../../..");
 const cwd = resolve(root, "packages/cloudflare");
-const upload = Bun.argv.includes("--upload");
+const upload = Deno.args.includes("--upload");
 const prefix = `quaso-beta2-${upload ? "upload" : "batch"}-${Date.now()}`;
 const name = `${prefix}-contractcontainer`;
 const folderRoot = resolve(root, ".quaso");
@@ -19,18 +19,15 @@ let report: { path: string; data: object } | undefined;
 const cleanupFailures: unknown[] = [];
 
 async function wrangler(args: string[], allowMissing = false): Promise<string> {
-  const child = Bun.spawn(["bun", "run", "wrangler", ...args], {
+  const output = await new Deno.Command(Deno.execPath(), {
+    args: ["run", "-A", "npm:wrangler", ...args],
     cwd,
-    stdin: "ignore",
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const [stdout, stderr, code] = await Promise.all([
-    new Response(child.stdout).text(),
-    new Response(child.stderr).text(),
-    child.exited,
-  ]);
-  if (code !== 0) {
+    stdin: "null",
+  }).output();
+  const decoder = new TextDecoder();
+  const stdout = decoder.decode(output.stdout);
+  const stderr = decoder.decode(output.stderr);
+  if (!output.success) {
     const missing = /does not exist|not found/i.test(stdout + stderr);
     if (allowMissing && missing) return stdout;
     throw new Error(`wrangler ${args[0]}: ${stdout}\n${stderr}`);
@@ -44,16 +41,14 @@ try {
   databaseCreated = true;
   const id = /"database_id":\s*"([^"]+)"/.exec(created)?.[1];
   if (!id) throw new Error("Wrangler did not return the database ID");
-  const bundle = await Bun.build({
-    entrypoints: [resolve(cwd, upload ? "spike/upload_server.ts" : "spike/contract_server.ts")],
-    target: "bun",
-    outdir: folder,
-    naming: "server.js",
-  });
-  if (!bundle.success) throw new Error(bundle.logs.join("\n"));
+  const entry = resolve(cwd, upload ? "spike/upload_server.ts" : "spike/contract_server.ts");
+  const bundle = await new Deno.Command(Deno.execPath(), {
+    args: ["bundle", "--platform=deno", "--output", resolve(folder, "server.js"), entry],
+  }).output();
+  if (!bundle.success) throw new Error(new TextDecoder().decode(bundle.stderr));
   await writeFile(
     resolve(folder, "Dockerfile"),
-    'FROM oven/bun:1.4.2\nWORKDIR /probe\nCOPY server.js .\nEXPOSE 8000\nENTRYPOINT ["bun", "server.js"]\n',
+    'FROM denoland/deno:2.9.6\nWORKDIR /probe\nCOPY server.js .\nEXPOSE 8000\nENTRYPOINT ["deno", "run", "-A", "server.js"]\n',
   );
   await writeFile(
     configPath,
@@ -101,7 +96,7 @@ try {
       ready = true;
       break;
     }
-    await Bun.sleep(2000);
+    await new Promise((done) => setTimeout(done, 2000));
   }
   if (!ready) throw new Error("The new workers.dev route did not become ready within two minutes");
   console.log("Waiting for container provisioning");
@@ -116,7 +111,7 @@ try {
       ready = true;
       break;
     }
-    await Bun.sleep(5000);
+    await new Promise((done) => setTimeout(done, 5000));
   }
   if (!ready) throw new Error("The container did not become ready");
   console.log("Running shared cases from the container");
@@ -216,20 +211,20 @@ try {
   }
   if (databaseCreated) await clean(() => wrangler(["d1", "delete", prefix, "--skip-confirmation"]));
   await clean(async () => {
-    const images = Bun.spawn(["docker", "image", "ls", "--format", "{{.Repository}}:{{.Tag}}"], {
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    const tags = (await new Response(images.stdout).text())
+    const images = await new Deno.Command("docker", {
+      args: ["image", "ls", "--format", "{{.Repository}}:{{.Tag}}"],
+    }).output();
+    if (!images.success) throw new Error("Could not inspect local probe images");
+    const tags = new TextDecoder()
+      .decode(images.stdout)
       .split("\n")
       .filter((tag) => tag.includes(name));
-    if ((await images.exited) !== 0) throw new Error("Could not inspect local probe images");
     for (const tag of tags) {
-      const removed = Bun.spawn(["docker", "image", "rm", tag], {
-        stdout: "ignore",
-        stderr: "pipe",
-      });
-      if ((await removed.exited) !== 0) throw new Error(`Could not remove local image ${tag}`);
+      const removed = await new Deno.Command("docker", {
+        args: ["image", "rm", tag],
+        stdout: "null",
+      }).output();
+      if (!removed.success) throw new Error(`Could not remove local image ${tag}`);
     }
   });
   await clean(async () => {

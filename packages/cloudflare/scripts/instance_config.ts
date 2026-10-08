@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import { parse as parseJsonc } from "@std/jsonc";
 /** Operator-owned instance settings generate deployment bindings without editing the checkout. */
 import * as fs from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
@@ -67,10 +68,12 @@ export function parseInstanceConfig(value: unknown): InstanceConfig {
       bucketName: string(fields.bucketName, `${id}bucketName`, /^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/),
       locationHint,
       sleepAfter: string(fields.sleepAfter, `${id}sleepAfter`, /^[1-9]\d*[smh]$/),
+      // A published release on Docker Hub (such as explodi/quaso:1), or one already
+      // transferred to the account's managed registry.
       image: string(
         fields.image,
         `${id}image`,
-        /^(?:ghcr\.io\/[a-z0-9_.-]+\/quaso(?::[a-zA-Z0-9_.-]+|@sha256:[a-f0-9]{64})|registry\.cloudflare\.com\/[a-f0-9]{32}\/quaso@sha256:[a-f0-9]{64})$/,
+        /^(?:(?:docker\.io\/)?[a-z0-9_.-]+\/quaso(?::[a-zA-Z0-9_.-]+|@sha256:[a-f0-9]{64})|registry\.cloudflare\.com\/[a-f0-9]{32}\/quaso@sha256:[a-f0-9]{64})$/,
       ),
     };
     if (
@@ -97,12 +100,12 @@ export async function readInstanceConfig(path = DEFAULT_INSTANCE_CONFIG): Promis
     text = await fs.readFile(path, "utf8");
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT")
-      throw new Error(`No instance configuration at ${path}. Run bun run cf:setup first.`, {
+      throw new Error(`No instance configuration at ${path}. Run deno task cf:setup first.`, {
         cause: error,
       });
     throw error;
   }
-  return parseInstanceConfig(Bun.JSONC.parse(text));
+  return parseInstanceConfig(parseJsonc(text));
 }
 
 export async function saveInstanceConfig(path: string, config: InstanceConfig): Promise<void> {
@@ -120,7 +123,7 @@ export async function saveInstanceConfig(path: string, config: InstanceConfig): 
 export function configuredInstance(config: InstanceConfig, environment: Environment): Instance {
   const instance = config.environments[environment];
   if (instance === undefined)
-    throw new Error(`No ${environment} instance is configured. Run bun run cf:setup first.`);
+    throw new Error(`No ${environment} instance is configured. Run deno task cf:setup first.`);
   return instance;
 }
 
@@ -180,7 +183,7 @@ export function deploymentConfig(
 
 export async function readDeploymentTemplate(): Promise<Record<string, unknown>> {
   return object(
-    Bun.JSONC.parse(await fs.readFile(resolve(PACKAGE_DIR, "wrangler.jsonc"), "utf8")),
+    parseJsonc(await fs.readFile(resolve(PACKAGE_DIR, "wrangler.jsonc"), "utf8")),
     "Wrangler template",
   );
 }

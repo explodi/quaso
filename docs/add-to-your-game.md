@@ -3,7 +3,7 @@
 Quaso reads i18next JSON v4 files. Keep the source language in your repository and let Quaso write
 the other languages. First [deploy an instance](deploy-docker.md) and create an upload API key in
 Settings. The `@quaso/cli` npm names must be reserved and published before these install
-commands work. Before publication, run `bun run cli` from a Quaso checkout against its development
+commands work. Before publication, run `deno task cli` from a Quaso checkout against its development
 instance.
 
 ## Connect and upload
@@ -21,10 +21,10 @@ npx quaso download
 npx quaso status --fail-on untranslated
 ```
 
-With Bun 1.4.2, use `bunx @quaso/cli` in place of `npx quaso`, for example:
+With Deno 2.9, use `deno run -A npm:@quaso/cli` in place of `npx quaso`, for example:
 
 ```sh
-bunx @quaso/cli init --languages de,fr,pl
+deno run -A npm:@quaso/cli init --languages de,fr,pl
 ```
 
 `init` writes `quaso.config.json` without prompting. Edit it before uploading if your files live

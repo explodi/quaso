@@ -5,7 +5,7 @@
  * file tree, the shortcuts, plural inputs with example numbers, right-to-left inputs, live
  * checks, and a failed save that keeps the text.
  */
-import { assert, assertEquals, assertStringIncludes } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import type { Page } from "puppeteer";
 import {
   browserTest,

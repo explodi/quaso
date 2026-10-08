@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { makeTempDir } from "@quaso/runtime/files";
 import * as fs from "node:fs/promises";
-import { assertEquals, assertThrows } from "@quaso/runtime/assert";
+import { assertEquals, assertThrows } from "@std/assert";
 import { openNodeSqlite } from "./adapters/node_sqlite.ts";
 import { SQL_CASES } from "./testing/sql_cases.ts";
 
@@ -74,7 +73,7 @@ test("SyncSql on node:sqlite sees a table's new columns after a script changes i
 });
 
 test("SyncSql on node:sqlite uses WAL mode and foreign keys for files", async () => {
-  const folder = await makeTempDir();
+  const folder = await Deno.makeTempDir();
   const { sql, close } = openNodeSqlite(`${folder}/test.sqlite`);
   try {
     assertEquals(sql.query("PRAGMA journal_mode"), [{ journal_mode: "wal" }]);

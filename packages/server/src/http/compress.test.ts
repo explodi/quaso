@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { assertEquals } from "@quaso/runtime/assert";
+import { assertEquals } from "@std/assert";
 import { acceptsGzip, compress, MIN_COMPRESS_SIZE } from "./compress.ts";
 
 function request(acceptEncoding?: string): Request {

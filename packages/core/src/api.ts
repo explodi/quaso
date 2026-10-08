@@ -814,7 +814,7 @@ export interface SessionInfo {
   /** No administrator yet: the setup page creates one. */
   setupRequired: boolean;
   setupKeyConfigured?: boolean;
-  /** A development instance (`bun run dev`), with the one-click login. */
+  /** A development instance (`deno task dev`), with the one-click login. */
   dev: boolean;
   providers: {
     github: boolean;

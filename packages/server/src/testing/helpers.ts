@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 /** Helpers for the server's tests. */
-import { assert } from "@quaso/runtime/assert";
+import { assert } from "@std/assert";
 import type { ServiceApi } from "@quaso/service";
 import { type App, createApp } from "../app.ts";
 import { type Config, type Env, loadConfig } from "../config.ts";

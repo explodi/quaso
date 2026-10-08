@@ -3,7 +3,7 @@
 import { mkdtemp, rm, chmod } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { assertEquals } from "@quaso/runtime/assert";
+import { assertEquals } from "@std/assert";
 import { openBrowser } from "../e2e/_setup.ts";
 import { runWorkflow } from "../acceptance/workflow.ts";
 
@@ -13,23 +13,22 @@ const certs = await mkdtemp(join(tmpdir(), name));
 const setupKey = "workflow-only-setup-key";
 const email = "workflow@example.com";
 const password = "workflow-only-password";
-const reservation = Bun.serve({ port: 0, fetch: () => new Response() });
-const port = reservation.port;
-await reservation.stop(true);
+const reservation = Deno.listen({ hostname: "127.0.0.1", port: 0 });
+const port = reservation.addr.port;
+reservation.close();
 const url = `http://127.0.0.1:${port}`;
 async function run(command: string[]) {
-  const process = Bun.spawn(command, {
-    stdout: "pipe",
-    stderr: "pipe",
+  const output = await new Deno.Command(command[0], {
+    args: command.slice(1),
+    stdout: "piped",
+    stderr: "piped",
     signal: AbortSignal.timeout(120_000),
-  });
-  const [stdout, stderr, code] = await Promise.all([
-    new Response(process.stdout).text(),
-    new Response(process.stderr).text(),
-    process.exited,
-  ]);
-  if (code !== 0) throw new Error(`${command[0]} ${command[1]} failed: ${stderr}`);
-  return stdout.trim();
+  }).output();
+  const decoder = new TextDecoder();
+  if (!output.success) {
+    throw new Error(`${command[0]} ${command[1]} failed: ${decoder.decode(output.stderr)}`);
+  }
+  return decoder.decode(output.stdout).trim();
 }
 async function origin(container: string, port: number) {
   return `http://${await run(["docker", "port", container, String(port)])}`;
@@ -41,7 +40,7 @@ async function ready(url: string) {
     } catch {
       /* Container is starting. */
     }
-    await Bun.sleep(500);
+    await new Promise((done) => setTimeout(done, 500));
   }
   throw new Error("Workflow container did not become healthy");
 }
@@ -82,8 +81,9 @@ try {
     `${certs}:/certs:ro`,
     "-v",
     `${resolve("scripts/workflow_gemini_stub.ts")}:/stub.ts:ro`,
-    "oven/bun:1.4.2",
-    "bun",
+    "denoland/deno:2.9.6",
+    "run",
+    "-A",
     "/stub.ts",
   ]);
   await run([
@@ -104,7 +104,7 @@ try {
     "-v",
     `${join(certs, "cert.pem")}:/cert.pem:ro`,
     "-e",
-    "NODE_EXTRA_CA_CERTS=/cert.pem",
+    "DENO_CERT=/cert.pem",
     "-e",
     "TRUST_PROXY=false",
     "-e",

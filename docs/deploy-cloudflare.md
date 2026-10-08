@@ -47,7 +47,7 @@ environment.
 
 - A Cloudflare account on the **Workers Paid** plan (Containers and Durable Objects with SQLite need
   it), and a domain on Cloudflare, such as `yourgame.com`.
-- [Bun](https://bun.sh) 1.4.2 and git, to run Wrangler from the repository.
+- [Deno](https://deno.com) 2.9.6 and git, to run Wrangler from the repository.
 - [Docker](https://docs.docker.com/get-docker/), running: `wrangler deploy` builds the image.
 - `openssl`, or another way to make long random strings.
 
@@ -56,17 +56,17 @@ Get the code and Wrangler:
 ```sh
 git clone 'https://github.com/<org>/quaso.git'
 cd quaso
-bun run cf:install
+deno install
 ```
 
-Every direct Wrangler command below runs from `packages/cloudflare`. Run `bun run cf:*` commands
+Every direct Wrangler command below runs from `packages/cloudflare`. Run `deno task cf:*` commands
 from the repository root unless stated otherwise.
 
 ## 1. Sign in to Cloudflare
 
 ```sh
 cd packages/cloudflare
-bun run wrangler login
+deno run -A npm:wrangler login
 ```
 
 ## 2. Choose the names
@@ -88,10 +88,10 @@ Wrangler doesn't inherit them. In `env.production` (and `env.staging`, if you wa
 - `r2_buckets[0].bucket_name`: the bucket for backups. Create it:
 
   ```sh
-  bun run wrangler r2 bucket create quaso-production-backups
+  deno run -A npm:wrangler r2 bucket create quaso-production-backups
   ```
 
-After changing `wrangler.jsonc`, run `bun run cf:types` (from the repository's root), which
+After changing `wrangler.jsonc`, run `deno task cf:types` (from the repository's root), which
 updates `worker-configuration.d.ts`.
 
 ## 3. Prepare the secrets
@@ -121,6 +121,7 @@ explains each. Set them after the first deploy.
 Later, change or add a secret with Wrangler, which asks for the value:
 
 ```sh
+
 ```
 
 ## 4. Deploy
@@ -129,16 +130,16 @@ From the repository's root:
 
 ```sh
 # The first time, with the secrets file:
-bun run cf:deploy --env production --secrets-file .dev.vars.production
+deno task cf:deploy --env production --secrets-file .dev.vars.production
 # Afterwards (the secrets stay):
-bun run cf:deploy --env production
+deno task cf:deploy --env production
 ```
 
 The same with `--env staging` (and `.dev.vars.staging`) if you have a staging environment. The first
-deploy pulls the published GHCR image for `linux/amd64`, transfers it to the account's
-Cloudflare registry, and deploys the transferred digest. Docker must be running for this
-transfer; deployment does not build the image. Private GHCR images require Docker to be
-logged into GHCR. An account-owned `registry.cloudflare.com/<account-id>/quaso@sha256:<digest>`
+deploy pulls the published image (`explodi/quaso` on Docker Hub, or one of your own) for
+`linux/amd64`, transfers it to the account's Cloudflare registry, and deploys the transferred
+digest. Docker must be running for this transfer; deployment does not build the image. A private
+image requires Docker to be logged into its registry. An account-owned `registry.cloudflare.com/<account-id>/quaso@sha256:<digest>`
 reference skips the transfer and needs no local Docker daemon. Dry runs skip the transfer.
 `cf:deploy` refuses to run without `--env`: the top level of `wrangler.jsonc` is only for local
 runs. Once deployed, you can delete the secrets file, or keep it somewhere safer.
@@ -161,7 +162,7 @@ docker run --rm \
   -e SERVICES_URL=https://translate.yourgame.com/internal \
   -e SERVICE_TOKEN \
   -e SECRET_KEY \
-  'ghcr.io/<org>/quaso:1' token create --name ci --scope upload
+  'explodi/quaso:1' token create --name ci --scope upload
 ```
 
 ## Updates
@@ -170,7 +171,7 @@ Once the instance is running, follow [From your repository to every language](wo
 to connect your game and run the translation workflow, or [Migrate from Crowdin](migrate-from-crowdin.md)
 to bring existing translations and their proofread state.
 
-Pull the new version and run `bun run cf:deploy --env production` again. Wrangler activates the
+Pull the new version and run `deno task cf:deploy --env production` again. Wrangler activates the
 new Worker first and then rolls out the new image, so for a while the new Worker talks to the old
 server: the internal API always accepts the previous release's calls. The Durable Object migrates
 its database the first time it starts with the new code. Take a backup before upgrading. Record the
@@ -206,7 +207,7 @@ Three ways back, from the quickest to the most portable:
   command (replace the timestamp with the backup you want):
 
   ```sh
-  bun run wrangler r2 object get \
+  deno run -A npm:wrangler r2 object get \
     quaso-production-backups/backups/quaso-20260924T030000Z.json.gz \
     --file backup.json.gz --remote --env production
   ```
@@ -237,7 +238,7 @@ restore didn't finish, and the backup only goes into another, empty instance.
   run the restore command with the setup key printed by `cf:setup`:
 
   ```sh
-  bun run cf:restore --env production --file backup.json.gz
+  deno task cf:restore --env production --file backup.json.gz
   ```
 
   The command asks for the setup key; automation can supply `QUASO_SETUP_KEY` through its
@@ -251,7 +252,7 @@ Wrangler. [D1 Time Travel](https://developers.cloudflare.com/d1/reference/time-t
 any minute within the last 30 days on Workers Paid:
 
 ```sh
-bun run cf:restore --env production --at 2026-10-03T00:00:00Z
+deno task cf:restore --env production --at 2026-10-03T00:00:00Z
 ```
 
 This overwrites D1 in place. The command deploys maintenance mode, stops the container,
@@ -263,7 +264,7 @@ image stays deployed: neither maintenance deployment builds or transfers an imag
 To undo, use the saved bookmark:
 
 ```sh
-bun run cf:restore --env production --bookmark <undo-bookmark>
+deno task cf:restore --env production --bookmark <undo-bookmark>
 ```
 
 Successful restoration removes maintenance mode and checks `/healthz`. The new deployment
@@ -272,7 +273,7 @@ A failure can leave
 the instance paused. After inspecting D1 and confirming the earlier command is no longer
 running, retry the intended timestamp or bookmark with `--takeover`; this retains the pause
 through the retry. To keep the database as it is and return to service, use
-`bun run cf:restore --env production --resume`. Temporary control secrets and generated
+`deno task cf:restore --env production --resume`. Temporary control secrets and generated
 configuration files are removed after each command. R2 is not rewound by D1 Time Travel;
 the restored D1 pointers select retained immutable file objects.
 
@@ -309,7 +310,7 @@ Cloudflare storage, or to move an instance between setups.
      -e SERVICE_TOKEN \
      -e SECRET_KEY \
      -e PUBLIC_URL=https://translate-vm.yourgame.com \
-     'ghcr.io/<org>/quaso:1'
+     'explodi/quaso:1'
    ```
 
    Or, with Docker Compose, add the three variables to `.env`. `SERVICES_URL` must use `https`.
@@ -328,7 +329,7 @@ one-line message, and you run it again.
 `scripts/measure.ts` times an instance from the outside, and prints a table:
 
 ```sh
-bun run scripts/measure.ts --url https://translate.yourgame.com \
+deno run -A scripts/measure.ts --url https://translate.yourgame.com \
   --key qso_… --requests 50
 ```
 
@@ -343,7 +344,7 @@ storage), and against a Docker Compose instance for comparison.
 
 ## Local runs
 
-`bun run cf:dev` runs the Worker, the Durable Object and the container on your machine with
+`deno task cf:dev` runs the Worker, the Durable Object and the container on your machine with
 Wrangler (Docker must be running; the first run builds the image for `linux/amd64`, which is slow on
 other machines). Copy `packages/cloudflare/.dev.vars.example` to `packages/cloudflare/.dev.vars` and
 fill in the three required secrets; locally, Wrangler loads only those from it. The top level of
@@ -351,7 +352,7 @@ fill in the three required secrets; locally, Wrangler loads only those from it. 
 (`SERVICES_URL`), because the container can't reach the Worker at `localhost`. Then open
 <http://localhost:8787>.
 
-`bun run cf:test` runs the package's tests in `workerd`, without Docker or an account.
+`deno task cf:test` runs the package's tests in `workerd`, without Docker or an account.
 
 ## Limits to know
 

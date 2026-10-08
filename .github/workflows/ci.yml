@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
 # Every push and pull request: formatting, lint, types, headers, licences and tests
-# (`bun run check`), plus the builds and the optional packages' tests.
+# (`deno task check`), plus the builds and the optional packages' tests.
 name: CI
 
 on:
@@ -17,50 +17,50 @@ concurrency:
 
 jobs:
   check:
-    name: bun run check
+    name: deno task check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: denoland/setup-deno@v2
         with:
-          bun-version-file: .bun-version
-      - run: bun install --frozen-lockfile
-      - run: bun run check
+          deno-version-file: .dvmrc
+      - run: deno install --frozen-lockfile
+      - run: deno task check
 
   build:
     name: Build the website and the server binary
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: denoland/setup-deno@v2
         with:
-          bun-version-file: .bun-version
-      - run: bun install --frozen-lockfile
-      - run: bun run build
+          deno-version-file: .dvmrc
+      - run: deno install --frozen-lockfile
+      - run: deno task build
       - run: ./dist/quaso version
-      - run: bun run test:binary
+      - run: deno task test:binary
 
   e2e:
     name: Browser tests (Puppeteer)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: denoland/setup-deno@v2
         with:
-          bun-version-file: .bun-version
-      - run: bun install --frozen-lockfile
+          deno-version-file: .dvmrc
+      - run: deno install --frozen-lockfile
       # Puppeteer installs Chromium before the browser tests.
       - uses: actions/cache@v4
         with:
           path: ~/.cache/puppeteer
-          key: puppeteer-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-      - run: bun run build:web
-      - run: bun run puppeteer browsers install chrome
-      - run: bun run e2e
+          key: puppeteer-${{ runner.os }}-${{ hashFiles('deno.lock') }}
+      - run: deno task build:web
+      - run: deno run -A npm:puppeteer browsers install chrome
+      - run: deno task e2e
 
   cli:
     # S4.1 and S4.11: the CLI's bundle on every system and runtime it supports, against a
-    # development server (Bun runs the server either way).
+    # development server (Deno runs the server either way).
     name: CLI (${{ matrix.os }}, ${{ matrix.runtime.name }})
     runs-on: ${{ matrix.os }}
     strategy:
@@ -70,16 +70,16 @@ jobs:
         runtime:
           - { name: node 22, command: node, node: "22" }
           - { name: node 24, command: node, node: "24" }
-          - { name: bun, command: bun }
+          - { name: deno, command: deno }
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: denoland/setup-deno@v2
         with:
-          bun-version-file: .bun-version
-      - run: bun install --frozen-lockfile
+          deno-version-file: .dvmrc
+      - run: deno install --frozen-lockfile
       - if: matrix.runtime.command == 'node'
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.runtime.node }}
-      - run: bun run build:cli
-      - run: bun run scripts/cli_e2e.ts --runtime ${{ matrix.runtime.command }}
+      - run: deno task build:cli
+      - run: deno run -A scripts/cli_e2e.ts --runtime ${{ matrix.runtime.command }}

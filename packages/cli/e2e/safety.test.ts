@@ -6,7 +6,7 @@ import * as fs from "node:fs/promises";
  * server in a temporary copy of the demo, and the English files' SHA-256 are the same
  * afterwards. With `--json`, stdout is exactly one JSON document every time.
  */
-import { assert, assertEquals } from "@quaso/runtime/assert";
+import { assert, assertEquals } from "@std/assert";
 import { join } from "node:path";
 import { copyDemo, hashFiles, inProcess, jsonOf, startServer, tempDir } from "./harness.ts";
 

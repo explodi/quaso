@@ -5,7 +5,7 @@ import { test } from "node:test";
  * The public website in a browser (S7.10): acceptance tests 2 and 11, and every page free
  * of console errors and Content Security Policy violations under the server's real headers.
  */
-import { assert, assertEquals, assertStringIncludes } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import type { Page } from "puppeteer";
 import {
   browserTest,

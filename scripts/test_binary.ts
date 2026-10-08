@@ -5,15 +5,14 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { Command } from "@quaso/runtime/command";
 import { createFolderStore } from "../packages/server/src/storage/folder_store.ts";
 import { backupKey } from "@quaso/service";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const dir = await mkdtemp(join(tmpdir(), "quaso-binary-"));
-const listener = Bun.listen({ hostname: "127.0.0.1", port: 0, socket: { data() {} } });
-const port = listener.port;
-listener.stop();
+const listener = Deno.listen({ hostname: "127.0.0.1", port: 0 });
+const port = listener.addr.port;
+listener.close();
 const url = `http://127.0.0.1:${port}`;
 const env = {
   DATA_DIR: dir,
@@ -21,18 +20,18 @@ const env = {
   PORT: String(port),
   PUBLIC_URL: url,
 };
-let server: ReturnType<Command["spawn"]> | undefined;
-let output: ReturnType<ReturnType<Command["spawn"]>["output"]> | undefined;
+let server: ReturnType<Deno.Command["spawn"]> | undefined;
+let output: ReturnType<ReturnType<Deno.Command["spawn"]>["output"]> | undefined;
 try {
-  const seed = await new Command(process.execPath, {
-    args: [join(root, "packages/server/main.ts"), "seed-dev"],
+  const seed = await new Deno.Command(Deno.execPath(), {
+    args: ["run", "-A", join(root, "packages/server/main.ts"), "seed-dev"],
     cwd: dir,
     env,
   }).output();
   assert.equal(seed.code, 0, new TextDecoder().decode(seed.stderr));
   const executable = process.platform === "win32" ? "quaso.exe" : "quaso";
   const binary = process.argv[2] ?? join(root, "dist", executable);
-  server = new Command(binary, {
+  server = new Deno.Command(binary, {
     cwd: dir,
     env,
     stdout: "piped",
@@ -47,7 +46,7 @@ try {
       /* Still starting. */
     }
     if (ready) break;
-    await Bun.sleep(50);
+    await new Promise((done) => setTimeout(done, 50));
   }
   assert(ready, "The compiled server did not become healthy");
   const html = await (await fetch(url)).text();
@@ -66,7 +65,7 @@ try {
   const key = backupKey(Date.UTC(2026, 9, 2), "sqlite");
   await createFolderStore(join(dir, "store")).write(key, bytes);
   const extracted = join(dir, "extracted.sqlite");
-  const result = await new Command(binary, {
+  const result = await new Deno.Command(binary, {
     args: ["backup", key, extracted],
     cwd: dir,
     env,

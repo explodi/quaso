@@ -226,7 +226,7 @@ export function themeCss(): string {
   return `/* SPDX-License-Identifier: MIT */
 /*
  * The theme's colours. Generated from tokens.ts: change them there, then run
- * bun run design:tokens
+ * deno task design:tokens
  * The light theme is the default; the dark one follows the system setting unless the
  * visitor picked a theme (data-theme on <html>).
  */

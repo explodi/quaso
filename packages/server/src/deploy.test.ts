@@ -2,7 +2,7 @@
 import * as fs from "node:fs/promises";
 import { test } from "node:test";
 /** `deploy/` stays in step with the server: every setting is listed in `.env.example`. */
-import { assert, assertEquals } from "@quaso/runtime/assert";
+import { assert, assertEquals } from "@std/assert";
 import { SHUTDOWN_DEADLINE_MS } from "./shutdown.ts";
 
 const read = (path: string) => fs.readFile(new URL(path, import.meta.url), "utf8");

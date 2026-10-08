@@ -4,7 +4,7 @@
  * staging, or a VM with Cloudflare storage, and paste the tables into the implementation
  * notes.
  *
- *   bun run scripts/measure.ts --url https://staging.translate.yourgame.com \
+ *   deno run -A scripts/measure.ts --url https://staging.translate.yourgame.com \
  *     --key qso_… [--requests 50] [--cold-starts 3 --sleep 660] [--json]
  *
  * - **API response times:** each endpoint `--requests` times, one after the other: the time
@@ -225,7 +225,7 @@ async function main(): Promise<number> {
   } catch (error) {
     console.error((error as Error).message);
     console.error(
-      "Usage: bun run scripts/measure.ts --url <address> [--key qso_…] [--requests 20] " +
+      "Usage: deno run -A scripts/measure.ts --url <address> [--key qso_…] [--requests 20] " +
         "[--cold-starts 0 --sleep 660] [--json]",
     );
     return 2;

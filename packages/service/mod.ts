@@ -2,7 +2,7 @@
 /**
  * @module
  * The service: the project's logic and data, behind the ports (design §3). The same code
- * runs in the Bun server with local storage and in a Cloudflare Durable Object.
+ * runs in the Deno server with local storage and in a Cloudflare Durable Object.
  *
  * The `node:sqlite` adapter has its own entry point (`@quaso/service/node-sqlite`), and so
  * do the `SyncSql` port's shared test cases (`@quaso/service/sql-cases`).

@@ -21,7 +21,7 @@ anything, it can print JSON, and its exit codes say what happened.
 
 ## Installing
 
-The CLI runs on Node 22 or later and on Bun 1.4.2 or later. It is one JavaScript file with no
+The CLI runs on Node 22 or later and on Deno 2.9 or later. It is one JavaScript file with no
 dependencies.
 
 **With npm**, pin it in your game's `package.json`, so that everyone and CI use the same version:
@@ -33,13 +33,13 @@ npx quaso status
 
 Or run a version without installing it: `npx @quaso/cli@1.0.0-rc.1 status`.
 
-**With Bun**, run it from npm:
+**With Deno**, run it from npm:
 
 ```sh
-bunx @quaso/cli@1.0.0-rc.1 status
+deno run -A npm:@quaso/cli@1.0.0-rc.1 status
 ```
 
-To install a global `quaso` command, run `bun add --global @quaso/cli`.
+To install a global `quaso` command, run `deno install --global -A --name quaso npm:@quaso/cli`.
 
 ## Connecting to your instance
 

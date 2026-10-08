@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { assert, assertEquals, assertStringIncludes } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import { join } from "node:path";
 import { EXIT_CODES } from "./errors.ts";
 import { COMMANDS, wantsJson } from "./run.ts";
@@ -51,11 +51,11 @@ test("--help --json describes the commands as data", async () => {
 test("version and --version", async () => {
   const text = await runCli(["version"]);
   assertEquals(text.code, 0);
-  assert(text.stdout.startsWith(`quaso ${VERSION} (bun `));
+  assert(text.stdout.startsWith(`quaso ${VERSION} (deno `));
   assertEquals((await runCli(["--version"])).stdout, text.stdout);
   const json = JSON.parse((await runCli(["--version", "--json"])).stdout);
   assertEquals(json.result.version, VERSION);
-  assertEquals(json.result.runtime.name, "bun");
+  assertEquals(json.result.runtime.name, "deno");
 });
 
 test("usage errors exit with code 2 and never print a stack trace", async () => {

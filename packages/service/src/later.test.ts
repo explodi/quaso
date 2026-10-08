@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
 /** Validation, permission edges, live QA and LLM integration for community features. */
-import { assert, assertEquals, assertRejects, assertStringIncludes } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertRejects, assertStringIncludes } from "@std/assert";
 import { ANONYMOUS, SYSTEM } from "./api.ts";
 import { ServiceError } from "./errors.ts";
 import { glossaryFor } from "./glossary.ts";

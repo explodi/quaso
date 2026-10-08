@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { assert, assertEquals, assertStringIncludes, assertThrows } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertStringIncludes, assertThrows } from "@std/assert";
 import { createFakeTranslator } from "../packages/service/mod.ts";
 import { DEFAULT_MODELS, evaluate, parseOptions, report } from "./llm_eval.ts";
 

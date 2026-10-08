@@ -5,7 +5,7 @@ import { test } from "node:test";
  * take well under 2 seconds each. The 50,000-string smoke test in 30 languages guards
  * against anything quadratic; it runs only with `QUASO_SMOKE=1`, and reports its times.
  */
-import { assert } from "@quaso/runtime/assert";
+import { assert } from "@std/assert";
 import type { UploadRequest } from "@quaso/core";
 import { SYSTEM } from "./api.ts";
 import { startTestService, type TestInstance } from "./test_helpers.ts";

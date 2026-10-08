@@ -19,7 +19,7 @@ translation files back into the repository. Each game runs its own instance, for
   byte-stable, and unreviewed work never reaches the files.
 - **Human work is never lost.** The LLM never overwrites a proofread translation, and every change
   is kept in history.
-- **Easy to run.** One Bun application and one SQLite database, in one Docker container.
+- **Easy to run.** One Deno application and one SQLite database, in one Docker container.
 
 Quaso 1.0 is in release-candidate testing. See the [documentation](docs/README.md) and
 [release process](docs/releasing.md). The public package names and registry publishing must be set
@@ -45,16 +45,16 @@ up before installing release artifacts; development works from this repository.
 
 ## Working on Quaso
 
-You need [Bun](https://bun.sh/) 1.4.2 (pinned in `.bun-version`) and git:
+You need [Deno](https://deno.com/) 2.9.6 (pinned in `.dvmrc`) and git:
 
 ```sh
 git clone 'https://github.com/<org>/quaso.git'
 cd quaso
-bun install --frozen-lockfile
-bun run dev
+deno install --frozen-lockfile
+deno task dev
 ```
 
-`bun run dev` starts a working Quaso with a demo project, hot reloading, a signed-in developer
+`deno task dev` starts a working Quaso with a demo project, hot reloading, a signed-in developer
 account and a fake translator, with no accounts, keys, Docker or cloud services. See
 [CONTRIBUTING.md](CONTRIBUTING.md).
 

@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
-import { Command } from "@quaso/runtime/command";
 import * as fsSync from "node:fs";
 import * as fs from "node:fs/promises";
 /**
- * Builds the project website into site/dist/ (`bun run site:build`).
+ * Builds the project website into site/dist/ (`deno task site:build`).
  *
  * Every page is pre-rendered to static HTML with react-dom/server (src/prerender.tsx), so
  * the pages load fast, work without JavaScript and ship none. That is also why there is no
- * `vite build` step: Vite only runs the development server (`bun run site`).
+ * `vite build` step: Vite only runs the development server (`deno task site`).
  *
  * - The landing page (src/Landing.tsx) becomes index.html.
  * - Each Markdown file in docs/ becomes a page, rendered with marked and Quaso’s documentation styles: docs/README.md becomes docs/index.html, docs/contributing/architecture.md becomes
@@ -32,7 +31,7 @@ marked.use(gfmHeadingId());
 const render = (text: string) => marked.parse(text, { async: false });
 import { cp } from "node:fs/promises";
 import { mkdir } from "node:fs/promises";
-import { walk } from "@quaso/runtime/files";
+import { walk } from "@std/fs/walk";
 import { fileURLToPath as fromFileUrl } from "node:url";
 import { dirname, join, relative, sep as SEPARATOR } from "node:path";
 import * as posix from "node:path/posix";
@@ -211,7 +210,7 @@ async function findRepositoryUrl(): Promise<string | undefined> {
   const repository = process.env["GITHUB_REPOSITORY"];
   if (server && repository) return `${server}/${repository}`;
   try {
-    const output = await new Command("git", {
+    const output = await new Deno.Command("git", {
       args: ["remote", "get-url", "origin"],
       cwd: REPOSITORY,
       stdout: "piped",

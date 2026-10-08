@@ -5,8 +5,7 @@ import { mkdtemp, readFile, cp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
-import { Command } from "@quaso/runtime/command";
-import { assert, assertEquals, assertStringIncludes } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import type { Browser, Page } from "puppeteer";
 import type { JobInfo, JobsResult, ProjectInfo, QuasoConfig, SourceFilesResult } from "@quaso/core";
 import type { DownloadResult } from "../packages/cli/src/commands/download.ts";
@@ -107,7 +106,7 @@ export async function runWorkflow(options: WorkflowOptions): Promise<{ job: JobI
       changedKey: { file: string; key: string };
     } = JSON.parse(await readFile(join(FIXTURE, "expected.json"), "utf8"));
     const cli = async <T>(...args: string[]): Promise<T> => {
-      const output = await new Command("node", {
+      const output = await new Deno.Command("node", {
         args: [join(ROOT, "packages/cli/dist/quaso.mjs"), ...args, "--json"],
         cwd: workspace,
         env: { QUASO_HOSTNAME: url, QUASO_API_KEY: token.secret },

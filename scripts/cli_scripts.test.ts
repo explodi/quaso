@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
 import * as fs from "node:fs/promises";
-import { makeTempDir } from "@quaso/runtime/files";
 /** The CLI's build, development and end-to-end scripts. */
-import { assert, assertEquals, assertThrows } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertThrows } from "@std/assert";
 import { fileURLToPath as fromFileUrl } from "node:url";
 import { join } from "node:path";
 import { checkBundle, cliVersion, FORBIDDEN, HEADER, packageJson } from "./build_cli.ts";
@@ -55,7 +54,7 @@ test("the CLI's version matches packages/cli/package.json", async () => {
   assertEquals(await cliVersion(), config.version);
 });
 
-test("bun run cli: the development server and key, unless set", async () => {
+test("deno task cli: the development server and key, unless set", async () => {
   assertEquals(await devEnv({}, () => Promise.resolve("qso_dev")), {
     QUASO_HOSTNAME: DEV_URL,
     QUASO_API_KEY: "qso_dev",
@@ -67,9 +66,9 @@ test("bun run cli: the development server and key, unless set", async () => {
   assertEquals(await devEnv({}, () => Promise.resolve(null)), { QUASO_HOSTNAME: DEV_URL });
 });
 
-test("bun run cli uses the demo when no project is found or chosen", async () => {
+test("deno task cli uses the demo when no project is found or chosen", async () => {
   const demo = join(ROOT, "examples", "demo-game");
-  const outside = await makeTempDir();
+  const outside = await Deno.makeTempDir();
   try {
     assertEquals(await devArgs(["status"], outside), ["--cwd", demo, "status"]);
     assertEquals(await devArgs(["status", "--cwd", "x"], outside), ["status", "--cwd", "x"]);
@@ -91,9 +90,9 @@ test("bun run cli uses the demo when no project is found or chosen", async () =>
 test("cli_e2e.ts takes --runtime and --bundle", () => {
   assertEquals(parseOptions(["--runtime", "node"]).runtime, "node");
   assert(
-    parseOptions(["--runtime=bun"]).bundle.endsWith(join("packages", "cli", "dist", "quaso.mjs")),
+    parseOptions(["--runtime=deno"]).bundle.endsWith(join("packages", "cli", "dist", "quaso.mjs")),
   );
-  assertEquals(parseOptions(["--runtime", "bun", "--bundle", "/tmp/q.mjs"]).bundle, "/tmp/q.mjs");
+  assertEquals(parseOptions(["--runtime", "deno", "--bundle", "/tmp/q.mjs"]).bundle, "/tmp/q.mjs");
   assertThrows(() => parseOptions([]));
   assertThrows(() => parseOptions(["--runtime", "invalid"]));
   assertThrows(() => parseOptions(["--runtime", "node", "--other"]));

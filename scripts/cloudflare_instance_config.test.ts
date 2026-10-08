@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
-import { describe, expect, test } from "bun:test";
+import { exists } from "@std/fs/exists";
+import { describe, test } from "node:test";
+import { expect } from "@std/expect";
 import * as fs from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, isAbsolute } from "node:path";
@@ -21,7 +23,7 @@ const instance = {
   bucketName: "quaso-example-store",
   locationHint: "weur",
   sleepAfter: "5m",
-  image: "ghcr.io/explodi/quaso:1.0.0-beta.2",
+  image: "explodi/quaso:1.0.0-beta.2",
 };
 const settings = { version: 1 as const, environments: { staging: instance } };
 
@@ -130,7 +132,7 @@ describe("Cloudflare instance configuration", () => {
           return 0;
         }),
       ).toBe(0);
-      expect(await fs.exists(dirname(generatedPath))).toBe(false);
+      expect(await exists(dirname(generatedPath))).toBe(false);
       await expect(
         deploy(
           ["--env", "staging", "--instance-config", path],
@@ -141,7 +143,7 @@ describe("Cloudflare instance configuration", () => {
           async () => {},
         ),
       ).rejects.toThrow("Wrangler failed");
-      expect(await fs.exists(dirname(generatedPath))).toBe(false);
+      expect(await exists(dirname(generatedPath))).toBe(false);
       expect(
         await deploy(
           ["--env", "staging", "--instance-config", path],
@@ -152,7 +154,7 @@ describe("Cloudflare instance configuration", () => {
           async () => {},
         ),
       ).toBe(7);
-      expect(await fs.exists(dirname(generatedPath))).toBe(false);
+      expect(await exists(dirname(generatedPath))).toBe(false);
       await expect(readInstanceConfig(join(directory, "missing.jsonc"))).rejects.toThrow(
         "cf:setup",
       );

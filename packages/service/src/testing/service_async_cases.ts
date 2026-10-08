@@ -49,7 +49,9 @@ export const ASYNC_SERVICE_CASES: { name: string; run(sql: Sql): Promise<void> }
     name: "a fresh service migrates, creates defaults and restarts without changing the revision",
     async run(sql) {
       const tables = MIGRATIONS.flatMap((migration) =>
-        [...migration.sql.matchAll(/CREATE TABLE (?:IF NOT EXISTS )?(\w+)/g)].map((match) => match[1]),
+        [...migration.sql.matchAll(/CREATE TABLE (?:IF NOT EXISTS )?(\w+)/g)].map(
+          (match) => match[1],
+        ),
       );
       await sql.migrate([
         { sql: "PRAGMA defer_foreign_keys = ON" },

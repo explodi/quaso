@@ -55,20 +55,20 @@ jobs:
       COMPOSE_PROJECT_NAME: quaso-acceptance-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: denoland/setup-deno@v2
         with:
-          bun-version-file: .bun-version
-      - run: bun install --frozen-lockfile
-      - run: bun run puppeteer browsers install chrome
-      - run: bun run build:cli
+          deno-version-file: .dvmrc
+      - run: deno install --frozen-lockfile
+      - run: deno run -A npm:puppeteer browsers install chrome
+      - run: deno task build:cli
       - run: docker compose build quaso
       - run: docker compose up -d --wait --wait-timeout 120 quaso
       - name: Claim the disposable instance and run acceptance checks
         env:
           QUASO_SETUP_KEY: acceptance-only-setup-key-not-for-deployment
-        run: bun run acceptance --url http://127.0.0.1:8000 --compose-dir deploy
+        run: deno task acceptance --url http://127.0.0.1:8000 --compose-dir deploy
       - name: Beta 2 workflow on the production image with Gemini stubbed
-        run: bun scripts/docker_workflow.ts quaso:acceptance
+        run: deno run -A scripts/docker_workflow.ts quaso:acceptance
       - name: Diagnostic logs (setup links redacted)
         if: failure()
         run: >-
@@ -93,18 +93,18 @@ jobs:
       QUASO_SETUP_KEY: ${{ secrets.STAGING_SETUP_KEY }}
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: denoland/setup-deno@v2
         with:
-          bun-version-file: .bun-version
-      - run: bun install --frozen-lockfile
-      - run: bun run puppeteer browsers install chrome
-      - run: bun run build:cli
+          deno-version-file: .dvmrc
+      - run: deno install --frozen-lockfile
+      - run: deno run -A npm:puppeteer browsers install chrome
+      - run: deno task build:cli
       # The staging Worker/domain/bucket and its secrets must already be configured.
-      - run: bun run cf:deploy --env staging
+      - run: deno task cf:deploy --env staging
       - name: Wait for the deployed service
         run: curl --fail --retry 12 --retry-all-errors --retry-delay 5 "$STAGING_URL/healthz"
       - name: Run the HTTP, CLI and browser acceptance checks
-        run: bun run acceptance --url "$STAGING_URL"
+        run: deno task acceptance --url "$STAGING_URL"
 
   vm-with-cloudflare-storage:
     name: Docker server with Cloudflare storage
@@ -120,13 +120,13 @@ jobs:
       QUASO_ADMIN_PASSWORD: ${{ secrets.STAGING_ADMIN_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: denoland/setup-deno@v2
         with:
-          bun-version-file: .bun-version
-      - run: bun install --frozen-lockfile
-      - run: bun run puppeteer browsers install chrome
-      - run: bun run build:cli
-      - run: bun run docker
+          deno-version-file: .dvmrc
+      - run: deno install --frozen-lockfile
+      - run: deno run -A npm:puppeteer browsers install chrome
+      - run: deno task build:cli
+      - run: deno task docker
       - name: Start the server with remote storage
         run: |
           docker run -d --name quaso-mixed --read-only --tmpfs /tmp \
@@ -134,7 +134,7 @@ jobs:
             -e SERVICES_URL="${STAGING_URL%/}/internal" -e SERVICE_TOKEN -e SECRET_KEY \
             -e PUBLIC_URL=http://127.0.0.1:8000 quaso:dev
           curl --fail --retry 12 --retry-all-errors --retry-delay 5 http://127.0.0.1:8000/healthz
-      - run: bun run acceptance --url http://127.0.0.1:8000
+      - run: deno task acceptance --url http://127.0.0.1:8000
       - name: Diagnostic logs (setup links redacted)
         if: failure()
         run: >-

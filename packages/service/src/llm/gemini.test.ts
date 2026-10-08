@@ -8,7 +8,7 @@ import {
   assertFalse,
   assertRejects,
   assertStringIncludes,
-} from "@quaso/runtime/assert";
+} from "@std/assert";
 import {
   createGeminiProvider,
   GEMINI_BASE_URL,

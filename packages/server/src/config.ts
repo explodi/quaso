@@ -6,7 +6,7 @@ import * as fs from "node:fs/promises";
  * `loadConfig` checks them all at once and reports every problem together, so an operator
  * fixes their `.env` in one go.
  */
-import { parse as parseDotenv } from "dotenv";
+import { parse as parseDotenv } from "@std/dotenv";
 import { fileURLToPath as fromFileUrl } from "node:url";
 import { resolve } from "node:path";
 
@@ -27,7 +27,7 @@ export const LOCATION_HINTS = [
 ] as const;
 
 export interface Config {
-  /** A development instance (`QUASO_DEV=1`, set by `bun run dev`). */
+  /** A development instance (`QUASO_DEV=1`, set by `deno task dev`). */
   dev: boolean;
   port: number;
   /** Absolute. */
@@ -66,11 +66,12 @@ export interface ConfigOptions {
   webDir?: string;
 }
 
-/** The website's build, next to the server's source (or inside the `bun build --compile` binary). */
+/**
+ * The website's build, next to the server's source. `deno compile --include` keeps that
+ * path inside the binary too.
+ */
 export function defaultWebDir(): string {
-  return Bun.isStandaloneExecutable
-    ? resolve(import.meta.dir, "dist")
-    : fromFileUrl(new URL("../../web/dist", import.meta.url));
+  return fromFileUrl(new URL("../../web/dist", import.meta.url));
 }
 
 /**

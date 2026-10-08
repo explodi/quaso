@@ -12,10 +12,22 @@
  * the signature covers the session ID too. Attributes: `HttpOnly; SameSite=Lax; Path=/`,
  * `Max-Age` 30 days, and `Secure` except for plain-http local addresses.
  */
+import { Buffer } from "node:buffer";
 import { type ServiceApi, SYSTEM } from "@quaso/service";
-import { decodeBase64Url, encodeBase64Url } from "@quaso/runtime/encoding";
 
 export const SESSION_COOKIE = "quaso_session";
+
+// node:buffer rather than @std/encoding: the Cloudflare Worker imports this module too.
+function encodeBase64Url(value: Uint8Array): string {
+  return Buffer.from(value).toString("base64url");
+}
+
+function decodeBase64Url(value: string): Uint8Array {
+  if (!/^[A-Za-z0-9_-]*={0,2}$/.test(value) || value.length % 4 === 1) {
+    throw new TypeError("Invalid base64url");
+  }
+  return new Uint8Array(Buffer.from(value, "base64url"));
+}
 
 /** How long a signed token is trusted without asking the service. */
 export const TOKEN_TTL_MS = 60 * 60 * 1000;

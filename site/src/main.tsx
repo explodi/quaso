@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 /**
- * The development server's entry point (`bun run site`): renders the landing page in the
+ * The development server's entry point (`deno task site`): renders the landing page in the
  * browser, with hot reloading. The published site doesn't use it: build.ts pre-renders the
  * same components to static HTML, without JavaScript.
  */

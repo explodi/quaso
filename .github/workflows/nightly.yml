@@ -25,11 +25,11 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: denoland/setup-deno@v2
         with:
-          bun-version-file: .bun-version
-      - run: bun install --frozen-lockfile
-      - run: bun run test
+          deno-version-file: .dvmrc
+      - run: deno install --frozen-lockfile
+      - run: deno task test
         env:
           QUASO_SMOKE: "1"
 
@@ -39,12 +39,12 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: denoland/setup-deno@v2
         with:
-          bun-version-file: .bun-version
-      - run: bun install --frozen-lockfile
+          deno-version-file: .dvmrc
+      - run: deno install --frozen-lockfile
       # Includes the local Durable Object performance case; no cloud account is needed.
-      - run: bun run cf:test
+      - run: deno task cf:test
 
   configuration:
     name: Check optional measurement credentials
@@ -77,13 +77,13 @@ jobs:
       COLD_STARTS: ${{ github.event_name == 'workflow_dispatch' && inputs.cold_starts && '3' || '0' }}
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: denoland/setup-deno@v2
         with:
-          bun-version-file: .bun-version
-      - run: bun install --frozen-lockfile
+          deno-version-file: .dvmrc
+      - run: deno install --frozen-lockfile
       - name: Measure authenticated and anonymous requests
         run: >-
-          bun run scripts/measure.ts --url "$STAGING_URL"
+          deno run -A scripts/measure.ts --url "$STAGING_URL"
           --key "$STAGING_READ_API_KEY" --requests 50 --json
           --cold-starts "$COLD_STARTS" --sleep 660 > measurements.json
       - name: Retain measurements

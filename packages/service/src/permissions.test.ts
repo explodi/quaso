@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { assertEquals, assertThrows } from "@quaso/runtime/assert";
+import { assertEquals, assertThrows } from "@std/assert";
 import { ANONYMOUS, SYSTEM } from "./api.ts";
 import { ServiceError } from "./errors.ts";
 import { type Action, ACTIONS, can, languageLimit, requirePermission } from "./permissions.ts";

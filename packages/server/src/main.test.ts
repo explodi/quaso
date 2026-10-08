@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: MIT
 import * as fs from "node:fs/promises";
-import { Command } from "@quaso/runtime/command";
-import { makeTempDir } from "@quaso/runtime/files";
 import { test } from "node:test";
 /**
  * The `quaso` commands, run as the real program in a temporary data folder: the start
  * checks, `seed-dev`, `serve` with its lock and graceful shutdown, `healthcheck` and
  * `token create`.
  */
-import { assert, assertEquals, assertMatch, assertStringIncludes } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertMatch, assertStringIncludes } from "@std/assert";
 import { fileURLToPath as fromFileUrl } from "node:url";
 import { join } from "node:path";
 import { healthcheck, parseFlags } from "./commands.ts";
@@ -17,9 +15,9 @@ import { VERSION } from "./version.ts";
 const MAIN = fromFileUrl(new URL("../main.ts", import.meta.url));
 const decoder = new TextDecoder();
 
-function command(args: string[], env: Record<string, string>, cwd: string): Command {
-  return new Command(process.execPath, {
-    args: ["run", MAIN, ...args],
+function command(args: string[], env: Record<string, string>, cwd: string): Deno.Command {
+  return new Deno.Command(Deno.execPath(), {
+    args: ["run", "-A", MAIN, ...args],
     env: { LOG_LEVEL: "info", ...env },
     cwd,
     stdin: "null",
@@ -34,9 +32,9 @@ async function run(args: string[], env: Record<string, string>, cwd: string) {
 }
 
 function freePort(): number {
-  const listener = Bun.listen({ hostname: "127.0.0.1", port: 0, socket: { data() {} } });
-  const port = { port: listener.port }.port;
-  listener.stop();
+  const listener = Deno.listen({ hostname: "127.0.0.1", port: 0 });
+  const port = listener.addr.port;
+  listener.close();
   return port;
 }
 
@@ -53,7 +51,7 @@ async function waitForServer(port: string): Promise<void> {
 }
 
 async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {
-  const dir = await makeTempDir();
+  const dir = await Deno.makeTempDir();
   try {
     await fn(dir);
   } finally {

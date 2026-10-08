@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
 import * as fs from "node:fs/promises";
-import { assertEquals, assertStringIncludes } from "@quaso/runtime/assert";
+import { assertEquals, assertStringIncludes } from "@std/assert";
 import { join } from "node:path";
 import { runCli, withProject } from "../test_helpers.ts";
 import { defaultTranslation } from "./init.ts";

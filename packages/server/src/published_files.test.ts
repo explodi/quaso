@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import * as fs from "node:fs/promises";
 import { join } from "node:path";
-import { assertEquals } from "@quaso/runtime/assert";
+import { assertEquals } from "@std/assert";
 import { SYSTEM, silentLogger } from "@quaso/service";
 import { openAsyncSqlite } from "../../service/src/adapters/node_async_sqlite.ts";
 import { createMemoryStore } from "../../service/src/adapters/memory_store.ts";

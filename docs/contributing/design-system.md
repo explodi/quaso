@@ -1,7 +1,7 @@
 # The Quaso design system
 
-Run `bun run dev` and open [the catalog](http://localhost:5173/design.html). It is an independent
-React entry point: no account, seeded data, or API calls are needed to use it. `bun run build:web`
+Run `deno task dev` and open [the catalog](http://localhost:5173/design.html). It is an independent
+React entry point: no account, seeded data, or API calls are needed to use it. `deno task build:web`
 also builds `design.html` for the normal static server.
 
 The catalog renders the product's components. Editing their implementation or shared CSS changes
@@ -49,8 +49,8 @@ actions in both. Status colors have separate semantic roles and must remain dist
 After editing the palette or theme roles, run:
 
 ```sh
-bun run design:tokens
-bun test packages/web/src/styles/tokens.test.ts
+deno task design:tokens
+deno test -A packages/web/src/styles/tokens.test.ts
 ```
 
 The generator updates `theme.css` and both favicons. Commit the generated files with the palette.
@@ -113,11 +113,11 @@ Inspect the affected examples in light and dark mode, then the real workflow tha
 narrow screens, keyboard focus, and long or right-to-left text when relevant. Targeted checks are:
 
 ```sh
-bun run lint:react
-bun run typecheck
-bun test packages/web/src/styles/tokens.test.ts
-bun test e2e/catalog.test.ts --timeout 60000
-bun run site:build
+deno task lint:react
+deno task typecheck
+deno test -A packages/web/src/styles/tokens.test.ts
+deno test -A e2e/catalog.test.ts --timeout 60000
+deno task site:build
 ```
 
 The Jersey fonts are distributed under the SIL Open Font License. Each font's license ships in

@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { sha256Hex } from "@quaso/core";
 import { ANONYMOUS, SYSTEM, type Actor } from "../api.ts";
-import {
-  createEmailTokenAsync,
-  createResetLinkAsync,
-  EMAIL_TOKEN_TTL,
-} from "../accounts.ts";
+import { createEmailTokenAsync, createResetLinkAsync, EMAIL_TOKEN_TTL } from "../accounts.ts";
 import { ServiceError } from "../errors.ts";
 import type { Sql } from "../ports.ts";
 import { asyncWriteMethods } from "../write_methods.ts";

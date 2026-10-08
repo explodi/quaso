@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
-import { serveHttp } from "@quaso/runtime/http";
 import * as fs from "node:fs/promises";
-/** Capture the real seeded app with Puppeteer: bun run site/screenshots.ts. */
+/** Capture the real seeded app with Puppeteer: deno run -A site/screenshots.ts. */
 import { ANONYMOUS, SYSTEM } from "@quaso/service";
 import { fileURLToPath as fromFileUrl } from "node:url";
 import { ensureWebsiteBuilt, openBrowser, waitFor, WEB_DIST } from "../e2e/_setup.ts";
@@ -14,7 +13,7 @@ await ensureWebsiteBuilt();
 const real = await realService({ dev: true });
 let browser: Awaited<ReturnType<typeof openBrowser>> | undefined;
 let app: App;
-const server = serveHttp({ hostname: "127.0.0.1", port: 0, onListen() {} }, (request) =>
+const server = Deno.serve({ hostname: "127.0.0.1", port: 0, onListen() {} }, (request) =>
   app(request),
 );
 const url = `http://127.0.0.1:${server.addr.port}`;

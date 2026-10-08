@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 /**
- * Line endings for `bun run cf:fixtures` (`fixtures.ts`). Git for Windows checks text files
+ * Line endings for `deno task cf:fixtures` (`fixtures.ts`). Git for Windows checks text files
  * out with CRLF by default, both the demo project's files and the fixture itself, so the
  * fixture is written from LF text, and compared whatever the endings on disk.
  */

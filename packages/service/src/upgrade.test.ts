@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { makeTempDir } from "@quaso/runtime/files";
 import * as fs from "node:fs/promises";
-import { assert, assertEquals } from "@quaso/runtime/assert";
+import { assert, assertEquals } from "@std/assert";
 import { fileURLToPath as fromFileUrl } from "node:url";
 import { join } from "node:path";
 import { openNodeSqlite } from "./adapters/node_sqlite.ts";
@@ -17,7 +16,7 @@ const fixtures = fromFileUrl(new URL("../testdata/upgrade/", import.meta.url));
 
 for (const version of [1, 3]) {
   test(`upgrade historical schema ${version}: preserve rows and export bytes, then continue working`, async () => {
-    const dir = await makeTempDir({ prefix: "quaso-upgrade-" });
+    const dir = await Deno.makeTempDir({ prefix: "quaso-upgrade-" });
     try {
       const file = join(dir, "quaso.sqlite");
       await fs.copyFile(join(fixtures, `v${version}.sqlite`), file);

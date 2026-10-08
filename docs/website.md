@@ -327,7 +327,7 @@ dark instead, for this browser.
 ## Accessibility: the keyboard audit
 
 We aim for WCAG 2.2 AA. This checklist is the keyboard audit of Sprint 7; the browser tests
-(`bun run e2e`) check the items marked _(tested)_ on every run.
+(`deno task e2e`) check the items marked _(tested)_ on every run.
 
 - [x] A **Skip to content** link is the first thing Tab reaches, on every page.
 - [x] Landmarks: a header with the main navigation, the main content, a footer; every page has one

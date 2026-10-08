@@ -5,7 +5,7 @@
  * another site, however `next` is spelled), and what it does when the session ends while
  * someone is working (a 401).
  */
-import { assert, assertEquals, assertStringIncludes } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import type { SessionInfo } from "@quaso/core";
 import { ANONYMOUS, SYSTEM } from "@quaso/service";
 import {

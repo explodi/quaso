@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { assertEquals } from "@quaso/runtime/assert";
+import { assertEquals } from "@std/assert";
 import type { Role } from "@quaso/core";
 import type { Context } from "../../../service/src/context.ts";
 import { can as serviceCan } from "../../../service/src/permissions.ts";

@@ -33,8 +33,8 @@ All requests require `Authorization: Bearer <TEST_KEY>`. Call these endpoints in
    grace progress and exit. This measures a lower bound on available shutdown time;
    it does not establish rollout or platform-failure guarantees.
 
-Check types with `bunx tsc --noEmit -p packages/cloudflare/spike/tsconfig.json` from
-repository root. Check `server.ts` separately with the root's Bun types.
+Check types with `deno run -A npm:typescript/tsc --noEmit -p packages/cloudflare/spike/tsconfig.json`
+from repository root. Check `server.ts` separately with `deno check`.
 
 After saving results, delete the container application, Worker, every object in the
 bucket, the bucket, both D1 databases, and all probe image tags in the managed registry.
@@ -43,7 +43,7 @@ with the chosen prefix remain. Keep the probe source and measurements for reprod
 
 ## D1 batch contract
 
-Run `bun packages/cloudflare/scripts/batch_smoke.ts` from repository root after
+Run `deno run -A packages/cloudflare/scripts/batch_smoke.ts` from repository root after
 `wrangler login`. This creates a uniquely named temporary Worker, controller, D1
 database and container image; runs the shared batch cases from inside the container;
 saves `.quaso/beta-2-evidence/d1-contract.json`; and deletes its resources in a `finally`

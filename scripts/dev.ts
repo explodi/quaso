@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
-import type { CommandStatus } from "@quaso/runtime/command";
 import * as fs from "node:fs/promises";
-import { Command } from "@quaso/runtime/command";
 /**
- * `bun run dev` (design §5.13): the development server with the demo project.
+ * `deno task dev` (design §5.13): the development server with the demo project.
  *
  * 1. Creates `.quaso/` (with `--reset`, deletes it first) and seeds the demo project on the
  *    first run (`quaso seed-dev`).
@@ -38,8 +36,8 @@ async function exists(path: string): Promise<boolean> {
   );
 }
 
-function bun(args: string[], options: { cwd?: string; env?: Record<string, string> } = {}) {
-  return new Command(process.execPath, {
+function deno(args: string[], options: { cwd?: string; env?: Record<string, string> } = {}) {
+  return new Deno.Command(Deno.execPath(), {
     args,
     cwd: options.cwd ?? ROOT,
     env: options.env,
@@ -57,12 +55,12 @@ async function prepare(reset: boolean): Promise<boolean> {
   }
   if (await exists(join(DATA_DIR, "dev-api-key"))) return true;
   if (await exists(join(DATA_DIR, "quaso.sqlite"))) {
-    console.error(".quaso/ has a database but no development key. Run: bun run dev:reset");
+    console.error(".quaso/ has a database but no development key. Run: deno task dev:reset");
     return true;
   }
   console.log("Seeding the demo project into .quaso/ …");
-  const { success } = await bun(["run", SERVER, "seed-dev"], { env }).spawn().status;
-  if (!success) console.error("Seeding failed. To start again: bun run dev:reset");
+  const { success } = await deno(["run", "-A", SERVER, "seed-dev"], { env }).spawn().status;
+  if (!success) console.error("Seeding failed. To start again: deno task dev:reset");
   return success;
 }
 
@@ -93,19 +91,19 @@ async function readKey(): Promise<string | null> {
 if (import.meta.main) {
   if (!(await prepare(process.argv.slice(2).includes("--reset")))) process.exit(1);
 
-  const server = bun(["run", "--watch", SERVER, "serve"], { env }).spawn();
-  const web = bun(["run", "vite", "--strictPort"], {
+  const server = deno(["run", "-A", "--watch", SERVER, "serve"], { env }).spawn();
+  const web = deno(["run", "-A", "npm:vite", "--strictPort"], {
     cwd: join(ROOT, "packages", "web"),
     env: { QUASO_DEV_SERVER: SERVER_URL },
   }).spawn();
   const children = [server, web];
 
   /** Why we stop: Ctrl-C, or the first child that exited. */
-  let reason: "signal" | CommandStatus | null = null;
-  const stop = (why: "signal" | CommandStatus) => {
+  let reason: "signal" | Deno.CommandStatus | null = null;
+  const stop = (why: "signal" | Deno.CommandStatus) => {
     if (reason !== null) return;
     reason = why;
-    // SIGINT, as Ctrl-C in a terminal: `bun run --watch` only exits on that.
+    // SIGINT, as Ctrl-C in a terminal: what `deno run --watch` and Vite expect.
     for (const child of children) {
       try {
         child.kill("SIGINT");
@@ -132,12 +130,12 @@ if (import.meta.main) {
     if (key) {
       console.log("  The development API key (upload scope), for the CLI:");
       console.log(
-        `    QUASO_HOSTNAME=http://localhost:${PORT} QUASO_API_KEY=${key} bun run cli status\n`,
+        `    QUASO_HOSTNAME=http://localhost:${PORT} QUASO_API_KEY=${key} deno task cli status\n`,
       );
     }
   });
 
   await Promise.all(children.map((child) => child.status));
-  const why = reason as "signal" | CommandStatus | null;
+  const why = reason as "signal" | Deno.CommandStatus | null;
   process.exit(why === "signal" || why?.success ? 0 : why?.code || 1);
 }

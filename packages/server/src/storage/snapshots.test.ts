@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: MIT
-import { makeTempDir } from "@quaso/runtime/files";
 import * as fs from "node:fs/promises";
 import { test } from "node:test";
-import { Command } from "@quaso/runtime/command";
 import { DatabaseSync } from "node:sqlite";
-import { assert, assertEquals, assertRejects } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertRejects } from "@std/assert";
 import { join } from "node:path";
 import {
   copyInto,
@@ -16,7 +14,7 @@ import {
 
 /** A WAL database in a temporary folder, with a few rows. */
 async function withDatabase(fn: (db: DatabaseSync, dir: string) => Promise<void>) {
-  const dir = await makeTempDir();
+  const dir = await Deno.makeTempDir();
   const db = new DatabaseSync(join(dir, "quaso.sqlite"));
   try {
     db.exec("PRAGMA journal_mode = WAL");
@@ -105,8 +103,8 @@ test("snapshots: a worker copies on its own connection, while this one goes on",
   });
 });
 
-test("snapshots: work in a standalone Bun subprocess", async () => {
-  const dir = await makeTempDir();
+test("snapshots: work in a standalone Deno subprocess", async () => {
+  const dir = await Deno.makeTempDir();
   try {
     const probe = join(dir, "probe.ts");
     const snapshots = new URL("./snapshots.ts", import.meta.url).href;
@@ -123,8 +121,8 @@ test("snapshots: work in a standalone Bun subprocess", async () => {
          console.log(name, copy.prepare("SELECT COUNT(*) AS n FROM t").get()?.n);
        }`,
     );
-    const { code, stdout, stderr } = await new Command(process.execPath, {
-      args: ["run", probe, dir],
+    const { code, stdout, stderr } = await new Deno.Command(Deno.execPath(), {
+      args: ["run", "-A", probe, dir],
       stdout: "piped",
       stderr: "piped",
     }).output();

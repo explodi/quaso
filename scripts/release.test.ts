@@ -1,13 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { makeTempDir } from "@quaso/runtime/files";
 import * as fs from "node:fs/promises";
-import {
-  assertEquals,
-  assertRejects,
-  assertStringIncludes,
-  assertThrows,
-} from "@quaso/runtime/assert";
+import { assertEquals, assertRejects, assertStringIncludes, assertThrows } from "@std/assert";
 import { prepareRelease, releaseChangelog, validateVersion } from "./release.ts";
 
 const NOTES = `# Changelog
@@ -48,7 +42,7 @@ test("release accepts semantic versions and rejects unsafe or malformed input", 
 });
 
 test("release updates all artifacts from one version and validates before writing", async () => {
-  const root = await makeTempDir();
+  const root = await Deno.makeTempDir();
   try {
     for (const path of [
       "packages/core/src",
@@ -83,7 +77,7 @@ test("release updates all artifacts from one version and validates before writin
     );
     await fs.writeFile(`${root}/CHANGELOG.md`, NOTES);
     await fs.writeFile(
-      `${root}/bun.lock`,
+      `${root}/deno.lock`,
       '{"workspaces":{"packages/core":{"version":"0.1.0"}}}\n',
     );
     const files = await prepareRelease("1.0.0-rc.1", root, new Date("2026-10-01T00:00:00Z"));

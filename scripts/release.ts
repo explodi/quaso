@@ -88,9 +88,9 @@ export async function prepareRelease(
     if (typeof parsed.version !== "string") throw new Error(`${path} has no version`);
     files.set(path, original.replace(/("version"\s*:\s*")[^"]+"/, `$1${version}"`));
   }
-  const lockPath = join(root, "bun.lock");
+  const lockPath = join(root, "deno.lock");
   const lock = await fs.readFile(lockPath, "utf8");
-  files.set("bun.lock", lock.replace(/("version"\s*:\s*")[^"]+"/g, `$1${version}"`));
+  files.set("deno.lock", lock.replace(/("version"\s*:\s*")[^"]+"/g, `$1${version}"`));
   const examplePath = "examples/demo-game/package.json";
   const example = await fs.readFile(join(root, examplePath), "utf8");
   if (!JSON.parse(example).devDependencies?.["@quaso/cli"]) {
@@ -118,7 +118,7 @@ export async function prepareRelease(
 
 if (import.meta.main) {
   if (process.argv.slice(2).length !== 1) {
-    console.error("Usage: bun run release <version> (for example, 1.0.0-rc.1)");
+    console.error("Usage: deno task release <version> (for example, 1.0.0-rc.1)");
     process.exit(2);
   }
   try {

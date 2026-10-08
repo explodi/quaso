@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { assertEquals, assertThrows } from "@quaso/runtime/assert";
+import { assertEquals, assertThrows } from "@std/assert";
 import { formatPath, type Infer, parse, s, SchemaError, toJsonSchema, validate } from "./schema.ts";
 
 const Upload = s.object({

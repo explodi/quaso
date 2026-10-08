@@ -140,9 +140,9 @@ function help(out: Output, command: Command | null): ExitCode {
 }
 
 function version(out: Output): ExitCode {
-  const bun = process.versions.bun;
-  const runtime = bun
-    ? { name: "bun", version: bun }
+  const deno = process.versions.deno;
+  const runtime = deno
+    ? { name: "deno", version: deno }
     : { name: "node", version: process.versions.node };
   if (out.json) {
     out.document(resultDocument("version", EXIT.ok, { version: VERSION, runtime }));

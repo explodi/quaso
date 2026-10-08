@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { assert, assertEquals, assertRejects } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertRejects } from "@std/assert";
 import { CliError } from "./errors.ts";
 import {
   ApiClient,
@@ -256,7 +256,7 @@ test("redirects are never followed", async () => {
   assert(error.hint?.includes("https://elsewhere.test"));
 });
 
-test("network errors: exit code 4, with the cause as Node and Bun report it", async () => {
+test("network errors: exit code 4, with the cause as Node and Deno report it", async () => {
   const fetch = fakeFetch(() => {
     throw new TypeError("fetch failed", {
       cause: Object.assign(new Error("connect ECONNREFUSED 127.0.0.1:1"), { code: "ECONNREFUSED" }),

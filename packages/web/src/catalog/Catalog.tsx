@@ -1068,7 +1068,7 @@ export function Catalog() {
                 <H3>Give color a purpose.</H3>
                 <p>
                   Use semantic CSS variables. The palette in <code>styles/tokens.ts</code> defines
-                  every shade; <code>bun run design:tokens</code> generates the themes.
+                  every shade; <code>deno task design:tokens</code> generates the themes.
                 </p>
               </div>
               <div>

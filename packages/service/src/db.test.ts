@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { assertEquals, assertThrows } from "@quaso/runtime/assert";
+import { assertEquals, assertThrows } from "@std/assert";
 import { openNodeSqlite } from "./adapters/node_sqlite.ts";
 import {
   bumpRevision,

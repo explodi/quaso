@@ -13,8 +13,5 @@
   "private": true,
   "dependencies": {
     "@quaso/core": "workspace:*"
-  },
-  "devDependencies": {
-    "@quaso/runtime": "workspace:*"
   }
 }

@@ -6,7 +6,7 @@ import {
   assertInstanceOf,
   assertStrictEquals,
   assertThrows,
-} from "@quaso/runtime/assert";
+} from "@std/assert";
 import {
   entryValue,
   isReferenceOnly,
@@ -22,21 +22,21 @@ import {
   SourceError,
 } from "./entries.ts";
 import { entryKey, type KeyPath, PLURAL_CATEGORIES, type TextValue } from "./types.ts";
-const enAppendix = await Bun.file(
+const enAppendix = await Deno.readTextFile(
   new URL("../testdata/i18next/en/appendix.json", import.meta.url),
-).text();
-const enCommon = await Bun.file(
+);
+const enCommon = await Deno.readTextFile(
   new URL("../testdata/i18next/en/common.json", import.meta.url),
-).text();
-const enMenus = await Bun.file(
+);
+const enMenus = await Deno.readTextFile(
   new URL("../testdata/i18next/en/menus.json.txt", import.meta.url),
-).text();
-const jaAppendix = await Bun.file(
+);
+const jaAppendix = await Deno.readTextFile(
   new URL("../testdata/i18next/ja/appendix.json", import.meta.url),
-).text();
-const importedPlCommon = await Bun.file(
+);
+const importedPlCommon = await Deno.readTextFile(
   new URL("../testdata/i18next/import/pl/common.json.txt", import.meta.url),
-).text();
+);
 
 // Helpers
 

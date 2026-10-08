@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { Command } from "@quaso/runtime/command";
 import {
   assert,
   assertEquals,
   assertInstanceOf,
   assertStrictEquals,
   assertThrows,
-} from "@quaso/runtime/assert";
+} from "@std/assert";
 import {
   DEFAULT_FORMAT,
   detectJsonFormat,
@@ -755,7 +754,7 @@ test("accepts nesting up to MAX_JSON_DEPTH levels and rejects deeper nesting cle
   assertEquals(parseError('{"a":'.repeat(2000)).detail, "Nesting is deeper than 256 levels");
 });
 
-test("the deepest accepted nesting runs in a Bun subprocess", async () => {
+test("the deepest accepted nesting runs in a Deno subprocess", async () => {
   // Exercise parsing and conversion at the supported depth in a fresh runtime.
   const depth = MAX_JSON_DEPTH;
   const objects = '{"a":'.repeat(depth) + "1" + "}".repeat(depth);
@@ -771,8 +770,8 @@ test("the deepest accepted nesting runs in a Bun subprocess", async () => {
     }
     console.log("ok");
   `;
-  const command = new Command(process.execPath, {
-    args: ["--eval", script],
+  const command = new Deno.Command(Deno.execPath(), {
+    args: ["eval", script],
     stdout: "piped",
     stderr: "piped",
   });

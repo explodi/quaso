@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 /** Uses Wrangler's current credentials without displaying or persisting them. */
-import { Command } from "@quaso/runtime/command";
 import type { Fetch } from "../../core/mod.ts";
 
 export interface Identity {
@@ -16,8 +15,8 @@ export type WranglerRun = (
 ) => Promise<{ code: number; stdout: string }>;
 
 export async function runWrangler(args: string[], inherit = false) {
-  const result = await new Command(process.execPath, {
-    args: ["run", "wrangler", ...args],
+  const result = await new Deno.Command(Deno.execPath(), {
+    args: ["run", "-A", "npm:wrangler", ...args],
     cwd: new URL("../", import.meta.url),
     stdin: "inherit",
     stdout: inherit ? "inherit" : "piped",

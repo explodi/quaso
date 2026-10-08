@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
-import { makeTempDir } from "@quaso/runtime/files";
 import * as fs from "node:fs/promises";
 import { test } from "node:test";
-import { assertEquals, assertStringIncludes } from "@quaso/runtime/assert";
+import { assertEquals, assertStringIncludes } from "@std/assert";
 import { join } from "node:path";
 import { CONTENT_SECURITY_POLICY } from "./http/headers.ts";
 import { FakeService } from "./testing/fake_service.ts";
@@ -13,7 +12,7 @@ const INDEX =
   "</script></head><body><div id=root></div></body></html>";
 
 async function withWebsite(fn: (webDir: string) => Promise<void>): Promise<void> {
-  const webDir = await makeTempDir();
+  const webDir = await Deno.makeTempDir();
   try {
     await fs.mkdir(join(webDir, "assets"));
     await fs.writeFile(join(webDir, "index.html"), INDEX);
@@ -31,7 +30,7 @@ test("website: the HTML shell, with the CSP, for a few minutes", () =>
     const response = await call(app, "/");
     assertEquals(response.status, 200);
     assertEquals(await response.text(), INDEX);
-    assertEquals(response.headers.get("Content-Type"), "text/html;charset=utf-8");
+    assertEquals(response.headers.get("Content-Type"), "text/html; charset=UTF-8");
     assertEquals(response.headers.get("Content-Security-Policy"), CONTENT_SECURITY_POLICY);
     assertEquals(
       response.headers.get("Cache-Control"),
@@ -106,7 +105,7 @@ test("website: without a build, a placeholder says how to make one", async () =>
   const { app } = testApp(new FakeService());
   const response = await call(app, "/");
   assertEquals(response.status, 200);
-  assertStringIncludes(await response.text(), "bun run build:web");
+  assertStringIncludes(await response.text(), "deno task build:web");
   assertEquals(response.headers.get("Cache-Control"), "no-store");
   assertEquals(response.headers.get("Content-Security-Policy"), CONTENT_SECURITY_POLICY);
 });

@@ -2,7 +2,7 @@
 import * as fs from "node:fs/promises";
 /**
  * The development seed (design §5.13): the demo project from `examples/demo-game/`,
- * uploaded and partly translated, and a development API key. `bun run dev` runs it once,
+ * uploaded and partly translated, and a development API key. `deno task dev` runs it once,
  * on a new database, through `quaso seed-dev`.
  */
 import {

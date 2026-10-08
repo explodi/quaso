@@ -1,6 +1,0 @@
-# SPDX-License-Identifier: MIT
-[install]
-linker = "hoisted"
-
-[test]
-timeout = 30000

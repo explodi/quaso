@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { assertEquals, assertMatch } from "@quaso/runtime/assert";
+import { assertEquals, assertMatch } from "@std/assert";
 import { SYSTEM } from "@quaso/service";
 import {
   DEMO_SUGGESTIONS,

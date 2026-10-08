@@ -4,7 +4,7 @@
  * "translates" by marking the English in a recognisable way, `[Ŵéļçöɱé {{name}}]`, keeping
  * every placeholder, `⟦n⟧` token and number exactly, and gives every plural form the request
  * asks for. With it, upload, automatic translation, review and download work offline, for
- * free and deterministically. `bun run dev` uses it when no Gemini key is set.
+ * free and deterministically. `deno task dev` uses it when no Gemini key is set.
  *
  * It answers the same request the Gemini provider gets, reading the machine-readable copy of
  * the batch (`ProviderRequest.batch`) instead of the prompt.

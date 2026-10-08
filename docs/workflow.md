@@ -11,7 +11,7 @@ hostname and language tags with yours. The operator must configure an LLM provid
 key before the auto-translation step.
 
 This guide describes Beta 2. Until its CLI package is published, use a CLI built from the
-same checkout as your instance: run `bun run build:cli` in Quaso, then install its
+same checkout as your instance: run `deno task build:cli` in Quaso, then install its
 `packages/cli/dist` folder in your game instead of the npm package below.
 
 ## 1. Connect the repository

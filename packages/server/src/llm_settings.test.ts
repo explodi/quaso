@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { makeTempDir } from "@quaso/runtime/files";
 import * as fs from "node:fs/promises";
-import { assertEquals } from "@quaso/runtime/assert";
+import { assertEquals } from "@std/assert";
 import { SYSTEM } from "@quaso/service";
 import { startLocalService } from "./local_service.ts";
 import { memoryLogger, testConfig } from "./testing/helpers.ts";
 
 test("local LLM configuration ignores the former environment variables", async () => {
-  const dir = await makeTempDir();
+  const dir = await Deno.makeTempDir();
   const log = memoryLogger();
   const local = await startLocalService(
     testConfig({

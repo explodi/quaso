@@ -18,7 +18,7 @@ export function releaseNotes(changelog: string, version: string, repository?: st
     `Back up the instance and retain its SECRET_KEY and previous image before upgrading.\n\n` +
     `- Docker Compose: pin image version \`${version}\`, then run ` +
     "`docker compose pull` and `docker compose up -d`. Check `/healthz` and the logs.\n" +
-    "- Cloudflare: deploy this source tag with `bun run cf:deploy --env production`, " +
+    "- Cloudflare: deploy this source tag with `deno task cf:deploy --env production`, " +
     "then check `/healthz` and the jobs page.\n\n" +
     "Migrations are forward-only. Keep the pre-migration snapshot with the previous image. " +
     `Read [operations and rollback](${operations}) before changing production.\n`

@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { STORE_CASES } from "../../../service/src/testing/store_cases.ts";
 import { createFolderStore } from "./folder_store.ts";
-import { assertEquals, assertInstanceOf } from "@quaso/runtime/assert";
+import { assertEquals, assertInstanceOf } from "@std/assert";
 import { StoreConflict } from "@quaso/service";
 
 for (const testCase of STORE_CASES) {
@@ -44,21 +44,35 @@ test("a process exit before rename leaves the old object and releases the write 
   try {
     const store = createFolderStore(dir);
     const first = await store.write("object", new Uint8Array([1, 2]));
-    const module = new URL("./folder_store.ts", import.meta.url).pathname;
+    const module = new URL("./folder_store.ts", import.meta.url).href;
     const script = join(dir, "crash.ts");
     await writeFile(
       script,
       `
-      import { mock } from "bun:test";
-      import * as fs from "node:fs/promises";
-      mock.module("node:fs/promises", () => ({ ...fs, rename: () => process.exit(99) }));
-      const { createFolderStore } = await import(${JSON.stringify(module)});
+      import { createFolderStore } from ${JSON.stringify(module)};
       await createFolderStore(${JSON.stringify(dir)}).write("object", new Uint8Array([9, 9]));
     `,
     );
-    const child = Bun.spawn([process.execPath, script], { stdout: "ignore", stderr: "pipe" });
-    const [code, stderr] = await Promise.all([child.exited, new Response(child.stderr).text()]);
-    assertEquals(code, 99, stderr);
+    // The import map gives folder_store.ts, and only it, a rename that exits the process.
+    const crashingFs = join(dir, "crashing_fs.ts");
+    await writeFile(
+      crashingFs,
+      `export * from "node:fs/promises";\nexport const rename = () => Deno.exit(99);\n`,
+    );
+    const importMap = join(dir, "import_map.json");
+    await writeFile(
+      importMap,
+      JSON.stringify({
+        imports: { "@quaso/core": new URL("../../../core/mod.ts", import.meta.url).href },
+        scopes: { [module]: { "node:fs/promises": crashingFs } },
+      }),
+    );
+    const { code, stderr } = await new Deno.Command(Deno.execPath(), {
+      args: ["run", "-A", `--import-map=${importMap}`, script],
+      stdout: "null",
+      stderr: "piped",
+    }).output();
+    assertEquals(code, 99, new TextDecoder().decode(stderr));
     const restarted = createFolderStore(dir);
     assertEquals(await restarted.read("object"), new Uint8Array([1, 2]));
     assertEquals(

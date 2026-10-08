@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { makeTempDir } from "@quaso/runtime/files";
 import * as fs from "node:fs/promises";
-import { assertEquals } from "@quaso/runtime/assert";
+import { assertEquals } from "@std/assert";
 import { join } from "node:path";
 import { missingHeaders } from "./check_headers.ts";
 import { isAllowed } from "./check_licenses.ts";
@@ -26,14 +25,14 @@ test("licence expressions: permissive passes, copyleft fails", () => {
 });
 
 test("files without the SPDX header are reported", async () => {
-  const dir = await makeTempDir();
+  const dir = await Deno.makeTempDir();
   try {
     const good = join(dir, "good.ts");
     const shebang = join(dir, "tool.ts");
     const bad = join(dir, "bad.ts");
     const other = join(dir, "notes.md");
     await fs.writeFile(good, "// SPDX-License-Identifier: MIT\nexport {};\n");
-    await fs.writeFile(shebang, "#!/usr/bin/env bun\n// SPDX-License-Identifier: MIT\n");
+    await fs.writeFile(shebang, "#!/usr/bin/env -S deno run -A\n// SPDX-License-Identifier: MIT\n");
     await fs.writeFile(bad, "export const x = 1;\n");
     await fs.writeFile(other, "no header needed\n");
     assertEquals(await missingHeaders([good, shebang, bad, other]), [bad]);

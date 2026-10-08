@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { assert, assertEquals, assertMatch, assertNotEquals } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertMatch, assertNotEquals } from "@std/assert";
 import type { Actor } from "@quaso/service";
 import {
   COOKIE_MAX_AGE,

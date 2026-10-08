@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 /**
  * The ports (design §3): the only ways the service reaches its runtime. Each has two
- * implementations, one in the Bun server (local storage) and one in the Durable Object
+ * implementations, one in the Deno server (local storage) and one in the Durable Object
  * (Cloudflare storage), and the same test cases run against both.
  */
 

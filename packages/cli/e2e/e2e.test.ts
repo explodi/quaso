@@ -2,7 +2,7 @@
 import { test } from "node:test";
 /**
  * S4.11: the end-to-end scenario against a real server, with the CLI in this process
- * (Bun), and with the built bundle under Node and under Bun. The bundle is built into a
+ * (Deno), and with the built bundle under Node and under Deno. The bundle is built into a
  * temporary folder, so the test never uses a stale `dist/`.
  */
 import { join } from "node:path";
@@ -10,7 +10,7 @@ import { bundleCli } from "../../../scripts/build_cli.ts";
 import { bundled, inProcess, nodeVersion, tempDir } from "./harness.ts";
 import { runScenario } from "./scenario.ts";
 
-test("e2e: the CLI in-process under Bun", async () => {
+test("e2e: the CLI in-process under Deno", async () => {
   await runScenario(inProcess());
 });
 
@@ -20,7 +20,7 @@ const nodeMajor = node === null ? 0 : Number(/^v(\d+)/.exec(node)?.[1] ?? 0);
 const skipNode =
   node === null ? "node isn't installed" : nodeMajor < 22 ? `node ${node} is older than 22` : null;
 
-test("e2e: the bundle under Node and under Bun", { timeout: 60000 }, async (t) => {
+test("e2e: the bundle under Node and under Deno", { timeout: 60000 }, async (t) => {
   const temp = await tempDir("quaso-cli-bundle-");
   try {
     const bundle = join(temp.dir, "quaso.mjs");
@@ -31,7 +31,7 @@ test("e2e: the bundle under Node and under Bun", { timeout: 60000 }, async (t) =
       { skip: skipNode !== null, timeout: 60000 },
       () => runScenario(bundled("node", bundle)),
     );
-    await t.test("bun", { timeout: 60000 }, () => runScenario(bundled("bun", bundle)));
+    await t.test("deno", { timeout: 60000 }, () => runScenario(bundled("deno", bundle)));
   } finally {
     await temp.remove();
   }

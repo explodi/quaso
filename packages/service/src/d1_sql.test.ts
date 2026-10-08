@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { assertEquals, assertRejects } from "@quaso/runtime/assert";
+import { assertEquals, assertRejects } from "@std/assert";
 import { createD1Sql } from "./adapters/d1_sql.ts";
 import { RevisionConflict } from "./write.ts";
 import { ServiceError } from "./errors.ts";

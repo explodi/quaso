@@ -122,7 +122,7 @@ export async function restore(
         "Content-Length": String(file.size),
         "X-Setup-Key": key,
       },
-      body: Bun.file(options.file).stream(),
+      body: (await Deno.open(options.file)).readable,
       redirect: "error",
       signal: AbortSignal.timeout(15 * 60_000),
     },
@@ -140,7 +140,7 @@ export async function restore(
   return result;
 }
 
-const HELP = `Usage: bun run cf:restore --env staging|production <source> [options]
+const HELP = `Usage: deno task cf:restore --env staging|production <source> [options]
 
 Restores SQLite, JSON or gzip JSON into an empty instance before initial setup.
   --file <backup>            Import a portable backup using the setup key.

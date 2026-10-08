@@ -2,10 +2,9 @@
 /**
  * Takes a snapshot on its own connection, in a worker, so the server's connection and its
  * requests go on meanwhile (design §8). The copy is one step of SQLite's backup API, so it
- * sees one consistent state of the database. `bun build --compile` includes this file
+ * sees one consistent state of the database. `deno compile` includes this file
  * (scripts/build_server.ts).
  */
-import { parentPort } from "node:worker_threads";
 import { backup, DatabaseSync } from "node:sqlite";
 
 /** What the worker is asked: copy the database file `source` into the new file `target`. */
@@ -36,8 +35,10 @@ export async function copyDatabase(db: DatabaseSync, target: string): Promise<vo
   }
 }
 
-if (parentPort) {
-  parentPort.on("message", async (data: SnapshotJob) => {
+// snapshots.ts imports this module on the main thread too, for copyDatabase.
+const inWorker = "WorkerGlobalScope" in globalThis;
+if (inWorker) {
+  self.onmessage = async ({ data }: MessageEvent<SnapshotJob>) => {
     let result: SnapshotResult;
     try {
       const db = new DatabaseSync(data.source, { readOnly: true });
@@ -50,6 +51,6 @@ if (parentPort) {
     } catch (error) {
       result = { ok: false, message: error instanceof Error ? error.message : String(error) };
     }
-    parentPort!.postMessage(result);
-  });
+    self.postMessage(result);
+  };
 }

@@ -145,7 +145,7 @@ const FEATURES = [
   },
   {
     title: "Easy to run",
-    text: "One Bun application and one SQLite database, in one Docker container.",
+    text: "One Deno application and one SQLite database, in one Docker container.",
   },
 ];
 

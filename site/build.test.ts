@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { assertEquals } from "@quaso/runtime/assert";
+import { assertEquals } from "@std/assert";
 import { brokenOutputLinks, type LinkContext, type PathKind, rewriteHref } from "./build.ts";
 import { docPagePath, relativeHref } from "./src/paths.ts";
 

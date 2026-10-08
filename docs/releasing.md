@@ -12,15 +12,15 @@ every Quaso package's version, including the service, server, private front ends
 package, and the demo CLI pin.
 
 ```sh
-bun run release 1.0.0-rc.1
-bun run fmt
-bun run check
-bun run build
-bun run build:cli
-bun run site:build
-bun run e2e
-bun run cf:check
-bun run docker:smoke
+deno task release 1.0.0-rc.1
+deno task fmt
+deno task check
+deno task build
+deno task build:cli
+deno task site:build
+deno task e2e
+deno task cf:check
+deno task docker:smoke
 ```
 
 `release` accepts one semantic version, updates metadata, moves Unreleased changelog entries into a
@@ -29,7 +29,7 @@ diff before committing. An already dated version is refused. A prepared `1.0.0 -
 is replaced when that final version is chosen. With no new changes, final 1.0.0 notes copy the
 latest 1.0.0 candidate's notes. Describe changes made after a candidate under Unreleased.
 
-For a final release, run `bun run release 1.0.0`, repeat the checks, and have the team approve the
+For a final release, run `deno task release 1.0.0`, repeat the checks, and have the team approve the
 candidate and migration results before running the printed tag/push commands. Never reuse a
 published version. A failed multi-registry publication may need a patch version: npm
 packages cannot be silently overwritten.
@@ -41,20 +41,21 @@ publishing. A separate validation gate also requires the complete checks, app bu
 Cloudflare checks, documentation build and Docker smoke test to pass. The website workflow also runs
 on version tags.
 
-| Artifact                       | Destination                       | Authentication                                         |
-| ------------------------------ | --------------------------------- | ------------------------------------------------------ |
-| CLI bundle                     | npm `@quaso/cli`, with provenance | Repository secret `NPM_TOKEN`                          |
-| Server and built website image | `ghcr.io/<org>/quaso`             | Workflow `GITHUB_TOKEN` with packages write permission |
-| Project website and docs       | GitHub Pages                      | Workflow Pages permission and OIDC                     |
-| Release notes                  | GitHub release for the tag        | Workflow `GITHUB_TOKEN` with contents write permission |
+| Artifact                       | Destination                       | Authentication                                             |
+| ------------------------------ | --------------------------------- | ---------------------------------------------------------- |
+| CLI bundle                     | npm `@quaso/cli`, with provenance | Repository secret `NPM_TOKEN`                              |
+| Server and built website image | Docker Hub `explodi/quaso`        | Repository secrets `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` |
+| Project website and docs       | GitHub Pages                      | Workflow Pages permission and OIDC                         |
+| Release notes                  | GitHub release for the tag        | Workflow `GITHUB_TOKEN` with contents write permission     |
 
-A stable `v1.0.0` image receives `:1.0.0`, `:1.0`, `:1` and `:latest`. Prereleases receive their
+A stable `v1.0.0` image receives `:1.0.0`, `:1.0` and `:1`. `:latest` and `:sha-<commit>` come
+from every push to main instead (`.github/workflows/docker.yml`). Prereleases receive their
 full version only, and npm uses the `next` distribution tag rather than `latest`. Check the workflow
-results and registry visibility after publishing. GHCR packages need to be public for anonymous
-pulls.
+results and registry visibility after publishing. The Docker Hub repository needs to be public for
+anonymous pulls.
 
-Before the first tag, reserve the npm package name, add `NPM_TOKEN` to the
-repository, and enable GitHub Pages with **GitHub Actions** as its source. The private development
+Before the first tag, reserve the npm package name, add `NPM_TOKEN`, `DOCKERHUB_USERNAME` and
+`DOCKERHUB_TOKEN` to the repository, and enable GitHub Pages with **GitHub Actions** as its source. The private development
 repository builds the site but does not deploy it. `BASE_PATH` comes from Pages configuration; an
 optional `SITE_REPOSITORY_URL` overrides source links when building outside GitHub.
 
@@ -66,7 +67,7 @@ and recovery guide. Review notes for operator-visible configuration or schema ch
 - The tested previous release and schemas, and any new or changed settings.
 - A backup reminder and the target image version.
 - Docker: pin the target image, then `docker compose pull` and `docker compose up -d`.
-- Cloudflare: deploy the tested source checkout with `bun run cf:deploy --env production`.
+- Cloudflare: deploy the tested source checkout with `deno task cf:deploy --env production`.
 - Expected migration behavior, `/healthz` checks and a link to [rollback steps](operations.md).
 
 Do not tag the release until the documented upgrade path has been exercised on retained historical

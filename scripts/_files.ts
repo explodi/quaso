@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
-import { Command } from "@quaso/runtime/command";
 import * as fs from "node:fs/promises";
 /**
  * Lists the repository's files: tracked, plus untracked ones that git doesn't ignore.
  * Shared by the check scripts.
  */
 export async function repositoryFiles(): Promise<string[]> {
-  const output = await new Command("git", {
+  const output = await new Deno.Command("git", {
     args: ["ls-files", "--cached", "--others", "--exclude-standard", "-z"],
     stdout: "piped",
   }).output();

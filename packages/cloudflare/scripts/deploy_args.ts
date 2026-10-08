@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-/** The arguments of `bun run cf:deploy`, checked (see `deploy.ts`). */
+/** The arguments of `deno task cf:deploy`, checked (see `deploy.ts`). */
 
 export const ENVIRONMENTS = ["staging", "production"] as const;
 
@@ -18,7 +18,7 @@ export function deployProblem(args: readonly string[]): string | null {
   const env = deployEnvironment(args);
   if (env === null) {
     return (
-      "Name the environment: bun run cf:deploy --env staging (or --env production). " +
+      "Name the environment: deno task cf:deploy --env staging (or --env production). " +
       "The instance is read from quaso.cloudflare.jsonc; wrangler.jsonc is for local runs only."
     );
   }

@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 import * as fs from "node:fs/promises";
-import { makeTempFile } from "@quaso/runtime/files";
 /**
  * Backup files (design §5.12, OPS-2, S8.9, S9.2): the downloads of `GET /backup` and the
  * files `quaso restore` and `POST /restore` read.
@@ -152,7 +151,7 @@ export async function jsonBackupResponse(
     const file = await temporaryFile(options.tempDir, ".json");
     try {
       const stream = backupJsonStream(service, actor);
-      await Bun.write(file, new Response(stream));
+      await Deno.writeFile(file, stream);
       return file;
     } catch (error) {
       await fs.rm(file).catch(() => {});
@@ -257,7 +256,7 @@ function withCleanup(
 
 /** A new, empty temporary file (its folder resolved: `node:sqlite` refuses symbolic links). */
 async function temporaryFile(dir: string | undefined, suffix: string): Promise<string> {
-  const path = await makeTempFile({ dir, prefix: "quaso-backup-", suffix });
+  const path = await Deno.makeTempFile({ dir, prefix: "quaso-backup-", suffix });
   return await fs.realpath(path);
 }
 

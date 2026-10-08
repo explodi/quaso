@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
-import { expect, test } from "bun:test";
+import { gzipSync } from "node:zlib";
+import { test } from "node:test";
+import { expect } from "@std/expect";
 import * as fs from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -22,7 +24,7 @@ async function fixture() {
           bucketName: "quaso-example-store",
           locationHint: "weur",
           sleepAfter: "5m",
-          image: "ghcr.io/explodi/quaso:1.0.0-beta.2",
+          image: "explodi/quaso:1.0.0-beta.2",
         },
       },
     }),
@@ -68,7 +70,7 @@ test("streams a backup to the configured HTTPS origin without logging the setup 
 test("detects gzip backup content independently of its filename", async () => {
   const f = await fixture();
   try {
-    const gzip = Bun.gzipSync('{"version":1,"tables":{}}');
+    const gzip = new Uint8Array(gzipSync('{"version":1,"tables":{}}'));
     await fs.writeFile(f.file, gzip);
     await restore(f.args, {
       key: async () => "key",

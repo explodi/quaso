@@ -4,7 +4,7 @@ import { test } from "node:test";
  * The job runner (S5.1, S5.4, S5.8): priorities, the concurrency limit, retries with the
  * reasons, failures, pauses, the budget, restarts, and acceptance tests 3 and 9.
  */
-import { assert, assertEquals, assertRejects, assertStringIncludes } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertRejects, assertStringIncludes } from "@std/assert";
 import { openNodeSqlite } from "../adapters/node_sqlite.ts";
 import { TimerScheduler } from "../adapters/timer_scheduler.ts";
 import { ANONYMOUS, SYSTEM } from "../api.ts";

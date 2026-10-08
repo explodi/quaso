@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { assertEquals, assertRejects } from "@quaso/runtime/assert";
+import { assertEquals, assertRejects } from "@std/assert";
 import { openAsyncSqlite } from "./adapters/node_async_sqlite.ts";
 import { BATCH_SQL_CASES, initializeBatchSql } from "./testing/batch_sql_cases.ts";
 import { RevisionConflict, withRetries } from "./write.ts";

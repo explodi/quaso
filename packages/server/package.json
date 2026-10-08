@@ -9,8 +9,6 @@
   "private": true,
   "dependencies": {
     "@quaso/core": "workspace:*",
-    "@quaso/service": "workspace:*",
-    "@quaso/runtime": "workspace:*",
-    "dotenv": "17.2.3"
+    "@quaso/service": "workspace:*"
   }
 }

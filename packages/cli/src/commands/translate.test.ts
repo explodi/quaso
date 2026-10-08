@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { assert, assertEquals, assertStringIncludes } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import type { CreateJobRequest, JobEstimate, JobInfo } from "@quaso/core";
 import { POLL_INTERVAL_MS } from "../jobs.ts";
 import { CONFIG, fakeFetch, jobInfo, jsonResponse, runCli, withProject } from "../test_helpers.ts";

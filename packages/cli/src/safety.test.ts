@@ -3,11 +3,11 @@ import * as fs from "node:fs/promises";
 import { test } from "node:test";
 /**
  * CLI-1 and CLI-5 in the source: the CLI's code (tests and their helpers aside) runs on
- * Node and Bun from one source, so it uses only `node:` built-ins, web APIs and
+ * Node and Deno from one source, so it uses only `node:` built-ins, web APIs and
  * `@quaso/core`, never the Deno namespace, and nothing that starts a process. The build
  * checks the bundle the same way (scripts/build_cli.ts).
  */
-import { assertEquals } from "@quaso/runtime/assert";
+import { assertEquals } from "@std/assert";
 import { fileURLToPath as fromFileUrl } from "node:url";
 import { join, relative } from "node:path";
 import { FORBIDDEN } from "../../../scripts/build_cli.ts";

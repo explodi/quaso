@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-/** `bun run cf:fixtures --check` passes on a checkout with CRLF line endings. */
+/** `deno task cf:fixtures --check` passes on a checkout with CRLF line endings. */
 import { describe, expect, it } from "vitest";
 import { fixtureUpToDate, lf, withLf } from "../scripts/fixture_text.ts";
 

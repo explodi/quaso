@@ -1,6 +1,6 @@
 # Working on the Cloudflare package
 
-`packages/cloudflare` is optional and part of the Bun workspace. It owns Wrangler, Cloudflare
+`packages/cloudflare` is optional and part of the Deno workspace. It owns Wrangler, Cloudflare
 Containers bindings and the Vitest workerd pool. Contributors changing core, the CLI or ordinary
 website code do not need these tools.
 
@@ -21,7 +21,7 @@ preserve both when changing scheduling. The SQL port uses `ctx.storage.sql` and 
 From the repository root, with Docker running:
 
 ```sh
-bun run cf:install
+deno install
 cp packages/cloudflare/.dev.vars.example packages/cloudflare/.dev.vars
 ```
 
@@ -29,7 +29,7 @@ Fill in `SECRET_KEY` and `SERVICE_TOKEN` with independent long random values, fo
 of `openssl rand -hex 32`. Set `GEMINI_API_KEY` only if exercising real translation. Then:
 
 ```sh
-bun run cf:dev
+deno task cf:dev
 ```
 
 Open <http://localhost:8787>. Wrangler builds the container; on another CPU architecture this may
@@ -44,9 +44,9 @@ The root Wrangler environment is only for local work. `cf:deploy` requires `--en
 ## Types, fixtures and tests
 
 ```sh
-bun run cf:types
-bun run cf:fixtures
-bun run cf:check
+deno task cf:types
+deno task cf:fixtures
+deno task cf:check
 ```
 
 After changing `wrangler.jsonc`, commit regenerated `worker-configuration.d.ts`. After changing
@@ -54,7 +54,7 @@ shared behavior, review and commit the fixture from `packages/cloudflare/scripts
 `cf:check` checks both generated outputs, compiles the package, runs its tests in workerd, and
 bundles the Worker without deploying it. Tests compare the same service scenario with local SQLite.
 
-Keep service and core portable: no Bun or Node runtime imports in their production code. Worker
+Keep service and core portable: no Deno or Node runtime imports in their production code. Worker
 modules may export only supported handlers and classes. Durable Object SQLite binds numbers as REAL
 (strict integer columns still enforce integer values), limits LIKE/GLOB patterns and does not accept
 SQL transaction statements. Use the port's transaction API and existing query helpers.

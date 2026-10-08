@@ -2,12 +2,13 @@
 import * as fs from "node:fs/promises";
 /**
  * The website's files (design §5.9, §5.12): the Vite build in `WEB_DIR`, served with
- * Bun file responses. Any other page path gets `index.html`, since the website is a single-page
+ * streamed file responses. Any other page path gets `index.html`, since the website is a single-page
  * app; a missing build file under `/assets/` stays a 404, and a path that can't be decoded
  * is a 400. Without a build, a placeholder page says how to make one.
  */
 import { resolve, sep } from "node:path";
-import { join } from "node:path";
+import { extname, join } from "node:path";
+import { contentType } from "@std/media-types";
 import { errorResponse } from "./http/errors.ts";
 
 /** Serves `GET` and `HEAD` requests for the website. */
@@ -32,12 +33,11 @@ export function createWebHandler(webDir: string): (request: Request) => Promise<
 
 async function fileResponse(request: Request, path: string): Promise<Response> {
   if (!(await isFile(path))) return new Response(null, { status: 404 });
-  const file = Bun.file(path);
   const info = await fs.stat(path);
   const etag = `W/"${info.size.toString(16)}-${info.mtimeMs.toString(16)}"`;
   const headers = new Headers({
-    "Content-Type": file.type,
-    "Content-Length": String(file.size),
+    "Content-Type": contentType(extname(path)) ?? "application/octet-stream",
+    "Content-Length": String(info.size),
     ETag: etag,
     "Last-Modified": info.mtime.toUTCString(),
   });
@@ -49,7 +49,9 @@ async function fileResponse(request: Request, path: string): Promise<Response> {
     headers.delete("Content-Length");
     return new Response(null, { status: 304, headers });
   }
-  return new Response(request.method === "HEAD" ? null : file, { headers });
+  if (request.method === "HEAD") return new Response(null, { headers });
+  const file = await Deno.open(path);
+  return new Response(file.readable, { headers });
 }
 
 /** Whether a path decodes and has no NUL. */
@@ -86,8 +88,8 @@ function placeholder(): Response {
     <h1>Quaso is running</h1>
     <p>The API works, but this server has no website to show: its folder has no
       <code>index.html</code>.</p>
-    <p>In development, open the address <code>bun run dev</code> printed (Vite serves the
-      website). To serve a build from here, run <code>bun run build:web</code>, or set
+    <p>In development, open the address <code>deno task dev</code> printed (Vite serves the
+      website). To serve a build from here, run <code>deno task build:web</code>, or set
       <code>WEB_DIR</code> to the folder with the built website.</p>
     <p>Meanwhile: <a href="/healthz">/healthz</a> and
       <a href="/api/v1/openapi.json">the API's OpenAPI document</a>.</p>

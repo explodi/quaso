@@ -15,7 +15,10 @@ Release candidates are for deployment and migration testing. The team decides wh
 - Beta 2 stores provider and retention configuration in Settings and uses independently
   salted PBKDF2 passwords. Beta 1 password hashes are incompatible; Beta 2 requires a fresh
   instance. The schema starts again at `001`; Beta 1 SQLite and JSON backups are rejected.
-  Remove old development data before starting Beta 2 (`bun run dev:reset`).
+  Remove old development data before starting Beta 2 (`deno task dev:reset`).
+- Quaso runs on Deno again: `deno task` replaces `bun run`, the server binary is built with
+  `deno compile`, and the CLI supports Node 22+ and Deno 2.9+ (no longer Bun). Every push to main
+  publishes the official image to Docker Hub as `explodi/quaso`, for amd64 and arm64.
 - Upgrade the app and project website to Vite 8 with React Compiler. Enforce the React hooks rules
   against synchronous state changes in effects and rendering through the required checks.
 

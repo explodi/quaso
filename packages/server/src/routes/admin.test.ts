@@ -2,14 +2,13 @@
 import type { Fetch } from "@quaso/core";
 import { test } from "node:test";
 import * as fs from "node:fs/promises";
-import { makeTempDir } from "@quaso/runtime/files";
 import * as fsSync from "node:fs";
 /**
  * The administrators' routes with the real service: settings, languages, files, strings,
  * renames, the admin page, backup downloads (JSON and SQLite, with local and Cloudflare
  * storage) and the restore at setup.
  */
-import { assert, assertEquals, assertMatch, assertStringIncludes } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertMatch, assertStringIncludes } from "@std/assert";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { AdminInfo, BackupDocument, SettingsResult } from "@quaso/core";
@@ -424,7 +423,7 @@ function plain(rows: Record<string, unknown>[]) {
 }
 
 test("GET /backup with local storage: a consistent SQLite copy, then the file is gone", async () => {
-  const dir = await makeTempDir();
+  const dir = await Deno.makeTempDir();
   const config = testConfig({ DATA_DIR: dir, SECRET_KEY: "k".repeat(64) });
   const local = await startLocalService(config, silentLogger);
   try {
@@ -438,10 +437,7 @@ test("GET /backup with local storage: a consistent SQLite copy, then the file is
     const copy = await downloadDatabase(response, dir);
     try {
       const read = (sql: string) => plain(copy.prepare(sql).all() as Record<string, unknown>[]);
-      assertEquals(
-        tables(read),
-        { ...tables((sql) => local.storage.sql.query(sql)), secrets: [] },
-      );
+      assertEquals(tables(read), { ...tables((sql) => local.storage.sql.query(sql)), secrets: [] });
     } finally {
       copy.close();
     }
@@ -457,7 +453,7 @@ test("GET /backup with local storage: a consistent SQLite copy, then the file is
 });
 
 test("GET /backup selects retained and pre-migration copies, checks permission and restores the earlier project", async () => {
-  const dir = await makeTempDir();
+  const dir = await Deno.makeTempDir();
   const source = await startLocalService(
     testConfig({ DATA_DIR: join(dir, "source") }),
     silentLogger,
@@ -558,7 +554,7 @@ function workerStub(service: ServiceApi, token: string): Fetch {
 }
 
 test("GET /backup with Cloudflare storage: a SQLite file built from the rows", async () => {
-  const dir = await makeTempDir();
+  const dir = await Deno.makeTempDir();
   const instance = await memoryService();
   try {
     const people = await project(instance.service, instance.sql);
@@ -647,7 +643,7 @@ test("POST /restore: only with the setup key, only before setup", async () => {
 
 test("POST /restore takes SQLite files and gzip-compressed JSON too", async () => {
   const source = await memoryService();
-  const dir = await makeTempDir();
+  const dir = await Deno.makeTempDir();
   try {
     const people = await project(source.service, source.sql);
     const { app } = appFor(source.service, people);

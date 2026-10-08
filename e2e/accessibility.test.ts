@@ -7,7 +7,7 @@
  * exist before their first message; targets are large enough; the current page isn't told
  * by colour alone; and filtering says how many things match.
  */
-import { assert, assertEquals, assertStringIncludes } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import type { Page } from "puppeteer";
 import type { ActivityResult, FilesResult, ProjectInfo, StringDetail } from "@quaso/core";
 import {

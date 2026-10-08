@@ -5,16 +5,16 @@ development environment, see [CONTRIBUTING.md](../../CONTRIBUTING.md).
 
 ## One application, one database, one game
 
-Quaso is one Bun application for one game. It serves a static website and an HTTP API (`/api/v1`),
+Quaso is one Deno application for one game. It serves a static website and an HTTP API (`/api/v1`),
 and keeps all its data in one SQLite database. A deployment serves one game, for example at
 `translate.yourgame.com`; a studio with several games runs one deployment per game.
 
 ```text
- CLI (Node or Bun)            Browsers
+ CLI (Node or Deno)           Browsers
        │  API key                 │  session cookie
        ▼                          ▼
 ┌──────────────────────────────────────────────┐
-│ server (Bun): website files + HTTP API      │
+│ server (Deno): website files + HTTP API     │
 └──────────────────────┬───────────────────────┘
                        │ direct call, or HTTPS to a Worker
                        ▼
@@ -61,14 +61,14 @@ implementation per place:
 - `Scheduler`: wake the service up later, for LLM jobs. A timer in the server, whose next wake-up is
   stored in the database, or a Durable Object alarm.
 
-This is why `core` and `service` may only use web-standard APIs: no `Bun.*`, and no `node:`,
+This is why `core` and `service` may only use web-standard APIs: no `Deno.*`, and no `node:`,
 `jsr:`, `npm:` or `@std/` imports outside tests. CI checks it.
 
 ### One writer at a time
 
 Every operation (an upload, an approval, an LLM result) runs as one synchronous transaction. The
 service never waits for anything between reading and writing, so operations can't interleave: the
-Bun server is single-threaded, and a Durable Object runs synchronous code one event at a time.
+Deno server is single-threaded, and a Durable Object runs synchronous code one event at a time.
 While the service waits for Gemini, it keeps serving other requests.
 
 ## The data model
@@ -140,9 +140,9 @@ authentication secrets; password verification still needs the original instance 
 
 ## Tests
 
-- Tests sit next to the code (`*.test.ts`) and run with `bun run test`: offline, in seconds, with
+- Tests sit next to the code (`*.test.ts`) and run with `deno task test`: offline, in seconds, with
   an in-memory database and a fake translator.
 - The same test cases run against both implementations of each port.
-- The Cloudflare package has its own tests, which run in `workerd` (`bun run cf:test`).
+- The Cloudflare package has its own tests, which run in `workerd` (`deno task cf:test`).
 
 See [testing](testing.md) for commands, and [Cloudflare development](cloudflare.md) for its runtime.

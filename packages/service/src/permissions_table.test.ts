@@ -6,7 +6,7 @@ import { test } from "node:test";
  * people limited to French and for people with every language. A new action fails here
  * until it has its row.
  */
-import { assertEquals } from "@quaso/runtime/assert";
+import { assertEquals } from "@std/assert";
 import { type Actor, ANONYMOUS, SYSTEM } from "./api.ts";
 import { type Action, ACTIONS, can } from "./permissions.ts";
 import { addUser, createToken, startTestService } from "./test_helpers.ts";

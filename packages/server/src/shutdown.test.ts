@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
-import { serveHttp } from "@quaso/runtime/http";
 import { connect, type Socket } from "node:net";
 import { once } from "node:events";
 import { test } from "node:test";
-import { assert, assertEquals, assertStringIncludes } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import { readJson } from "./http/request.ts";
 import { InFlight, stopServer } from "./shutdown.ts";
 
@@ -13,7 +12,7 @@ const decoder = new TextDecoder();
 /** A server whose handler reads a JSON body and echoes it, counted by an `InFlight`. */
 function echoServer() {
   const inFlight = new InFlight();
-  const server = serveHttp(
+  const server = Deno.serve(
     { hostname: "127.0.0.1", port: 0, onListen() {} },
     inFlight.wrap(async (request) => {
       try {

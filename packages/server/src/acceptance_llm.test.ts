@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { makeTempDir } from "@quaso/runtime/files";
 import * as fs from "node:fs/promises";
 /**
  * The LLM acceptance tests through the HTTP API (sprint plan, "Acceptance tests"):
@@ -12,7 +11,7 @@ import * as fs from "node:fs/promises";
  *   to the model with the reason; a string that fails every retry stays untranslated, with
  *   its failure on the job and on the string. (The person path is in `accounts.test.ts`.)
  */
-import { assert, assertEquals, assertStringIncludes } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import type { JobInfo, JobsResult, StatusResult, StringsPage, UploadResult } from "@quaso/core";
 import {
   createFakeTranslator,
@@ -49,7 +48,7 @@ async function settled(app: App, key: string, timeoutMs = 30_000): Promise<JobIn
 }
 
 test("acceptance test 3 through the API: a new string is green in every language within a minute", async () => {
-  const dataDir = await makeTempDir({ prefix: "quaso-acceptance-3-" });
+  const dataDir = await Deno.makeTempDir({ prefix: "quaso-acceptance-3-" });
   const config = testConfig({ QUASO_DEV: "1", DATA_DIR: dataDir });
   const log = memoryLogger();
   // What `serve` does: local storage, its timers, and the LLM (the fake translator here).

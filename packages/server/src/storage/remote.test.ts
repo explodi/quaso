@@ -1,8 +1,5 @@
 // SPDX-License-Identifier: MIT
 import type { Fetch } from "@quaso/core";
-import { serveHttp } from "@quaso/runtime/http";
-import { makeTempDir } from "@quaso/runtime/files";
-import { Command } from "@quaso/runtime/command";
 import * as fs from "node:fs/promises";
 import { test } from "node:test";
 /**
@@ -15,7 +12,7 @@ import {
   assertMatch,
   assertRejects,
   assertStringIncludes,
-} from "@quaso/runtime/assert";
+} from "@std/assert";
 import { fileURLToPath as fromFileUrl } from "node:url";
 import { join } from "node:path";
 import {
@@ -241,14 +238,14 @@ test(
   { skip: process.platform === "win32" },
   async () => {
     const real = await realService();
-    const worker = serveHttp({ hostname: "127.0.0.1", port: 0, onListen() {} }, (request) =>
+    const worker = Deno.serve({ hostname: "127.0.0.1", port: 0, onListen() {} }, (request) =>
       handleServiceRequest(request, real.service, { token: TOKEN }),
     );
-    const dir = await makeTempDir();
+    const dir = await Deno.makeTempDir();
     try {
-      const listener = Bun.listen({ hostname: "127.0.0.1", port: 0, socket: { data() {} } });
-      const port = String({ port: listener.port }.port);
-      listener.stop();
+      const listener = Deno.listen({ hostname: "127.0.0.1", port: 0 });
+      const port = String(listener.addr.port);
+      listener.close();
       const env = {
         ...REMOTE_ENV,
         SERVICES_URL: `http://127.0.0.1:${worker.addr.port}/internal`,
@@ -258,8 +255,8 @@ test(
         LOG_LEVEL: "info",
       };
       const command = (args: string[]) =>
-        new Command(process.execPath, {
-          args: ["run", MAIN, ...args],
+        new Deno.Command(Deno.execPath(), {
+          args: ["run", "-A", MAIN, ...args],
           env,
           cwd: dir,
           stdin: "null",
@@ -335,7 +332,7 @@ test(
   { skip: process.platform === "win32" },
   async () => {
     // getHealth answers; createApiToken gets the Worker's 503, as during a deploy.
-    const worker = serveHttp({ hostname: "127.0.0.1", port: 0, onListen() {} }, (request) => {
+    const worker = Deno.serve({ hostname: "127.0.0.1", port: 0, onListen() {} }, (request) => {
       if (new URL(request.url).pathname.endsWith("/getHealth")) {
         return Response.json({ result: { ok: true, schemaVersion: 1, revision: 0 } });
       }
@@ -346,14 +343,17 @@ test(
         { status: 503 },
       );
     });
-    const dir = await makeTempDir();
-    const closed = Bun.listen({ hostname: "127.0.0.1", port: 0, socket: { data() {} } });
-    const closedPort = { port: closed.port }.port;
-    closed.stop();
+    const dir = await Deno.makeTempDir();
+    const closed = Deno.listen({ hostname: "127.0.0.1", port: 0 });
+    const closedPort = closed.addr.port;
+    closed.close();
     try {
       const create = async (servicesUrl: string) => {
-        const { code, stdout, stderr } = await new Command(process.execPath, {
-          args: ["run", MAIN, "token", "create", "--name", "CI"].concat(["--scope", "upload"]),
+        const { code, stdout, stderr } = await new Deno.Command(Deno.execPath(), {
+          args: ["run", "-A", MAIN, "token", "create", "--name", "CI"].concat([
+            "--scope",
+            "upload",
+          ]),
           env: { ...REMOTE_ENV, SERVICES_URL: servicesUrl, DATA_DIR: join(dir, "data") },
           cwd: dir,
           stdin: "null",

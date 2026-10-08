@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: MIT
-import { Command } from "@quaso/runtime/command";
-import { makeTempDir } from "@quaso/runtime/files";
 import * as fs from "node:fs/promises";
 import { test } from "node:test";
 /// <reference lib="dom" />
 /** Black-box release checks. Use only public HTTP, the shipped CLI and a browser. */
-import { assert, assertEquals, assertStringIncludes } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import { fileURLToPath as fromFileUrl } from "node:url";
 import { join } from "node:path";
 import { launch } from "puppeteer";
@@ -16,7 +14,7 @@ for (let i = 0; i < args.length; i += 2) {
   const name = args[i];
   if (!["--url", "--setup-key", "--compose-dir"].includes(name) || !args[i + 1]) {
     throw new Error(
-      "Usage: bun run acceptance --url URL [--setup-key TOKEN] [--compose-dir DIR]",
+      "Usage: deno task acceptance --url URL [--setup-key TOKEN] [--compose-dir DIR]",
     );
   }
   options.set(name, args[i + 1]);
@@ -77,7 +75,10 @@ test(`acceptance 1–11 against ${url}`, { timeout: 300000 }, async (t) => {
   );
   if (session.setupRequired) {
     const token = options.get("--setup-key") ?? process.env["QUASO_SETUP_KEY"];
-    assert(token, "Fresh instance: provide --setup-key or QUASO_SETUP_KEY from deployment configuration.");
+    assert(
+      token,
+      "Fresh instance: provide --setup-key or QUASO_SETUP_KEY from deployment configuration.",
+    );
     await admin.api("/auth/setup", "POST", {
       token,
       email: process.env["QUASO_ADMIN_EMAIL"] ?? `acceptance-admin-${runId}@example.com`,
@@ -102,7 +103,7 @@ test(`acceptance 1–11 against ${url}`, { timeout: 300000 }, async (t) => {
   });
   const cliClient = new Client();
   cliClient.key = token.secret;
-  const temp = await makeTempDir({ prefix: "quaso-acceptance-" });
+  const temp = await Deno.makeTempDir({ prefix: "quaso-acceptance-" });
   const file = (name: string) => `acceptance-${runId}-${name}.json`;
   const json = (value: unknown) => JSON.stringify(value, null, 2) + "\n";
   const sourceDir = join(temp, "src/locales/en");
@@ -117,8 +118,8 @@ test(`acceptance 1–11 against ${url}`, { timeout: 300000 }, async (t) => {
     }),
   );
   async function cli(...args: string[]) {
-    const out = await new Command(process.execPath, {
-      args: ["run", join(root, "packages/cli/dist/quaso.mjs"), ...args],
+    const out = await new Deno.Command(Deno.execPath(), {
+      args: ["run", "-A", join(root, "packages/cli/dist/quaso.mjs"), ...args],
       cwd: temp,
       env: { QUASO_HOSTNAME: url, QUASO_API_KEY: token.secret },
       stdout: "piped",
@@ -181,7 +182,7 @@ test(`acceptance 1–11 against ${url}`, { timeout: 300000 }, async (t) => {
         await upload("restart", { hello: "Hello restart" });
         await importBlue("restart", { hello: "Hallo Neustart" });
         const before = await exported("restart");
-        const restart = await new Command("docker", {
+        const restart = await new Deno.Command("docker", {
           args: ["compose", "restart", "quaso"],
           cwd: options.get("--compose-dir"),
           stdout: "piped",

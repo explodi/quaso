@@ -1,16 +1,22 @@
 // SPDX-License-Identifier: MIT
 /**
- * One scenario, run on both `SyncSql` adapters: `node:sqlite` in Bun writes its results to
- * `test/fixtures/demo.json` (`bun run cf:fixtures`), and the tests in workerd run it on
+ * One scenario, run on both `SyncSql` adapters: `node:sqlite` in Deno writes its results to
+ * `test/fixtures/demo.json` (`deno task cf:fixtures`), and the tests in workerd run it on
  * Durable Object SQLite and compare. The demo project is uploaded and its translations
  * imported; then every read, the export (byte for byte), and every table's rows must be
  * the same. The clock is fixed, so nothing differs between runs.
  *
- * It imports the service by relative path, so that Bun (outside the workspace's import
+ * It imports the service by relative path, so that Deno (outside the workspace's import
  * names) and Vite load the same files.
  */
 import type { ImportRequest, UploadRequest } from "../../core/mod.ts";
-import { ANONYMOUS, backupJsonStream, createService, type SyncSql, SYSTEM } from "../../service/mod.ts";
+import {
+  ANONYMOUS,
+  backupJsonStream,
+  createService,
+  type SyncSql,
+  SYSTEM,
+} from "../../service/mod.ts";
 
 /** The fixed time of the scenario: 2026-09-24, noon UTC. */
 export const SCENARIO_TIME = Date.UTC(2026, 8, 24, 12);

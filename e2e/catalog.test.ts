@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { assert, assertEquals } from "@quaso/runtime/assert";
+import { assert, assertEquals } from "@std/assert";
 import { browserTest, openTab, press, waitFor } from "./_setup.ts";
 
 browserTest("catalog controls have comfortable touch targets", {}, async ({ server, browser }) => {

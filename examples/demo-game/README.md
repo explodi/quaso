@@ -1,7 +1,7 @@
 # Demo game
 
 A small, made-up game that uses [i18next](https://www.i18next.com/), for trying Quaso.
-`bun run dev` seeds a development instance from it, and it shows what a game needs to work with
+`deno task dev` seeds a development instance from it, and it shows what a game needs to work with
 Quaso:
 
 - `quaso.config.json`: the source language, the languages to translate into, where the English files
@@ -16,9 +16,9 @@ Quaso:
   (green). Japanese, Arabic and Brazilian Portuguese start empty.
 - `src/game.js`: how the game looks its strings up.
 
-With the development server running (`bun run dev`), the CLI works against it: set
+With the development server running (`deno task dev`), the CLI works against it: set
 `QUASO_HOSTNAME=http://localhost:8000` and `QUASO_API_KEY` to the development key that
-`bun run dev` prints (it is also in `.quaso/dev-api-key`).
+`deno task dev` prints (it is also in `.quaso/dev-api-key`).
 
 ## Run the example
 

@@ -4,7 +4,7 @@ import { test } from "node:test";
  * The whole LLM flow with the fake translator (S5.8): uploads queue jobs, the alarm runs
  * them, and the results follow the state rules of design §5.4.
  */
-import { assert, assertEquals, assertRejects } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertRejects } from "@std/assert";
 import type { PluralForms } from "@quaso/core";
 import { ANONYMOUS, SYSTEM } from "../api.ts";
 import { ServiceError } from "../errors.ts";

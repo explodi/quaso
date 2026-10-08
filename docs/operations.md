@@ -9,10 +9,10 @@ recovery commands.
 
 ## Backups
 
-| Setup                  | Automatic backup                                        | Retention                                                                                        | Manual copy                                           |
-| ---------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------- |
+| Setup                  | Automatic backup                                        | Retention                                                                                                                        | Manual copy                                           |
+| ---------------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
 | Docker / local storage | Hourly SQLite objects under `backups/` in `/data/store` | Every copy for 48 hours, then the newest copy per UTC day for the configured window (default 30 days); pre-migration copies stay | Settings → Backups, or copy all `/data` while stopped |
-| Cloudflare storage     | gzip JSON in R2 at 03:00 UTC                            | Settings → Retention, default 30 days                                                         | Settings → Backups, or download an R2 object          |
+| Cloudflare storage     | gzip JSON in R2 at 03:00 UTC                            | Settings → Retention, default 30 days                                                                                            | Settings → Backups, or download an R2 object          |
 
 Settings offers SQLite and JSON downloads in both setups. Local snapshots use SQLite's backup API on
 a separate connection, so a copy is consistent while requests continue. Cloudflare exports are read
@@ -87,7 +87,7 @@ previous image and the same key, then switch the deployment to it. Keep the newe
 investigating and recovering later writes. Never run an older image against an upgraded database.
 
 For Cloudflare, test staging and retain a portable backup and a pre-upgrade UTC timestamp. Deploy
-the chosen source checkout with `bun run cf:deploy --env production`. The rollout is **not
+the chosen source checkout with `deno task cf:deploy --env production`. The rollout is **not
 transactional**: Wrangler activates the Worker before all containers run the new image. The internal
 API accepts the previous version so that this overlap works. Schema migrations only move forwards.
 
@@ -111,7 +111,7 @@ Record which later writes were lost and keep a backup of the newer state before 
 - Quaso writes structured JSON logs. `docker compose logs --tail 100 quaso` is the first check on a
   VM. Keep logs in your existing log system with limited retention and access.
 - Cloudflare has Workers Logs enabled in `wrangler.jsonc`. From `packages/cloudflare`, use
-  `bun run wrangler tail --env production`. Check both Worker and container failures.
+  `deno run -A npm:wrangler tail --env production`. Check both Worker and container failures.
 - Alert when health fails, backups become stale, disk space is low, or jobs keep failing/pausing.
 
 The local `quaso.lock` uses an operating system lock, released on normal exit or a crash. A second
@@ -135,7 +135,7 @@ is a local storage check, not a deployed Cloudflare network or cold-start measur
 
 Actual Gemini latency, cold starts and distance to Cloudflare storage vary. Use `scripts/measure.ts`
 from the regions your contributors use; its command and cold-start options are in the Cloudflare
-guide. Run `QUASO_SMOKE=1 bun run test` for the large local dataset. Measure production-sized data
+guide. Run `QUASO_SMOKE=1 deno task test` for the large local dataset. Measure production-sized data
 before choosing hardware or setting alert thresholds.
 
 ## Secret rotation and access
@@ -167,5 +167,5 @@ settings.
 
 Beta 2 has a rewritten initial schema and no upgrade path from 1.0.0-rc.1. Its restore
 commands reject Beta 1 SQLite, JSON and compressed JSON backups. Start a fresh instance
-and import the translation files instead. For local development, use `bun run dev:reset`
+and import the translation files instead. For local development, use `deno task dev:reset`
 to replace old development data.

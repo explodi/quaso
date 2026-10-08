@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 import * as fs from "node:fs/promises";
 /**
- * `bun run cli <command>` (design §5.13): the CLI from source, against the development
- * server of `bun run dev`. It sets `QUASO_HOSTNAME=http://localhost:8000` and
+ * `deno task cli <command>` (design §5.13): the CLI from source, against the development
+ * server of `deno task dev`. It sets `QUASO_HOSTNAME=http://localhost:8000` and
  * `QUASO_API_KEY` from `.quaso/dev-api-key` when they aren't set, and runs the CLI in this
  * process with the remaining arguments.
  *
- * Tasks run in the repository's root, so the CLI runs where `bun run` was started
+ * Tasks run in the repository's root, so the CLI runs where `deno task` was started
  * (`INIT_CWD`). Without a `quaso.config.json` there or in a parent folder, and without
- * `--cwd` or `--config`, it uses `examples/demo-game/`: `bun run cli status` works from the
+ * `--cwd` or `--config`, it uses `examples/demo-game/`: `deno task cli status` works from the
  * repository's root.
  */
 import { fileURLToPath as fromFileUrl } from "node:url";

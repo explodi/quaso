@@ -9,10 +9,11 @@
 # to Quaso. Upgrades: docker compose pull && docker compose up -d
 services:
   quaso:
-    # Replace <org> with the organization that publishes the image. To build the image
-    # yourself instead, in a clone of the repository: name it locally (such as quaso:local)
-    # and run `docker compose build`; the build section points at the repository.
-    image: ghcr.io/<org>/quaso:1
+    # The official image. `latest` follows main; pin a release (such as explodi/quaso:1)
+    # once one is published. To build the image yourself instead, in a clone of the
+    # repository: name it locally (such as quaso:local) and run `docker compose build`; the
+    # build section points at the repository.
+    image: explodi/quaso:latest
     build:
       context: ..
       dockerfile: deploy/Dockerfile

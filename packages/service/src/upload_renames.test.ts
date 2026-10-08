@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { assertEquals } from "@quaso/runtime/assert";
+import { assertEquals } from "@std/assert";
 import { type RenameCandidate, type RenameKey, suggestUploadRenames } from "./upload_renames.ts";
 
 const OLD: RenameCandidate = {

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { assertEquals, assertThrows } from "@quaso/runtime/assert";
+import { assertEquals, assertThrows } from "@std/assert";
 import { RATE_RULES, RateLimiter, RateLimitError } from "./rate_limit.ts";
 
 test("setup allows five attempts per address and waits the full fifteen minutes", () => {

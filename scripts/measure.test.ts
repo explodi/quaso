@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
-import { serveHttp } from "@quaso/runtime/http";
 import { test } from "node:test";
-import { Command } from "@quaso/runtime/command";
-import { assert, assertEquals, assertStringIncludes, assertThrows } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertStringIncludes, assertThrows } from "@std/assert";
 import { SYSTEM } from "@quaso/service";
 import { createApp } from "../packages/server/src/app.ts";
 import { memoryLogger, testConfig } from "../packages/server/src/testing/helpers.ts";
@@ -54,12 +52,12 @@ test("measure: runs against a server", async () => {
   const real = await realService();
   const key = await real.service.createApiToken(SYSTEM, { name: "Measure", scope: "read" });
   const app = createApp({ config: testConfig(), service: real.service, log: memoryLogger() });
-  const server = serveHttp({ hostname: "127.0.0.1", port: 0, onListen() {} }, app);
+  const server = Deno.serve({ hostname: "127.0.0.1", port: 0, onListen() {} }, app);
   try {
-    const { code, stdout, stderr } = await new Command(process.execPath, {
+    const { code, stdout, stderr } = await new Deno.Command(Deno.execPath(), {
       args: [
         "run",
-
+        "-A",
         new URL("./measure.ts", import.meta.url).pathname,
         "--url",
         `http://127.0.0.1:${server.addr.port}`,
@@ -83,17 +81,17 @@ test("measure: runs against a server", async () => {
 
 test("measure: a failed cold start fails the run even when warm requests succeed", async () => {
   let healthRequests = 0;
-  const server = serveHttp({ hostname: "127.0.0.1", port: 0, onListen() {} }, (request) => {
+  const server = Deno.serve({ hostname: "127.0.0.1", port: 0, onListen() {} }, (request) => {
     if (new URL(request.url).pathname === "/healthz" && healthRequests++ === 0) {
       return new Response("Starting", { status: 503 });
     }
     return Response.json({ languages: [] });
   });
   try {
-    const result = await new Command(process.execPath, {
+    const result = await new Deno.Command(Deno.execPath(), {
       args: [
         "run",
-
+        "-A",
         new URL("./measure.ts", import.meta.url).pathname,
         "--url",
         `http://127.0.0.1:${server.addr.port}`,

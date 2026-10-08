@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { assert, assertEquals, assertStrictEquals, assertThrows } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertStrictEquals, assertThrows } from "@std/assert";
 import {
   parsePluralKey,
   type PluralEntry,
@@ -28,48 +28,48 @@ import {
   type PluralForms,
   type TextValue,
 } from "./types.ts";
-const arAppendix = await Bun.file(
+const arAppendix = await Deno.readTextFile(
   new URL("../testdata/i18next/ar/appendix.json", import.meta.url),
-).text();
-const enAppendix = await Bun.file(
+);
+const enAppendix = await Deno.readTextFile(
   new URL("../testdata/i18next/en/appendix.json", import.meta.url),
-).text();
-const enCommon = await Bun.file(
+);
+const enCommon = await Deno.readTextFile(
   new URL("../testdata/i18next/en/common.json", import.meta.url),
-).text();
-const enHud = await Bun.file(
+);
+const enHud = await Deno.readTextFile(
   new URL("../testdata/i18next/en/hud.json.txt", import.meta.url),
-).text();
-const enMenus = await Bun.file(
+);
+const enMenus = await Deno.readTextFile(
   new URL("../testdata/i18next/en/menus.json.txt", import.meta.url),
-).text();
-const enStore = await Bun.file(
+);
+const enStore = await Deno.readTextFile(
   new URL("../testdata/i18next/en/store.json.txt", import.meta.url),
-).text();
-const frAppendix = await Bun.file(
+);
+const frAppendix = await Deno.readTextFile(
   new URL("../testdata/i18next/fr/appendix.json", import.meta.url),
-).text();
-const frMenus = await Bun.file(
+);
+const frMenus = await Deno.readTextFile(
   new URL("../testdata/i18next/fr/menus.json.txt", import.meta.url),
-).text();
-const importedPlCommon = await Bun.file(
+);
+const importedPlCommon = await Deno.readTextFile(
   new URL("../testdata/i18next/import/pl/common.json.txt", import.meta.url),
-).text();
-const jaAppendix = await Bun.file(
+);
+const jaAppendix = await Deno.readTextFile(
   new URL("../testdata/i18next/ja/appendix.json", import.meta.url),
-).text();
-const plAppendix = await Bun.file(
+);
+const plAppendix = await Deno.readTextFile(
   new URL("../testdata/i18next/pl/appendix.json", import.meta.url),
-).text();
-const plCommon = await Bun.file(
+);
+const plCommon = await Deno.readTextFile(
   new URL("../testdata/i18next/pl/common.json", import.meta.url),
-).text();
-const plMenus = await Bun.file(
+);
+const plMenus = await Deno.readTextFile(
   new URL("../testdata/i18next/pl/menus.json.txt", import.meta.url),
-).text();
+);
 
 /*
- * Golden files live in packages/core/testdata/i18next/<language>/. Files that `bun run fmt`
+ * Golden files live in packages/core/testdata/i18next/<language>/. Files that `deno task fmt`
  * would reformat (4-space or tab indentation, CRLF, one line) end in `.json.txt` so that
  * their bytes stay as they are; testdata/.gitattributes keeps git from converting their line
  * endings.

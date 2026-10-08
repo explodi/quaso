@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
 /** The portable backup fixture is compared byte-for-byte to workerd's output by its scenario test. */
-import { assertEquals } from "@quaso/runtime/assert";
+import { assertEquals } from "@std/assert";
 import type { BackupDocument, ExportResult } from "@quaso/core";
 import fixture from "../../cloudflare/test/fixtures/demo.json" with { type: "json" };
 import { ANONYMOUS, SYSTEM } from "./api.ts";

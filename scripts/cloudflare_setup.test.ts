@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, test } from "node:test";
+import { expect } from "@std/expect";
 import * as fs from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -16,7 +17,7 @@ const DATABASE = "12345678-1234-1234-1234-123456789abc";
 const NAME = "quaso-staging";
 const ROOT = `/accounts/${ACCOUNT}`;
 const IDENTITY = { loggedIn: true, accounts: [{ id: ACCOUNT, name: "Example account" }] };
-const IMAGE = "ghcr.io/explodi/quaso:1.0.0-beta.2";
+const IMAGE = "explodi/quaso:1.0.0-beta.2";
 const envelope = (result: unknown) => Response.json({ success: true, result });
 
 function harness(directory: string) {
@@ -286,10 +287,7 @@ describe("Cloudflare setup", () => {
       setup({ ...fixture.options, image: undefined }, fixture.dependencies),
     ).rejects.toThrow("published Beta 2 image");
     await expect(
-      setup(
-        { ...fixture.options, image: "ghcr.io/explodi/quaso:1.0.0-rc.1" },
-        fixture.dependencies,
-      ),
+      setup({ ...fixture.options, image: "explodi/quaso:1.0.0-rc.1" }, fixture.dependencies),
     ).rejects.toThrow("incompatible");
     expect(fixture.state.requests.every((request) => request.method === "GET")).toBe(true);
     expect(fixture.state.commands).toEqual([]);

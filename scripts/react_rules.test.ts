@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
 /** These probes ensure the CI gate rejects both state-update regressions. */
-import { assert, assertEquals } from "@quaso/runtime/assert";
+import { assert, assertEquals } from "@std/assert";
 import { fileURLToPath as fromFileUrl } from "node:url";
 import { ESLint } from "eslint";
 

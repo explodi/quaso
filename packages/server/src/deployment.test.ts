@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: MIT
-import { makeTempDir } from "@quaso/runtime/files";
-import { Command } from "@quaso/runtime/command";
 import * as fs from "node:fs/promises";
 import { test } from "node:test";
 /** The actual server starts with a configured setup key, which never appears in logs. */
-import { assert, assertEquals, assertMatch } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertMatch } from "@std/assert";
 import { fileURLToPath as fromFileUrl } from "node:url";
 import { join } from "node:path";
 
@@ -12,7 +10,7 @@ const MAIN = fromFileUrl(new URL("../main.ts", import.meta.url));
 const DOMAIN = "translate.example.com";
 const ORIGIN = `https://${DOMAIN}`;
 
-/** The variables Bun itself needs (its cache, temporary files), none of Quaso's. */
+/** The variables Deno itself needs (its cache, temporary files), none of Quaso's. */
 function runtimeEnv(): Record<string, string> {
   const names = [
     "HOME",
@@ -32,9 +30,9 @@ function runtimeEnv(): Record<string, string> {
 }
 
 function freePort(): number {
-  const listener = Bun.listen({ hostname: "127.0.0.1", port: 0, socket: { data() {} } });
-  const port = { port: listener.port }.port;
-  listener.stop();
+  const listener = Deno.listen({ hostname: "127.0.0.1", port: 0 });
+  const port = listener.addr.port;
+  listener.close();
   return port;
 }
 
@@ -42,11 +40,11 @@ test(
   "deployment: a fresh instance is claimed with the configured key, then used",
   { skip: process.platform === "win32" },
   async () => {
-    const dir = await makeTempDir();
+    const dir = await Deno.makeTempDir();
     const port = freePort();
-    const server = new Command(process.execPath, {
-      args: ["run", "--deny-net=generativelanguage.googleapis.com", MAIN, "serve"],
-      // Exactly what .env needs, plus what the Docker image sets (and what Bun itself needs).
+    const server = new Deno.Command(Deno.execPath(), {
+      args: ["run", "-A", "--deny-net=generativelanguage.googleapis.com", MAIN, "serve"],
+      // Exactly what .env needs, plus what the Docker image sets (and what Deno itself needs).
       env: {
         ...runtimeEnv(),
         QUASO_DOMAIN: DOMAIN,

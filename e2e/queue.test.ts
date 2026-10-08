@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 /// <reference lib="dom" />
-import { assertEquals, assertStringIncludes } from "@quaso/runtime/assert";
+import { assertEquals, assertStringIncludes } from "@std/assert";
 import { ANONYMOUS, SYSTEM, type Service } from "@quaso/service";
 import { browserTest, openTab, press, text, waitFor } from "./_setup.ts";
 

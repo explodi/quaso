@@ -6,13 +6,13 @@ import * as fs from "node:fs/promises";
  * background pair has WCAG AA contrast in both themes, and the three state colours stay
  * apart for people with the common red–green colour blindnesses.
  */
-import { assert, assertEquals } from "@quaso/runtime/assert";
+import { assert, assertEquals } from "@std/assert";
 import { colourDifference, contrastRatio, lightness, type Vision } from "../lib/contrast.ts";
 import { CONTRAST_CHECKS, faviconSvg, THEME_CSS_URL, themeCss, THEMES } from "./tokens.ts";
 
 test("theme.css is generated from tokens.ts", async () => {
   const css = await fs.readFile(THEME_CSS_URL, "utf8");
-  assertEquals(css, themeCss(), "theme.css is out of date: run bun run design:tokens");
+  assertEquals(css, themeCss(), "theme.css is out of date: run deno task design:tokens");
 });
 
 test("every colour pair has enough contrast in both themes (WCAG 2.2 AA)", () => {

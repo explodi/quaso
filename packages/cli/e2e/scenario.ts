@@ -10,7 +10,7 @@ import * as fs from "node:fs/promises";
  * translator (S5.6): `upload --wait`, `translate` with `--dry-run`, `--language`, `--file`
  * and `--no-wait`, and exit code 6 with the failed strings' local paths.
  */
-import { assert, assertEquals, assertMatch, assertStringIncludes } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertMatch, assertStringIncludes } from "@std/assert";
 import { join } from "node:path";
 import {
   closedAddress,

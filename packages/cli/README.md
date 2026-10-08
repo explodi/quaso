@@ -6,11 +6,11 @@ progress, holds a release back when translations are missing, and imports the tr
 already have. It never asks anything, prints JSON with `--json`, and its exit codes say what
 happened, so it works the same on a laptop, in CI and for AI agents.
 
-It runs on Node 22 or later and Bun 1.4.2 or later: one file, no dependencies.
+It runs on Node 22 or later and Deno 2.9 or later: one file, no dependencies.
 
 ```sh
 npm install --save-dev @quaso/cli    # then: npx quaso …
-bunx @quaso/cli status     # or with Bun, from npm
+deno run -A npm:@quaso/cli status    # or with Deno, from npm
 ```
 
 ## Connecting

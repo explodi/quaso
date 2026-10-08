@@ -13,22 +13,22 @@ Object. Do not put secrets in git. See [Docker](deploy-docker.md) and
 
 ## Required for your setup
 
-| Variable       | Default           | Applies to | Example                 | Meaning                                                                                                                                                 |
-| -------------- | ----------------- | ---------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `QUASO_DOMAIN` | unset             | Docker     | `translate.example.com` | Hostname Caddy serves. Sets the default PUBLIC_URL; needed by the supplied Compose file.                                                                |
+| Variable       | Default           | Applies to | Example                 | Meaning                                                                                                |
+| -------------- | ----------------- | ---------- | ----------------------- | ------------------------------------------------------------------------------------------------------ |
+| `QUASO_DOMAIN` | unset             | Docker     | `translate.example.com` | Hostname Caddy serves. Sets the default PUBLIC_URL; needed by the supplied Compose file.               |
 | `SECRET_KEY`   | generated locally | Both       | `openssl rand -hex 32`  | Legacy remote-service mode only. Supported Beta 2 hosts generate instance credentials in the database. |
 
 ## Sign-in and email
 
-| Variable                | Default      | Applies to | Example                      | Meaning                                                         |
-| ----------------------- | ------------ | ---------- | ---------------------------- | --------------------------------------------------------------- |
-| `SETUP_KEY` | unset | Both | `openssl rand -hex 16` | At least 16 characters; required until initial setup completes. Enter it at `/setup`. |
-| `GITHUB_CLIENT_ID`      | unset        | Both       | `your-client-id`             | GitHub OAuth client ID; set with its secret.                    |
-| `GITHUB_CLIENT_SECRET`  | unset        | Both       | `your-client-secret`         | GitHub OAuth secret.                                            |
-| `DISCORD_CLIENT_ID`     | unset        | Both       | `your-client-id`             | Discord OAuth client ID; set with its secret.                   |
-| `DISCORD_CLIENT_SECRET` | unset        | Both       | `your-client-secret`         | Discord OAuth secret.                                           |
-| `TURNSTILE_SITE_KEY`    | unset        | Both       | `your-site-key`              | Optional human-check site key; set with the secret.             |
-| `TURNSTILE_SECRET_KEY`  | unset        | Both       | `your-secret-key`            | Human-check secret for sign-up and volunteer requests.          |
+| Variable                | Default | Applies to | Example                | Meaning                                                                               |
+| ----------------------- | ------- | ---------- | ---------------------- | ------------------------------------------------------------------------------------- |
+| `SETUP_KEY`             | unset   | Both       | `openssl rand -hex 16` | At least 16 characters; required until initial setup completes. Enter it at `/setup`. |
+| `GITHUB_CLIENT_ID`      | unset   | Both       | `your-client-id`       | GitHub OAuth client ID; set with its secret.                                          |
+| `GITHUB_CLIENT_SECRET`  | unset   | Both       | `your-client-secret`   | GitHub OAuth secret.                                                                  |
+| `DISCORD_CLIENT_ID`     | unset   | Both       | `your-client-id`       | Discord OAuth client ID; set with its secret.                                         |
+| `DISCORD_CLIENT_SECRET` | unset   | Both       | `your-client-secret`   | Discord OAuth secret.                                                                 |
+| `TURNSTILE_SITE_KEY`    | unset   | Both       | `your-site-key`        | Optional human-check site key; set with the secret.                                   |
+| `TURNSTILE_SECRET_KEY`  | unset   | Both       | `your-secret-key`      | Human-check secret for sign-up and volunteer requests.                                |
 
 ## LLM
 

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { assertEquals, assertRejects } from "@quaso/runtime/assert";
+import { assertEquals, assertRejects } from "@std/assert";
 import { ServiceError, silentLogger } from "@quaso/service";
 import { createHumanCheck, TURNSTILE_VERIFY_URL } from "./human_check.ts";
 

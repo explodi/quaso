@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 import type { Fetch } from "@quaso/core";
 import { test } from "node:test";
-import { assert, assertEquals, assertInstanceOf, assertRejects } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertInstanceOf, assertRejects } from "@std/assert";
 import {
   ApiError,
   apiUrl,

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { assertEquals } from "@quaso/runtime/assert";
+import { assertEquals } from "@std/assert";
 import { isMac, type KeyInput, shortcutFor, shortcutList } from "./shortcuts.ts";
 
 function key(init: Partial<KeyInput> & { key: string }): KeyInput {

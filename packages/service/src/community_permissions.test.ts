@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
 /** Community features must preserve the same access and publication boundaries as translations. */
-import { assert, assertEquals, assertRejects } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertRejects } from "@std/assert";
 import { ANONYMOUS } from "./api.ts";
 import { ServiceError } from "./errors.ts";
 import { addUser, stringId, uploadJson } from "./test_helpers.ts";

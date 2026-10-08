@@ -6,7 +6,7 @@ import { test } from "node:test";
  * limits, session renewal, email links, the team, and acceptance tests 4, 9 (the person
  * path) and 10.
  */
-import { assert, assertEquals, assertMatch, assertStringIncludes } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertMatch, assertStringIncludes } from "@std/assert";
 import type { ExportResult, SessionInfo, StringsPage, SuggestionInfo } from "@quaso/core";
 import { type Service, SYSTEM } from "@quaso/service";
 import { type App, createApp } from "./app.ts";
@@ -323,7 +323,9 @@ test("accounts API: writes with the session cookie need the site's Origin", asyn
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          files: [{ path: "common.json", repoPath: "common.json", content: JSON.stringify(ENGLISH) }],
+          files: [
+            { path: "common.json", repoPath: "common.json", content: JSON.stringify(ENGLISH) },
+          ],
           dryRun: true,
         }),
       }),

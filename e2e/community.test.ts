@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 /// <reference lib="dom" />
 /** LATER-1 to LATER-3 through real accounts, service writes and the rendered website. */
-import { assert, assertEquals, assertStringIncludes } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import type { Page } from "puppeteer";
 import { ANONYMOUS, type Service, SYSTEM } from "@quaso/service";
 import {

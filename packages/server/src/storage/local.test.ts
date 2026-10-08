@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 import * as fs from "node:fs/promises";
-import { makeTempDir } from "@quaso/runtime/files";
 import { test } from "node:test";
 import { DatabaseSync } from "node:sqlite";
-import { assert, assertEquals, assertRejects } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertRejects } from "@std/assert";
 import { join } from "node:path";
 import { silentLogger } from "@quaso/service";
 import { LockBusyError } from "./lock.ts";
@@ -11,7 +10,7 @@ import { DATABASE_FILE, openLocalStorage } from "./local.ts";
 import { listStoredBackups } from "../../../service/src/stored_backups.ts";
 
 async function withDataDir(fn: (dir: string) => Promise<void>): Promise<void> {
-  const dir = await makeTempDir();
+  const dir = await Deno.makeTempDir();
   try {
     await fn(join(dir, "data"));
   } finally {

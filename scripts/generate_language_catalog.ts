@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: MIT
-/** Regenerate the fixed catalog after deliberately updating the bundled CLDR runtime. */
+/**
+ * Regenerate the fixed catalog after deliberately updating the bundled CLDR runtime.
+ * The catalog came from JavaScriptCore's ICU; V8's (Deno, Node, Chrome) names far fewer
+ * languages, so running this on Deno shrinks the catalog from 300 to about 70 languages.
+ */
 import { writeFile } from "node:fs/promises";
 import { format } from "prettier";
 

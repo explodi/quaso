@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 import * as fs from "node:fs/promises";
 /**
- * The opt-in LLM evaluation (S0.6, S5.8; design open question 4), `bun run test:llm`:
+ * The opt-in LLM evaluation (S0.6, S5.8; design open question 4), `deno task test:llm`:
  * translates the demo game's strings (`examples/demo-game/`) into German, Polish and
  * Japanese with each model, through the service's own batching, prompts, checks and
  * retries (an in-memory service with the Gemini provider), so the numbers are production's.
@@ -9,7 +9,7 @@ import * as fs from "node:fs/promises";
  * the first try and after the retries, the tokens and the time, and writes the translations
  * to a JSON file for a native speaker's review. It needs GEMINI_API_KEY, and spends tokens.
  *
- *   bun run test:llm [--models gemini-flash-latest,gemini-2.5-pro] [--languages de,pl,ja]
+ *   deno task test:llm [--models gemini-flash-latest,gemini-2.5-pro] [--languages de,pl,ja]
  *                      [--out .quaso/llm-eval.json] [--concurrency 4]
  */
 import { fileURLToPath as fromFileUrl } from "node:url";
@@ -237,7 +237,7 @@ if (import.meta.main) {
   if (!key) {
     console.error(
       "The LLM evaluation needs a Gemini API key, and spends tokens: " +
-        "GEMINI_API_KEY=… bun run test:llm [--models a,b] [--languages de,pl,ja] [--out file]",
+        "GEMINI_API_KEY=… deno task test:llm [--models a,b] [--languages de,pl,ja] [--out file]",
     );
     process.exit(1);
   }

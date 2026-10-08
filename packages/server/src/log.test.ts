@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { assertEquals } from "@quaso/runtime/assert";
+import { assertEquals } from "@std/assert";
 import { createLogger, formatLine } from "./log.ts";
 
 test("log: JSON lines with time, level, message and fields", () => {

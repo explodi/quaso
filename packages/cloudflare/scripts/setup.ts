@@ -76,7 +76,7 @@ export function setupOptions(args: readonly string[]): SetupOptions {
       "--image",
       "--instance-config",
     ].includes(flag);
-    if (!supported) throw new Error(`Unknown setup option ${flag}. See bun run cf:setup --help.`);
+    if (!supported) throw new Error(`Unknown setup option ${flag}. See deno task cf:setup --help.`);
     const value = args[++index];
     if (value === undefined || value.startsWith("-")) throw new Error(`${flag} needs a value.`);
     switch (flag) {
@@ -190,7 +190,7 @@ export async function setup(options: SetupOptions, dependencies: Dependencies) {
     bucketName: existing?.bucketName ?? `${name}-store`,
     locationHint,
     sleepAfter: existing?.sleepAfter ?? (environment === "staging" ? "5m" : "10m"),
-    image: image ?? `ghcr.io/explodi/quaso:${VERSION}`,
+    image: image ?? `explodi/quaso:${VERSION}`,
   };
   const instance = parseInstanceConfig({ version: 1, environments: { [environment]: candidate } })
     .environments[environment]!;
@@ -360,7 +360,7 @@ async function healthy(request: Fetch, hostname: string): Promise<boolean> {
   }
 }
 
-const HELP = `Usage: bun run cf:setup [options]
+const HELP = `Usage: deno task cf:setup [options]
 
 Choose an account, environment, domain and D1 location interactively.
   --env staging|production   Select the environment.
@@ -368,7 +368,7 @@ Choose an account, environment, domain and D1 location interactively.
   --hostname <hostname>      Use a hostname in an active account domain.
   --location <hint>          D1 region (wnam, enam, weur, eeur, apac or oc).
   --name <worker-name>       Name the Worker, database and store bucket.
-  --image <release-image>    Use a tagged or digest-pinned Quaso image on GHCR.
+  --image <release-image>    Use a tagged or digest-pinned Quaso image on Docker Hub.
   --instance-config <file>   Save settings elsewhere.
   --check                   Only check account access and domains; create nothing.
 `;

@@ -2,7 +2,7 @@
 /**
  * The real Gemini provider in workerd, with the runtime's own `fetch` (no fetch is
  * injected), against the fake Gemini API that vitest.config.ts makes the Worker's outbound
- * service (test/gemini_stub.ts). workerd refuses some `fetch` options that Bun and Node
+ * service (test/gemini_stub.ts). workerd refuses some `fetch` options that Deno and Node
  * accept (`redirect: "error"`), so only a test here shows that the Durable Object can reach
  * the API at all.
  */

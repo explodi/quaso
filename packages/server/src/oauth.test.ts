@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { assert, assertEquals, assertMatch } from "@quaso/runtime/assert";
-import { encodeBase64Url } from "@quaso/runtime/encoding";
+import { assert, assertEquals, assertMatch } from "@std/assert";
+import { encodeBase64Url } from "@std/encoding";
 import { ANONYMOUS, SYSTEM } from "@quaso/service";
 import { type App, createApp } from "./app.ts";
 import { safeNext } from "./oauth.ts";

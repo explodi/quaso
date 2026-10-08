@@ -6,7 +6,7 @@ import * as fs from "node:fs/promises";
  * npm packages are checked from their installed `package.json`, in every `node_modules`
  * folder of the repository.
  */
-import { walk } from "@quaso/runtime/files";
+import { walk } from "@std/fs/walk";
 
 const ALLOWED = new Set([
   "MIT",

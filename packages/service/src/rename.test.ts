@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { assertEquals, assertThrows } from "@quaso/runtime/assert";
+import { assertEquals, assertThrows } from "@std/assert";
 import { SYSTEM_AUTHOR } from "./actors.ts";
 import { ServiceError } from "./errors.ts";
 import { planRenameMove, resolveRenameRows, type RenameClash, type RenameEnd } from "./rename.ts";

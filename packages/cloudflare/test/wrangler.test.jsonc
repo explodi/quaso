@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 //
-// The configuration for the tests in workerd (`bun run cf:test`): the Worker and the data
+// The configuration for the tests in workerd (`deno task cf:test`): the Worker and the data
 // object as in wrangler.jsonc, without the container (which needs Docker and an account).
 // QUASO_CONTAINER is bound to a fake server instead (worker.ts here), and TEST_OBJECT is a
 // bare Durable Object for the adapters' tests. The secrets are test values. It lives in

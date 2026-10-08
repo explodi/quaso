@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
-import { assertEquals, assertStringIncludes } from "@quaso/runtime/assert";
+import { assertEquals, assertStringIncludes } from "@std/assert";
 import { sha256Hex } from "@quaso/core";
 import { convertCrowdin } from "./crowdin.ts";
 import { fakeFetch, jsonResponse, runCli, withProject } from "./test_helpers.ts";

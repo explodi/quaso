@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { assertEquals } from "@quaso/runtime/assert";
+import { assertEquals } from "@std/assert";
 import type { Progress, TranslationInfo } from "@quaso/core";
 import { colourOf, filterCount, flagsOf, isCompleted, stateSentence } from "./states.ts";
 

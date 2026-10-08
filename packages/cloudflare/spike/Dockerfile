@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
-FROM oven/bun:1.4.2
+FROM denoland/deno:2.9.6
 WORKDIR /spike
 COPY server.ts .
 EXPOSE 8000
-ENTRYPOINT ["bun", "server.ts"]
+ENTRYPOINT ["deno", "run", "-A", "server.ts"]

@@ -14,7 +14,7 @@ import type { Fetch } from "@quaso/core";
  *   `oauth_denied`, `oauth_failed`, `oauth_conflict`, `invite_invalid`, `setup_required`
  *   or `signed_out`.
  */
-import { encodeBase64Url } from "@quaso/runtime/encoding";
+import { encodeBase64Url } from "@std/encoding";
 import { type Logger, type ServiceApi, ServiceError, SYSTEM } from "@quaso/service";
 import type { Config } from "./config.ts";
 import type { Handler, RequestContext } from "./http/context.ts";

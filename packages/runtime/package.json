@@ -1,9 +1,0 @@
-{
-  "name": "@quaso/runtime",
-  "private": true,
-  "type": "module",
-  "license": "MIT",
-  "exports": {
-    "./*": "./*.ts"
-  }
-}

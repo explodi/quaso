@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { assertEquals } from "@quaso/runtime/assert";
+import { assertEquals } from "@std/assert";
 import { DEFAULT_SYNTAX } from "@quaso/core";
 import type { Facts } from "./facts.ts";
 import { planQa, type QaRow } from "./translations.ts";

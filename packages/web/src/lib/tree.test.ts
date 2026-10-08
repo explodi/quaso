@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { assertEquals } from "@quaso/runtime/assert";
+import { assertEquals } from "@std/assert";
 import type { FileProgress, SourceFileInfo } from "@quaso/core";
 import { buildTree, filterTree, leaves, parentPath, sumProgress, visibleNodes } from "./tree.ts";
 

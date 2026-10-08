@@ -19,8 +19,7 @@
     "typescript": "5.9.3",
     "vite": "7.3.6",
     "vitest": "4.1.11",
-    "wrangler": "4.136.3",
-    "@quaso/runtime": "workspace:*"
+    "wrangler": "4.136.3"
   },
   "dependencies": {
     "@quaso/core": "workspace:*",

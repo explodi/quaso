@@ -5,7 +5,9 @@ import { runWorkflow } from "../acceptance/workflow.ts";
 
 const args = process.argv.slice(2);
 if (args.length !== 2 || args[0] !== "--url") {
-  throw new Error("Usage: bun run workflow --url URL (dedicated empty instance with an LLM stub)");
+  throw new Error(
+    "Usage: deno task workflow --url URL (dedicated empty instance with an LLM stub)",
+  );
 }
 const url = new URL(args[1]!);
 const supportedProtocol = url.protocol === "http:" || url.protocol === "https:";

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
-import { expect, test } from "bun:test";
+import { test } from "node:test";
+import { expect } from "@std/expect";
 import * as fs from "node:fs/promises";
 import { withDeploymentConfig } from "../packages/cloudflare/scripts/deploy.ts";
 import { parseInstanceConfig } from "../packages/cloudflare/scripts/instance_config.ts";
@@ -14,7 +15,7 @@ const instance = {
   bucketName: "quaso-example-store",
   locationHint: "weur",
   sleepAfter: "5m",
-  image: "ghcr.io/explodi/quaso:1.0.0-beta.2",
+  image: "explodi/quaso:1.0.0-beta.2",
 };
 const hash = "a".repeat(64);
 const registry = `registry.cloudflare.com/${instance.accountId}/quaso`;
@@ -55,7 +56,7 @@ test("transfers the published amd64 image without building and deploys its manag
       ["image", "rm", target, instance.image],
     ]);
   });
-  expect(instance.image).toBe("ghcr.io/explodi/quaso:1.0.0-beta.2");
+  expect(instance.image).toBe("explodi/quaso:1.0.0-beta.2");
 });
 
 test("failed transfer stops deployment and removes newly created local tags", async () => {

@@ -3,8 +3,8 @@ import * as fs from "node:fs/promises";
 /**
  * Writes `test/fixtures/demo.json`: the demo project's scenario (`test/scenario.ts`) run
  * with local storage (`node:sqlite`), for the tests in workerd to compare against. With
- * `--check`, fails instead when the file is out of date. Run it with Bun, from the
- * repository's root, with its configuration: bun run cf:fixtures [--check]
+ * `--check`, fails instead when the file is out of date. Run it with Deno, from the
+ * repository's root, with its configuration: deno task cf:fixtures [--check]
  *
  * Line endings don't matter: the demo's files are read with LF, and the check ignores how
  * the fixture's lines end on disk (a Windows checkout has CRLF).
@@ -48,7 +48,7 @@ if (import.meta.main) {
   if (process.argv.slice(2).includes("--check")) {
     const current = await fs.readFile(path, "utf8").catch(() => "");
     if (!fixtureUpToDate(current, text)) {
-      console.error(`${path.pathname} is out of date: run bun run cf:fixtures`);
+      console.error(`${path.pathname} is out of date: run deno task cf:fixtures`);
       process.exit(1);
     }
     console.log("The workerd fixture is up to date.");

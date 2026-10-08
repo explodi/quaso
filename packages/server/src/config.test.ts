@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { makeTempDir } from "@quaso/runtime/files";
 import * as fs from "node:fs/promises";
-import { assert, assertEquals, assertStringIncludes } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import { join } from "node:path";
 import { type Config, type Env, loadConfig, readEnvironment } from "./config.ts";
 
@@ -161,7 +160,7 @@ test("config: private Cloudflare storage needs no operator credentials", () => {
 });
 
 test("config: .env fills in what the environment doesn't set", async () => {
-  const dir = await makeTempDir();
+  const dir = await Deno.makeTempDir();
   const name = "QUASO_TEST_FROM_ENVIRONMENT";
   try {
     await fs.writeFile(
@@ -180,7 +179,7 @@ test("config: .env fills in what the environment doesn't set", async () => {
 });
 
 test("config: no .env file is fine", async () => {
-  const dir = await makeTempDir();
+  const dir = await Deno.makeTempDir();
   try {
     const env = await readEnvironment(dir);
     assertEquals(env.PATH, process.env["PATH"]);

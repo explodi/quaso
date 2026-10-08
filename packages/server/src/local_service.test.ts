@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { makeTempDir } from "@quaso/runtime/files";
 import * as fs from "node:fs/promises";
 /** The service with local storage: who runs LLM jobs. */
-import { assertEquals } from "@quaso/runtime/assert";
+import { assertEquals } from "@std/assert";
 import { silentLogger, SYSTEM } from "@quaso/service";
 import { startLocalService } from "./local_service.ts";
 import { testConfig } from "./testing/helpers.ts";
@@ -13,7 +12,7 @@ import { DAY_MS } from "../../service/src/file_retention.ts";
 const wait = (ms: number) => new Promise((done) => setTimeout(done, ms));
 
 test("local host keeps its stored signing key across restarts and ignores the environment key", async () => {
-  const dataDir = await makeTempDir({ prefix: "quaso-instance-key-" });
+  const dataDir = await Deno.makeTempDir({ prefix: "quaso-instance-key-" });
   try {
     const first = await startLocalService(
       testConfig({ DATA_DIR: dataDir, SECRET_KEY: "x".repeat(32) }),
@@ -41,7 +40,7 @@ test("local host keeps its stored signing key across restarts and ignores the en
 });
 
 test("local backups apply changed retention without restarting", async () => {
-  const dataDir = await makeTempDir({ prefix: "quaso-retention-" });
+  const dataDir = await Deno.makeTempDir({ prefix: "quaso-retention-" });
   const local = await startLocalService(testConfig({ DATA_DIR: dataDir }), silentLogger);
   try {
     const old = backupKey(Date.now() - 10 * DAY_MS, "sqlite");
@@ -61,7 +60,7 @@ test("local backups apply changed retention without restarting", async () => {
 });
 
 test("local service: health reports its scheduled backup deadline", async () => {
-  const dataDir = await makeTempDir({ prefix: "quaso-backup-health-" });
+  const dataDir = await Deno.makeTempDir({ prefix: "quaso-backup-health-" });
   const local = await startLocalService(testConfig({ DATA_DIR: dataDir }), silentLogger, {
     backups: true,
   });
@@ -77,7 +76,7 @@ test("local service: health reports its scheduled backup deadline", async () => 
 });
 
 test("local service: one-off commands leave LLM jobs to the server", async () => {
-  const dataDir = await makeTempDir({ prefix: "quaso-local-service-" });
+  const dataDir = await Deno.makeTempDir({ prefix: "quaso-local-service-" });
   const config = testConfig({ QUASO_DEV: "1", DATA_DIR: dataDir });
   try {
     // A queued job and its due wake-up, as a server that stopped leaves them.

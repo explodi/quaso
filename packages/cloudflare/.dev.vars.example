@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: MIT
-# Secrets for local runs (bun run cf:dev): copy this file to .dev.vars, which git ignores,
+# Secrets for local runs (deno task cf:dev): copy this file to .dev.vars, which git ignores,
 # and fill it in. For the first deploy of an environment, the same format in a file such as
 # .dev.vars.production (also ignored):
-#   bun run cf:deploy --env production --secrets-file .dev.vars.production
+#   deno task cf:deploy --env production --secrets-file .dev.vars.production
 # Later, change one with: wrangler secret put <NAME> --env <env>
 
 # openssl rand -hex 32

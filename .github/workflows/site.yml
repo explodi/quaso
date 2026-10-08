@@ -16,8 +16,9 @@ on:
       - "packages/web/src/components/**"
       - "packages/web/public/fonts/**"
       - "package.json"
-      - "bun.lock"
-      - ".bun-version"
+      - "deno.json"
+      - "deno.lock"
+      - ".dvmrc"
       - ".github/workflows/site.yml"
   workflow_dispatch:
 
@@ -37,14 +38,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: denoland/setup-deno@v2
         with:
-          bun-version-file: .bun-version
-      - run: bun install --frozen-lockfile
+          deno-version-file: .dvmrc
+      - run: deno install --frozen-lockfile
       - id: pages
         if: ${{ !github.event.repository.private }}
         uses: actions/configure-pages@v6
-      - run: bun run site:build
+      - run: deno task site:build
         env:
           # The path the site is served under, such as /quaso, for 404.html.
           BASE_PATH: ${{ steps.pages.outputs.base_path }}

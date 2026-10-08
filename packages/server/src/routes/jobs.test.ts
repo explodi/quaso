@@ -4,7 +4,7 @@ import { test } from "node:test";
  * The LLM routes with the real service and the fake translator, through `createApp`:
  * jobs, their progress and cancelling, usage and models, and who may call them.
  */
-import { assert, assertEquals } from "@quaso/runtime/assert";
+import { assert, assertEquals } from "@std/assert";
 import type { CreateJobResult, JobInfo, JobsResult, UsageResult } from "@quaso/core";
 import { createFakeTranslator, type Service, SYSTEM } from "@quaso/service";
 import type { App } from "../app.ts";

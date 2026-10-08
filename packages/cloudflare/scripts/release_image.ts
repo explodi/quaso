@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: MIT
 /** Transfer a published release unchanged into the account's managed registry. */
 import * as fs from "node:fs/promises";
-import { Command } from "@quaso/runtime/command";
 import { runWrangler, type WranglerRun } from "./cloudflare_api.ts";
 import type { Environment, Instance } from "./instance_config.ts";
 
 type DockerRun = (args: string[]) => Promise<{ code: number; stdout: string }>;
 
 async function runDocker(args: string[]) {
-  const result = await new Command("docker", { args, stdout: "piped", stderr: "inherit" }).output();
+  const result = await new Deno.Command("docker", {
+    args,
+    stdout: "piped",
+    stderr: "inherit",
+  }).output();
   return { code: result.code, stdout: new TextDecoder().decode(result.stdout).trim() };
 }
 
@@ -28,7 +31,9 @@ export async function prepareReleaseImage(
   let failure: unknown;
   try {
     if ((await docker(["pull", "--platform", "linux/amd64", source])).code !== 0)
-      throw new Error("Couldn't pull the published release. Check Docker and GHCR access.");
+      throw new Error(
+        "Couldn't pull the published release. Check Docker and access to its registry.",
+      );
     pulled = true;
     const inspected = await docker(["image", "inspect", "--format", "{{.Id}}", source]);
     const imageId = inspected.stdout.trim();

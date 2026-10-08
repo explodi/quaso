@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { serveHttp } from "@quaso/runtime/http";
 import * as fs from "node:fs/promises";
-import { Command } from "@quaso/runtime/command";
 import { test } from "node:test";
 /// <reference lib="dom" />
 /**
@@ -12,7 +10,7 @@ import { test } from "node:test";
  * failed requests and CSP violations. Tests end by asserting there were none.
  */
 import { type Browser, launch, type Page } from "puppeteer";
-import { assert } from "@quaso/runtime/assert";
+import { assert } from "@std/assert";
 import { fileURLToPath as fromFileUrl } from "node:url";
 import { join } from "node:path";
 import type { ProjectInfo, SessionInfo, StringsPage, UploadResult } from "@quaso/core";
@@ -62,14 +60,14 @@ export function ensureWebsiteBuilt(): Promise<void> {
       ...(await Promise.all(WEB_SOURCES.map((p) => newestChange(join(ROOT, p))))),
     );
     if (built > sources) return;
-    console.log("Building the website (bun run build:web)…");
-    const { success } = await new Command(process.execPath, {
-      args: ["run", "build:web"],
+    console.log("Building the website (deno task build:web)…");
+    const { success } = await new Deno.Command(Deno.execPath(), {
+      args: ["task", "build:web"],
       cwd: ROOT,
       stdout: "null",
       stderr: "inherit",
     }).output();
-    assert(success, "bun run build:web failed");
+    assert(success, "deno task build:web failed");
   })());
 }
 
@@ -194,7 +192,7 @@ export async function startServer(options: ServerOptions = {}): Promise<TestServ
       sourceLanguage: project.sourceLanguage,
     });
   }
-  // The browser's real origin is known once Bun chooses the ephemeral port. Use it for
+  // The browser's real origin is known once Deno chooses the ephemeral port. Use it for
   // CSRF checks and one-time links, just as a deployed instance uses PUBLIC_URL.
   const handler: App = async (request, info) => {
     const next = (r: Request) => app(r, info);
@@ -212,7 +210,7 @@ export async function startServer(options: ServerOptions = {}): Promise<TestServ
     }
     return await next(request);
   };
-  const server = serveHttp({ hostname: "127.0.0.1", port: 0, onListen() {} }, (request, info) =>
+  const server = Deno.serve({ hostname: "127.0.0.1", port: 0, onListen() {} }, (request, info) =>
     handler(request, { remoteAddr: { hostname: info.remoteAddr.hostname } }),
   );
   const url = `http://127.0.0.1:${server.addr.port}`;

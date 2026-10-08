@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { makeTempDir } from "@quaso/runtime/files";
+import { gzipSync } from "node:zlib";
 import * as fs from "node:fs/promises";
 import { test } from "node:test";
 import * as fsSync from "node:fs";
@@ -8,7 +8,7 @@ import * as fsSync from "node:fs";
  * storage; with Cloudflare storage, rows read at one state, started again after a write),
  * snapshots are single files, and SQLite backups restore from read-only folders.
  */
-import { assert, assertEquals, assertRejects, assertStringIncludes } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertRejects, assertStringIncludes } from "@std/assert";
 import { join } from "node:path";
 import { backup, DatabaseSync } from "node:sqlite";
 import type { BackupDocument } from "@quaso/core";
@@ -162,7 +162,7 @@ function translationFacts(query: (sql: string) => Row[]) {
 }
 
 async function tempDir(): Promise<string> {
-  return await fs.realpath(await makeTempDir({ prefix: "quaso-backup-test-" }));
+  return await fs.realpath(await Deno.makeTempDir({ prefix: "quaso-backup-test-" }));
 }
 
 test("the SQLite file built from rows is one moment's copy: a write between two calls starts it again", async () => {
@@ -345,7 +345,7 @@ test("SQLite backups restore from a read-only folder, and leave nothing beside t
 
     for (const name of ["snapshot.sqlite", "old.sqlite"]) {
       const target = await memoryService();
-      const temp = await makeTempDir({ dir });
+      const temp = await Deno.makeTempDir({ dir });
       try {
         const result = await restoreFile(target.service, join(mount, name), { tempDir: temp });
         assertEquals(result.tables.revision_guard, undefined);
@@ -419,7 +419,7 @@ test("Beta 1 SQLite and JSON backups are rejected before the destination changes
     );
     assertStringIncludes(jsonError.message, "Beta 1 (1.0.0-rc.1) backups are not supported");
     const gzipPath = join(dir, "beta-1.json.gz");
-    await fs.writeFile(gzipPath, Bun.gzipSync(await fs.readFile(jsonPath)));
+    await fs.writeFile(gzipPath, gzipSync(await fs.readFile(jsonPath)));
     const gzipError = await assertRejects(
       () => restoreFile(target.service, gzipPath),
       ServiceError,

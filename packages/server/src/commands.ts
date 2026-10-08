@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: MIT
-import { serveHttp } from "@quaso/runtime/http";
-import type { HttpServer } from "@quaso/runtime/http";
 import * as fs from "node:fs/promises";
 /**
  * The server's commands (design §5.12, §5.13): `serve`, `healthcheck` for Docker's
  * `HEALTHCHECK`, `version`, `token create` for operators, and `seed-dev` for
- * `bun run dev`. Each returns its exit code. The Cloudflare container runs the service
+ * `deno task dev`. Each returns its exit code. The Cloudflare container runs the service
  * on private D1/R2 storage; other deployments use the local data folder.
  */
 import { CreateApiTokenRequest, formatIssue, PublicationTime, validate } from "@quaso/core";
@@ -44,7 +42,7 @@ Commands:
                             Create an API key and print its secret, once. With local
                             storage, stop the server first: it holds the data folder.
   seed-dev                  Seed the demo project into a new development database
-                            (QUASO_DEV=1; bun run dev runs it)
+                            (QUASO_DEV=1; deno task dev runs it)
   restore <file>            Restore a backup (.sqlite, .json or .json.gz) into a new, empty
                             instance: the data folder (stop the server first), or
                             Cloudflare storage
@@ -157,9 +155,9 @@ async function serve(config: Config): Promise<number> {
       secretKey: storage.secretKey,
     }),
   );
-  let server: HttpServer;
+  let server: Deno.HttpServer;
   try {
-    server = serveHttp(
+    server = Deno.serve(
       {
         port: config.port,
         onListen: ({ hostname, port }) =>
@@ -174,7 +172,7 @@ async function serve(config: Config): Promise<number> {
     );
   } catch (error) {
     storage.close();
-    if (!((error as NodeJS.ErrnoException).code === "EADDRINUSE")) throw error;
+    if (!(error instanceof Deno.errors.AddrInUse)) throw error;
     log.error(`Port ${config.port} is already in use. Stop what uses it, or set PORT.`);
     return 1;
   }
@@ -182,7 +180,7 @@ async function serve(config: Config): Promise<number> {
   const stopped = Promise.withResolvers<void>();
   let stopping = false;
   const stop = async (signal: string) => {
-    // `bun run --watch` sends SIGTERM after a Ctrl-C: once is enough. The deadline ends a
+    // `deno run --watch` may signal again after a Ctrl-C: once is enough. The deadline ends a
     // shutdown that hangs, such as on a client that never finishes its request; the exit
     // then closes what is still open.
     if (stopping) return;
@@ -425,7 +423,7 @@ async function seedDev(config: Config, log: Logger): Promise<number> {
   if (!local) return 1;
   try {
     if (!local.created) {
-      console.error(`${config.dataDir} already has a project. To start again: bun run dev:reset`);
+      console.error(`${config.dataDir} already has a project. To start again: deno task dev:reset`);
       return 1;
     }
     const { apiKey, upload, imports } = await seedDemo(local.service, demoDir(), {

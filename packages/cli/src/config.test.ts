@@ -7,7 +7,7 @@ import {
   assertRejects,
   assertStringIncludes,
   assertThrows,
-} from "@quaso/runtime/assert";
+} from "@std/assert";
 import { join } from "node:path";
 import {
   apiKey,

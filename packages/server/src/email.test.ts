@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { assertEquals, assertRejects, assertStringIncludes } from "@quaso/runtime/assert";
+import { assertEquals, assertRejects, assertStringIncludes } from "@std/assert";
 import { ServiceError, silentLogger } from "@quaso/service";
 import { createEmailSender, emailLink, escapeHtml, linkEmail } from "./email.ts";
 

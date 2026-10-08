@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { assertEquals } from "@quaso/runtime/assert";
+import { assertEquals } from "@std/assert";
 import { conflict, ServiceError } from "@quaso/service";
 import { memoryLogger } from "../testing/helpers.ts";
 import { methodNotAllowedResponse, notFoundResponse, toErrorResponse } from "./errors.ts";

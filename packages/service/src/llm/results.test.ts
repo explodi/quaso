@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { assertEquals } from "@quaso/runtime/assert";
+import { assertEquals } from "@std/assert";
 import { checkTranslation, DEFAULT_SYNTAX, type TextValue } from "@quaso/core";
 import { maskString, promptId, type PromptString } from "./prompt.ts";
 import { checkAnswer, NO_TRANSLATION } from "./results.ts";

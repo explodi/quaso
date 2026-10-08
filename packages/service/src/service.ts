@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 /**
  * The service (design §3): the project's logic and data behind the ports. `createService`
- * builds it; the host (the Bun server, or the Durable Object) calls `start()` once, then
+ * builds it; the host (the Deno server, or the Durable Object) calls `start()` once, then
  * the `ServiceApi` methods, and `alarm()` when the scheduler fires.
  */
 import {
@@ -70,7 +70,7 @@ export interface ServiceOptions {
   version?: string;
   /** Where the service runs, for the admin page. */
   setup?: "local" | "cloudflare";
-  /** A development instance (`bun run dev`): the developer account and its sign-in. */
+  /** A development instance (`deno task dev`): the developer account and its sign-in. */
   dev?: boolean;
   /** PBKDF2 iterations for new password hashes. Default: 210,000 (`DEFAULT_ITERATIONS`). */
   passwordIterations?: number;

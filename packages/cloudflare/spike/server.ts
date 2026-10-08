@@ -35,56 +35,53 @@ process.on("SIGTERM", () => {
   setTimeout(() => process.exit(0), 60_000);
 });
 
-Bun.serve({
-  port: 8000,
-  async fetch(request) {
-    const url = new URL(request.url);
-    if (url.pathname === "/grace") {
-      measureGrace = true;
-      return new Response("ready");
+Deno.serve({ port: 8000 }, async (request) => {
+  const url = new URL(request.url);
+  if (url.pathname === "/grace") {
+    measureGrace = true;
+    return new Response("ready");
+  }
+  if (url.pathname === "/healthz")
+    return Response.json({ busy: Date.now() < busyUntil, startedAt });
+  if (url.pathname === "/busy") {
+    busyUntil = Date.now() + 70_000;
+    return Response.json({ busyUntil, startedAt });
+  }
+  if (url.pathname === "/measure") {
+    const far = url.searchParams.has("far");
+    const reads: number[] = [];
+    const commits: number[] = [];
+    let metadata: unknown;
+    for (let i = 0; i < 20; i++) {
+      const read = await batch(far, [
+        {
+          sql: "SELECT COALESCE((SELECT CAST(value AS INTEGER) FROM meta WHERE key = 'revision'), 0) AS revision",
+        },
+      ]);
+      const revision = read.results[0].results[0].revision;
+      metadata = read.results[0].meta;
+      const commit = await batch(far, [
+        {
+          sql: "UPDATE revision_guard SET expected_revision = ? WHERE id = 1",
+          params: [revision],
+        },
+      ]);
+      reads.push(read.ms);
+      commits.push(commit.ms);
     }
-    if (url.pathname === "/healthz")
-      return Response.json({ busy: Date.now() < busyUntil, startedAt });
-    if (url.pathname === "/busy") {
-      busyUntil = Date.now() + 70_000;
-      return Response.json({ busyUntil, startedAt });
-    }
-    if (url.pathname === "/measure") {
-      const far = url.searchParams.has("far");
-      const reads: number[] = [];
-      const commits: number[] = [];
-      let metadata: unknown;
-      for (let i = 0; i < 20; i++) {
-        const read = await batch(far, [
-          {
-            sql: "SELECT COALESCE((SELECT CAST(value AS INTEGER) FROM meta WHERE key = 'revision'), 0) AS revision",
-          },
-        ]);
-        const revision = read.results[0].results[0].revision;
-        metadata = read.results[0].meta;
-        const commit = await batch(far, [
-          {
-            sql: "UPDATE revision_guard SET expected_revision = ? WHERE id = 1",
-            params: [revision],
-          },
-        ]);
-        reads.push(read.ms);
-        commits.push(commit.ms);
-      }
-      const put = await fetch("http://r2.quaso.internal/probe", {
-        method: "PUT",
-        body: "binding round trip",
-      });
-      const get = await fetch("http://r2.quaso.internal/probe");
-      return Response.json({
-        far,
-        startedAt,
-        reads,
-        commits,
-        metadata,
-        r2: { put: put.status, text: await get.text() },
-      });
-    }
-    return new Response(null, { status: 404 });
-  },
+    const put = await fetch("http://r2.quaso.internal/probe", {
+      method: "PUT",
+      body: "binding round trip",
+    });
+    const get = await fetch("http://r2.quaso.internal/probe");
+    return Response.json({
+      far,
+      startedAt,
+      reads,
+      commits,
+      metadata,
+      r2: { put: put.status, text: await get.text() },
+    });
+  }
+  return new Response(null, { status: 404 });
 });

@@ -16,5 +16,5 @@ labels: bug
 **Setup**
 
 - Quaso version (shown on the admin page, or `quaso --version` for the CLI):
-- Setup: Docker Compose / Cloudflare / VM with Cloudflare storage / `bun run dev`
-- Browser, or Node/Bun version for the CLI:
+- Setup: Docker Compose / Cloudflare / VM with Cloudflare storage / `deno task dev`
+- Browser, or Node/Deno version for the CLI:

@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: MIT
-import { makeTempDir } from "@quaso/runtime/files";
 import * as fs from "node:fs/promises";
-import { Command } from "@quaso/runtime/command";
 import { test } from "node:test";
 /**
  * `quaso restore <file>` with local storage, run as the real program: a SQLite snapshot and
  * gzip-compressed JSON into new data folders, and the refusals.
  */
-import { assertEquals, assertStringIncludes } from "@quaso/runtime/assert";
+import { assertEquals, assertStringIncludes } from "@std/assert";
 import { fileURLToPath as fromFileUrl } from "node:url";
 import { join } from "node:path";
 import { backupJsonStream, silentLogger, SYSTEM } from "@quaso/service";
@@ -20,8 +18,8 @@ const decoder = new TextDecoder();
 const SECRET_KEY = "r".repeat(64);
 
 async function run(args: string[], env: Record<string, string>, cwd: string) {
-  const { code, stderr } = await new Command(process.execPath, {
-    args: ["run", MAIN, ...args],
+  const { code, stderr } = await new Deno.Command(Deno.execPath(), {
+    args: ["run", "-A", MAIN, ...args],
     env: { SECRET_KEY, ...env },
     cwd,
     stdin: "null",
@@ -75,7 +73,7 @@ test(
   "restore: a SQLite snapshot and gzip JSON into new data folders; never over a project",
   { skip: process.platform === "win32" },
   async () => {
-    const dir = await fs.realpath(await makeTempDir());
+    const dir = await fs.realpath(await Deno.makeTempDir());
     try {
       const source = await sourceInstance(join(dir, "source"));
       const snapshot = join(dir, "backup.sqlite");
@@ -127,7 +125,7 @@ test(
 );
 
 test("snapshots record the last backup for the admin page", async () => {
-  const dir = await fs.realpath(await makeTempDir());
+  const dir = await fs.realpath(await Deno.makeTempDir());
   try {
     const local = await startLocalService(testConfig({ DATA_DIR: dir, SECRET_KEY }), silentLogger);
     try {
@@ -148,7 +146,7 @@ test("snapshots record the last backup for the admin page", async () => {
 });
 
 test("backup extraction works without opening the live database and refuses to overwrite an output", async () => {
-  const dir = await makeTempDir();
+  const dir = await Deno.makeTempDir();
   const dataDir = join(dir, "source");
   const source = await sourceInstance(dataDir);
   const expected = (await source.service.exportFiles(SYSTEM, {})).files;

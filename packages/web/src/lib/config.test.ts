@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 import type { Fetch } from "@quaso/core";
 import { test } from "node:test";
-import { assertEquals } from "@quaso/runtime/assert";
+import { assertEquals } from "@std/assert";
 import { DEFAULT_CONFIG, loadConfig, parseConfig, resetConfigForTests } from "./config.ts";
 
 test("parseConfig takes a path or an http(s) address, without trailing slashes", () => {

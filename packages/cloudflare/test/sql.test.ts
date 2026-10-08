@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 /**
- * The `SyncSql` port's shared cases (the same ones `node:sqlite` passes in Bun) against
+ * The `SyncSql` port's shared cases (the same ones `node:sqlite` passes in Deno) against
  * Durable Object SQLite, each in a new object; then what the service relies on beyond them.
  */
 import { runInDurableObject } from "cloudflare:test";

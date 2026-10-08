@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { assertEquals } from "@quaso/runtime/assert";
+import { assertEquals } from "@std/assert";
 import { openAsyncSqlite } from "./adapters/node_async_sqlite.ts";
 import { SYSTEM_AUTHOR } from "./actors.ts";
 import { initializeUploadSql, UPLOAD_CASES } from "./testing/upload_cases.ts";

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
 import * as fs from "node:fs/promises";
-import { assertEquals, assertStringIncludes, assertThrows } from "@quaso/runtime/assert";
+import { assertEquals, assertStringIncludes, assertThrows } from "@std/assert";
 import { join } from "node:path";
 import type { UploadRequest, UploadResult } from "@quaso/core";
 import { CliError } from "../errors.ts";

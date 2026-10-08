@@ -4,7 +4,7 @@ import { test } from "node:test";
  * The server with the real service on an in-memory database, through `createApp`, without
  * a network: the CLI's calls, anonymous reads, and acceptance tests 2 and 7 through the API.
  */
-import { assert, assertEquals, assertStringIncludes } from "@quaso/runtime/assert";
+import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import type { StatusResult, StringsPage } from "@quaso/core";
 import { DATABASE_VERSION, type Service, SYSTEM } from "@quaso/service";
 import { type App } from "./app.ts";
