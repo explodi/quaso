@@ -28,7 +28,7 @@ export interface KeyInput {
  *
  * - Ctrl+Enter (⌘+Enter on a Mac): save or suggest, then go to the next string to do.
  * - Alt+↓ and Alt+↑: the next and the previous string.
- * - Ctrl+Shift+C (⌘+Shift+C): copy the English into the input.
+ * - Ctrl+Shift+C (⌘+Shift+C): copy the source text into the input.
  * - Alt+1…9, or Ctrl+1…9 (Control+1…9 on a Mac): insert the nth placeholder or reference.
  *   Browsers keep Ctrl+1…9 for switching tabs on Windows and Linux, hence Alt there. On a
  *   Mac, Option+digit types characters on most layouts ({ } [ ] | @ # on German, Spanish,
@@ -104,7 +104,7 @@ export function shortcutList(mac: boolean): ShortcutHelp[] {
     { keys: [[alt, "↑"]], description: "Previous string" },
     { keys: [[alt, "Shift", "↓"]], description: "Next string to do" },
     { keys: [[alt, "Shift", "↑"]], description: "Previous string to do" },
-    { keys: [[mod, "Shift", "C"]], description: "Copy the English into the input" },
+    { keys: [[mod, "Shift", "C"]], description: "Copy the source text into the input" },
     {
       // Browsers keep Ctrl+digits for tabs on Windows and Linux, and ⌥+digits type
       // characters on a Mac: each platform gets the combination that works there.

@@ -102,10 +102,10 @@ function Value({ value, lang }: { value: TextValue | null; lang: string }) {
 }
 
 const EVENT_LABELS: Record<HistoryEvent, string> = {
-  source_added: "English added",
-  source_changed: "English changed",
-  source_removed: "English removed",
-  source_restored: "English restored",
+  source_added: "Source added",
+  source_changed: "Source changed",
+  source_removed: "Source removed",
+  source_restored: "Source restored",
   source_renamed: "Key renamed",
   translation_saved: "Translation saved",
   translation_llm: "Translated by the LLM",
