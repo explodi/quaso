@@ -354,8 +354,12 @@ browserTest(
     await typeWithOption(page, "{{");
     await page.keyboard.type("score");
     // ⌥1 is ¡, not the first placeholder.
+    await page.evaluate(() => {
+      (globalThis as any).__keys = [];
+      document.addEventListener("keydown", (e) => (globalThis as any).__keys.push(`${e.key}|${e.code}|alt=${e.altKey}|ctrl=${e.ctrlKey}|meta=${e.metaKey}|${navigator.platform}`), true);
+    });
     await typeWithOption(page, "}} [|]“¡");
-    assertEquals(await value(), "Punkte: {{score}} [|]“¡");
+    assertEquals(await value(), "Punkte: {{score}} [|]“¡", JSON.stringify(await page.evaluate(() => (globalThis as any).__keys)));
     // Control+1 inserts the first placeholder (⌘+1 is the browser's).
     await sendKey(page, { key: "1", code: "Digit1", ctrl: true, keyCode: 49 });
     await waitFor(
