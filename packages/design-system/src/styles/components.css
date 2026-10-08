@@ -21,8 +21,10 @@
   transition:
     background var(--transition),
     border-color var(--transition);
+  /* Long labels wrap between words; break-word (unlike anywhere) leaves the min-content width
+     alone, so a button in a crowded flex row never shrinks into "Sa/ve". */
   white-space: normal;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .btn:hover:not(:disabled, [aria-busy="true"]) {
