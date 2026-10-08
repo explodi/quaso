@@ -5,7 +5,7 @@ address and a hostname you control. Allow inbound TCP ports 80 and 443; UDP 443 
 HTTP/3. Do not expose port 8000 when Caddy is the public entry point.
 
 Throughout these guides, replace `<org>` with the organization publishing your Quaso image and
-repository. The package name `quaso-cli` must be reserved before the first public release. Until
+repository. The package name `@quaso-i18n/cli` must be reserved before the first public release. Until
 images are published, build from a checkout with `deno task docker`, and use `quaso:dev` as the
 image.
 

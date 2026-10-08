@@ -329,7 +329,7 @@ export function Landing({ page, hasDoc, repositoryUrl }: LandingProps) {
         <div className="container">
           <H2 id="adopt-title">Connect your game</H2>
           <p>
-            Install <code>quaso-cli</code>, set your instance hostname and API key, then run
+            Install <code>@quaso-i18n/cli</code>, set your instance hostname and API key, then run
             <code>npx quaso init --languages de,fr,pl</code>. Your config maps source globs to
             language folders. Use the same commands locally and in CI.
           </p>
