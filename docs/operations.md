@@ -128,9 +128,9 @@ status. With the LLM provider enabled, large uploads measured about 1.5 seconds.
 translation using a fake provider with 300 ms requests completed in about a second; that does not
 measure Gemini quality or latency.
 
-The local workerd performance case uses real Durable Object SQLite with 3,000 strings, ten
-languages, 30,000 translations and 100 exported files. Its complete test took 263 ms in the same
-development run; each upload, export and browsing operation stayed within its 30-second budget. This
+The local workerd performance case uses D1, as deployed, with 3,000 strings, ten
+languages, 30,000 translations and 100 exported files. Its complete test took about 730 ms on
+2026-10-08; each upload, export and browsing operation stayed within its 30-second budget. This
 is a local storage check, not a deployed Cloudflare network or cold-start measurement.
 
 Actual Gemini latency, cold starts and distance to Cloudflare storage vary. Use `scripts/measure.ts`

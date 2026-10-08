@@ -13,19 +13,6 @@ import { resolve } from "node:path";
 export const LOG_LEVELS = ["debug", "info", "warn", "error"] as const;
 export type LogLevel = (typeof LOG_LEVELS)[number];
 
-/** Cloudflare's location hints for Durable Objects. */
-export const LOCATION_HINTS = [
-  "wnam",
-  "enam",
-  "sam",
-  "weur",
-  "eeur",
-  "apac",
-  "oc",
-  "afr",
-  "me",
-] as const;
-
 export interface Config {
   /** A development instance (`QUASO_DEV=1`, set by `deno task dev`). */
   dev: boolean;
@@ -41,8 +28,6 @@ export interface Config {
   github: { clientId: string; clientSecret: string } | null;
   discord: { clientId: string; clientSecret: string } | null;
   turnstile: { siteKey: string; secretKey: string } | null;
-  servicesUrl: string | null;
-  serviceToken: string | null;
   /** Set by the Cloudflare container controller; storage uses fixed private hostnames. */
   cloudflare: boolean;
   trustProxy: boolean;
@@ -51,7 +36,6 @@ export interface Config {
   webDir: string;
   /** Other origins the API accepts requests from, with credentials. */
   corsOrigins: string[];
-  locationHint: string | null;
 }
 
 /** Environment variables by name. */
@@ -99,28 +83,11 @@ export function loadConfig(env: Env, options: ConfigOptions = {}): ConfigResult 
   const publicUrl =
     read.origin("PUBLIC_URL") ?? (domain ? `https://${domain}` : `http://localhost:${port}`);
 
-  const servicesUrl = read.url("SERVICES_URL");
   const cloudflare = read.boolean("QUASO_CLOUDFLARE", false);
-  const serviceToken = read.string("SERVICE_TOKEN");
-  if (servicesUrl && !serviceToken) {
-    read.problem("SERVICE_TOKEN", "is required with SERVICES_URL");
-  }
-  if (servicesUrl && !secureServicesUrl(servicesUrl)) {
-    read.problem(
-      "SERVICES_URL",
-      "must use https, so that SERVICE_TOKEN never crosses the network in the clear " +
-        "(http is only for localhost and host.docker.internal)",
-    );
-  }
   const secretKey = read.string("SECRET_KEY");
   if (secretKey !== null && secretKey.length < 32) {
     read.problem("SECRET_KEY", "must be at least 32 characters long (openssl rand -hex 32)");
   }
-  if (servicesUrl && secretKey === null) {
-    read.problem("SECRET_KEY", "is required with SERVICES_URL (openssl rand -hex 32)");
-  }
-  if (cloudflare && servicesUrl !== null)
-    read.problem("SERVICES_URL", "cannot be combined with private Cloudflare storage");
 
   const config: Config = {
     dev,
@@ -133,27 +100,13 @@ export function loadConfig(env: Env, options: ConfigOptions = {}): ConfigResult 
     github: read.pair("GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET", "clientId", "clientSecret"),
     discord: read.pair("DISCORD_CLIENT_ID", "DISCORD_CLIENT_SECRET", "clientId", "clientSecret"),
     turnstile: read.pair("TURNSTILE_SITE_KEY", "TURNSTILE_SECRET_KEY", "siteKey", "secretKey"),
-    servicesUrl,
-    serviceToken,
     cloudflare,
     trustProxy: read.boolean("TRUST_PROXY", false),
     logLevel: read.oneOf("LOG_LEVEL", LOG_LEVELS) ?? "info",
     webDir: resolve(cwd, read.string("WEB_DIR") ?? options.webDir ?? defaultWebDir()),
     corsOrigins: read.origins("CORS_ORIGINS"),
-    locationHint: read.oneOf("LOCATION_HINT", LOCATION_HINTS),
   };
   return read.problems.length > 0 ? { ok: false, problems: read.problems } : { ok: true, config };
-}
-
-/**
- * Whether the internal API's address keeps the token safe (design §8): https, or http to
- * this machine or, in local development, to the Docker host.
- */
-export function secureServicesUrl(url: string): boolean {
-  const parsed = URL.parse(url);
-  if (!parsed) return false;
-  if (parsed.protocol === "https:") return true;
-  return ["localhost", "127.0.0.1", "[::1]", "host.docker.internal"].includes(parsed.hostname);
 }
 
 /** Reads variables and collects problems, as sentences that start with the name. */
@@ -226,18 +179,6 @@ class Reader {
       return null;
     }
     return value.toLowerCase();
-  }
-
-  /** An http or https URL. */
-  url(name: string): string | null {
-    const value = this.string(name);
-    if (value === null) return null;
-    const url = URL.parse(value);
-    if (!url || (url.protocol !== "https:" && url.protocol !== "http:")) {
-      this.problem(name, `must be an http or https URL, not "${value}"`);
-      return null;
-    }
-    return value.replace(/\/+$/, "");
   }
 
   /** An origin, such as `https://translate.yourgame.com`, without a path. */
