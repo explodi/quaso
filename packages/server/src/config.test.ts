@@ -29,14 +29,11 @@ test("config: the defaults", () => {
     github: null,
     discord: null,
     turnstile: null,
-    servicesUrl: null,
-    serviceToken: null,
     cloudflare: false,
     trustProxy: false,
     logLevel: "info",
     webDir: "/srv/quaso/web",
     corsOrigins: [],
-    locationHint: null,
   });
 });
 
@@ -82,7 +79,6 @@ test("config: every value is read and typed", () => {
     TRUST_PROXY: "true",
     LOG_LEVEL: "debug",
     CORS_ORIGINS: "https://a.example.com, http://localhost:5173/",
-    LOCATION_HINT: "weur",
   });
   assertEquals(all.domain, "translate.example.com");
 
@@ -92,7 +88,6 @@ test("config: every value is read and typed", () => {
   assertEquals(all.trustProxy, true);
   assertEquals(all.logLevel, "debug");
   assertEquals(all.corsOrigins, ["https://a.example.com", "http://localhost:5173"]);
-  assertEquals(all.locationHint, "weur");
 });
 
 test("config: empty values count as not set, as in .env.example", () => {
@@ -110,7 +105,6 @@ test("config: every problem is reported at once", () => {
     GITHUB_CLIENT_ID: "id-without-secret",
     EMAIL_PROVIDER: "carrier-pigeon",
     CORS_ORIGINS: "https://ok.example.com,not a url",
-    LOCATION_HINT: "moon",
   });
   const text = found.join("\n");
   for (const name of [
@@ -122,41 +116,15 @@ test("config: every problem is reported at once", () => {
     "LOG_LEVEL",
     "GITHUB_CLIENT_SECRET",
     "CORS_ORIGINS",
-    "LOCATION_HINT",
   ]) {
     assertStringIncludes(text, name);
   }
-  assertEquals(found.length, 9);
+  assertEquals(found.length, 8);
   assertStringIncludes(text, 'PORT must be a whole number from 1 to 65535, not "80a".');
 });
 
-test("config: Cloudflare storage needs SERVICE_TOKEN and SECRET_KEY", () => {
-  const found = problems({ SERVICES_URL: "https://quaso.example.workers.dev" });
-  assertEquals(found.length, 2);
-  assertStringIncludes(found.join("\n"), "SERVICE_TOKEN is required with SERVICES_URL");
-  assertStringIncludes(found.join("\n"), "SECRET_KEY is required with SERVICES_URL");
-  const ok = config({
-    SERVICES_URL: "https://quaso.example.workers.dev/",
-    SERVICE_TOKEN: "token",
-    SECRET_KEY: "s".repeat(32),
-  });
-  assertEquals(ok.servicesUrl, "https://quaso.example.workers.dev");
-});
-
 test("config: private Cloudflare storage needs no operator credentials", () => {
-  const privateStorage = config({ QUASO_CLOUDFLARE: "1" });
-  assertEquals(privateStorage.cloudflare, true);
-  assertEquals(privateStorage.serviceToken, null);
-  assertEquals(privateStorage.servicesUrl, null);
-  assertStringIncludes(
-    problems({
-      QUASO_CLOUDFLARE: "1",
-      SECRET_KEY: "s".repeat(32),
-      SERVICES_URL: "https://quaso.test/internal",
-      SERVICE_TOKEN: "legacy",
-    }).join("\n"),
-    "cannot be combined with private Cloudflare storage",
-  );
+  assertEquals(config({ QUASO_CLOUDFLARE: "1" }).cloudflare, true);
 });
 
 test("config: .env fills in what the environment doesn't set", async () => {

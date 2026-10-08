@@ -162,15 +162,13 @@ Optional staging jobs activate only when the following configuration is present:
 | Secrets `CLOUDFLARE_API_TOKEN`, optionally `CLOUDFLARE_ACCOUNT_ID` | Deploy the preconfigured staging Worker                                   |
 | Secrets `STAGING_ADMIN_EMAIL`, `STAGING_ADMIN_PASSWORD`            | Dedicated administrator account for repeated acceptance runs              |
 | Secret `STAGING_SETUP_KEY`                                         | Initial claim only; must match the staging instance's setup key           |
-| Secrets `STAGING_SERVICE_TOKEN`, `STAGING_SECRET_KEY`              | Also enable a Docker server using that Durable Object's storage           |
 | Secret `STAGING_READ_API_KEY`                                      | Enable nightly authenticated response measurements with a read-scoped key |
 
 Configure the staging hostname, bucket and Worker secrets using the deployment guide before enabling
-those jobs. The preflight exposes only enabled/disabled flags; it does not print secret values. The
-mixed setup runs after Cloudflare staging, using the same data and administrator credentials.
+those jobs. The preflight exposes only enabled/disabled flags; it does not print secret values.
 
 `.github/workflows/nightly.yml` runs the large local stress case and workerd tests without
-credentials. The Durable Object performance case uses 3,000 strings in ten languages, with 30,000
+credentials. The D1 performance case uses 3,000 strings in ten languages, with 30,000
 translations and 100 exported files; upload, export and browsing operations each have a 30-second
 budget. With the read key the workflow saves request timings as an artifact. Its manual
 **cold_starts** option adds `--cold-starts 3 --sleep 660`: three measurements, each after an
@@ -190,7 +188,7 @@ The first enables the 50,000-string / 30-language local stress case. The second 
 `GEMINI_API_KEY`, makes real provider requests and may incur usage charges; it evaluates the sample
 corpus and writes results for review. Never make either a requirement for a small unrelated patch. A
 fake-provider timing result is not evidence of linguistic quality. Real staging deployments,
-regional latency, cold starts, PITR and native-speaker evaluation remain separate release checks.
+regional latency, cold starts, D1 Time Travel and native-speaker evaluation remain separate release checks.
 
 ## Beta 2 workflow on the production image
 

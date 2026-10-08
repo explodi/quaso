@@ -55,19 +55,19 @@ state.
 
 ## Where things live
 
-| Folder                   | Contents                                                                                                                                                                                       |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/core`          | i18next files and quality: JSON reader and writer, plural rules, tokenizer, renderer, checks, the schema module and the API types. Pure TypeScript, no I/O.                                    |
-| `packages/service`       | the service: upload, download, review, accounts, permissions, LLM jobs. Runs in Deno and in a Cloudflare Durable Object, so it only uses web-standard APIs and its ports (`Sql`, `Scheduler`). |
-| `packages/server`        | the Deno application: HTTP routes, sign-in, local storage, the website's files                                                                                                                 |
-| `packages/design-system` | shared React controls, themes, typography, icons and brand assets for both frontends                                                                                                           |
-| `packages/web`           | the React application and design-system catalog, built with Vite                                                                                                                               |
-| `packages/cli`           | the `quaso` command, for Node ≥ 22 and Deno ≥ 2.9                                                                                                                                              |
-| `packages/cloudflare`    | optional: the Durable Object, the Worker and `wrangler.jsonc`                                                                                                                                  |
-| `deploy/`                | the Dockerfile, `compose.yaml`, `Caddyfile` and `.env.example`                                                                                                                                 |
-| `examples/`              | a small i18next app with `quaso.config.json` and CI workflows                                                                                                                                  |
-| `docs/`                  | documentation for users, operators and contributors                                                                                                                                            |
-| `site/`                  | the project's public website                                                                                                                                                                   |
+| Folder                   | Contents                                                                                                                                                                                                              |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/core`          | i18next files and quality: JSON reader and writer, plural rules, tokenizer, renderer, checks, the schema module and the API types. Pure TypeScript, no I/O.                                                           |
+| `packages/service`       | the service: upload, download, review, accounts, permissions, LLM jobs. Runs in the server on local SQLite or on Cloudflare D1 and R2, so it only uses web-standard APIs and its ports (`Sql`, `Store`, `Scheduler`). |
+| `packages/server`        | the Deno application: HTTP routes, sign-in, local storage, the website's files                                                                                                                                        |
+| `packages/design-system` | shared React controls, themes, typography, icons and brand assets for both frontends                                                                                                                                  |
+| `packages/web`           | the React application and design-system catalog, built with Vite                                                                                                                                                      |
+| `packages/cli`           | the `quaso` command, for Node ≥ 22 and Deno ≥ 2.9                                                                                                                                                                     |
+| `packages/cloudflare`    | optional: the Worker, the container controller, `wrangler.jsonc` and the `cf:*` scripts                                                                                                                               |
+| `deploy/`                | the Dockerfile, `compose.yaml`, `Caddyfile` and `.env.example`                                                                                                                                                        |
+| `examples/`              | a small i18next app with `quaso.config.json` and CI workflows                                                                                                                                                         |
+| `docs/`                  | documentation for users, operators and contributors                                                                                                                                                                   |
+| `site/`                  | the project's public website                                                                                                                                                                                          |
 
 [docs/contributing/architecture.md](docs/contributing/architecture.md) explains how the parts fit
 together. The [design-system guide](docs/contributing/design-system.md) covers shared UI conventions
@@ -98,7 +98,7 @@ and package boundaries.
    as the format example. Do not edit a released migration or renumber existing ones.
 2. Import it in `packages/service/src/migrations.ts` and append it to `MIGRATIONS` in version order.
    `DATABASE_VERSION` follows that array. Keep SQL portable: the adapter supplies transactions;
-   Durable Object SQLite does not accept `BEGIN`, `COMMIT`, `SAVEPOINT` or arbitrary PRAGMAs.
+   D1 does not accept `BEGIN`, `COMMIT`, `SAVEPOINT` or arbitrary PRAGMAs.
 3. Write a migration test with representative data from the previous schema. Assert preservation of
    translations, history, roles and settings, and verify the new behavior. Tests must also cover
    upgrading older supported schemas, rather than only creating an empty latest database.

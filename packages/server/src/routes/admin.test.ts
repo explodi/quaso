@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: MIT
-import type { Fetch } from "@quaso/core";
 import { test } from "node:test";
 import * as fs from "node:fs/promises";
 import * as fsSync from "node:fs";
@@ -18,7 +17,6 @@ import {
   createService,
   createGeminiProvider,
   type ServiceOptions,
-  handleServiceRequest,
   type Service,
   type ServiceApi,
   silentLogger,
@@ -29,7 +27,6 @@ import { openNodeSqlite } from "@quaso/service/node-sqlite";
 import { type App, createApp } from "../app.ts";
 import type { Authenticator } from "../auth.ts";
 import { startLocalService } from "../local_service.ts";
-import { connectRemoteService } from "../storage/remote.ts";
 import { call, memoryLogger, testConfig } from "../testing/helpers.ts";
 import { SETUP_KEY_HEADER } from "./admin.ts";
 import { backupKey } from "../../../service/src/stored_backups.ts";
@@ -548,26 +545,12 @@ test("GET /backup selects retained and pre-migration copies, checks permission a
   }
 });
 
-/** A fetch that answers like the Worker's internal API. */
-function workerStub(service: ServiceApi, token: string): Fetch {
-  return (input, init) => handleServiceRequest(new Request(input, init), service, { token });
-}
-
 test("GET /backup with Cloudflare storage: a SQLite file built from the rows", async () => {
   const dir = await Deno.makeTempDir();
   const instance = await memoryService();
   try {
     const people = await project(instance.service, instance.sql);
-    const token = "internal-token-for-the-tests-0123456789";
-    const env = {
-      SERVICES_URL: "https://quaso.test/internal",
-      SERVICE_TOKEN: token,
-      SECRET_KEY: "k".repeat(64),
-    };
-    const remote = await connectRemoteService(testConfig(env), silentLogger, {
-      fetch: workerStub(instance.service, token),
-    });
-    const { app } = appFor(remote, people, { storage: "cloudflare" });
+    const { app } = appFor(instance.service, people, { storage: "cloudflare" });
     const response = await call(app, "/api/v1/backup?format=sqlite", {
       headers: { Authorization: "Bearer admin" },
     });

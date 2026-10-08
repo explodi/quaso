@@ -13,7 +13,7 @@ test("deploy: .env.example lists every setting the server reads", async () => {
     [...source.matchAll(/"([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+|PORT)"/g)].map((m) => m[1]),
   );
   // Most settings live in the admin panel; this guards against the pattern finding none.
-  assert(names.size >= 20, [...names].join(", "));
+  assert(names.size >= 15, [...names].join(", "));
   const example = await read("../../../deploy/.env.example");
   const listed = new Set([...example.matchAll(/^(?:# )?([A-Z][A-Z0-9_]*)=/gm)].map((m) => m[1]));
   assertEquals(

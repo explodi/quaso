@@ -23,7 +23,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       staging: ${{ steps.config.outputs.staging }}
-      mixed: ${{ steps.config.outputs.mixed }}
     steps:
       - id: config
         env:
@@ -31,20 +30,15 @@ jobs:
           STAGING_URL: ${{ vars.STAGING_URL }}
           ADMIN_EMAIL: ${{ secrets.STAGING_ADMIN_EMAIL }}
           ADMIN_PASSWORD: ${{ secrets.STAGING_ADMIN_PASSWORD }}
-          SERVICE_TOKEN: ${{ secrets.STAGING_SERVICE_TOKEN }}
-          SECRET_KEY: ${{ secrets.STAGING_SECRET_KEY }}
         shell: python
         run: |
           import os
           staging = all(os.environ.get(name) for name in (
               "CF_TOKEN", "STAGING_URL", "ADMIN_EMAIL", "ADMIN_PASSWORD"))
-          mixed = staging and all(os.environ.get(name) for name in ("SERVICE_TOKEN", "SECRET_KEY"))
           with open(os.environ["GITHUB_OUTPUT"], "a") as output:
-              output.write(f"staging={str(staging).lower()}\nmixed={str(mixed).lower()}\n")
+              output.write(f"staging={str(staging).lower()}\n")
           if not staging:
               print("Cloudflare staging checks skipped: optional staging credentials are not configured.")
-          elif not mixed:
-              print("Mixed-storage checks skipped: optional storage credentials are not configured.")
 
   compose:
     name: Production image with local SQLite
@@ -105,41 +99,3 @@ jobs:
         run: curl --fail --retry 12 --retry-all-errors --retry-delay 5 "$STAGING_URL/healthz"
       - name: Run the HTTP, CLI and browser acceptance checks
         run: deno task acceptance --url "$STAGING_URL"
-
-  vm-with-cloudflare-storage:
-    name: Docker server with Cloudflare storage
-    needs: [configuration, cloudflare-staging]
-    if: needs.configuration.outputs.mixed == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    env:
-      STAGING_URL: ${{ vars.STAGING_URL }}
-      SERVICE_TOKEN: ${{ secrets.STAGING_SERVICE_TOKEN }}
-      SECRET_KEY: ${{ secrets.STAGING_SECRET_KEY }}
-      QUASO_ADMIN_EMAIL: ${{ secrets.STAGING_ADMIN_EMAIL }}
-      QUASO_ADMIN_PASSWORD: ${{ secrets.STAGING_ADMIN_PASSWORD }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: denoland/setup-deno@v2
-        with:
-          deno-version-file: .dvmrc
-      - run: deno install --frozen-lockfile
-      - run: deno task e2e:browser
-      - run: deno task build:cli
-      - run: deno task docker
-      - name: Start the server with remote storage
-        run: |
-          docker run -d --name quaso-mixed --read-only --tmpfs /tmp \
-            -p 127.0.0.1:8000:8000 \
-            -e SERVICES_URL="${STAGING_URL%/}/internal" -e SERVICE_TOKEN -e SECRET_KEY \
-            -e PUBLIC_URL=http://127.0.0.1:8000 quaso:dev
-          curl --fail --retry 12 --retry-all-errors --retry-delay 5 http://127.0.0.1:8000/healthz
-      - run: deno task acceptance --url http://127.0.0.1:8000
-      - name: Diagnostic logs (setup links redacted)
-        if: failure()
-        run: >-
-          docker logs quaso-mixed 2>&1 |
-          sed -E 's#(/setup\?token=)[^"[:space:]]+#\1[redacted]#g'
-      - name: Stop the disposable server
-        if: always()
-        run: docker rm -f quaso-mixed

@@ -52,7 +52,7 @@ Run a drill on a separate hostname and empty storage. Never rehearse on producti
    not claim it or upload strings before restoring.
 4. For Docker, follow the new-volume `quaso restore <file>` drill in the
    [Docker guide](deploy-docker.md#backups-and-a-restore-drill). For Cloudflare, use the
-   [setup-token restore route or remote restore command](deploy-cloudflare.md#backups-and-recovery).
+   [`cf:restore --file` command](deploy-cloudflare.md#backups-and-recovery) with the setup key.
 5. Sign in, compare status, downloads, roles and history. Verify a new edit and download on the
    destination. Keep every command pointed at the drill hostname.
 6. Repeat Docker → Cloudflare and Cloudflare → Docker when both are in use. SQLite, JSON and gzip
@@ -64,11 +64,11 @@ A restore rejects a destination with strings or assigned roles. An interrupted r
 retried before anything else writes there. If the destination was used meanwhile, start with another
 empty instance. A backup from a newer schema requires a newer Quaso release.
 
-Cloudflare point-in-time recovery is separate from portable restore. On a deployed Durable Object,
-it rewinds storage to a timestamp in the recovery window. Pause writes, record the current UTC time,
-then use the internal `pitr` request in the Cloudflare guide. It restarts the object. Check health
-and the restored data, then resume traffic. A rehearsal belongs on staging; local workerd cannot
-perform PITR. All writes after the selected time disappear.
+Cloudflare's D1 Time Travel is separate from portable restore. It rewinds the deployed database in
+place to a time in the last 30 days: `deno task cf:restore --env production --at <UTC time>`. The
+command pauses the instance and stops the container first, and prints a bookmark that undoes the
+restore. Check health and the restored data afterwards. A rehearsal belongs on staging; local D1
+cannot time travel. All writes after the selected time disappear, and R2 is not rewound.
 
 ## Upgrades and rollbacks
 
@@ -86,14 +86,14 @@ the previous image. To roll back, stop the server, restore the snapshot into a n
 previous image and the same key, then switch the deployment to it. Keep the newer volume for
 investigating and recovering later writes. Never run an older image against an upgraded database.
 
-For Cloudflare, test staging and retain a portable backup and a pre-upgrade UTC timestamp. Deploy
-the chosen source checkout with `deno task cf:deploy --env production`. The rollout is **not
-transactional**: Wrangler activates the Worker before all containers run the new image. The internal
-API accepts the previous version so that this overlap works. Schema migrations only move forwards.
+For Cloudflare, test staging and retain a portable backup and a pre-upgrade UTC timestamp. Set the
+new release as `image` in `quaso.cloudflare.jsonc`, then run `deno task cf:deploy --env production`.
+The rollout is **not transactional**: Wrangler activates the Worker before all containers run the
+new image. Schema migrations only move forwards.
 
-To roll back Cloudflare, stop traffic and translation jobs, return to the previous tested source
-checkout, deploy that version and recover the database to its pre-upgrade state using PITR. If PITR
-is unavailable, restore the pre-upgrade export into a separate empty deployment on the previous
+To roll back Cloudflare, set `image` back to the previous tested release, deploy it, and rewind the
+database to its pre-upgrade state with D1 Time Travel (`cf:restore --at`). If Time Travel is
+unavailable, restore the pre-upgrade export into a separate empty deployment on the previous
 version and switch the hostname after verification. Rewinding code alone cannot undo schema changes.
 Record which later writes were lost and keep a backup of the newer state before recovery.
 
@@ -128,9 +128,9 @@ status. With the LLM provider enabled, large uploads measured about 1.5 seconds.
 translation using a fake provider with 300 ms requests completed in about a second; that does not
 measure Gemini quality or latency.
 
-The local workerd performance case uses real Durable Object SQLite with 3,000 strings, ten
-languages, 30,000 translations and 100 exported files. Its complete test took 263 ms in the same
-development run; each upload, export and browsing operation stayed within its 30-second budget. This
+The local workerd performance case uses D1, as deployed, with 3,000 strings, ten
+languages, 30,000 translations and 100 exported files. Its complete test took about 730 ms on
+2026-10-08; each upload, export and browsing operation stayed within its 30-second budget. This
 is a local storage check, not a deployed Cloudflare network or cold-start measurement.
 
 Actual Gemini latency, cold starts and distance to Cloudflare storage vary. Use `scripts/measure.ts`
@@ -155,8 +155,7 @@ trust a signed cookie for the rest of its one-hour lifetime.
 
 Give download jobs read keys and upload jobs upload keys. Create one named key per integration, save
 its secret once in your CI secret store, and revoke it in Settings when no longer needed. API-key
-authentication may be cached for up to one minute. Keep `SERVICE_TOKEN` private between the server
-and Worker and rotate both ends together. Do not expose internal API credentials to game clients.
+authentication may be cached for up to one minute.
 
 Keep the initial setup key private and claim an instance promptly. Require HTTPS, keep development
 login disabled publicly, restrict administrator roles, install supported image updates and keep

@@ -76,19 +76,9 @@ test("commands: version, unknown commands and bad settings", () =>
     assertStringIncludes(bad.stderr, "Quaso can't start, because of its settings:");
     assertStringIncludes(bad.stderr, 'PORT must be a whole number from 1 to 65535, not "eighty".');
     assertStringIncludes(bad.stderr, "LOG_LEVEL must be one of");
-    // Cloudflare storage runs in storage/remote.test.ts; seed-dev only seeds local storage.
-    const remote = await run(
-      ["seed-dev"],
-      {
-        QUASO_DEV: "1",
-        SERVICES_URL: "https://quaso.example.workers.dev",
-        SERVICE_TOKEN: "token",
-        SECRET_KEY: "s".repeat(64),
-      },
-      dir,
-    );
-    assertEquals(remote.code, 2);
-    assertStringIncludes(remote.stderr, "seed-dev only seeds local storage");
+    const cloudflare = await run(["seed-dev"], { QUASO_DEV: "1", QUASO_CLOUDFLARE: "1" }, dir);
+    assertEquals(cloudflare.code, 2);
+    assertStringIncludes(cloudflare.stderr, "seed-dev only seeds local storage");
     const token = await run(["token", "create", "--scope", "admin"], { DATA_DIR: dir }, dir);
     assertEquals(token.code, 2);
     assertStringIncludes(token.stderr, "--name: is required");

@@ -5,6 +5,12 @@ Release candidates are for deployment and migration testing. The team decides wh
 
 ## [Unreleased]
 
+### Removed
+
+- The server's remote-storage mode (`SERVICES_URL`, `SERVICE_TOKEN`) and its `LOCATION_HINT`
+  setting. The Cloudflare Worker no longer serves the internal API that mode called; a Cloudflare
+  deployment keeps its data in D1 and R2 (`deno task cf:setup`).
+
 ## [1.0.0-rc.2] - 2026-10-08
 
 ### Added

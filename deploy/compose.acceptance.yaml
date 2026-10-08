@@ -15,7 +15,6 @@ services:
       QUASO_DEV: "0"
       SETUP_KEY: acceptance-only-setup-key-not-for-deployment
       GEMINI_API_KEY: ""
-      SERVICES_URL: ""
       TRUST_PROXY: "false"
     ports: ["127.0.0.1:${QUASO_ACCEPTANCE_PORT:-8000}:8000"]
     restart: "no"
