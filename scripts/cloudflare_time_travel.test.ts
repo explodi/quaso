@@ -92,7 +92,7 @@ function fixture() {
       paths.push(path);
       const config = JSON.parse(await fs.readFile(path, "utf8"));
       expect((await fs.stat(path)).mode & 0o777).toBe(0o600);
-      expect(config.env.staging.containers[0].image).toBe(instance.image);
+      expect(config.env.staging.containers[0].image).toBe(`docker.io/${instance.image}`);
       const paused = config.env.staging.vars.QUASO_RESTORE_PAUSED === "true";
       events.push(paused ? "deploy pause" : "deploy resume");
       return { code: !paused && state.failResumeDeploy ? 1 : 0, stdout: "" };

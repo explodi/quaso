@@ -17,6 +17,10 @@ Release candidates are for deployment and migration testing. The team decides wh
 
 ### Changed
 
+- `cf:setup` and `cf:deploy` deploy a release published on Docker Hub as `docker.io/<image>`,
+  which Cloudflare pulls itself, instead of copying it into the account's registry with Docker.
+  Deploying needs no Docker any more, and no longer fails where Docker's containerd image store
+  reports a pulled multi-platform image without a platform.
 - `quaso import` skips empty values (`""`) as untranslated, as `skippedEmpty`, even with
   `--allow-qa-errors`: Crowdin writes untranslated entries that way when asked to skip them.
 - `quaso import` ignores plural forms a language doesn't use, such as `_one` in Japanese, instead
