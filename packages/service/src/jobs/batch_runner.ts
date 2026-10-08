@@ -13,7 +13,7 @@ import {
   type PromptContext,
   type PromptString,
   renderPrompt,
-  RESPONSE_SCHEMA,
+  responseSchemaFor,
 } from "../llm/prompt.ts";
 import { checkAnswer } from "../llm/results.ts";
 import { checkValue } from "../translations.ts";
@@ -70,7 +70,7 @@ export async function translateBatch(input: {
       model: input.model,
       system: rendered.system,
       prompt: rendered.prompt,
-      responseSchema: RESPONSE_SCHEMA,
+      responseSchema: responseSchemaFor(rendered.batch.strings),
       safety: settings.llm.safety,
       batch: rendered.batch,
     };

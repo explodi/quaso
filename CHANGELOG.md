@@ -24,6 +24,8 @@ Release candidates are for deployment and migration testing. The team decides wh
 
 ### Changed
 
+- The LLM's answer schema requires the plural forms every plural string of the batch needs, so
+  structured output can't skip one (French `many`, for 1000000, went missing otherwise).
 - `cf:setup` and `cf:deploy` deploy a release published on Docker Hub as `docker.io/<image>`,
   which Cloudflare pulls itself, instead of copying it into the account's registry with Docker.
   Deploying needs no Docker any more, and no longer fails where Docker's containerd image store
