@@ -56,6 +56,8 @@ export interface WorkScope {
   fileIds: number[] | null;
   stringIds: number[] | null;
   retranslate: boolean;
+  /** Green translations that fail the quality checks, such as imported ones. */
+  qa: boolean;
   updateGreen: boolean;
   proposeBlue: boolean;
 }
@@ -103,6 +105,7 @@ function resolveWorkScope(
     fileIds,
     stringIds: scope.strings ?? null,
     retranslate: scope.retranslate === true,
+    qa: scope.qa === true,
     updateGreen: outdated && (!upload || llm.updateOutdated),
     proposeBlue: outdated && llm.proposeForProofread,
   };
@@ -147,6 +150,7 @@ function condition(scope: WorkScope, language: string): { where: string; params:
   }
   const needs = ["t.string_id IS NULL"];
   if (scope.retranslate) needs.push("t.colour = 'green'");
+  if (scope.qa) needs.push("(t.colour = 'green' AND t.qa_errors > 0)");
   if (scope.updateGreen) needs.push("(t.colour = 'green' AND t.source_hash <> s.source_hash)");
   if (scope.proposeBlue) {
     needs.push(

@@ -181,6 +181,7 @@ function normalizeScope(
     scope.strings = ids;
   }
   if (request.retranslate) scope.retranslate = true;
+  if (request.qa) scope.qa = true;
   if (request.outdated !== undefined) scope.outdated = request.outdated;
   if (request.instruction !== undefined && request.instruction.trim() !== "") {
     scope.instruction = request.instruction.trim();
@@ -235,6 +236,7 @@ function describeScope(scope: StoredScope, total: number): string {
   if (scope.languages) parts.push(`in ${scope.languages.join(", ")}`);
   if (scope.files) parts.push(`of ${scope.files.join(", ")}`);
   if (scope.retranslate) parts.push("(re-translating green ones)");
+  if (scope.qa) parts.push("(re-translating green ones that fail the checks)");
   return parts.join(" ");
 }
 

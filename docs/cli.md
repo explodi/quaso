@@ -246,6 +246,7 @@ Strings that stayed untranslated (1):
 | `--language <lang>`    | Only these languages. Repeatable, or a comma list. Default: the config's `languages`.                                   |
 | `--file <path>`        | Only this file: its path on the instance (`common.json`) or its source file's local path. Repeatable.                   |
 | `--retranslate`        | Also translate green (translated, not proofread) strings again. Blue (proofread) strings never change.                  |
+| `--qa`                 | Also translate again the green strings that fail the quality checks, such as values imported with `--allow-qa-errors`.  |
 | `--instruction <text>` | An instruction for this run, such as `"Address the player informally"`. It comes after the instance's own instructions. |
 | `--model <name>`       | The model for this run, instead of the instance's, such as `gemini-2.5-pro`.                                            |
 | `--no-wait`            | Start the job and exit. The instance runs it; `quaso status` shows the result.                                          |
