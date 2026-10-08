@@ -1,3 +1,8 @@
 // SPDX-License-Identifier: MIT
-/** The canonical application version; scripts/release.ts synchronizes package metadata. */
-export const VERSION = "1.0.0-rc.1";
+import workspace from "../../../package.json" with { type: "json" };
+
+/**
+ * The version of every package and artifact (the server, the image, the CLI, the website):
+ * the repository's package.json. scripts/release.ts changes it there and nowhere else.
+ */
+export const VERSION: string = workspace.version;

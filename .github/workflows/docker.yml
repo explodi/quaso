@@ -50,6 +50,12 @@ jobs:
           cache-to: type=gha,mode=max
       - name: Smoke test (acceptance test 1) on the image
         run: deno run -A scripts/docker_smoke.ts --image quaso:candidate
+      - id: version
+        name: The image reports the version in package.json
+        run: |
+          version="$(jq -r .version package.json)"
+          test "$(docker run --rm quaso:candidate version)" = "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
       - if: env.PUBLISH == 'true'
         uses: docker/login-action@v3
         with:
@@ -63,6 +69,8 @@ jobs:
           tags: |
             type=raw,value=latest
             type=sha,format=short
+          labels: |
+            org.opencontainers.image.version=${{ steps.version.outputs.version }}
       - if: env.PUBLISH == 'true'
         uses: docker/build-push-action@v6
         with:

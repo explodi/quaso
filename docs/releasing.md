@@ -6,10 +6,10 @@ before a stable tag. A schema upgrade must have documented recovery steps even i
 
 ## Prepare the files
 
-`packages/core/src/version.ts` is the canonical runtime version. Both server and CLI import it.
-Package metadata repeats the version because npm requires it; the release script synchronizes
-every Quaso package's version, including the service, server, private front ends and Cloudflare
-package, and the demo CLI pin.
+The `version` in the root `package.json` is the only version. Nothing else declares one: core
+imports it, the server, CLI, website and Worker report it, and the npm package and the Docker image
+are published with it (CI fails if either reports another). The release script changes it there,
+and updates the demo game's pin of the published CLI.
 
 ```sh
 deno task release 1.0.0-rc.1
@@ -23,7 +23,7 @@ deno task cf:check
 deno task docker:smoke
 ```
 
-`release` accepts one semantic version, updates metadata, moves Unreleased changelog entries into a
+`release` accepts one semantic version, sets it in `package.json`, moves Unreleased changelog entries into a
 dated section and prints git commands. It never invokes git, tags, publishes or deploys. Review its
 diff before committing. An already dated version is refused. A prepared `1.0.0 - unreleased` section
 is replaced when that final version is chosen. With no new changes, final 1.0.0 notes copy the

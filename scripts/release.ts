@@ -71,27 +71,16 @@ export async function prepareRelease(
   now = new Date(),
 ): Promise<string[]> {
   validateVersion(version);
-  const files = new Map<string, string>();
-  const jsonFiles = [
-    "packages/core/package.json",
-    "packages/service/package.json",
-    "packages/server/package.json",
-    "packages/cli/package.json",
-    "packages/web/package.json",
-    "packages/cloudflare/package.json",
-    "site/package.json",
-  ];
   // Read and validate every input before writing any output.
-  for (const path of jsonFiles) {
-    const original = await fs.readFile(join(root, path), "utf8");
-    const parsed = JSON.parse(original);
-    if (typeof parsed.version !== "string") throw new Error(`${path} has no version`);
-    files.set(path, original.replace(/("version"\s*:\s*")[^"]+"/, `$1${version}"`));
+  const files = new Map<string, string>();
+  const workspace = await fs.readFile(join(root, "package.json"), "utf8");
+  if (typeof JSON.parse(workspace).version !== "string") {
+    throw new Error("package.json has no version");
   }
-  const lockPath = join(root, "deno.lock");
-  const lock = await fs.readFile(lockPath, "utf8");
-  files.set("deno.lock", lock.replace(/("version"\s*:\s*")[^"]+"/g, `$1${version}"`));
-  const cliName: string = JSON.parse(files.get("packages/cli/package.json")!).name;
+  files.set("package.json", workspace.replace(/("version"\s*:\s*")[^"]+"/, `$1${version}"`));
+  // The example game pins the published CLI, under the name in packages/cli/package.json.
+  const cliPackage = await fs.readFile(join(root, "packages/cli/package.json"), "utf8");
+  const cliName: string = JSON.parse(cliPackage).name;
   const examplePath = "examples/demo-game/package.json";
   const example = await fs.readFile(join(root, examplePath), "utf8");
   const pinned = JSON.parse(example).devDependencies?.[cliName];
@@ -99,13 +88,6 @@ export async function prepareRelease(
   files.set(
     examplePath,
     example.replace(`"${cliName}": "${pinned}"`, `"${cliName}": "${version}"`),
-  );
-  const versionPath = "packages/core/src/version.ts";
-  const source = await fs.readFile(join(root, versionPath), "utf8");
-  if (!/export const VERSION = "[^"]+";/.test(source)) throw new Error("Missing canonical VERSION");
-  files.set(
-    versionPath,
-    source.replace(/export const VERSION = "[^"]+";/, `export const VERSION = "${version}";`),
   );
   files.set(
     "CHANGELOG.md",

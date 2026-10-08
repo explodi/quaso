@@ -6,8 +6,8 @@ import * as fs from "node:fs/promises";
  * writes the npm package around it (`package.json`, `README.md`, `LICENSE`).
  *
  * The build fails if the bundle could start a process (`child_process`, `Deno.Command`,
- * `Deno.run`, `spawn(`), imports anything but `node:` built-ins, or if the CLI's version
- * differs from `packages/cli/package.json`.
+ * `Deno.run`, `spawn(`) or imports anything but `node:` built-ins. The package's version is
+ * the repository's, from the root package.json.
  */
 import { fileURLToPath as fromFileUrl } from "node:url";
 import { dirname, join } from "node:path";
@@ -71,18 +71,6 @@ export function packageJson(
   return pkg;
 }
 
-/** The version in `packages/cli/package.json`, which must match the CLI's `VERSION`. */
-export async function cliVersion(): Promise<string> {
-  const config = JSON.parse(await fs.readFile(join(CLI, "package.json"), "utf8"));
-  const { VERSION } = await import("../packages/cli/src/version.ts");
-  if (config.version !== VERSION) {
-    throw new Error(
-      `packages/cli/package.json says ${config.version}, but packages/cli/src/version.ts says ${VERSION}`,
-    );
-  }
-  return VERSION;
-}
-
 /**
  * Bundles the CLI into `output`, with the header, and checks it. Returns the problems
  * found (the file is removed when there are any).
@@ -109,7 +97,8 @@ export async function bundleCli(output: string): Promise<string[]> {
 }
 
 if (import.meta.main) {
-  const version = await cliVersion();
+  // The published version is the repository's, the one `quaso version` reports.
+  const { VERSION: version } = await import("../packages/cli/src/version.ts");
   const { name } = JSON.parse(await fs.readFile(join(CLI, "package.json"), "utf8"));
   await fs.rm(DIST, { recursive: true }).catch(() => {});
   await fs.mkdir(DIST, { recursive: true });

@@ -41,57 +41,34 @@ test("release accepts semantic versions and rejects unsafe or malformed input", 
   }
 });
 
-test("release updates all artifacts from one version and validates before writing", async () => {
+test("release changes the version in the root package.json only, and validates before writing", async () => {
   const root = await Deno.makeTempDir();
   try {
-    for (const path of [
-      "packages/core/src",
-      "packages/service",
-      "packages/server",
-      "packages/cli",
-      "packages/web",
-      "packages/cloudflare",
-      "site",
-      "examples/demo-game",
-    ]) {
-      await fs.mkdir(`${root}/${path}`, { recursive: true });
-    }
-    for (const path of [
-      "packages/core/package.json",
-      "packages/service/package.json",
-      "packages/server/package.json",
-      "packages/cli/package.json",
-      "packages/web/package.json",
-      "packages/cloudflare/package.json",
-      "site/package.json",
-    ]) {
-      await fs.writeFile(
-        `${root}/${path}`,
-        '{ "name": "@acme/quaso-cli", "version": "0.1.0", "other": true }\n',
-      );
-    }
+    await fs.mkdir(`${root}/packages/cli`, { recursive: true });
+    await fs.mkdir(`${root}/examples/demo-game`, { recursive: true });
+    await fs.writeFile(`${root}/package.json`, '{ "name": "acme", "version": "0.1.0" }\n');
+    await fs.writeFile(`${root}/packages/cli/package.json`, '{ "name": "@acme/quaso-cli" }\n');
     await fs.writeFile(
       `${root}/examples/demo-game/package.json`,
       '{ "devDependencies": { "@acme/quaso-cli": "0.1.0" } }\n',
     );
-    await fs.writeFile(
-      `${root}/packages/core/src/version.ts`,
-      '// SPDX-License-Identifier: MIT\nexport const VERSION = "0.1.0";\n',
-    );
     await fs.writeFile(`${root}/CHANGELOG.md`, NOTES);
-    await fs.writeFile(
-      `${root}/deno.lock`,
-      '{"workspaces":{"packages/core":{"version":"0.1.0"}}}\n',
-    );
     const files = await prepareRelease("1.0.0-rc.1", root, new Date("2026-10-01T00:00:00Z"));
-    assertEquals(files.length, 11);
-    for (const file of files) {
-      assertStringIncludes(await fs.readFile(`${root}/${file}`, "utf8"), "1.0.0-rc.1");
-    }
-    const before = await fs.readFile(`${root}/packages/core/package.json`, "utf8");
+    assertEquals(files, ["package.json", "examples/demo-game/package.json", "CHANGELOG.md"]);
+    assertEquals(
+      await fs.readFile(`${root}/package.json`, "utf8"),
+      '{ "name": "acme", "version": "1.0.0-rc.1" }\n',
+    );
+    assertEquals(
+      await fs.readFile(`${root}/examples/demo-game/package.json`, "utf8"),
+      '{ "devDependencies": { "@acme/quaso-cli": "1.0.0-rc.1" } }\n',
+    );
     await fs.writeFile(`${root}/CHANGELOG.md`, "invalid changelog");
     await assertRejects(() => prepareRelease("1.0.0", root), Error, "Unreleased");
-    assertEquals(await fs.readFile(`${root}/packages/core/package.json`, "utf8"), before);
+    assertEquals(
+      await fs.readFile(`${root}/package.json`, "utf8"),
+      '{ "name": "acme", "version": "1.0.0-rc.1" }\n',
+    );
   } finally {
     await fs.rm(root, { recursive: true });
   }
