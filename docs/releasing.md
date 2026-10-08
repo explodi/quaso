@@ -43,7 +43,7 @@ on version tags.
 
 | Artifact                       | Destination                       | Authentication                                             |
 | ------------------------------ | --------------------------------- | ---------------------------------------------------------- |
-| CLI bundle                     | npm `@quaso/cli`, with provenance | Repository secret `NPM_TOKEN`                              |
+| CLI bundle                     | npm `@quaso/cli`, with provenance | npm trusted publishing (the workflow's OIDC token)         |
 | Server and built website image | Docker Hub `explodi/quaso`        | Repository secrets `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` |
 | Project website and docs       | GitHub Pages                      | Workflow Pages permission and OIDC                         |
 | Release notes                  | GitHub release for the tag        | Workflow `GITHUB_TOKEN` with contents write permission     |
@@ -54,8 +54,19 @@ full version only, and npm uses the `next` distribution tag rather than `latest`
 results and registry visibility after publishing. The Docker Hub repository needs to be public for
 anonymous pulls.
 
-Before the first tag, reserve the npm package name, add `NPM_TOKEN`, `DOCKERHUB_USERNAME` and
-`DOCKERHUB_TOKEN` to the repository, and enable GitHub Pages with **GitHub Actions** as its source. The private development
+Before the first tag, add `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` to the repository, and enable
+GitHub Pages with **GitHub Actions** as its source. npm needs no secret: `release.yml` is the
+package's trusted publisher, set once after the package's first, manual publish (npm only trusts
+existing packages):
+
+```sh
+GITHUB_REPOSITORY=explodi/quaso deno task build:cli
+cd packages/cli/dist && npm publish --access public --tag next
+npm trust github @quaso/cli --file release.yml --repo explodi/quaso
+```
+
+Then, in the package's **Settings → Publishing access** on npmjs.com, choose **Require two-factor
+authentication and disallow tokens**. The private development
 repository builds the site but does not deploy it. `BASE_PATH` comes from Pages configuration; an
 optional `SITE_REPOSITORY_URL` overrides source links when building outside GitHub.
 
