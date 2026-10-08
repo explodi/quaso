@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 # A release (design §5.10, §5.12, S4.1): on a tag such as v1.4.2, publishes the CLI to npm
-# and the Docker image to Docker Hub (explodi/quaso). The tag must match the version in
+# and the Docker image to Docker Hub (the repository variable DOCKERHUB_IMAGE, or
+# <GitHub owner>/quaso). The tag must match the version in
 # packages/cli/package.json and packages/core/package.json.
 #
 name: Release
@@ -130,7 +131,7 @@ jobs:
       - id: meta
         uses: docker/metadata-action@v5
         with:
-          images: explodi/quaso
+          images: ${{ vars.DOCKERHUB_IMAGE || format('{0}/quaso', github.repository_owner) }}
           # 1.4.2, 1.4 and 1 for v1.4.2; pre-releases only get their own version. `latest`
           # follows main (docker.yml).
           tags: |

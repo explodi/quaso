@@ -68,7 +68,7 @@ export function parseInstanceConfig(value: unknown): InstanceConfig {
       bucketName: string(fields.bucketName, `${id}bucketName`, /^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/),
       locationHint,
       sleepAfter: string(fields.sleepAfter, `${id}sleepAfter`, /^[1-9]\d*[smh]$/),
-      // A published release on Docker Hub (such as explodi/quaso:1), or one already
+      // A published release on Docker Hub (such as <namespace>/quaso:1), or one already
       // transferred to the account's managed registry.
       image: string(
         fields.image,

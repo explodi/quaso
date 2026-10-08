@@ -1,11 +1,13 @@
 # SPDX-License-Identifier: MIT
 # Every push to main: builds the official image (deploy/Dockerfile, the `deno compile`
 # binary on distroless), runs the Docker smoke test against the amd64 build, and only then
-# pushes it for amd64 and arm64 to Docker Hub as explodi/quaso:latest and :sha-<commit>.
+# pushes it for amd64 and arm64 to Docker Hub as <image>:latest and <image>:sha-<commit>.
 # Pull requests build and test the image without pushing it.
 #
-# Repository secrets: DOCKERHUB_USERNAME, and DOCKERHUB_TOKEN, a Docker Hub access token
-# with Read & Write access to explodi/quaso.
+# <image> is the repository variable DOCKERHUB_IMAGE, or <GitHub owner>/quaso. Publishing
+# needs the repository secrets DOCKERHUB_USERNAME and DOCKERHUB_TOKEN, a Docker Hub access
+# token with Read & Write access to <image>; without them (as in a fresh fork) the image is
+# only built and tested.
 name: Docker image
 
 on:
@@ -21,12 +23,14 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  IMAGE: explodi/quaso
+  IMAGE: ${{ vars.DOCKERHUB_IMAGE || format('{0}/quaso', github.repository_owner) }}
 
 jobs:
   publish:
-    name: Build, test and publish explodi/quaso
+    name: Build, test and publish the image
     runs-on: ubuntu-latest
+    env:
+      PUBLISH: ${{ github.event_name == 'push' && secrets.DOCKERHUB_TOKEN != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: denoland/setup-deno@v2
@@ -46,20 +50,20 @@ jobs:
           cache-to: type=gha,mode=max
       - name: Smoke test (acceptance test 1) on the image
         run: deno run -A scripts/docker_smoke.ts --image quaso:candidate
-      - if: github.event_name == 'push'
+      - if: env.PUBLISH == 'true'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - id: meta
-        if: github.event_name == 'push'
+        if: env.PUBLISH == 'true'
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.IMAGE }}
           tags: |
             type=raw,value=latest
             type=sha,format=short
-      - if: github.event_name == 'push'
+      - if: env.PUBLISH == 'true'
         uses: docker/build-push-action@v6
         with:
           context: .

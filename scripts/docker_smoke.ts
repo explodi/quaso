@@ -9,7 +9,7 @@ import * as fs from "node:fs/promises";
  * the same volume refuses to start, and that the log never discloses the configured setup key.
  *
  * Needs Docker and curl. The task builds the image first; to test another one:
- *   deno run -A scripts/docker_smoke.ts --image explodi/quaso:latest --port 8124
+ *   deno run -A scripts/docker_smoke.ts --image <namespace>/quaso:latest --port 8124
  * Everything it creates (containers, the volume) is removed at the end, pass or fail.
  */
 import type { Progress, StatusResult } from "@quaso/core";

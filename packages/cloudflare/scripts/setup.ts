@@ -3,7 +3,6 @@
 import * as fs from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
-import { VERSION } from "../../core/src/version.ts";
 import type { Fetch } from "../../core/mod.ts";
 import {
   CloudflareApi,
@@ -177,10 +176,8 @@ export async function setup(options: SetupOptions, dependencies: Dependencies) {
     throw new Error("Choose a hostname in an active domain listed above.");
   const name = options.name ?? existing?.workerName ?? `quaso-${environment}`;
   const image = options.image ?? existing?.image;
-  if (image === undefined && VERSION === "1.0.0-rc.1")
-    throw new Error(
-      "Select a published Beta 2 image with --image. The rc.1 release uses incompatible storage.",
-    );
+  if (image === undefined)
+    throw new Error("Select a published image with --image, such as <namespace>/quaso:<version>.");
   const candidate: Instance = {
     accountId,
     hostname,
@@ -190,7 +187,7 @@ export async function setup(options: SetupOptions, dependencies: Dependencies) {
     bucketName: existing?.bucketName ?? `${name}-store`,
     locationHint,
     sleepAfter: existing?.sleepAfter ?? (environment === "staging" ? "5m" : "10m"),
-    image: image ?? `explodi/quaso:${VERSION}`,
+    image,
   };
   const instance = parseInstanceConfig({ version: 1, environments: { [environment]: candidate } })
     .environments[environment]!;
