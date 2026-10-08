@@ -5,7 +5,7 @@ import * as fs from "node:fs/promises";
 import { assert, assertEquals, assertThrows } from "@std/assert";
 import { fileURLToPath as fromFileUrl } from "node:url";
 import { join } from "node:path";
-import { checkBundle, cliVersion, FORBIDDEN, HEADER, packageJson } from "./build_cli.ts";
+import { checkBundle, FORBIDDEN, HEADER, packageJson } from "./build_cli.ts";
 import { DEV_URL, devArgs, devEnv } from "./cli_dev.ts";
 import { parseOptions } from "./cli_e2e.ts";
 
@@ -45,13 +45,6 @@ test("packageJson: one bin, no dependencies, Node 22, the repository when known"
     directory: "packages/cli",
   });
   assert(HEADER.startsWith("#!/usr/bin/env node\n// SPDX-License-Identifier: MIT\n"));
-});
-
-test("the CLI's version matches packages/cli/package.json", async () => {
-  const config = JSON.parse(
-    await fs.readFile(join(ROOT, "packages", "cli", "package.json"), "utf8"),
-  );
-  assertEquals(await cliVersion(), config.version);
 });
 
 test("deno task cli: the development server and key, unless set", async () => {

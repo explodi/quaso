@@ -1,6 +1,5 @@
 {
   "name": "@quaso/server",
-  "version": "1.0.0-rc.1",
   "license": "MIT",
   "exports": {
     ".": "./main.ts"

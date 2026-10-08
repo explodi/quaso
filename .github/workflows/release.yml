@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: MIT
 # A release (design §5.10, §5.12, S4.1): on a tag such as v1.4.2, publishes the CLI to npm
 # and the Docker image to Docker Hub (the repository variable DOCKERHUB_IMAGE, or
-# <GitHub owner>/quaso). The tag must match the version in
-# packages/cli/package.json and packages/core/package.json.
+# <GitHub owner>/quaso). The tag must match the version in the root package.json, the only
+# version: the CLI, the image and the website all report it.
 #
 name: Release
 
@@ -29,16 +29,9 @@ jobs:
         shell: bash
         run: |
           version="${GITHUB_REF_NAME#v}"
-          for package in cli core; do
-            found="$(jq -r .version "packages/$package/package.json")"
-            if [ "$found" != "$version" ]; then
-              echo "::error::packages/$package/package.json has version $found, but the tag is $GITHUB_REF_NAME"
-              exit 1
-            fi
-          done
-          canonical="$(deno eval 'import { VERSION } from "./packages/core/src/version.ts"; console.log(VERSION)')"
-          if [ "$canonical" != "$version" ]; then
-            echo "::error::The canonical version $canonical does not match $version"
+          found="$(jq -r .version package.json)"
+          if [ "$found" != "$version" ]; then
+            echo "::error::package.json has version $found, but the tag is $GITHUB_REF_NAME"
             exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
@@ -78,7 +71,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      # Fails when packages/cli/src/version.ts differs from packages/cli/package.json.
       - run: deno task build:cli
       - run: deno run -A scripts/cli_e2e.ts --runtime node
       - run: deno run -A scripts/cli_e2e.ts --runtime deno
@@ -106,6 +98,8 @@ jobs:
         with:
           name: cli-npm
           path: dist
+      - name: The package's version is the tag's (and package.json's)
+        run: test "$(jq -r .version dist/package.json)" = "${{ needs.check.outputs.version }}"
       - name: Publish
         working-directory: dist
         # npm trusts this workflow (npm trust github <package> --file release.yml): it

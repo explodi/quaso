@@ -1,6 +1,5 @@
 {
   "name": "@quaso/cloudflare",
-  "version": "1.0.0-rc.1",
   "private": true,
   "license": "MIT",
   "description": "Quaso on Cloudflare: a Worker and container controller with private D1 and R2 storage.",

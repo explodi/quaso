@@ -19,7 +19,11 @@ test("release notes only publish dated entries and include upgrade instructions"
   assertThrows(() => releaseNotes("## [1.2.3] - unreleased\n", "1.2.3"));
 });
 
-test("all released metadata matches the canonical runtime version", async () => {
+test("the root package.json holds the only version, and every artifact reports it", async () => {
+  const workspace = JSON.parse(
+    await fs.readFile(new URL("../package.json", import.meta.url), "utf8"),
+  );
+  assertEquals(VERSION, workspace.version);
   assertEquals(CLI_VERSION, VERSION);
   assertEquals(SERVER_VERSION, VERSION);
   for (const path of [
@@ -32,7 +36,7 @@ test("all released metadata matches the canonical runtime version", async () => 
     "site/package.json",
   ]) {
     const file = new URL(`../${path}`, import.meta.url);
-    assertEquals(JSON.parse(await fs.readFile(file, "utf8")).version, VERSION, path);
+    assertEquals(JSON.parse(await fs.readFile(file, "utf8")).version, undefined, path);
   }
   const example = JSON.parse(
     await fs.readFile(new URL("../examples/demo-game/package.json", import.meta.url), "utf8"),
