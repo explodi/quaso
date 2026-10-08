@@ -4,7 +4,6 @@ import * as fs from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { deployEnvironment, deployProblem } from "./deploy_args.ts";
-import { prepareReleaseImage } from "./release_image.ts";
 import {
   configuredInstance,
   DEFAULT_INSTANCE_CONFIG,
@@ -55,14 +54,11 @@ export function deployOptions(args: readonly string[]) {
 export async function deploy(
   args: readonly string[],
   run: (args: string[]) => Promise<number> = runWrangler,
-  prepareImage: typeof prepareReleaseImage = prepareReleaseImage,
 ): Promise<number> {
   const options = deployOptions(args);
   const config = await readInstanceConfig(options.configPath);
   const instance = configuredInstance(config, options.environment);
   return await withDeploymentConfig(instance, options.environment, async (path) => {
-    if (!options.wrangler.includes("--dry-run"))
-      await prepareImage(instance, options.environment, path);
     return await run([
       "deploy",
       "--config",

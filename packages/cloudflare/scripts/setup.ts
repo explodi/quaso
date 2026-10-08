@@ -13,7 +13,6 @@ import {
   type WranglerRun,
 } from "./cloudflare_api.ts";
 import { withDeploymentConfig } from "./deploy.ts";
-import { prepareReleaseImage } from "./release_image.ts";
 import {
   DEFAULT_INSTANCE_CONFIG,
   type Environment,
@@ -52,7 +51,6 @@ interface Dependencies {
   fetch?: Fetch;
   print?: (message: string) => void;
   wait?: (ms: number) => Promise<void>;
-  prepareImage?: typeof prepareReleaseImage;
 }
 
 export function setupOptions(args: readonly string[]): SetupOptions {
@@ -266,7 +264,6 @@ export async function setup(options: SetupOptions, dependencies: Dependencies) {
     return { checked: false as const, instance, changed: false };
   }
   await withDeploymentConfig(instance, environment, async (path) => {
-    await (dependencies.prepareImage ?? prepareReleaseImage)(instance, environment, path, run);
     if (Object.keys(secrets).length > 0) {
       const secretFile = join(dirname(path), "initial-secrets.json");
       await fs.writeFile(secretFile, JSON.stringify(secrets), { mode: 0o600 });

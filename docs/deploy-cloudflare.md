@@ -52,9 +52,8 @@ instance settings, `quaso.cloudflare.jsonc`, so you never edit the template.
 
 - A Cloudflare account on the **Workers Paid** plan (Containers need it), and a domain on
   Cloudflare, such as `yourgame.com`.
-- [Deno](https://deno.com) 2.9.6 and git, to run the commands from the repository.
-- [Docker](https://docs.docker.com/get-docker/), running: deploying copies the published image into
-  your account's Cloudflare registry.
+- [Deno](https://deno.com) 2.9.6 and git, to run the commands from the repository. Docker isn't
+  needed: Cloudflare pulls the published image from Docker Hub itself.
 
 Get the code:
 
@@ -115,8 +114,8 @@ Setup then:
    it),
 4. generates the Worker's secrets, `SECRET_KEY` and `SETUP_KEY`, and prints the setup key once:
    save it,
-5. copies the image into the account's Cloudflare registry, deploys, and waits until
-   `https://<hostname>/healthz` answers.
+5. deploys the Worker with the image as `docker.io/<image>`, which Cloudflare pulls from Docker
+   Hub, and waits until `https://<hostname>/healthz` answers.
 
 Keep a copy of `quaso.cloudflare.jsonc` somewhere safe, such as your password manager or the
 repository that holds your infrastructure: it names the database by its ID, and every later deploy
@@ -204,7 +203,7 @@ Three ways back, from the quickest to the most portable:
   confirms its exit before restoring. Public requests get 503 while paused; scheduled starts cannot
   restart the server. It prints the previous bookmark before making the restore request, then the
   undo bookmark returned by Cloudflare. Save these. The existing container image stays deployed:
-  neither maintenance deployment builds or transfers an image.
+  neither maintenance deployment builds an image.
 
   To undo, use the saved bookmark:
 

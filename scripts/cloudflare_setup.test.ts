@@ -84,7 +84,7 @@ function harness(directory: string) {
     state.configPaths.push(configPath);
     const config = JSON.parse(await fs.readFile(configPath, "utf8"));
     expect(config.env.staging.d1_databases[0].database_id).toBe(DATABASE);
-    expect(config.env.staging.containers[0].image).toBe(IMAGE);
+    expect(config.env.staging.containers[0].image).toBe(`docker.io/${IMAGE}`);
     if (args[0] === "secret") {
       state.uploadedSecrets = JSON.parse(await fs.readFile(args[2], "utf8"));
       expect((await fs.stat(args[2])).mode & 0o777).toBe(0o600);
@@ -111,7 +111,6 @@ function harness(directory: string) {
     join(directory, "quaso.cloudflare.jsonc"),
   ]);
   const dependencies = {
-    prepareImage: async () => {},
     api,
     identity: IDENTITY,
     run,

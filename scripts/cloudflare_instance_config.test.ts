@@ -83,7 +83,7 @@ describe("Cloudflare instance configuration", () => {
       { binding: "DB", database_name: instance.databaseName, database_id: instance.databaseId },
     ]);
     expect(selected.r2_buckets).toEqual([{ binding: "BACKUPS", bucket_name: instance.bucketName }]);
-    expect(selected.containers[0].image).toBe(instance.image);
+    expect(selected.containers[0].image).toBe(`docker.io/${instance.image}`);
     expect(selected.containers[0].image_build_context).toBeUndefined();
     expect(selected.vars.PUBLIC_URL).toBe("https://translate.example.com");
     expect(selected.vars.CONTAINER_SLEEP_AFTER).toBe("5m");
@@ -134,25 +134,17 @@ describe("Cloudflare instance configuration", () => {
       ).toBe(0);
       expect(await exists(dirname(generatedPath))).toBe(false);
       await expect(
-        deploy(
-          ["--env", "staging", "--instance-config", path],
-          async (args) => {
-            generatedPath = args[2];
-            throw new Error("Wrangler failed");
-          },
-          async () => {},
-        ),
+        deploy(["--env", "staging", "--instance-config", path], async (args) => {
+          generatedPath = args[2];
+          throw new Error("Wrangler failed");
+        }),
       ).rejects.toThrow("Wrangler failed");
       expect(await exists(dirname(generatedPath))).toBe(false);
       expect(
-        await deploy(
-          ["--env", "staging", "--instance-config", path],
-          async (args) => {
-            generatedPath = args[2];
-            return 7;
-          },
-          async () => {},
-        ),
+        await deploy(["--env", "staging", "--instance-config", path], async (args) => {
+          generatedPath = args[2];
+          return 7;
+        }),
       ).toBe(7);
       expect(await exists(dirname(generatedPath))).toBe(false);
       await expect(readInstanceConfig(join(directory, "missing.jsonc"))).rejects.toThrow(
