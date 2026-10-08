@@ -6,15 +6,23 @@ website code do not need these tools.
 
 ## The request path
 
-The Worker receives the public request. Anonymous cacheable reads can end there. Other requests go
-to the Quaso container, which runs the same server image as Docker Compose. The server calls the
-Worker's authenticated internal API, which invokes the service in `QuasoData`, a Durable Object with
-SQLite storage. `QuasoContainer` is the container controller; it is not the project's database.
+The Worker receives the public request. Anonymous cacheable reads can end there, and published
+files (`/files/…`) are served straight from D1 metadata and R2 bytes without starting the container.
+Other requests go to the Quaso container, which runs the same server image as Docker Compose. The
+server owns the service logic: accounts, permission checks, translations, LLM jobs and the nightly
+R2 export. It reaches storage through two private outbound hosts that the container controller
+registers: `d1.quaso.internal` (`src/d1_handler.ts`, SQL batches against the `DB` binding) and
+`r2.quaso.internal` (`src/r2_handler.ts`, objects in the `BACKUPS` bucket). The public Worker answers
+404 to those paths.
 
-The data object runs accounts, permission checks, translations and LLM jobs. `GEMINI_API_KEY`
-belongs to the Worker/data object. The container has ephemeral disk and does not hold project data.
-One Durable Object alarm serves both persisted LLM wakeups and the nightly R2 export: always
-preserve both when changing scheduling. The SQL port uses `ctx.storage.sql` and `transactionSync`.
+`QuasoContainer` (`src/container.ts`) is the container controller, a Durable Object that holds no
+project data. Before letting the container sleep it asks the server's `/healthz` whether it is
+`busy` and when its `nextWakeUp` is, and schedules a wake-up for it: LLM jobs and the nightly export
+depend on that, so preserve both when changing scheduling. `GEMINI_API_KEY` reaches the server as an
+environment variable; the container's disk is ephemeral and holds no project data.
+
+`src/data_object.ts` and `src/nightly_backup.ts` belong to the earlier design, where a `QuasoData`
+Durable Object held the database; `wrangler.jsonc` no longer binds it.
 
 ## Run locally
 
@@ -25,21 +33,21 @@ deno install
 cp packages/cloudflare/.dev.vars.example packages/cloudflare/.dev.vars
 ```
 
-Fill in `SECRET_KEY` and `SERVICE_TOKEN` with independent long random values, for example the output
-of `openssl rand -hex 32`. Set `GEMINI_API_KEY` only if exercising real translation. Then:
+Fill in `SECRET_KEY` with a long random value, for example the output of `openssl rand -hex 32`.
+Set `GEMINI_API_KEY` only if exercising real translation. Then:
 
 ```sh
 deno task cf:dev
 ```
 
-Open <http://localhost:8787>. Wrangler builds the container; on another CPU architecture this may
-take longer. Its internal API uses `http://host.docker.internal:8787/internal`, since the host's
-localhost is not the container's localhost. Local state is in Wrangler's ignored state directory.
-PITR needs a deployed Durable Object and is unavailable locally.
+Open <http://localhost:8787>. Wrangler builds the container from `deploy/Dockerfile`; on another CPU
+architecture this may take longer. D1 and R2 are Wrangler's local simulations, kept in its ignored
+state directory. D1 Time Travel needs a deployed database and is unavailable locally.
 
-The root Wrangler environment is only for local work. `cf:deploy` requires `--env staging` or
-`--env production`. Never use an unqualified deploy to test a local change. See
-[deployment](../deploy-cloudflare.md) for accounts, domains and first-deploy secrets.
+The top level of `wrangler.jsonc` is only for local work. Deployments never use it directly:
+`cf:setup` and `cf:deploy` generate a temporary configuration from the `staging` or `production`
+template and the operator's `quaso.cloudflare.jsonc` (`scripts/instance_config.ts`), and require
+`--env`. See [deployment](../deploy-cloudflare.md) for accounts, domains and secrets.
 
 ## Types, fixtures and tests
 
@@ -55,13 +63,13 @@ shared behavior, review and commit the fixture from `packages/cloudflare/scripts
 bundles the Worker without deploying it. Tests compare the same service scenario with local SQLite.
 
 Keep service and core portable: no Deno or Node runtime imports in their production code. Worker
-modules may export only supported handlers and classes. Durable Object SQLite binds numbers as REAL
-(strict integer columns still enforce integer values), limits LIKE/GLOB patterns and does not accept
-SQL transaction statements. Use the port's transaction API and existing query helpers.
+modules may export only supported handlers and classes. D1 does not accept SQL transaction
+statements: the D1 adapter (`packages/service/src/adapters/d1_sql.ts`) sends each commit as one
+batch, guarded by the database revision. Use the port's transaction API and existing query helpers.
 
 ## Rollout compatibility
 
-A Worker becomes active before all containers update. The internal transport must accept the
-previous server release during this overlap, and read retries must remain safe. Never retry writes
-blindly. Schema migrations run on object startup under `blockConcurrencyWhile`. Test restored and
-upgraded objects as well as brand-new ones. See [operations](../operations.md) for recovery.
+A Worker becomes active before all containers update. The private D1 and R2 handlers must accept
+the previous server release during this overlap, and read retries must remain safe. Never retry
+writes blindly. Schema migrations run when the server starts. Test restored and upgraded databases
+as well as brand-new ones. See [operations](../operations.md) for recovery.

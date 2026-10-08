@@ -10,215 +10,236 @@ Test a deployment and a restore on staging before sending production traffic to 
 ## How it fits together
 
 ```text
- Browsers, the CLI
+ Browsers, the CLI, games
         │ https://translate.yourgame.com
         ▼
-┌─────────────────────────────────┐        ┌──────────────────────────────┐
-│ Worker                          │        │ Durable Object "QuasoData":  │
-│  anonymous reads: its cache     │        │ the service and its SQLite   │
-│  /internal/v1/…: to the data  ──┼───────►│ data, the LLM jobs, backups  │
-│  everything else: the container │        └──────────────────────────────┘
-└───────┬────────────────▲────────┘
-        │                │ /internal/v1/… with SERVICE_TOKEN
-        ▼                │
-┌────────────────────────┴────────┐
-│ Container: the Quaso server     │
-│ (the same Docker image)         │
+┌─────────────────────────────────┐
+│ Worker                          │
+│  anonymous reads: its cache     │        ┌──────────────────────────────┐
+│  /files/…: straight from ───────┼───────►│ D1: the database             │
+│    D1 and R2                    │        │ R2: files and nightly backups│
+│  everything else: the container │        └──────────────▲───────────────┘
+└───────┬─────────────────────────┘                       │
+        ▼                                                 │ private bindings
+┌─────────────────────────────────┐                       │ (d1.quaso.internal,
+│ Container: the Quaso server     ├───────────────────────┘  r2.quaso.internal)
+│ (the published Docker image)    │
 └─────────────────────────────────┘
 ```
 
 - **The Worker** is the front door. It answers anonymous reads (the website's files, public API
-  reads) from Cloudflare's cache when it can, so bots and visitors rarely wake the container. It
-  forwards everything else to the server in the container.
-- **The container** runs the same image as Docker Compose (`deploy/Dockerfile`). Its disk is wiped
-  whenever it stops, so it keeps nothing: it reaches the data through the Worker's internal API, at
-  `https://<your domain>/internal`, with a shared secret (`SERVICE_TOKEN`). It goes to sleep after
-  10 minutes without requests (`CONTAINER_SLEEP_AFTER`), and wakes up on the next request the cache
-  can't answer, which takes a few seconds.
-- **The Durable Object** holds the whole database in its SQLite storage, runs the service, and runs
-  the LLM jobs (so the Gemini key stays there, never in the container). Cloudflare keeps 30 days of
-  point-in-time recovery for it.
+  reads) from Cloudflare's cache when it can, and serves published translation files (`/files/…`)
+  straight from D1 and R2, so games, bots and visitors rarely wake the container. It forwards
+  everything else to the server in the container.
+- **The container** runs the same image as Docker Compose, the one published on Docker Hub. It runs
+  the whole service: accounts, translations, LLM jobs and backups. Its disk is wiped whenever it
+  stops, so it keeps nothing there: it reaches the database and the files through two private
+  bindings that only the container can use, never the internet. It goes to sleep after 10 minutes
+  without requests (`sleepAfter`), and wakes up on the next request the cache can't answer, which
+  takes a few seconds. It also wakes up by itself for scheduled work, such as LLM jobs and the
+  nightly backup.
+- **D1** is the database (Cloudflare's hosted SQLite): accounts, projects, strings, translations,
+  history and settings. Cloudflare keeps 30 days of [Time Travel](#backups-and-recovery) for it.
+- **R2** holds the bytes of uploaded and published files, and the nightly backups.
 
-Everything is in `packages/cloudflare` of the repository: `wrangler.jsonc` describes the Worker,
-both Durable Objects, the container, an R2 bucket for backups, and a `staging` and a `production`
-environment.
+A small Durable Object, `QuasoContainer`, starts and stops the container. It holds no project data.
+
+Everything is in `packages/cloudflare` of the repository. `wrangler.jsonc` there is a template:
+`cf:setup` and `cf:deploy` fill in your account, hostname, database, bucket and image from your
+instance settings, `quaso.cloudflare.jsonc`, so you never edit the template.
 
 ## What you need
 
-- A Cloudflare account on the **Workers Paid** plan (Containers and Durable Objects with SQLite need
-  it), and a domain on Cloudflare, such as `yourgame.com`.
-- [Deno](https://deno.com) 2.9.6 and git, to run Wrangler from the repository.
-- [Docker](https://docs.docker.com/get-docker/), running: `wrangler deploy` builds the image.
-- `openssl`, or another way to make long random strings.
+- A Cloudflare account on the **Workers Paid** plan (Containers need it), and a domain on
+  Cloudflare, such as `yourgame.com`.
+- [Deno](https://deno.com) 2.9.6 and git, to run the commands from the repository.
+- [Docker](https://docs.docker.com/get-docker/), running: deploying copies the published image into
+  your account's Cloudflare registry.
 
-Get the code and Wrangler:
+Get the code:
 
 ```sh
-git clone 'https://github.com/<org>/quaso.git'
+git clone 'https://github.com/explodi/quaso.git'
 cd quaso
 deno install
 ```
 
-Every direct Wrangler command below runs from `packages/cloudflare`. Run `deno task cf:*` commands
-from the repository root unless stated otherwise.
+Run every `deno task cf:*` command from the repository's root.
 
 ## 1. Sign in to Cloudflare
 
 ```sh
 cd packages/cloudflare
 deno run -A npm:wrangler login
+cd ../..
 ```
 
-## 2. Choose the names
+For automation, Wrangler reads an API token from `CLOUDFLARE_API_TOKEN` (and the account from
+`CLOUDFLARE_ACCOUNT_ID`) instead. The token needs these permissions:
 
-Open `packages/cloudflare/wrangler.jsonc`. Each environment repeats all its settings, because
-Wrangler doesn't inherit them. In `env.production` (and `env.staging`, if you want one):
+- Account: Workers Scripts Edit, Containers Edit, D1 Edit, Workers R2 Storage Edit, Account
+  Settings Read.
+- Zone, for the domain Quaso runs on: Workers Routes Edit, DNS Edit, Zone Read.
 
-- `vars.PUBLIC_URL`: the address people will use, such as `https://translate.yourgame.com`, without
-  a trailing slash.
-- `routes`: remove the `//` in front of the line, and put your hostname in it. The Worker must be on
-  a custom domain: Cloudflare's cache and the internal API work there, not on `workers.dev`. Turn on
-  **Always Use HTTPS** for the zone (SSL/TLS, Edge Certificates): the internal API refuses plain
-  `http`, because its token would cross the network in the clear.
-- `vars.LOCATION_HINT`: where the Durable Object is created, near your team: `weur` or `eeur`
-  (Europe), `wnam` or `enam` (North America), `apac`, `oc`, `sam`, `afr` or `me`. Empty means near
-  the first request. It is decided once, when the object is created.
-- `vars.CONTAINER_SLEEP_AFTER`: how long the container stays awake without requests, such as `10m`.
-  Shorter costs less; longer means fewer cold starts.
-- `r2_buckets[0].bucket_name`: the bucket for backups. Create it:
+## 2. Create the instance
 
-  ```sh
-  deno run -A npm:wrangler r2 bucket create quaso-production-backups
-  ```
-
-After changing `wrangler.jsonc`, run `deno task cf:types` (from the repository's root), which
-updates `worker-configuration.d.ts`.
-
-## 3. Prepare the secrets
-
-Secrets never go in `wrangler.jsonc`. Three are required, and a new Worker can't have secrets before
-its first deploy, so the first deploy of each environment takes them from a file. Copy
-`packages/cloudflare/.dev.vars.example` to `packages/cloudflare/.dev.vars.production` (git ignores
-it, and `.dockerignore` keeps it out of the image build, which runs from the repository's root) and
-fill it in:
-
-- `SECRET_KEY` signs sessions and is mixed into password hashes: `openssl rand -hex 32`. Keep a copy
-  somewhere safe: changing it signs everyone out and invalidates existing password hashes; users
-  must reset passwords.
-- `SERVICE_TOKEN` lets the server in the container call the Durable Object: `openssl rand -hex 32`
-  as well. Nothing outside needs it, unless you run the server elsewhere (below).
-
-After creating the administrator, enter the Gemini API key and choose the model, parallel
-requests and monthly budget in Settings → LLM translation. The server reads this stored
-configuration in both setups. Without a key, LLM translation is off.
-
-Optional ones, passed to the server when set: `SETUP_KEY`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `DISCORD_CLIENT_ID`,
-`DISCORD_CLIENT_SECRET`, `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`, `LOG_LEVEL` and
-`CORS_ORIGINS` (only when the website is served from another origin; the Worker's cache then keeps
-one copy of each anonymous read per origin). The [configuration reference](configuration.md)
-explains each. Set them after the first deploy.
-
-Later, change or add a secret with Wrangler, which asks for the value:
+`cf:setup` creates everything an instance needs and deploys it:
 
 ```sh
-
+deno task cf:setup --env production --hostname translate.yourgame.com \
+  --location weur --image explodi/quaso:1.0.0-rc.2
 ```
 
-## 4. Deploy
+Leave out any option and it asks. The options:
 
-From the repository's root:
+- `--env`: `production` or `staging`. Each environment is a separate instance with its own Worker,
+  database, bucket and secrets.
+- `--hostname`: the address people will use, in an active domain of the account. The Worker gets it
+  as a [Custom Domain](https://developers.cloudflare.com/workers/configuration/routing/custom-domains/):
+  Cloudflare creates its DNS record and certificate, so the hostname must not have a DNS record yet.
+- `--location`: where the D1 database and the R2 bucket are created, near your team: `weur` or
+  `eeur` (Europe), `wnam` or `enam` (North America), `apac` or `oc`. Empty means automatic. It is
+  decided once, when they are created.
+- `--image`: the release to run, a tag or digest of the published image, such as
+  `explodi/quaso:1.0.0-rc.2` or `explodi/quaso@sha256:…`. Pin a version rather than `latest`, so a
+  deploy always gets the release you expect.
+- `--name`: the Worker's name, `quaso-production` or `quaso-staging` by default. The database takes
+  the same name and the bucket `<name>-store`.
+- `--check`: only check that the account has Container access and list its domains; create nothing.
 
-```sh
-# The first time, with the secrets file:
-deno task cf:deploy --env production --secrets-file .dev.vars.production
-# Afterwards (the secrets stay):
-deno task cf:deploy --env production
-```
+Setup then:
 
-The same with `--env staging` (and `.dev.vars.staging`) if you have a staging environment. The first
-deploy pulls the published image (`explodi/quaso` on Docker Hub, or one of your own) for
-`linux/amd64`, transfers it to the account's Cloudflare registry, and deploys the transferred
-digest. Docker must be running for this transfer; deployment does not build the image. A private
-image requires Docker to be logged into its registry. An account-owned `registry.cloudflare.com/<account-id>/quaso@sha256:<digest>`
-reference skips the transfer and needs no local Docker daemon. Dry runs skip the transfer.
-`cf:deploy` refuses to run without `--env`: the top level of `wrangler.jsonc` is only for local
-runs. Once deployed, you can delete the secrets file, or keep it somewhere safer.
+1. checks that the account can run Containers (Workers Paid),
+2. creates the D1 database and the R2 bucket, unless they already exist,
+3. saves the instance settings in `quaso.cloudflare.jsonc` at the repository's root (git ignores
+   it),
+4. generates the Worker's secrets, `SECRET_KEY` and `SETUP_KEY`, and prints the setup key once:
+   save it,
+5. copies the image into the account's Cloudflare registry, deploys, and waits until
+   `https://<hostname>/healthz` answers.
 
-Then check it:
+Keep a copy of `quaso.cloudflare.jsonc` somewhere safe, such as your password manager or the
+repository that holds your infrastructure: it names the database by its ID, and every later deploy
+reads it. If setup stops part way, run it again with the same options: it picks up where it
+stopped.
+
+Turn on **Always Use HTTPS** for the zone (SSL/TLS, Edge Certificates), so nobody signs in over
+plain `http`.
+
+## 3. Create the administrator
+
+Open `https://translate.yourgame.com`, enter the setup key, and create the first administrator
+account. Then, in Settings:
+
+- **LLM translation:** enter the Gemini API key, and choose the model, parallel requests and monthly
+  budget. Without a key, LLM translation is off.
+- **API keys:** create one for each integration, such as an `upload` key for CI.
+
+Check it from outside:
 
 ```sh
 curl https://translate.yourgame.com/healthz
 ```
 
-The first request wakes the container, which takes a few seconds. The answer says
-`"storage": "cloudflare"`. Open `/setup`, enter the key printed once by `cf:setup`, and create the first
-administrator account. Create an API key in **Settings → API keys**, or use the server's
-`token create` command through the internal API:
+The answer says `"storage": "cloudflare"`.
+
+Then follow [From your repository to every language](workflow.md) to connect your game, or
+[Migrate from Crowdin](migrate-from-crowdin.md) to bring existing translations and their proofread
+state.
+
+## Optional settings
+
+The Worker passes these to the server when they are set: `EMAIL_PROVIDER`, `EMAIL_API_KEY`,
+`EMAIL_FROM`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `DISCORD_CLIENT_ID`,
+`DISCORD_CLIENT_SECRET`, `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`, `LOG_LEVEL` and
+`CORS_ORIGINS` (only when the website is served from another origin; the Worker's cache then keeps
+one copy of each anonymous read per origin). The [configuration reference](configuration.md)
+explains each. Set one as a Worker secret, which Wrangler asks for:
 
 ```sh
-export SERVICE_TOKEN='your Worker service token'
-export SECRET_KEY='your original instance secret key'
-docker run --rm \
-  -e SERVICES_URL=https://translate.yourgame.com/internal \
-  -e SERVICE_TOKEN \
-  -e SECRET_KEY \
-  'explodi/quaso:latest' token create --name ci --scope upload
+cd packages/cloudflare
+deno run -A npm:wrangler secret put GITHUB_CLIENT_SECRET --name quaso-production
 ```
+
+## Changing the instance
+
+To change the hostname, the image or how long the container stays awake, edit the environment in
+`quaso.cloudflare.jsonc` (`hostname`, `image`, `sleepAfter` such as `10m`), then deploy:
+
+```sh
+deno task cf:deploy --env production
+```
+
+`cf:deploy` refuses to run without `--env`, and `cf:setup` refuses to change an instance that
+already exists: it only creates.
 
 ## Updates
 
-Once the instance is running, follow [From your repository to every language](workflow.md)
-to connect your game and run the translation workflow, or [Migrate from Crowdin](migrate-from-crowdin.md)
-to bring existing translations and their proofread state.
+Pick the new release on [Docker Hub](https://hub.docker.com/r/explodi/quaso), and take a backup
+first. Record the current `image` and a UTC timestamp, for [Time Travel](#backups-and-recovery). Set
+`image` in `quaso.cloudflare.jsonc` to the new release, and deploy:
 
-Pull the new version and run `deno task cf:deploy --env production` again. Wrangler activates the
-new Worker first and then rolls out the new image, so for a while the new Worker talks to the old
-server: the internal API always accepts the previous release's calls. The Durable Object migrates
-its database the first time it starts with the new code. Take a backup before upgrading. Record the
-previous source commit and a UTC timestamp for PITR. For rollback, recover the data as well as the
-code; the [operations guide](operations.md#upgrades-and-rollbacks) describes both the PITR and
-separate-instance paths.
+```sh
+deno task cf:deploy --env production
+```
+
+Wrangler activates the new Worker first and then rolls out the new image, so for a while the new
+Worker serves the old server. The server migrates the database the first time the new release
+starts, and migrations only go forwards. To roll
+back, recover the data as well as the code; the
+[operations guide](operations.md#upgrades-and-rollbacks) describes how.
 
 ## Backups and recovery
 
 Three ways back, from the quickest to the most portable:
 
-- **Point-in-time recovery.** Cloudflare keeps 30 days of history of the Durable Object's storage.
-  To put the whole instance back to how it was at a moment in that window (everything written since
-  is lost), call the Worker's internal API with the `SERVICE_TOKEN` secret:
+- **D1 Time Travel.** Cloudflare keeps 30 days of history of the database. To put the whole
+  instance back to how it was at a moment in that window (everything written since is lost):
 
   ```sh
-  curl -X POST https://translate.yourgame.com/internal/v1/pitr \
-    -H "Authorization: Bearer <the SERVICE_TOKEN secret>" \
-    -H "Content-Type: application/json" \
-    -d '{ "at": "2026-09-24T03:00:00Z" }'
+  deno task cf:restore --env production --at 2026-10-03T00:00:00Z
   ```
 
-  The answer is `{ "ok": true, "at": …, "bookmark": … }`: the Durable Object restarts on its data as
-  it was then, and the server reconnects by itself. A recovery can itself be undone within the
-  window: go back to the time just before you ran it. It only works on a deployed Worker
-  (`wrangler dev` and the tests answer 400: their storage can't go back).
+  This overwrites D1 in place. The command deploys maintenance mode, stops the container, and
+  confirms its exit before restoring. Public requests get 503 while paused; scheduled starts cannot
+  restart the server. It prints the previous bookmark before making the restore request, then the
+  undo bookmark returned by Cloudflare. Save these. The existing container image stays deployed:
+  neither maintenance deployment builds or transfers an image.
 
-- **The nightly backup file.** At 03:00 UTC, the Durable Object writes the whole instance as
-  gzip-compressed JSON to the R2 bucket (`BACKUPS`), as `backups/quaso-<UTC time>.json.gz`, and
-  deletes files older than the backup retention set in Settings → Retention (30 days by
-  default). A request that changes the data while the file is written starts it again (after three
-  tries it waits an hour). The admin page shows the last one. Download one with the following
-  command (replace the timestamp with the backup you want):
+  To undo, use the saved bookmark:
 
   ```sh
+  deno task cf:restore --env production --bookmark <undo-bookmark>
+  ```
+
+  Successful restoration removes maintenance mode and checks `/healthz`. The new deployment starts a
+  fresh API cache so responses from the discarded database timeline are not reused. A failure can
+  leave the instance paused. After inspecting D1 and confirming the earlier command is no longer
+  running, retry the intended timestamp or bookmark with `--takeover`; this retains the pause
+  through the retry. To keep the database as it is and return to service, use
+  `deno task cf:restore --env production --resume`. Temporary control secrets and generated
+  configuration files are removed after each command. R2 is not rewound by D1 Time Travel; the
+  restored D1 pointers select retained immutable file objects.
+
+- **The nightly backup file.** At 03:00 UTC, the server writes the whole instance as gzip-compressed
+  JSON to the R2 bucket, as `backups/quaso-<UTC time>.json.gz`, and deletes files older than the
+  backup retention set in Settings → Retention (30 days by default). A request that changes the data
+  while the file is written starts it again. The admin page shows the last one. Download one with
+  the following command (replace the bucket and the timestamp with yours):
+
+  ```sh
+  cd packages/cloudflare
   deno run -A npm:wrangler r2 object get \
-    quaso-production-backups/backups/quaso-20260924T030000Z.json.gz \
-    --file backup.json.gz --remote --env production
+    quaso-production-store/backups/quaso-20260924T030000Z.json.gz \
+    --file backup.json.gz --remote
   ```
 
 - **A download.** Administrators download a backup from the Settings page, or from
-  `GET /api/v1/backup?format=sqlite` (one SQLite file, which the server builds from the Durable
-  Object's data in a temporary file, then sends) or `?format=json`.
+  `GET /api/v1/backup?format=sqlite` (one SQLite file) or `?format=json`.
 
-Each file is the instance at one moment. The Durable Object's data is read in many steps, so if it
-changes meanwhile (an LLM job, people translating), the backup starts again; after three tries a
-download answers 503 and asks you to try again later.
+Each file is the instance at one moment. The database is read in many steps, so if it changes
+meanwhile (an LLM job, people translating), the backup starts again; after three tries a download
+answers 503 and asks you to try again later.
 
 Any of these files restores into an **empty** instance of either kind (with no strings and no one
 with a role), which is also how an instance moves between setups. People sign in again: sessions
@@ -226,103 +247,36 @@ aren't part of backups; API keys are. A restore that fails part way can be run a
 nothing else has written to the instance since; once it has been used, the admin page says the
 restore didn't finish, and the backup only goes into another, empty instance.
 
-- **Into Docker Compose:** on a new VM, before the first start (or with an empty data folder), with
-  the backup's `SECRET_KEY` in `.env`:
+- **Into Docker Compose:** on a new VM, before the first start (or with an empty data folder):
 
   ```sh
   docker compose run --rm -v "$PWD/backup.json.gz:/backup.json.gz:ro" quaso restore /backup.json.gz
   docker compose up -d
   ```
 
-- **Into Cloudflare storage, without a shell:** deploy, and before creating the first administrator,
-  run the restore command with the setup key printed by `cf:setup`:
+- **Into Cloudflare storage:** run `cf:setup`, and before creating the first administrator, run the
+  restore command with the setup key it printed:
 
   ```sh
   deno task cf:restore --env production --file backup.json.gz
   ```
 
   The command asks for the setup key; automation can supply `QUASO_SETUP_KEY` through its
-  environment. It accepts SQLite, JSON and gzip JSON, streams the file unchanged, and refuses
-  files larger than 1 GiB. The server refuses imports into an instance that is already set up.
-  An interrupted restore can resume with the same backup and key. Preserve the original
-  instance's `SECRET_KEY` on the destination before restoring so password hashes remain valid.
+  environment. It accepts SQLite, JSON and gzip JSON, streams the file unchanged, and refuses files
+  larger than 1 GiB. The server refuses imports into an instance that is already set up. An
+  interrupted restore can resume with the same backup and key.
 
-To restore the existing D1 database to an earlier time, use the account authenticated with
-Wrangler. [D1 Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/) accepts
-any minute within the last 30 days on Workers Paid:
-
-```sh
-deno task cf:restore --env production --at 2026-10-03T00:00:00Z
-```
-
-This overwrites D1 in place. The command deploys maintenance mode, stops the container,
-and confirms its exit before restoring. Public requests get 503 while paused; scheduled
-starts cannot restart the server. It prints the previous bookmark before making the restore
-request, then the undo bookmark returned by Cloudflare. Save these. The existing container
-image stays deployed: neither maintenance deployment builds or transfers an image.
-
-To undo, use the saved bookmark:
-
-```sh
-deno task cf:restore --env production --bookmark <undo-bookmark>
-```
-
-Successful restoration removes maintenance mode and checks `/healthz`. The new deployment
-starts a fresh API cache so responses from the discarded database timeline are not reused.
-A failure can leave
-the instance paused. After inspecting D1 and confirming the earlier command is no longer
-running, retry the intended timestamp or bookmark with `--takeover`; this retains the pause
-through the retry. To keep the database as it is and return to service, use
-`deno task cf:restore --env production --resume`. Temporary control secrets and generated
-configuration files are removed after each command. R2 is not rewound by D1 Time Travel;
-the restored D1 pointers select retained immutable file objects.
-
-Moving back to local storage uses the Docker restore command above with a new volume. Compare
-status, downloaded files, roles and history before switching DNS. Keep the old deployment stopped
-and available until that comparison passes.
-
-The `SECRET_KEY` must be the one the backup's instance used (with local storage, the generated one
-is in the data folder's `secret-key` file), or people's passwords won't match.
+Compare status, downloaded files, roles and history before switching DNS. Keep the old deployment
+stopped and available until that comparison passes.
 
 A backup from an older release is migrated after the import; one from a newer release is refused
 (upgrade first).
 
 ## Staging
 
-`env.staging` is a second, separate instance: its own Worker (`quaso-staging`), Durable Object,
-container, bucket and secrets. Give it its own hostname, such as `staging.translate.yourgame.com`.
-Cloudflare doesn't make preview URLs for Workers with Durable Objects, so staging is how to try a
-release first.
-
-## A VM with Cloudflare storage
-
-You can also keep the data in the Durable Object and run the server anywhere Docker runs: to try
-Cloudflare storage, or to move an instance between setups.
-
-1. Deploy the Worker as above, with `SERVICE_TOKEN` and `SECRET_KEY` set. (Its container then stays
-   asleep unless someone opens the Worker's own address.)
-2. Run the image on the VM with the same token and key, and with `SERVICES_URL` pointing at the
-   Worker:
-
-   ```sh
-   docker run -d -p 8000:8000 \
-     -e SERVICES_URL=https://translate.yourgame.com/internal \
-     -e SERVICE_TOKEN \
-     -e SECRET_KEY \
-     -e PUBLIC_URL=https://translate-vm.yourgame.com \
-     'explodi/quaso:latest'
-   ```
-
-   Or, with Docker Compose, add the three variables to `.env`. `SERVICES_URL` must use `https`.
-
-The server then keeps nothing on the VM (no data folder, lock or snapshots), and the LLM jobs run in
-the Durable Object, so the Gemini key belongs to the Worker. Every API request crosses the network
-once more, which adds some latency: measure it (below). If the token is wrong, the Worker doesn't
-know this release's internal API, or the Worker's own settings are wrong (such as a short
-`SECRET_KEY`), the server stops at once and says why. If the Worker doesn't answer, or answers 503
-while a deploy restarts the Durable Object, the server starts anyway and `/healthz` answers 503
-until it does; reads are tried again, up to three times. `token create` can't wait: it fails with a
-one-line message, and you run it again.
+`--env staging` is a second, separate instance: its own Worker (`quaso-staging`), database, bucket,
+container and secrets. Give it its own hostname, such as `staging.translate.yourgame.com`. Cloudflare
+doesn't make preview URLs for Workers with Durable Objects, so staging is how to try a release first.
 
 ## Measure it
 
@@ -333,32 +287,27 @@ deno run -A scripts/measure.ts --url https://translate.yourgame.com \
   --key qso_… --requests 50
 ```
 
-- **Response times through the extra hop:** each endpoint 50 times, p50 and p95, to the first byte
-  and to the last. Reads with `--key` bypass the cache and cross every hop (Worker, container,
-  internal API, Durable Object); anonymous reads show the cache (`X-Quaso-Cache: hit`).
-- **Cold starts:** add `--cold-starts 3 --sleep 660`. It waits 11 minutes (longer than
-  `CONTAINER_SLEEP_AFTER`) before each `/healthz`, which is never cached.
+- **Response times:** each endpoint 50 times, p50 and p95, to the first byte and to the last. Reads
+  with `--key` bypass the cache and cross every hop (Worker, container, D1); anonymous reads show the
+  cache (`X-Quaso-Cache: hit`).
+- **Cold starts:** add `--cold-starts 3 --sleep 660`. It waits 11 minutes (longer than `sleepAfter`)
+  before each `/healthz`, which is never cached.
 
-Run it from where your team works, against both setups (Cloudflare, and a VM with Cloudflare
-storage), and against a Docker Compose instance for comparison.
+Run it from where your team works, and against a Docker Compose instance for comparison.
 
 ## Local runs
 
-`deno task cf:dev` runs the Worker, the Durable Object and the container on your machine with
-Wrangler (Docker must be running; the first run builds the image for `linux/amd64`, which is slow on
-other machines). Copy `packages/cloudflare/.dev.vars.example` to `packages/cloudflare/.dev.vars` and
-fill in the three required secrets; locally, Wrangler loads only those from it. The top level of
-`wrangler.jsonc` points the container at `http://host.docker.internal:8787/internal`
-(`SERVICES_URL`), because the container can't reach the Worker at `localhost`. Then open
-<http://localhost:8787>.
+`deno task cf:dev` runs the Worker and the container on your machine with Wrangler, on Wrangler's
+local D1 and R2 (Docker must be running; the first run builds the image from `deploy/Dockerfile` for
+`linux/amd64`, which is slow on other machines). Copy `packages/cloudflare/.dev.vars.example` to
+`packages/cloudflare/.dev.vars` and fill in `SECRET_KEY`. Then open <http://localhost:8787>.
 
 `deno task cf:test` runs the package's tests in `workerd`, without Docker or an account.
 
 ## Limits to know
 
-- **One container, one Durable Object.** One game's traffic is far below what either handles.
-- **Request bodies:** an upload of 50 MB of JSON is the most the server takes. The Durable Object
-  has 128 MB of memory, so very large uploads are better split by file.
+- **One container** (`max_instances: 1`). One game's traffic is far below what it handles.
+- **Request bodies:** an upload of 50 MB of JSON is the most the server takes.
 - **The cache** keeps anonymous reads for their `Cache-Control` time (30 seconds for the API, a few
   minutes for the website's page, a year for its hashed files), and serves them stale for a while as
   it refreshes them. Signed-in requests and API keys always reach the server.

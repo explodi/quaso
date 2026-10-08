@@ -16,12 +16,12 @@ and keeps all its data in one SQLite database. A deployment serves one game, for
 ┌──────────────────────────────────────────────┐
 │ server (Deno): website files + HTTP API     │
 └──────────────────────┬───────────────────────┘
-                       │ direct call, or HTTPS to a Worker
+                       │ direct call
                        ▼
 ┌──────────────────────────────────────────────┐
 │ service: the logic and the data, in SQLite   │
 │  local storage: a SQLite file                │
-│  Cloudflare storage: a Durable Object        │
+│  Cloudflare storage: D1 and R2               │
 └──────────────────────┬───────────────────────┘
                        ▼
                    Gemini API
@@ -44,36 +44,41 @@ and keeps all its data in one SQLite database. A deployment serves one game, for
 
 ## Two places for the data
 
-The service runs in one of two places, with exactly the same code:
+The service always runs inside the server, with exactly the same code. Only its storage differs:
 
-| Storage         | Where the service runs                                      | The database                                       |
-| --------------- | ----------------------------------------------------------- | -------------------------------------------------- |
-| Local (default) | inside the server                                           | one SQLite file, `quaso.sqlite` in the data folder |
-| Cloudflare      | inside one Cloudflare Durable Object, behind a small Worker | the Durable Object's SQLite storage                |
+| Storage         | Where the server runs                         | The database                                       | Files and backups |
+| --------------- | --------------------------------------------- | -------------------------------------------------- | ----------------- |
+| Local (default) | Docker, a VM, or `deno task dev`              | one SQLite file, `quaso.sqlite` in the data folder | the data folder   |
+| Cloudflare      | a Cloudflare Container, behind a small Worker | a D1 database                                      | an R2 bucket      |
 
-With Cloudflare storage, the server calls the service over HTTPS (`SERVICES_URL`, with
-`SERVICE_TOKEN`): one request per operation, with the same inputs and outputs as the direct call.
+In the Cloudflare container, the server reaches D1 and R2 through two private outbound hosts,
+`d1.quaso.internal` and `r2.quaso.internal`, which the container controller handles with the
+Worker's bindings. See [working on the Cloudflare package](cloudflare.md).
 
 ### Ports
 
 The service never calls a runtime API directly. It uses small interfaces, each with one
 implementation per place:
 
-- `Sql` (`packages/service/src/ports.ts`): run a statement, query rows, run a script, and run a
-  function as one synchronous transaction. On `node:sqlite` in the server, and on `ctx.storage.sql`
-  in the Durable Object.
-- `Scheduler`: wake the service up later, for LLM jobs. A timer in the server, whose next wake-up is
-  stored in the database, or a Durable Object alarm.
+- `Sql` (`packages/service/src/ports.ts`): read statements in one consistent snapshot, commit a
+  batch of writes against the revision it read, and apply a migration. On `node:sqlite` with local
+  storage, and on D1 in the Cloudflare container.
+- `Store`: private objects for published file versions and backups. The data folder with local
+  storage, R2 on Cloudflare.
+- `Scheduler`: wake the service up later, for LLM jobs and backups. A timer in the server; on
+  Cloudflare the container controller also wakes a sleeping container when work is due.
 
 This is why `core` and `service` may only use web-standard APIs: no `Deno.*`, and no `node:`,
 `jsr:`, `npm:` or `@std/` imports outside tests. CI checks it.
 
 ### One writer at a time
 
-Every operation (an upload, an approval, an LLM result) runs as one synchronous transaction. The
-service never waits for anything between reading and writing, so operations can't interleave: the
-Deno server is single-threaded, and a Durable Object runs synchronous code one event at a time.
-While the service waits for Gemini, it keeps serving other requests.
+Every operation (an upload, an approval, an LLM result) reads the database at one revision, decides
+its writes, and commits them as one batch guarded by that revision (`packages/service/src/write.ts`).
+If another commit landed in between, the batch aborts before changing anything, and the operation
+reads again and retries; after four tries it answers that the project is busy. Operations therefore
+never interleave, on either storage. While the service waits for Gemini, it keeps serving other
+requests.
 
 ## The data model
 

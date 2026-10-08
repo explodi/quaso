@@ -190,7 +190,7 @@ The first enables the 50,000-string / 30-language local stress case. The second 
 `GEMINI_API_KEY`, makes real provider requests and may incur usage charges; it evaluates the sample
 corpus and writes results for review. Never make either a requirement for a small unrelated patch. A
 fake-provider timing result is not evidence of linguistic quality. Real staging deployments,
-regional latency, cold starts, PITR and native-speaker evaluation remain separate release checks.
+regional latency, cold starts, D1 Time Travel and native-speaker evaluation remain separate release checks.
 
 ## Beta 2 workflow on the production image
 
