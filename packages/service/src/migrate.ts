@@ -32,6 +32,7 @@ export async function migrate(sql: SyncSql, options: MigrateOptions = {}): Promi
   checkOrder(migrations);
   const latest = migrations.length === 0 ? 0 : migrations[migrations.length - 1].version;
   const from = schemaVersion(sql);
+  if (from > 0) requireDatabaseGeneration(getMeta(sql, "schema_generation"));
   if (from > latest) {
     throw new Error(
       `The database has schema version ${from}, but this version of Quaso only knows versions up to ${latest}. Upgrade Quaso to open it.`,
@@ -47,6 +48,18 @@ export async function migrate(sql: SyncSql, options: MigrateOptions = {}): Promi
     });
   }
   return { from, to: Math.max(from, latest), created };
+}
+
+/**
+ * Beta 2 restarted the schema at version 1, so a Beta 1 database's version number means
+ * nothing here; only the `schema_generation` row tells them apart.
+ */
+function requireDatabaseGeneration(generation: unknown): void {
+  if (generation === "beta-2") return;
+  throw new Error(
+    "This database is from Beta 1 (1.0.0-rc.1), which this version of Quaso can't open. " +
+      "Start a fresh instance with an empty data folder and import your translation files instead.",
+  );
 }
 
 /** The database's schema version: 0 when it has no `meta` table yet. */
@@ -68,6 +81,12 @@ export async function migrateAsync(
   checkOrder(migrations);
   const latest = migrations.at(-1)?.version ?? 0;
   const from = await schemaVersionAsync(sql);
+  if (from > 0) {
+    const [rows] = await sql.read([
+      { sql: "SELECT value FROM meta WHERE key = 'schema_generation'" },
+    ]);
+    requireDatabaseGeneration(rows[0]?.value);
+  }
   if (from > latest) {
     throw new Error(
       `The database has schema version ${from}, but this version of Quaso only knows versions up to ${latest}. Upgrade Quaso to open it.`,

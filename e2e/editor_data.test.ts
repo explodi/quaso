@@ -220,7 +220,9 @@ browserTest(
     session: MANAGER_SESSION,
     intercept: (request) => {
       const url = new URL(request.url);
-      if (url.pathname === "/api/v1/strings" && url.searchParams.get("q") === "boom") {
+      // The editor searches through /strings/queue (queue order) or /strings.
+      const listsStrings = url.pathname.startsWith("/api/v1/strings");
+      if (listsStrings && url.searchParams.get("q") === "boom") {
         return apiError(500, "internal", "Something broke.");
       }
       return undefined;

@@ -126,7 +126,7 @@ test("inputs are validated, with the path of each problem", async () => {
   );
   assertEquals(
     upload.details?.map((detail) => detail.path),
-    ["files[0].path"],
+    ["files[0].path", "files[0].repoPath"],
   );
   const missing = await assertRejects(
     () => instance.service.getString(ANONYMOUS, undefined as never),

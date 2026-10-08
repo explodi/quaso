@@ -9,6 +9,7 @@ const INITIAL: BatchMigration = {
   name: "initial",
   statements: [
     { sql: "CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL) STRICT" },
+    { sql: "INSERT INTO meta (key, value) VALUES ('schema_generation', 'beta-2')" },
     { sql: "CREATE TABLE migration_items (id INTEGER PRIMARY KEY, value TEXT NOT NULL) STRICT" },
     { sql: "INSERT INTO migration_items VALUES (1, 'original')" },
   ],

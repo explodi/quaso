@@ -172,7 +172,7 @@ test("jobs routes: without a provider, 503 with the reason", async () => {
     );
     assertEquals(off.error, {
       code: "llm_unavailable",
-      message: "LLM translation is off: set GEMINI_API_KEY.",
+      message: "LLM translation is off: enter a Gemini API key in Settings.",
     });
     assertEquals(await json(call(app, "/api/v1/models", { key: upload })), { models: [] });
   }, false);

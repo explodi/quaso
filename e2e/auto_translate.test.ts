@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
 /// <reference lib="dom" />
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import type { CreateJobResult, JobInfo, JobsResult } from "@quaso/core";
 import { ANONYMOUS, createFakeTranslator, SYSTEM, type Service } from "@quaso/service";
@@ -177,10 +179,10 @@ browserTest(
     );
     assert(mixed);
     await cdp.detach();
-    await page.screenshot({ path: "/private/tmp/quaso-auto-desktop.png" });
+    await page.screenshot({ path: join(tmpdir(), "quaso-auto-desktop.png") });
     await page.setViewport({ width: 360, height: 800 });
     assert(await page.$eval("dialog", (dialog) => dialog.scrollWidth <= dialog.clientWidth));
-    await page.screenshot({ path: "/private/tmp/quaso-auto-mobile.png" });
+    await page.screenshot({ path: join(tmpdir(), "quaso-auto-mobile.png") });
     await clickButton(page, "Start translation");
     await waitFor(page, () => document.querySelector("dialog[open]") === null);
     const job = await page.evaluate(async () => {

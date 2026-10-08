@@ -17,15 +17,16 @@
     "jsr:@std/path@^1.1.6": "1.1.6",
     "npm:@babel/core@^7.29.7": "7.29.7",
     "npm:@cloudflare/containers@0.3.7": "0.3.7",
-    "npm:@cloudflare/vitest-pool-workers@0.22.0": "0.22.0_@vitest+runner@4.1.11_@vitest+snapshot@4.1.11_vitest@4.1.11_vite@8.3.2",
+    "npm:@cloudflare/vitest-pool-workers@0.22.0": "0.22.0_vitest@4.1.11__@types+node@26.6.4__vite@8.3.2_@types+node@26.6.4",
     "npm:@eslint/js@10.0.1": "10.0.1_eslint@10.11.0",
-    "npm:@rolldown/plugin-babel@0.2.4": "0.2.4_@babel+core@7.29.7_rolldown@1.2.12_vite@8.3.2",
+    "npm:@rolldown/plugin-babel@0.2.4": "0.2.4_@babel+core@7.29.7_vite@8.3.2_@types+node@26.6.4",
     "npm:@types/babel__core@^7.20.5": "7.20.5",
     "npm:@types/js-yaml@4.0.9": "4.0.9",
+    "npm:@types/node@26.6.4": "26.6.4",
     "npm:@types/react-dom@^19.3.0": "19.3.0_@types+react@19.3.0",
     "npm:@types/react@^19.3.0": "19.3.0",
     "npm:@typescript-eslint/parser@8.71.0": "8.71.0_eslint@10.11.0_typescript@5.9.3",
-    "npm:@vitejs/plugin-react@6.1.1": "6.1.1_@rolldown+plugin-babel@0.2.4_babel-plugin-react-compiler@1.0.0_vite@8.3.2_@babel+core@7.29.7_rolldown@1.2.12",
+    "npm:@vitejs/plugin-react@6.1.1": "6.1.1_@rolldown+plugin-babel@0.2.4__@babel+core@7.29.7__vite@8.3.2__@types+node@26.6.4_babel-plugin-react-compiler@1.0.0_vite@8.3.2_@types+node@26.6.4",
     "npm:babel-plugin-react-compiler@1.0.0": "1.0.0",
     "npm:eslint-plugin-react-hooks@7.1.1": "7.1.1_eslint@10.11.0",
     "npm:eslint@10.11.0": "10.11.0",
@@ -39,9 +40,9 @@
     "npm:react@^19.3.0": "19.3.0",
     "npm:typescript-eslint@8.71.0": "8.71.0_eslint@10.11.0_typescript@5.9.3",
     "npm:typescript@5.9.3": "5.9.3",
-    "npm:vite@7.3.6": "7.3.6",
-    "npm:vite@8.3.2": "8.3.2_esbuild@0.28.1",
-    "npm:vitest@4.1.11": "4.1.11_vite@8.3.2_esbuild@0.28.1",
+    "npm:vite@7.3.6": "7.3.6_@types+node@26.6.4",
+    "npm:vite@8.3.2": "8.3.2_@types+node@26.6.4_esbuild@0.28.1",
+    "npm:vitest@4.1.11": "4.1.11_@types+node@26.6.4_vite@8.3.2",
     "npm:wrangler@4.136.3": "4.136.3"
   },
   "jsr": {
@@ -257,7 +258,7 @@
         "workerd@1.20260921.1"
       ]
     },
-    "@cloudflare/vitest-pool-workers@0.22.0_@vitest+runner@4.1.11_@vitest+snapshot@4.1.11_vitest@4.1.11_vite@8.3.2": {
+    "@cloudflare/vitest-pool-workers@0.22.0_vitest@4.1.11__@types+node@26.6.4__vite@8.3.2_@types+node@26.6.4": {
       "integrity": "sha512-OJv/qikkOgxnKxJ5xrLS7zuOLZhc/6iziU+llqZm4tiQf2CJUYwlMuXN68VaWIQebORd1AUx4w6A0oy8XRbuaQ==",
       "dependencies": [
         "@vitest/runner",
@@ -861,16 +862,16 @@
       "os": ["win32"],
       "cpu": ["x64"]
     },
-    "@rolldown/plugin-babel@0.2.4_@babel+core@7.29.7_rolldown@1.2.12_vite@8.3.2": {
+    "@rolldown/plugin-babel@0.2.4_@babel+core@7.29.7_vite@8.3.2_@types+node@26.6.4": {
       "integrity": "sha512-ygmm2j/mN+aCvstHo0x3IOu4uc6LqXT9SJ3q4kpfG/+Yhfz0B+E47FITcC0FljZADwUFARP6E2kiE+Lc26D8wg==",
       "dependencies": [
         "@babel/core",
         "picomatch",
         "rolldown",
-        "vite@8.3.2_esbuild@0.28.1"
+        "vite@8.3.2_@types+node@26.6.4_esbuild@0.28.1"
       ],
       "optionalPeers": [
-        "vite@8.3.2_esbuild@0.28.1"
+        "vite@8.3.2_@types+node@26.6.4_esbuild@0.28.1"
       ]
     },
     "@rolldown/pluginutils@1.0.1": {
@@ -1186,13 +1187,13 @@
         "eslint-visitor-keys@5.0.1"
       ]
     },
-    "@vitejs/plugin-react@6.1.1_@rolldown+plugin-babel@0.2.4_babel-plugin-react-compiler@1.0.0_vite@8.3.2_@babel+core@7.29.7_rolldown@1.2.12": {
+    "@vitejs/plugin-react@6.1.1_@rolldown+plugin-babel@0.2.4__@babel+core@7.29.7__vite@8.3.2__@types+node@26.6.4_babel-plugin-react-compiler@1.0.0_vite@8.3.2_@types+node@26.6.4": {
       "integrity": "sha512-yxLaQV9gkhS8ezJqCM6+ndU7mDY6gqAg75NQ+0IjwEI8IYOmQCgkRwHKVSfWXW076DsqMo0Dk+0FK1U+M5RgFw==",
       "dependencies": [
         "@rolldown/plugin-babel",
         "@rolldown/pluginutils",
         "babel-plugin-react-compiler",
-        "vite@8.3.2_esbuild@0.28.1"
+        "vite@8.3.2_@types+node@26.6.4_esbuild@0.28.1"
       ],
       "optionalPeers": [
         "@rolldown/plugin-babel",
@@ -1210,16 +1211,16 @@
         "tinyrainbow"
       ]
     },
-    "@vitest/mocker@4.1.11_vite@8.3.2_esbuild@0.28.1": {
+    "@vitest/mocker@4.1.11_vite@8.3.2_@types+node@26.6.4": {
       "integrity": "sha512-2XJVD55d1o5AZous5CCGKS74g/riOj9odEt2bQpCVZeblHyHdnMeFl4jl0XjU21stf4mbjUkew2eXQZt65g5CQ==",
       "dependencies": [
         "@vitest/spy",
         "estree-walker",
         "magic-string",
-        "vite@8.3.2_esbuild@0.28.1"
+        "vite@8.3.2_@types+node@26.6.4_esbuild@0.28.1"
       ],
       "optionalPeers": [
-        "vite@8.3.2_esbuild@0.28.1"
+        "vite@8.3.2_@types+node@26.6.4_esbuild@0.28.1"
       ]
     },
     "@vitest/pretty-format@4.1.11": {
@@ -2483,9 +2484,10 @@
         "punycode"
       ]
     },
-    "vite@7.3.6": {
+    "vite@7.3.6_@types+node@26.6.4": {
       "integrity": "sha512-4XP60spRGjSZFf1qYH+dJIkK2znL3zQfl9KkOV9MkkRR/3Dls0dxaBsQPTloEc5BLXWPL9vsOxopxyKoMmDueg==",
       "dependencies": [
+        "@types/node",
         "esbuild",
         "fdir",
         "picomatch",
@@ -2496,11 +2498,15 @@
       "optionalDependencies": [
         "fsevents"
       ],
+      "optionalPeers": [
+        "@types/node"
+      ],
       "bin": true
     },
-    "vite@8.3.2_esbuild@0.28.1": {
+    "vite@8.3.2_@types+node@26.6.4_esbuild@0.28.1": {
       "integrity": "sha512-SQr1x6W5vVSbROg7vsyXIaxK9b0G7zsT68acdWWRmnBUsgDieLCRG+Rep9WdZgcposvv/GSnr4GUUBqB3vXq6w==",
       "dependencies": [
+        "@types/node",
         "esbuild",
         "lightningcss",
         "picomatch",
@@ -2512,13 +2518,15 @@
         "fsevents"
       ],
       "optionalPeers": [
+        "@types/node",
         "esbuild"
       ],
       "bin": true
     },
-    "vitest@4.1.11_vite@8.3.2_esbuild@0.28.1": {
+    "vitest@4.1.11_@types+node@26.6.4_vite@8.3.2": {
       "integrity": "sha512-fhACrNXUidIbGSBr5FlbuBkO7VWC1ZyLl0DO4CU2DrQoAPxX84Ysxs+HeGQpii5lZWV1Q4gBZTTu49mF+A6Edw==",
       "dependencies": [
+        "@types/node",
         "@vitest/expect",
         "@vitest/mocker",
         "@vitest/pretty-format",
@@ -2537,8 +2545,11 @@
         "tinyexec",
         "tinyglobby",
         "tinyrainbow",
-        "vite@8.3.2_esbuild@0.28.1",
+        "vite@8.3.2_@types+node@26.6.4_esbuild@0.28.1",
         "why-is-node-running"
+      ],
+      "optionalPeers": [
+        "@types/node"
       ],
       "bin": true
     },
@@ -2740,6 +2751,7 @@
           "dependencies": [
             "npm:@cloudflare/containers@0.3.7",
             "npm:@cloudflare/vitest-pool-workers@0.22.0",
+            "npm:@types/node@26.6.4",
             "npm:typescript@5.9.3",
             "npm:vite@7.3.6",
             "npm:vitest@4.1.11",

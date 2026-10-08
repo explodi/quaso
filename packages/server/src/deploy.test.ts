@@ -12,7 +12,8 @@ test("deploy: .env.example lists every setting the server reads", async () => {
   const names = new Set(
     [...source.matchAll(/"([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+|PORT)"/g)].map((m) => m[1]),
   );
-  assert(names.size >= 25, [...names].join(", "));
+  // Most settings live in the admin panel; this guards against the pattern finding none.
+  assert(names.size >= 20, [...names].join(", "));
   const example = await read("../../../deploy/.env.example");
   const listed = new Set([...example.matchAll(/^(?:# )?([A-Z][A-Z0-9_]*)=/gm)].map((m) => m[1]));
   assertEquals(
@@ -24,7 +25,7 @@ test("deploy: .env.example lists every setting the server reads", async () => {
     [],
   );
   const set = [...example.matchAll(/^([A-Z][A-Z0-9_]*)=/gm)].map((m) => m[1]);
-  assertEquals(set, ["QUASO_DOMAIN", "GEMINI_API_KEY", "TRUST_PROXY"]);
+  assertEquals(set, ["QUASO_DOMAIN", "SETUP_KEY", "TRUST_PROXY"]);
 });
 
 test("deploy: the Docker and Compose files carry the licence header", async () => {

@@ -116,7 +116,10 @@ describe("the data object and the LLM", () => {
       ok: false,
       status: 503,
       body: {
-        error: { code: "llm_unavailable", message: "LLM translation is off: set GEMINI_API_KEY." },
+        error: {
+          code: "llm_unavailable",
+          message: "LLM translation is off: enter a Gemini API key in Settings.",
+        },
       },
     });
     expect(unwrapCall(await data.call("listModels", SYSTEM, {}))).toEqual({ models: [] });

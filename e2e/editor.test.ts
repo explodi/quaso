@@ -326,7 +326,7 @@ browserTest(
       (s) => s.key === "gameOver.score",
     )!;
     const tab = await openTab(browser, server, "/", emulateMac);
-    const { page } = tab;
+    let page = tab.page;
     assertEquals(await page.evaluate(() => navigator.platform), "MacIntel");
     // Control: a search box outside the editor gets the characters.
     await waitFor(page, () => document.querySelector("#language-search") !== null);
@@ -341,7 +341,10 @@ browserTest(
       "{}",
     );
 
-    await page.goto(`${server.url}/translate/de?id=${score.id}`, { waitUntil: "networkidle0" });
+    // A new tab rather than a navigation: on Linux, Chrome drops the emulated platform when
+    // the tab navigates, and the editor would take Option+digit for a placeholder shortcut.
+    const editor = await openTab(browser, server, `/translate/de?id=${score.id}`, emulateMac);
+    page = editor.page;
     await waitFor(page, () => document.querySelector("#translation-text") !== null);
     const value = () =>
       page.evaluate(() => document.querySelector<HTMLTextAreaElement>("#translation-text")!.value);
@@ -382,5 +385,6 @@ browserTest(
     await waitFor(page, () => document.querySelector("dialog[open]") !== null);
     assertStringIncludes(await text(page, "dialog[open]"), "Control+1…9");
     assertEquals(tab.problems, []);
+    assertEquals(editor.problems, []);
   },
 );
