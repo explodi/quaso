@@ -394,6 +394,11 @@ browserTest(
     await sources(server);
     const tab = await openTab(browser, server, "/signin");
     await signIn(tab.page, server, OWNER);
+    await waitFor(tab.page, () =>
+      [...document.querySelectorAll<HTMLButtonElement>("button")].some(
+        (button) => button.textContent?.trim() === "Auto-translate" && !button.disabled,
+      ),
+    );
     await click(tab.page, "Auto-translate");
     await waitFor(tab.page, () =>
       document.querySelector(".estimate")?.textContent?.includes("1 strings"),
