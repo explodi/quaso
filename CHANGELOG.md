@@ -7,6 +7,9 @@ Release candidates are for deployment and migration testing. The team decides wh
 
 ### Added
 
+- Every push to main publishes its CLI to npm under the tag `main`, as
+  `<version>.main.g<commit>` (`-main.g<commit>` after a stable version), next to the image's
+  `sha-<commit>`.
 - `quaso translate --qa` (`qa` in a job's scope) also translates again the green translations that
   fail the quality checks, such as values imported with `--allow-qa-errors`. Blue ones never
   change.

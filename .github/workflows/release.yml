@@ -4,11 +4,17 @@
 # <GitHub owner>/quaso). The tag must match the version in the root package.json, the only
 # version: the CLI, the image and the website all report it.
 #
+# Every push to main also publishes the CLI it builds, as <version>-main.g<commit> (or
+# <version>.main.g<commit> when the version is a pre-release) under the npm tag `main`,
+# beside the image docker.yml publishes as sha-<commit>: a deployment can pin both to one
+# commit. It lives here because npm trusts this workflow file to publish.
+#
 name: Release
 
 on:
   push:
     tags: ["v*"]
+    branches: [main]
 
 permissions:
   contents: read
@@ -28,8 +34,15 @@ jobs:
       - id: version
         shell: bash
         run: |
-          version="${GITHUB_REF_NAME#v}"
           found="$(jq -r .version package.json)"
+          if [ "$GITHUB_REF_TYPE" = branch ]; then
+            # The `g` keeps the identifier valid semver when the short hash starts with a digit.
+            separator="-"
+            if [[ "$found" == *-* ]]; then separator="."; fi
+            echo "version=${found}${separator}main.g${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          version="${GITHUB_REF_NAME#v}"
           if [ "$found" != "$version" ]; then
             echo "::error::package.json has version $found, but the tag is $GITHUB_REF_NAME"
             exit 1
@@ -38,6 +51,8 @@ jobs:
 
   validate:
     name: Validate the complete application
+    # On main, ci.yml has already run these checks for the commit.
+    if: github.ref_type == 'tag'
     needs: check
     runs-on: ubuntu-latest
     timeout-minutes: 35
@@ -71,6 +86,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      # The version to publish (the tag's, or main's per-commit one), so `quaso version` says it.
+      - name: Set the version
+        env:
+          VERSION: ${{ needs.check.outputs.version }}
+        run: jq --arg version "$VERSION" '.version = $version' package.json > package.json.next && mv package.json.next package.json
       - run: deno task build:cli
       - run: deno run -A scripts/cli_e2e.ts --runtime node
       - run: deno run -A scripts/cli_e2e.ts --runtime deno
@@ -82,6 +102,7 @@ jobs:
 
   npm:
     name: Publish the CLI to npm
+    if: github.ref_type == 'tag'
     needs: [check, test, validate]
     runs-on: ubuntu-latest
     permissions:
@@ -120,8 +141,33 @@ jobs:
         # authenticates with the job's OIDC token and adds provenance by itself.
         run: npm publish --access public --tag "${{ steps.tag.outputs.tag }}"
 
+  npm-main:
+    name: Publish main's CLI to npm
+    if: github.ref_type == 'branch'
+    needs: [check, test]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+      - uses: actions/download-artifact@v4
+        with:
+          name: cli-npm
+          path: dist
+      - name: The package's version is main's
+        run: test "$(jq -r .version dist/package.json)" = "${{ needs.check.outputs.version }}"
+      - name: Publish under the `main` tag
+        working-directory: dist
+        # Never `latest`: `npm install` keeps picking releases.
+        run: npm publish --access public --tag main
+
   docker:
     name: Publish the Docker image
+    if: github.ref_type == 'tag'
     needs: [check, test, validate]
     runs-on: ubuntu-latest
     permissions:
@@ -158,6 +204,7 @@ jobs:
 
   notes:
     name: Publish release notes
+    if: github.ref_type == 'tag'
     needs: [check, npm, docker]
     runs-on: ubuntu-latest
     permissions:

@@ -41,6 +41,10 @@ deno run -A npm:@quaso-i18n/cli@1.0.0-rc.1 status
 
 To install a global `quaso` command, run `deno install --global -A --name quaso npm:@quaso-i18n/cli`.
 
+Every commit on Quaso's main is also published, as `<version>.main.g<commit>` under the npm tag
+`main` (`npx @quaso-i18n/cli@main`), for instances deployed from main's `sha-<commit>` image: pin
+the CLI of the commit your instance runs.
+
 ## Connecting to your instance
 
 Two environment variables connect the CLI to your team's Quaso instance:

@@ -40,8 +40,8 @@ packages cannot be silently overwritten.
 
 ## What a tag publishes
 
-`.github/workflows/release.yml` runs on `v*` tags, verifies versions and tests the built CLI before
-publishing. A separate validation gate also requires the complete checks, app build, browser suite,
+`.github/workflows/release.yml` runs on `v*` tags (and on main, below), verifies versions and tests
+the built CLI before publishing. A separate validation gate also requires the complete checks, app build, browser suite,
 Cloudflare checks, documentation build and Docker smoke test to pass. The website workflow also runs
 on version tags.
 
@@ -58,6 +58,17 @@ full version only. On npm, the workflow publishes to `latest` until a stable ver
 that, prereleases go to `next`, so `npm install` never picks a release candidate. Check the workflow
 results and registry visibility after publishing. The Docker Hub repository needs to be public for
 anonymous pulls.
+
+## What every push to main publishes
+
+Besides the image (`:latest` and `:sha-<commit>`, by `docker.yml`), `release.yml` builds and
+tests the CLI of every push to main, as for a release, and publishes it to npm under the tag
+`main`, never `latest`. Its version is the repository's with the commit appended:
+`1.0.0-rc.2.main.gae28a74` (`1.0.0-main.gae28a74` after a stable `1.0.0`), the `g` keeping the
+identifier valid when the short hash starts with a digit. A deployment that runs
+`<image>:sha-ae28a74` pins `@quaso-i18n/cli@1.0.0-rc.2.main.gae28a74`, so the CLI and the server
+come from one commit. `npm install @quaso-i18n/cli@main` takes the newest. These versions are
+for deployments that follow main; releases go to `latest` and `next` as above.
 
 The image is `<GitHub owner>/quaso`, or the repository variable `DOCKERHUB_IMAGE` (such as
 `yourname/quaso`) when your Docker Hub namespace differs. Before the first tag, add
