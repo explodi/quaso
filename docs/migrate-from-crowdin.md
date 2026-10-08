@@ -80,8 +80,9 @@ The first folder should contain only approved entries; the second contains the f
 export. `--all` permits exports without local source files under these temporary roots.
 Crowdin's [download reference](https://crowdin.github.io/crowdin-cli/commands/crowdin-download-translations)
 explains that `--export-only-approved` alone fills unapproved entries with source text;
-`--skip-untranslated-strings` omits those entries. Add your normal branch option if you
-use a Crowdin branch.
+with `--skip-untranslated-strings`, JSON files keep those keys with empty values instead, and
+Quaso's import skips empty values as untranslated. Add your normal branch option if you use a
+Crowdin branch.
 
 Check the exported paths before importing: with `src/locales/{lang}/{path}` in Quaso's
 config, each export root must contain `src/locales/es/common.json`, for example. If

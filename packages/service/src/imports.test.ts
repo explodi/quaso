@@ -85,6 +85,7 @@ test("import writes green translations through the write path", async () => {
     imported: 3,
     unchanged: 0,
     skippedIdentical: 0,
+    skippedEmpty: 0,
     droppedForms: 0,
     skippedBlue: 0,
     refused: [],
@@ -189,6 +190,26 @@ test("allowQaErrors imports failing values with their QA errors; export fills th
   assertEquals(
     [polish.coins_one, polish.coins_few, polish.coins_many, polish.coins_other],
     ["{{count}} moneta", "{{count}} coins", "{{count}} coins", "{{count}} monet"],
+  );
+});
+
+test("empty values are skipped as untranslated, even with allowQaErrors", async () => {
+  using instance = await project();
+  const file = {
+    title: "",
+    greeting: "  ",
+    coins_one: "",
+    coins_other: "",
+    menu: { play: "Graj" },
+  };
+  const result = await importPl(instance, file, { as: "blue", allowQaErrors: true });
+  assertEquals(
+    [result.imported, result.skippedEmpty, result.flagged.length, result.refused.length],
+    [1, 3, 0, 0],
+  );
+  assertEquals(
+    translations(instance).map((row) => row.key),
+    ["menu.play"],
   );
 });
 

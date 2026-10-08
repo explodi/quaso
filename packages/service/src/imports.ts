@@ -3,7 +3,7 @@
  * Import (design §5.10, CLI-7): existing translation files, read against the English on
  * the server, written through the write path as green or blue. Values identical to the
  * English are skipped (tools such as Crowdin write the English into untranslated
- * entries), values that fail QA-1 are refused and reported (or, with `allowQaErrors`,
+ * entries), and so are empty ones (or `""`, when told to skip untranslated entries), values that fail QA-1 are refused and reported (or, with `allowQaErrors`,
  * imported with their QA errors and listed as flagged), and blue translations stay
  * unless `overwrite`. One guarded commit; a dry run returns the plan without writing.
  */
@@ -212,6 +212,7 @@ function planImport(
     imported: 0,
     unchanged: 0,
     skippedIdentical: 0,
+    skippedEmpty: 0,
     droppedForms: 0,
     skippedBlue: 0,
     refused: [],
@@ -296,6 +297,10 @@ function planImportFile(
     const english = fromJson<TextValue>(row.source);
     const { value, dropped } = withoutUnusedForms(readValue, row, english, facts, language);
     result.droppedForms += dropped;
+    if (blank(value) && !blank(english)) {
+      result.skippedEmpty++;
+      continue;
+    }
     if (!request.keepIdentical && identical(value, english)) {
       result.skippedIdentical++;
       continue;
@@ -366,6 +371,15 @@ function withoutUnusedForms(
   const forms = Object.entries(value as PluralForms);
   const kept = forms.filter(([category]) => used.has(category));
   return { value: Object.fromEntries(kept) as PluralForms, dropped: forms.length - kept.length };
+}
+
+/**
+ * Whether a value has no text at all: tools such as Crowdin write untranslated entries as
+ * `""` when told to skip them, and such a value is no translation, whatever `allowQaErrors`.
+ */
+function blank(value: TextValue): boolean {
+  const texts = typeof value === "string" ? [value] : Object.values(value as PluralForms);
+  return texts.every((text) => text === undefined || text.trim() === "");
 }
 
 /**

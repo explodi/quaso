@@ -17,6 +17,8 @@ Release candidates are for deployment and migration testing. The team decides wh
 
 ### Changed
 
+- `quaso import` skips empty values (`""`) as untranslated, as `skippedEmpty`, even with
+  `--allow-qa-errors`: Crowdin writes untranslated entries that way when asked to skip them.
 - `quaso import` ignores plural forms a language doesn't use, such as `_one` in Japanese, instead
   of refusing the whole translation, and counts them as `droppedForms`.
 

@@ -192,6 +192,7 @@ export class FakeService implements ServiceApi {
       imported: 0,
       unchanged: 0,
       skippedIdentical: 0,
+      skippedEmpty: 0,
       droppedForms: 0,
       skippedBlue: 0,
       refused: [],
