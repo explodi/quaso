@@ -321,8 +321,10 @@ To preserve Crowdin's proofread state, import its approved-only export first wit
 current directory. The export needs no config or English files; the project supplies those.
 Blue translations stay, and values identical to English are skipped in both runs.
 
-Values that fail the quality checks are refused and listed, and the exit code is 6; the other values
-are imported:
+Plural forms a language doesn't use are ignored rather than refused: files that repeat the English
+categories, such as `coins_one` beside `coins_other` in Japanese, import their `other` form, and the
+summary counts the unused forms dropped. Values that fail the quality checks are refused and listed,
+and the exit code is 6; the other values are imported:
 
 ```text
 Refused by the quality checks (1):

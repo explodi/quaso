@@ -9,6 +9,7 @@
 import {
   canonicalLanguageTag,
   canonicalValue,
+  categoriesFor,
   type ErrorDetail,
   errorsOf,
   type ImportRequest,
@@ -32,7 +33,7 @@ import type { Context } from "./context.ts";
 import { bumpRevision, writeRevision, fromJson, toJson, transaction } from "./db.ts";
 import { entryFromRow } from "./entries.ts";
 import { badRequest, ServiceError } from "./errors.ts";
-import { type Facts, loadFacts } from "./facts.ts";
+import { type Facts, loadFacts, overrideOf } from "./facts.ts";
 import {
   checkValue,
   planTranslationWrite,
@@ -210,6 +211,7 @@ function planImport(
     imported: 0,
     unchanged: 0,
     skippedIdentical: 0,
+    droppedForms: 0,
     skippedBlue: 0,
     refused: [],
     unknownKeys: [],
@@ -286,10 +288,12 @@ function planImportFile(
   const existing = new Map(snapshot.translations.map((row) => [row.string_id, row]));
   const byKey = new Map(rows.map((row) => [row.key, row]));
   const actors = new ActorDirectory({ users: [], tokens: [] });
-  for (const [key, value] of read.values) {
+  for (const [key, readValue] of read.values) {
     const row = byKey.get(key);
     if (row === undefined) continue;
     const english = fromJson<TextValue>(row.source);
+    const { value, dropped } = withoutUnusedForms(readValue, row, english, facts, language);
+    result.droppedForms += dropped;
     if (!request.keepIdentical && identical(value, english)) {
       result.skippedIdentical++;
       continue;
@@ -332,6 +336,31 @@ function planImportFile(
     else result.unchanged++;
   }
   return statements;
+}
+
+/**
+ * A plural value without the forms its language doesn't use: tools that copy the English
+ * categories write `_one` beside `_other` in Japanese, say. No download ever writes them,
+ * so the rest of the value is still a complete translation.
+ */
+function withoutUnusedForms(
+  value: TextValue,
+  row: StringRow,
+  english: TextValue,
+  facts: Facts,
+  language: string,
+): { value: TextValue; dropped: number } {
+  const isPlural = row.kind === "plural" || row.kind === "ordinal";
+  if (!isPlural || typeof value === "string" || typeof english === "string") {
+    return { value, dropped: 0 };
+  }
+  const kind = row.kind as "plural" | "ordinal";
+  const used = new Set<string>(
+    categoriesFor(language, kind, english as PluralForms, overrideOf(facts, language)),
+  );
+  const forms = Object.entries(value as PluralForms);
+  const kept = forms.filter(([category]) => used.has(category));
+  return { value: Object.fromEntries(kept) as PluralForms, dropped: forms.length - kept.length };
 }
 
 /**
