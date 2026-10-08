@@ -625,3 +625,66 @@ test("tokenize stays linear on adversarial input", () => {
     assert(elapsed < 2000, `${elapsed} ms for ${text.slice(0, 20)}…`);
   }
 });
+
+const BRACES = { prefix: "{{", suffix: "}}", extra: [{ prefix: "{", suffix: "}" }] };
+
+test("extra delimiters: the app's {name} beside i18next's {{count}}", () => {
+  const text = "{companyName} has {{count}} jobs";
+  const tokens = tokenize(text, BRACES);
+  assertEquals(describe(tokens), [
+    "placeholder:{companyName}",
+    "text: has ",
+    "placeholder:{{count}}",
+    "text: jobs",
+  ]);
+  assertCovers(text, tokens);
+  assertEquals(tokens[0], {
+    type: "placeholder",
+    raw: "{companyName}",
+    name: "companyName",
+    unescaped: false,
+    delimiters: { prefix: "{", suffix: "}" },
+    start: 0,
+    end: 13,
+  });
+});
+
+test("extra delimiters: without them, {name} is plain text", () => {
+  assertEquals(describe(tokenize("{companyName} has {{count}} jobs")), [
+    "text:{companyName} has ",
+    "placeholder:{{count}}",
+    "text: jobs",
+  ]);
+});
+
+test("extra delimiters: the prefix nearest the suffix starts the placeholder", () => {
+  const text = "{a {b} c";
+  assertEquals(describe(tokenize(text, BRACES)), ["text:{a ", "placeholder:{b}", "text: c"]);
+  assertCovers(text, tokenize(text, BRACES));
+});
+
+test("extra delimiters: a blank name or a line break is plain text", () => {
+  assertEquals(describe(tokenize("{ } and {a\nb}", BRACES)), ["text:{ } and {a\nb}"]);
+  assertEquals(describe(tokenize("{a\n{b}", BRACES)), ["text:{a\n", "placeholder:{b}"]);
+});
+
+test("extra delimiters: a reference's options stay in the reference", () => {
+  const text = '$t(key, {"count": 3}) {name}';
+  assertEquals(describe(tokenize(text, BRACES)), [
+    'reference:$t(key, {"count": 3})',
+    "text: ",
+    "placeholder:{name}",
+  ]);
+});
+
+test("extra delimiters: the key keeps them and trims the name", () => {
+  const [spaced, braced] = placeholdersOf("{ name } {{name}}", BRACES);
+  assertEquals([placeholderKey(spaced), placeholderKey(braced)], ["{name}", "{{name}}"]);
+});
+
+test("extra delimiters: many prefixes without a suffix stay linear", () => {
+  const text = "{".repeat(200_000) + "x";
+  const started = performance.now();
+  assertEquals(describe(tokenize(text, BRACES)), [`text:${text}`]);
+  assert(performance.now() - started < 2000);
+});

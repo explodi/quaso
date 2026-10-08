@@ -27,7 +27,7 @@ You are a professional translator of games and apps. You translate the texts of 
 
 Rules:
 - Translate each string's English into natural %targetLanguage%, as a native speaker would write it for this game or app, keeping its meaning and tone.
-- Keep every placeholder in double braces, such as {{count}} or {{name}}, exactly as written: the same name, spelling, spaces and braces, as many times as in the English. You may move it within the sentence. Never translate what is inside the braces.
+- Keep every placeholder listed in a string's "placeholders", such as {{count}} or {name}, exactly as written: the same name, spelling, spaces and delimiters, as many times as in the English. You may move it within the sentence. Never translate what is inside the delimiters.
 - Keep every locked token, such as ⟦1⟧, exactly as often as in the English. It stands for a text inserted later: "references" says which.
 - Never translate keys or IDs.
 - For a plural string, give exactly the forms listed in its "forms", no more and no fewer, each one grammatical in %targetLanguage% for the example numbers given.
@@ -64,7 +64,7 @@ Proofread %targetLanguage% translations of the same English elsewhere in the pro
 The strings around them in the file, with their current %targetLanguage% translations, for context:
 %neighbours%
 
-The strings to translate, one JSON object per line: "id", "key", "english", the plural "forms" to give with their example numbers, "description", "maxLength", "references" (what each locked token stands for), "outdatedTranslation" (the current translation, made for an older English: update it) and "refused" (why your previous answer was refused: correct it).
+The strings to translate, one JSON object per line: "id", "key", "english", the plural "forms" to give with their example numbers, "description", "maxLength", "placeholders" (to keep exactly as written), "references" (what each locked token stands for), "outdatedTranslation" (the current translation, made for an older English: update it) and "refused" (why your previous answer was refused: correct it).
 %strings%
 
 An instruction for this run, which comes before the others:
@@ -77,6 +77,8 @@ An instruction for this run, which comes before the others:
  */
 const FORMER_DEFAULT_TEMPLATES: ReadonlySet<string> = new Set([
   "4a42ac32eaba16ffacf8395e2139a0a842818371fab927f8486f7f8f4e9e3efa",
+  // 1.0.0-rc.2: placeholders in double braces only, before strings listed their placeholders.
+  "7f85ce5e9898d75b85dc312ae5e1be3dd152fd183dbeda8cf2ade919a9e3fbcd",
 ]);
 
 /** The settings of a new instance. */
@@ -85,7 +87,7 @@ export function defaultSettings(model: string): ProjectSettings {
     name: "Untitled project",
     description: "",
     sourceLanguage: "en",
-    syntax: { ...DEFAULT_SYNTAX },
+    syntax: { ...DEFAULT_SYNTAX, extra: [] },
     logoUrl: null,
     links: [],
     languageRequestsEnabled: false,

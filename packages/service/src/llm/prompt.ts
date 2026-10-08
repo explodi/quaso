@@ -20,6 +20,7 @@ import {
   type InterpolationSyntax,
   languageName,
   maskReferences,
+  placeholdersOf,
   PLURAL_CATEGORIES,
   pluralCategories,
   type PluralCategory,
@@ -312,6 +313,8 @@ function stringLine(
   }
   if (string.description.trim() !== "") line.description = string.description.trim();
   if (mask.maxLength !== undefined) line.maxLength = mask.maxLength;
+  const placeholders = placeholdersIn(string.english, context.syntax);
+  if (placeholders.length > 0) line.placeholders = placeholders;
   if (mask.references.length > 0) {
     line.references = Object.fromEntries(
       mask.references.map((raw, index) => [`⟦${index + 1}⟧`, referenceText(raw, context)]),
@@ -330,6 +333,18 @@ function stringLine(
     };
   }
   return line;
+}
+
+/**
+ * The placeholders of the English as written, each once, in order: the model sees the app's
+ * own `{name}` beside i18next's `{{count}}` and keeps both.
+ */
+function placeholdersIn(english: TextValue, syntax: InterpolationSyntax): string[] {
+  const texts = typeof english === "string" ? [english] : Object.values(english);
+  const raws = texts.flatMap((text) =>
+    text === undefined ? [] : placeholdersOf(text, syntax).map((token) => token.raw),
+  );
+  return [...new Set(raws)];
 }
 
 /** What a reference stands for, for the prompt. */

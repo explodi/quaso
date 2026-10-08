@@ -211,6 +211,24 @@ test("a new placeholder syntax runs the checks again on every translation", asyn
   assertEquals(qa(), 1, "with {{…}}, {{name}} is missing");
 });
 
+test("extra placeholder delimiters are saved and check the app's own placeholders", async () => {
+  using instance = await startTestService();
+  await uploadJson(
+    instance.service,
+    { "jobs.json": { hiring: "{company} is hiring" } },
+    { languages: ["de"] },
+  );
+  const admin = addUser(instance.sql, "administrator");
+  write(instance, "jobs.json", "hiring", "de", "{Firma} stellt ein");
+  const qa = () =>
+    instance.sql.query<{ qa_errors: number }>("SELECT qa_errors FROM translations")[0].qa_errors;
+  assertEquals(qa(), 0, "without extra delimiters, {company} is plain text");
+  const syntax = { prefix: "{{", suffix: "}}", extra: [{ prefix: "{", suffix: "}" }] };
+  const result = await instance.service.updateSettings(admin, { syntax });
+  assertEquals(result.settings.syntax, syntax);
+  assertEquals(qa(), 2, "{company} is missing and {Firma} isn't in the English");
+});
+
 test("models come from the provider, kept for ten minutes", async () => {
   let calls = 0;
   const provider = {

@@ -1207,3 +1207,28 @@ test("checks stay fast on large values", () => {
   assertEquals(plural("pl", forms, polish), []);
   assert(performance.now() - again < 10000);
 });
+
+test("extra delimiters: the app's own placeholders are checked like i18next's", () => {
+  const syntax = { prefix: "{{", suffix: "}}", extra: [{ prefix: "{", suffix: "}" }] };
+  const english = "Join {companyName}, {{count}} openings";
+  assertEquals(text(english, "Komm zu {companyName}, {{count}} Stellen", { syntax }), []);
+  assertEquals(
+    errorsOf(text(english, "Komm zu {Firmenname}, {{count}} Stellen", { syntax })).map((result) => [
+      result.check,
+      result.value,
+    ]),
+    [
+      ["placeholder_missing", "{companyName}"],
+      ["placeholder_extra", "{Firmenname}"],
+    ],
+  );
+  assertEquals(
+    errorsOf(text(english, "Komm zu {{companyName}}, {{count}} Stellen", { syntax })).map(
+      (result) => [result.check, result.value],
+    ),
+    [
+      ["placeholder_missing", "{companyName}"],
+      ["placeholder_extra", "{{companyName}}"],
+    ],
+  );
+});

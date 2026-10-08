@@ -171,7 +171,7 @@ test("getProject describes the project, its languages and facts", async () => {
   const info = await instance.service.getProject(ANONYMOUS, {});
   assertEquals(info.name, "Untitled project");
   assertEquals([info.sourceLanguage, info.sourceLanguageName], ["en", "English"]);
-  assertEquals(info.syntax, { prefix: "{{", suffix: "}}" });
+  assertEquals(info.syntax, { prefix: "{{", suffix: "}}", extra: [] });
   assertEquals(
     info.languages.map((language) => [language.tag, language.green]),
     [

@@ -225,7 +225,9 @@ explains what happens before you proceed.
 Administrators choose a section in **Settings**:
 
 - **General**: project name, description, logo, links and interpolation delimiters. Match your app's
-  placeholder syntax; changing it rechecks translations.
+  placeholder syntax; changing it rechecks translations. **Other placeholders** adds the delimiters
+  of placeholders your app fills in itself, such as `{` and `}` for `{name}` beside i18next's
+  `{{count}}`: the checks, the editor and the LLM keep them like i18next's.
 - **Languages**: add or remove target languages, set instructions and override cardinal or ordinal
   plural categories when the app's runtime needs different rules.
 - **Files and length limits**: describe file context and string constraints. Config-defined limits

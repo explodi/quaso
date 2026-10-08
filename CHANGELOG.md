@@ -5,6 +5,13 @@ Release candidates are for deployment and migration testing. The team decides wh
 
 ## [Unreleased]
 
+### Added
+
+- Other placeholder delimiters (`syntax.extra` in Settings): placeholders an app fills in itself,
+  such as `{name}` beside i18next's `{{count}}`, are found, checked, shown as chips and kept by the
+  LLM like i18next's. Each string in the prompt lists its `placeholders`; instances on the
+  previous default prompt get the new one.
+
 ### Changed
 
 - `quaso import` ignores plural forms a language doesn't use, such as `_one` in Japanese, instead
