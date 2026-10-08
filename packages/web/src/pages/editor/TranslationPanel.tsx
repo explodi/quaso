@@ -21,7 +21,7 @@ import {
 
 /**
  * The editor's translation panel (design §5.9, S7.6): the key, the description and the
- * maximum length; the English with placeholder and reference chips; one input per plural
+ * maximum length; the source with placeholder and reference chips; one input per plural
  * form with its example numbers; live quality checks from core (errors block saving,
  * warnings don't); a length counter; and the actions the person's role allows. People who
  * can't write see the translation and an invitation to sign in instead (S7.8).
@@ -519,7 +519,7 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
 
       <section className="panel-source" aria-labelledby="source-heading">
         <H3 ui id="source-heading" className="panel-label">
-          English
+          {project.sourceLanguageName}
         </H3>
         {typeof detail.source === "string" ? (
           <p className="source" lang={project.sourceLanguage} dir={sourceDirection}>
@@ -556,7 +556,12 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
       </section>
 
       {!writable && (
-        <ReadOnly detail={detail} language={language} next={location.pathname + location.search} />
+        <ReadOnly
+          detail={detail}
+          language={language}
+          sourceLanguageName={project.sourceLanguageName}
+          next={location.pathname + location.search}
+        />
       )}
       {jobId !== null && (
         <JobProgress
@@ -731,7 +736,7 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
                 icon={<CheckSquareIcon />}
                 title={
                   current?.outdated
-                    ? "Confirm that the translation still fits the new English"
+                    ? `Confirm that the translation still fits the new ${project.sourceLanguageName}`
                     : undefined
                 }
                 onClick={() => action("approve")}
@@ -750,7 +755,7 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
               </Button>
             )}
             <Button variant="ghost" icon={<CopyIcon />} onClick={copySource} title="Ctrl+Shift+C">
-              Copy the English
+              Copy the {project.sourceLanguageName}
             </Button>
             {canTranslate && !(colour === "blue" && !current?.outdated) && (
               <Button
@@ -824,8 +829,8 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
         }
       >
         <p>
-          The {language.name} translation of <code>{detail.key}</code> goes, and the app shows the
-          English until someone translates it again. Its history stays.
+          The {language.name} translation of <code>{detail.key}</code> goes, and the app shows the{" "}
+          {project.sourceLanguageName} until someone translates it again. Its history stays.
         </p>
       </Dialog>
     </div>
@@ -934,10 +939,12 @@ function CheckList({ id, checks }: { id?: string; checks: CheckResult[] }) {
 function ReadOnly({
   detail,
   language,
+  sourceLanguageName,
   next,
 }: {
   detail: StringDetail;
   language: LanguageProgress;
+  sourceLanguageName: string;
   next: string;
 }) {
   const session = useSession();
@@ -967,7 +974,7 @@ function ReadOnly({
           )}
         </p>
       ) : (
-        <p className="muted">Not translated yet: the app shows the English.</p>
+        <p className="muted">Not translated yet: the app shows the {sourceLanguageName}.</p>
       )}
       {!session.user ? (
         <div className="signin-prompt">

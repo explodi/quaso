@@ -37,14 +37,24 @@ export function valueText(value: TextValue | null): string {
         .join("\n");
 }
 
-function Proposal({ suggestion }: { suggestion: SuggestionInfo }) {
+function Proposal({
+  suggestion,
+  sourceLanguage,
+  sourceLanguageName,
+}: {
+  suggestion: SuggestionInfo;
+  sourceLanguage?: string;
+  sourceLanguageName?: string;
+}) {
   const current = valueText(suggestion.current?.value ?? null);
   const proposal = suggestion.value === null ? current : valueText(suggestion.value);
   return (
     <div className="review-diff">
       <div>
-        <H3>English</H3>
-        <p className="value-text">{valueText(suggestion.source)}</p>
+        <H3>{sourceLanguageName ?? "Source text"}</H3>
+        <p className="value-text" lang={sourceLanguage} dir="auto">
+          {valueText(suggestion.source)}
+        </p>
       </div>
       <div>
         <H3>Current translation</H3>
@@ -308,7 +318,11 @@ function SuggestionsPage({ mine }: { mine: boolean }) {
               {suggestion.file} · {suggestion.language} · {suggestion.author.name} ·{" "}
               {formatDateTime(suggestion.createdAt)}
             </p>
-            <Proposal suggestion={suggestion} />
+            <Proposal
+              suggestion={suggestion}
+              sourceLanguage={project.data?.sourceLanguage}
+              sourceLanguageName={project.data?.sourceLanguageName}
+            />
             {suggestion.checks.length > 0 && (
               <ul className="checks">
                 {suggestion.checks.map((check, i) => (

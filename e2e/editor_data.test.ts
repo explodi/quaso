@@ -470,7 +470,7 @@ browserTest(
 );
 
 browserTest(
-  "right-to-left English: a Hebrew source shows right to left in the panel and the list",
+  "a Hebrew source has the correct language labels and reads right to left in the panel and list",
   { session: MANAGER_SESSION },
   async ({ server, browser }) => {
     await server.api("/sources", {
@@ -505,7 +505,9 @@ browserTest(
     );
     assert(directions.length >= 5, JSON.stringify(directions));
     for (const direction of directions) assertEquals(direction, "he:rtl");
-    // The English inputs stay left to right.
+    assertEquals(await text(page, "#source-heading"), "Hebrew");
+    assertStringIncludes(await text(page, ".panel-actions"), "Copy the Hebrew");
+    // The English translation inputs stay left to right.
     assertEquals(
       await page.evaluate(
         () => document.querySelector<HTMLTextAreaElement>(".pane-panel textarea")!.dir,
