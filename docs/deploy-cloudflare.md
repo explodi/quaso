@@ -162,7 +162,7 @@ docker run --rm \
   -e SERVICES_URL=https://translate.yourgame.com/internal \
   -e SERVICE_TOKEN \
   -e SECRET_KEY \
-  'explodi/quaso:1' token create --name ci --scope upload
+  'explodi/quaso:latest' token create --name ci --scope upload
 ```
 
 ## Updates
@@ -310,7 +310,7 @@ Cloudflare storage, or to move an instance between setups.
      -e SERVICE_TOKEN \
      -e SECRET_KEY \
      -e PUBLIC_URL=https://translate-vm.yourgame.com \
-     'explodi/quaso:1'
+     'explodi/quaso:latest'
    ```
 
    Or, with Docker Compose, add the three variables to `.env`. `SERVICES_URL` must use `https`.

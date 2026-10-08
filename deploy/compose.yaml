@@ -9,10 +9,9 @@
 # to Quaso. Upgrades: docker compose pull && docker compose up -d
 services:
   quaso:
-    # The official image. `latest` follows main; pin a release (such as explodi/quaso:1)
-    # once one is published. To build the image yourself instead, in a clone of the
-    # repository: name it locally (such as quaso:local) and run `docker compose build`; the
-    # build section points at the repository.
+    # The official image, which follows main. To build the image yourself instead, in a
+    # clone of the repository: name it locally (such as quaso:local) and run
+    # `docker compose build`; the build section points at the repository.
     image: explodi/quaso:latest
     build:
       context: ..

@@ -25,10 +25,8 @@ image.
    chmod 600 .env
    ```
 
-   `compose.yaml` uses the official image, `explodi/quaso:latest` on Docker Hub, which follows the
-   main branch. To pin a release, use its version, such as `explodi/quaso:1.0.0-rc.1`; the `:1`
-   alias is created only for stable releases. The `build` section is for a source checkout; using
-   the published image does not need it.
+   `compose.yaml` uses the official image, `explodi/quaso:latest` on Docker Hub. The `build`
+   section is for a source checkout; using the published image does not need it.
 
 3. Edit `.env`. Set `QUASO_DOMAIN=translate.example.com` and `SETUP_KEY` to the output of
    `openssl rand -hex 16`. Keep `TRUST_PROXY=true`, since Caddy is
@@ -58,7 +56,7 @@ volumes. Never run `docker compose down -v` against data you want to keep.
 Without Compose, use an existing reverse proxy for HTTPS:
 
 ```sh
-docker run -d --name quaso --restart unless-stopped   -p 127.0.0.1:8000:8000 -v quaso-data:/data   -e PUBLIC_URL=https://translate.example.com   'explodi/quaso:1'
+docker run -d --name quaso --restart unless-stopped   -p 127.0.0.1:8000:8000 -v quaso-data:/data   -e PUBLIC_URL=https://translate.example.com   'explodi/quaso:latest'
 ```
 
 The loopback binding lets a proxy on this VM reach Quaso. Set `TRUST_PROXY=true` only when a trusted
