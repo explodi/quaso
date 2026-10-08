@@ -1,5 +1,8 @@
 # Local development data (SQLite file, generated secret key)
 .quaso/
+# SQLite's side files, written next to any database that is opened
+*.sqlite-shm
+*.sqlite-wal
 # Local planning notes
 /plans/
 # Cloudflare local secrets

@@ -76,11 +76,11 @@ reader. The migration steps are in [CONTRIBUTING.md](../../CONTRIBUTING.md#addin
 
 ## Keep a database from every supported release
 
-`packages/service/testdata/upgrade/` preserves databases created with historical implementations:
-schema 1 at commit `a290bab` and schema 3 at `c855ab9`. Schema 2 was introduced alongside schema 3
-and never shipped separately. These are original databases, not today's migrations run backwards.
-`provenance.json` records their origins; each `vN-export.json` and `vN-status.json` records that
-version's responses. Run the upgrade check directly with:
+`packages/service/testdata/upgrade/` preserves databases created with historical implementations.
+`v1.sqlite` and `v3.sqlite` come from Beta 1 (schema 1 at commit `a290bab`, schema 3 at `c855ab9`);
+Beta 2 restarted the schema, so the test checks that it refuses them and leaves them unchanged.
+`provenance.json` records their origins. These are original databases, not today's migrations run
+backwards. Run the upgrade check directly with:
 
 ```sh
 deno test -A packages/service/src/upgrade.test.ts
