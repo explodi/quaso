@@ -27,19 +27,19 @@ dependencies.
 **With npm**, pin it in your game's `package.json`, so that everyone and CI use the same version:
 
 ```sh
-npm install --save-dev @quaso/cli
+npm install --save-dev quaso-cli
 npx quaso status
 ```
 
-Or run a version without installing it: `npx @quaso/cli@1.0.0-rc.1 status`.
+Or run a version without installing it: `npx quaso-cli@1.0.0-rc.1 status`.
 
 **With Deno**, run it from npm:
 
 ```sh
-deno run -A npm:@quaso/cli@1.0.0-rc.1 status
+deno run -A npm:quaso-cli@1.0.0-rc.1 status
 ```
 
-To install a global `quaso` command, run `deno install --global -A --name quaso npm:@quaso/cli`.
+To install a global `quaso` command, run `deno install --global -A --name quaso npm:quaso-cli`.
 
 ## Connecting to your instance
 

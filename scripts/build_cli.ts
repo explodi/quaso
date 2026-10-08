@@ -42,10 +42,14 @@ export function checkBundle(code: string): string[] {
   return problems;
 }
 
-/** The npm package's `package.json`. */
-export function packageJson(version: string, repository?: string): Record<string, unknown> {
+/** The npm package's `package.json`; `name` is the one in packages/cli/package.json. */
+export function packageJson(
+  name: string,
+  version: string,
+  repository?: string,
+): Record<string, unknown> {
   const pkg: Record<string, unknown> = {
-    name: "@quaso/cli",
+    name,
     version,
     description:
       "The command line of Quaso, localization for i18next JSON files: " +
@@ -106,6 +110,7 @@ export async function bundleCli(output: string): Promise<string[]> {
 
 if (import.meta.main) {
   const version = await cliVersion();
+  const { name } = JSON.parse(await fs.readFile(join(CLI, "package.json"), "utf8"));
   await fs.rm(DIST, { recursive: true }).catch(() => {});
   await fs.mkdir(DIST, { recursive: true });
   const output = join(DIST, BUNDLE);
@@ -118,7 +123,7 @@ if (import.meta.main) {
   const repository = process.env["GITHUB_REPOSITORY"];
   await fs.writeFile(
     join(DIST, "package.json"),
-    `${JSON.stringify(packageJson(version, repository), null, 2)}\n`,
+    `${JSON.stringify(packageJson(name, version, repository), null, 2)}\n`,
   );
   await fs.copyFile(join(CLI, "README.md"), join(DIST, "README.md"));
   const yamlPackage = createRequire(join(CLI, "package.json")).resolve("js-yaml/package.json");
@@ -129,5 +134,5 @@ if (import.meta.main) {
     `${license}\nBundled dependency: js-yaml\n\n${yamlLicense}`,
   );
   const size = (await fs.stat(output)).size;
-  console.log(`packages/cli/dist/${BUNDLE}: ${(size / 1024).toFixed(1)} KB, @quaso/cli ${version}`);
+  console.log(`packages/cli/dist/${BUNDLE}: ${(size / 1024).toFixed(1)} KB, ${name} ${version}`);
 }

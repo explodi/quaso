@@ -41,12 +41,12 @@ publishing. A separate validation gate also requires the complete checks, app bu
 Cloudflare checks, documentation build and Docker smoke test to pass. The website workflow also runs
 on version tags.
 
-| Artifact                       | Destination                       | Authentication                                             |
-| ------------------------------ | --------------------------------- | ---------------------------------------------------------- |
-| CLI bundle                     | npm `@quaso/cli`, with provenance | npm trusted publishing (the workflow's OIDC token)         |
-| Server and built website image | Docker Hub `<image>` (see below)  | Repository secrets `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` |
-| Project website and docs       | GitHub Pages                      | Workflow Pages permission and OIDC                         |
-| Release notes                  | GitHub release for the tag        | Workflow `GITHUB_TOKEN` with contents write permission     |
+| Artifact                       | Destination                      | Authentication                                             |
+| ------------------------------ | -------------------------------- | ---------------------------------------------------------- |
+| CLI bundle                     | npm `quaso-cli`, with provenance | npm trusted publishing (the workflow's OIDC token)         |
+| Server and built website image | Docker Hub `<image>` (see below) | Repository secrets `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` |
+| Project website and docs       | GitHub Pages                     | Workflow Pages permission and OIDC                         |
+| Release notes                  | GitHub release for the tag       | Workflow `GITHUB_TOKEN` with contents write permission     |
 
 A stable `v1.0.0` image receives `:1.0.0`, `:1.0` and `:1`. `:latest` and `:sha-<commit>` come
 from every push to main instead (`.github/workflows/docker.yml`). Prereleases receive their
@@ -59,17 +59,19 @@ The image is `<GitHub owner>/quaso`, or the repository variable `DOCKERHUB_IMAGE
 `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` to the repository, and enable
 GitHub Pages with **GitHub Actions** as its source. npm needs no secret: `release.yml` is the
 package's trusted publisher, set once after the package's first, manual publish (npm only trusts
-existing packages):
+existing packages). `<package>` is the `name` in `packages/cli/package.json`, which a fork
+changes to a name of its own:
 
 ```sh
 GITHUB_REPOSITORY=<owner>/<repository> deno task build:cli
 cd packages/cli/dist && npm publish --access public --tag next
-npm trust github @quaso/cli --file release.yml --repo <owner>/<repository>
+npm trust github <package> --file release.yml --repo <owner>/<repository>
 ```
 
 Then, in the package's **Settings → Publishing access** on npmjs.com, choose **Require two-factor
-authentication and disallow tokens**. The private development
-repository builds the site but does not deploy it. `BASE_PATH` comes from Pages configuration; an
+authentication and disallow tokens**.
+
+The private development repository builds the site but does not deploy it. `BASE_PATH` comes from Pages configuration; an
 optional `SITE_REPOSITORY_URL` overrides source links when building outside GitHub.
 
 ## Release notes and upgrade instructions

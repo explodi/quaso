@@ -2,7 +2,7 @@
 
 Quaso reads i18next JSON v4 files. Keep the source language in your repository and let Quaso write
 the other languages. First [deploy an instance](deploy-docker.md) and create an upload API key in
-Settings. The `@quaso/cli` npm names must be reserved and published before these install
+Settings. The `quaso-cli` npm names must be reserved and published before these install
 commands work. Before publication, run `deno task cli` from a Quaso checkout against its development
 instance.
 
@@ -11,7 +11,7 @@ instance.
 Install the CLI in your game repository (Node 22 or later):
 
 ```sh
-npm i -D @quaso/cli
+npm i -D quaso-cli
 export QUASO_HOSTNAME=translate.example.com
 export QUASO_API_KEY='your upload API key'
 npx quaso init --languages de,fr,pl
@@ -21,10 +21,10 @@ npx quaso download
 npx quaso status --fail-on untranslated
 ```
 
-With Deno 2.9, use `deno run -A npm:@quaso/cli` in place of `npx quaso`, for example:
+With Deno 2.9, use `deno run -A npm:quaso-cli` in place of `npx quaso`, for example:
 
 ```sh
-deno run -A npm:@quaso/cli init --languages de,fr,pl
+deno run -A npm:quaso-cli init --languages de,fr,pl
 ```
 
 `init` writes `quaso.config.json` without prompting. Edit it before uploading if your files live

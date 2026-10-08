@@ -30,8 +30,8 @@ test("checkBundle refuses code that could start a process, and imports that aren
 });
 
 test("packageJson: one bin, no dependencies, Node 22, the repository when known", () => {
-  const pkg = packageJson("1.2.3");
-  assertEquals(pkg.name, "@quaso/cli");
+  const pkg = packageJson("@acme/quaso-cli", "1.2.3");
+  assertEquals(pkg.name, "@acme/quaso-cli");
   assertEquals(pkg.version, "1.2.3");
   assertEquals(pkg.bin, { quaso: "quaso.mjs" });
   assertEquals(pkg.type, "module");
@@ -39,7 +39,7 @@ test("packageJson: one bin, no dependencies, Node 22, the repository when known"
   assertEquals(pkg.license, "MIT");
   assert(!("dependencies" in pkg));
   assert(!("repository" in pkg));
-  assertEquals(packageJson("1.2.3", "acme/quaso").repository, {
+  assertEquals(packageJson("@acme/quaso-cli", "1.2.3", "acme/quaso").repository, {
     type: "git",
     url: "git+https://github.com/acme/quaso.git",
     directory: "packages/cli",

@@ -65,11 +65,14 @@ test("release updates all artifacts from one version and validates before writin
       "packages/cloudflare/package.json",
       "site/package.json",
     ]) {
-      await fs.writeFile(`${root}/${path}`, '{ "version": "0.1.0", "other": true }\n');
+      await fs.writeFile(
+        `${root}/${path}`,
+        '{ "name": "@acme/quaso-cli", "version": "0.1.0", "other": true }\n',
+      );
     }
     await fs.writeFile(
       `${root}/examples/demo-game/package.json`,
-      '{ "devDependencies": { "@quaso/cli": "0.1.0" } }\n',
+      '{ "devDependencies": { "@acme/quaso-cli": "0.1.0" } }\n',
     );
     await fs.writeFile(
       `${root}/packages/core/src/version.ts`,
