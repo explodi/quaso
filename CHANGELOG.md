@@ -5,6 +5,8 @@ Release candidates are for deployment and migration testing. The team decides wh
 
 ## [Unreleased]
 
+## [1.0.0-rc.2] - 2026-10-08
+
 ### Added
 
 - Project glossary terms with per-language translations and locked terms, translator comments and
@@ -19,11 +21,19 @@ Release candidates are for deployment and migration testing. The team decides wh
 - Quaso runs on Deno again: `deno task` replaces `bun run`, the server binary is built with
   `deno compile`, and the CLI supports Node 22+ and Deno 2.9+ (no longer Bun). Every push to main
   publishes the official image to Docker Hub as `explodi/quaso`, for amd64 and arm64.
+- The CLI is published to npm as `@quaso-i18n/cli`, by the release workflow through npm trusted
+  publishing; the installed command is still `quaso`.
+- The version in the root `package.json` is the only version: the server, the CLI, the image and the
+  website all report it.
+- The app and the project website share one design system, `@quaso/design-system`: controls,
+  typography, icons, theme tokens, fonts and brand assets, so both look and behave alike.
 - Upgrade the app and project website to Vite 8 with React Compiler. Enforce the React hooks rules
   against synchronous state changes in effects and rendering through the required checks.
 
 ### Fixed
 
+- A Beta 1 database is refused at startup with an explanation, and left unchanged, instead of
+  crashing (`no such table: jobs`) or asking to upgrade Quaso.
 - Refresh saved settings and editor constraints so switching settings sections shows the latest
   project details, translation instructions, file context and length limits.
 
