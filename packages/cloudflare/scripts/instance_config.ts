@@ -164,7 +164,7 @@ export function deploymentConfig(
         preview_urls: false,
         containers: containers.map(({ image_build_context: _context, ...container }) => ({
           ...container,
-          image: instance.image,
+          image: deploymentImage(instance.image),
         })),
         d1_databases: [
           { binding: "DB", database_name: instance.databaseName, database_id: instance.databaseId },
@@ -179,6 +179,17 @@ export function deploymentConfig(
       },
     },
   };
+}
+
+/**
+ * The image as Wrangler deploys it. Cloudflare pulls a release published on Docker Hub
+ * itself (`docker.io/<namespace>/quaso:<tag>`), so a deployment needs no local Docker; an
+ * image already in the account's managed registry stays as it is.
+ */
+export function deploymentImage(image: string): string {
+  const fullReference =
+    image.startsWith("registry.cloudflare.com/") || image.startsWith("docker.io/");
+  return fullReference ? image : `docker.io/${image}`;
 }
 
 export async function readDeploymentTemplate(): Promise<Record<string, unknown>> {
