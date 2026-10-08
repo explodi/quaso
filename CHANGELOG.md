@@ -11,6 +11,9 @@ Release candidates are for deployment and migration testing. The team decides wh
   such as `{name}` beside i18next's `{{count}}`, are found, checked, shown as chips and kept by the
   LLM like i18next's. Each string in the prompt lists its `placeholders`; instances on the
   previous default prompt get the new one.
+- `quaso import --allow-qa-errors` (`allowQaErrors` in `POST /imports`) imports values that fail
+  the quality checks with their QA errors, listed as `flagged`, instead of refusing them, so a
+  migration keeps every existing translation.
 
 ### Changed
 

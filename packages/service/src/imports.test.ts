@@ -88,6 +88,7 @@ test("import writes green translations through the write path", async () => {
     droppedForms: 0,
     skippedBlue: 0,
     refused: [],
+    flagged: [],
     unknownKeys: [],
     unknownFiles: [],
   });
@@ -170,6 +171,24 @@ test("plural forms the language doesn't use are ignored, not refused", async () 
   assertEquals(
     translations(instance).map((row) => [row.key, row.value]),
     [["coins", '{"other":"コイン{{count}}枚"}']],
+  );
+});
+
+test("allowQaErrors imports failing values with their QA errors; export fills the gaps", async () => {
+  using instance = await project();
+  const file = { coins_one: "{{count}} moneta", coins_other: "{{count}} monet" };
+  const result = await importPl(instance, file, { allowQaErrors: true });
+  assertEquals([result.imported, result.refused.length], [1, 0]);
+  assertEquals(
+    result.flagged.map((item) => [item.key, item.checks.map((check) => check.form)]),
+    [["coins", ["few", "many"]]],
+  );
+  assertEquals(instance.sql.query("SELECT qa_errors FROM translations"), [{ qa_errors: 2 }]);
+  const exported = await instance.service.exportFiles(SYSTEM, { languages: ["pl"] });
+  const polish = JSON.parse(exported.files[0].content);
+  assertEquals(
+    [polish.coins_one, polish.coins_few, polish.coins_many, polish.coins_other],
+    ["{{count}} moneta", "{{count}} coins", "{{count}} coins", "{{count}} monet"],
   );
 });
 

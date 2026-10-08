@@ -195,6 +195,7 @@ export class FakeService implements ServiceApi {
       droppedForms: 0,
       skippedBlue: 0,
       refused: [],
+      flagged: [],
       unknownKeys: [],
       unknownFiles: [],
     });

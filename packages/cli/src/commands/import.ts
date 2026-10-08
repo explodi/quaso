@@ -32,6 +32,8 @@ export interface ImportSummary {
   withoutFiles: string[];
   /** Every refused value's error checks, with local paths. */
   refused: Problem[];
+  /** The error checks of values imported with `--allow-qa-errors`, with local paths. */
+  flagged: Problem[];
   /** Keys the English doesn't have, with local paths. */
   unknownKeys: Problem[];
   /** Translation files that aren't valid JSON (exit code 5). */
@@ -101,6 +103,12 @@ export const importCommand: Command = {
       description: "Keep values identical to the English instead of skipping them",
     },
     {
+      name: "allow-qa-errors",
+      type: "boolean",
+      description:
+        "Import values that fail the quality checks, with their QA errors, instead of refusing them",
+    },
+    {
       name: "dry-run",
       type: "boolean",
       description: "Show what would be imported without saving anything",
@@ -152,6 +160,7 @@ export const importCommand: Command = {
       languages: [],
       withoutFiles: [],
       refused: [],
+      flagged: [],
       unknownKeys: [],
       invalid: [],
       failed: [],
@@ -202,6 +211,7 @@ export const importCommand: Command = {
       const request: ImportRequest = { language, files, as };
       if (flag(ctx.args, "overwrite")) request.overwrite = true;
       if (flag(ctx.args, "keep-identical")) request.keepIdentical = true;
+      if (flag(ctx.args, "allow-qa-errors")) request.allowQaErrors = true;
       if (dryRun) request.dryRun = true;
       let result: ImportResult;
       try {
@@ -235,6 +245,17 @@ export const importCommand: Command = {
             file: pathOf(refused.file),
             key: refused.key,
             language: refused.language,
+            check: check.check,
+            message: checkMessage(check),
+          });
+        }
+      }
+      for (const flagged of result.flagged ?? []) {
+        for (const check of errorChecks(flagged.checks)) {
+          summary.flagged.push({
+            file: pathOf(flagged.file),
+            key: flagged.key,
+            language: flagged.language,
             check: check.check,
             message: checkMessage(check),
           });
@@ -337,6 +358,8 @@ function renderImport(out: Output, summary: ImportSummary): void {
     }
     if (result.skippedBlue > 0) parts.push(`${result.skippedBlue} proofread kept`);
     if (result.refused.length > 0) parts.push(red(`${result.refused.length} refused`));
+    const flagged = result.flagged ?? [];
+    if (flagged.length > 0) parts.push(yellow(`${flagged.length} with QA errors`));
     if (result.unknownKeys.length > 0) parts.push(`${result.unknownKeys.length} unknown keys`);
     out.print(`${bold(result.language.padEnd(6))} ${parts.join(", ")}`);
     for (const file of result.unknownFiles) {
@@ -361,6 +384,7 @@ function renderImport(out: Output, summary: ImportSummary): void {
     out.print(dim("The other languages were imported; import these again with --language."));
   }
   section("Refused by the quality checks", summary.refused);
+  section("Imported with QA errors (fix them on the instance)", summary.flagged);
   section("Keys the English doesn't have", summary.unknownKeys);
   section("Files that can't be read (fix them and import again)", summary.invalid);
   if (summary.refused.length > 0 && !summary.dryRun) {

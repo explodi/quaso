@@ -3,7 +3,8 @@
  * Import (design §5.10, CLI-7): existing translation files, read against the English on
  * the server, written through the write path as green or blue. Values identical to the
  * English are skipped (tools such as Crowdin write the English into untranslated
- * entries), values that fail QA-1 are refused and reported, and blue translations stay
+ * entries), values that fail QA-1 are refused and reported (or, with `allowQaErrors`,
+ * imported with their QA errors and listed as flagged), and blue translations stay
  * unless `overwrite`. One guarded commit; a dry run returns the plan without writing.
  */
 import {
@@ -214,6 +215,7 @@ function planImport(
     droppedForms: 0,
     skippedBlue: 0,
     refused: [],
+    flagged: [],
     unknownKeys: [],
     unknownFiles: [],
   };
@@ -299,8 +301,9 @@ function planImportFile(
       continue;
     }
     const errors = errorsOf(checkValue(facts, row, language, value));
-    if (errors.length > 0) {
-      result.refused.push({ file: file.path, key: row.display_key, language, checks: errors });
+    const failing = { file: file.path, key: row.display_key, language, checks: errors };
+    if (errors.length > 0 && !request.allowQaErrors) {
+      result.refused.push(failing);
       continue;
     }
     const current = existing.get(row.id);
@@ -321,6 +324,7 @@ function planImportFile(
         actor: author,
         event: "translation_imported",
         detail: { file: file.path },
+        allowQaErrors: request.allowQaErrors === true,
       },
       {
         string: row,
@@ -334,6 +338,7 @@ function planImportFile(
     statements.push(...plan.statements);
     if (plan.result.status === "written") result.imported++;
     else result.unchanged++;
+    if (errors.length > 0) result.flagged.push(failing);
   }
   return statements;
 }

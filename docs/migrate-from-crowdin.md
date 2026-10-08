@@ -103,6 +103,12 @@ first pass. The second pass adds green translations and preserves existing blue 
 Do not add `--overwrite`. Both exports are read only; the project config and English
 files still come from your repository.
 
+Crowdin accepts translations that Quaso's checks refuse, such as a Polish plural without its
+`few` form, or a placeholder the English no longer has. To bring every existing translation
+across as it is, add `--allow-qa-errors` to both imports: such values are imported with their QA
+errors and listed, and the QA column shows them until someone fixes them (or an auto-translate run
+with `--retranslate` replaces the green ones).
+
 Source-identical values are skipped because Crowdin can use English for untranslated
 entries. If an identical value is intentional, review it and import only that
 file/language with `--keep-identical`. Unknown keys are skipped. QA failures are listed

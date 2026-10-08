@@ -537,6 +537,10 @@ export const ImportRequest = s.object({
   as: s.enum(["green", "blue"]),
   overwrite: s.boolean().optional().describe("Also replace blue (proofread) translations"),
   keepIdentical: s.boolean().optional().describe("Keep values identical to the English"),
+  allowQaErrors: s
+    .boolean()
+    .optional()
+    .describe("Import values that fail the quality checks, flagged, instead of refusing them"),
   dryRun: s.boolean().optional(),
 });
 export type ImportRequest = Infer<typeof ImportRequest>;
@@ -559,6 +563,11 @@ export interface ImportResult {
   /** Blue translations left alone (no `overwrite`). */
   skippedBlue: number;
   refused: RefusedValue[];
+  /**
+   * Values imported although they fail the quality checks (`allowQaErrors`), with their
+   * checks: their QA errors show on the instance until someone fixes them.
+   */
+  flagged: RefusedValue[];
   /** Keys in the files that the English doesn't have. */
   unknownKeys: KeyRef[];
   /** Files the instance doesn't know. */
