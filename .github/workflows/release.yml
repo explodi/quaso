@@ -95,9 +95,10 @@ jobs:
       contents: read
       id-token: write
     steps:
+      # Trusted publishing (OIDC, no token) needs npm 11.5.1 or later, which Node 24 ships.
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
           registry-url: https://registry.npmjs.org
       # The package the test job built and tested, byte for byte.
       - uses: actions/download-artifact@v4
@@ -106,12 +107,12 @@ jobs:
           path: dist
       - name: Publish
         working-directory: dist
+        # npm trusts this workflow (npm trust github @quaso/cli --file release.yml): it
+        # authenticates with the job's OIDC token and adds provenance by itself.
         # A version such as 1.5.0-rc.1 goes to the "next" tag, not "latest".
         run: >-
-          npm publish --provenance --access public
+          npm publish --access public
           ${{ contains(needs.check.outputs.version, '-') && '--tag next' || '' }}
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   docker:
     name: Publish the Docker image
