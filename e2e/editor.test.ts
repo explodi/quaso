@@ -326,7 +326,7 @@ browserTest(
       (s) => s.key === "gameOver.score",
     )!;
     const tab = await openTab(browser, server, "/", emulateMac);
-    const { page } = tab;
+    let page = tab.page;
     assertEquals(await page.evaluate(() => navigator.platform), "MacIntel");
     // Control: a search box outside the editor gets the characters.
     await waitFor(page, () => document.querySelector("#language-search") !== null);
@@ -341,7 +341,10 @@ browserTest(
       "{}",
     );
 
-    await page.goto(`${server.url}/translate/de?id=${score.id}`, { waitUntil: "networkidle0" });
+    // A new tab rather than a navigation: on Linux, Chrome drops the emulated platform when
+    // the tab navigates, and the editor would take Option+digit for a placeholder shortcut.
+    const editor = await openTab(browser, server, `/translate/de?id=${score.id}`, emulateMac);
+    page = editor.page;
     await waitFor(page, () => document.querySelector("#translation-text") !== null);
     const value = () =>
       page.evaluate(() => document.querySelector<HTMLTextAreaElement>("#translation-text")!.value);
@@ -354,12 +357,8 @@ browserTest(
     await typeWithOption(page, "{{");
     await page.keyboard.type("score");
     // ⌥1 is ¡, not the first placeholder.
-    await page.evaluate(() => {
-      (globalThis as any).__keys = [];
-      document.addEventListener("keydown", (e) => (globalThis as any).__keys.push(`${e.key}|${e.code}|alt=${e.altKey}|ctrl=${e.ctrlKey}|meta=${e.metaKey}|${navigator.platform}`), true);
-    });
     await typeWithOption(page, "}} [|]“¡");
-    assertEquals(await value(), "Punkte: {{score}} [|]“¡", JSON.stringify(await page.evaluate(() => (globalThis as any).__keys)));
+    assertEquals(await value(), "Punkte: {{score}} [|]“¡");
     // Control+1 inserts the first placeholder (⌘+1 is the browser's).
     await sendKey(page, { key: "1", code: "Digit1", ctrl: true, keyCode: 49 });
     await waitFor(
@@ -386,5 +385,6 @@ browserTest(
     await waitFor(page, () => document.querySelector("dialog[open]") !== null);
     assertStringIncludes(await text(page, "dialog[open]"), "Control+1…9");
     assertEquals(tab.problems, []);
+    assertEquals(editor.problems, []);
   },
 );

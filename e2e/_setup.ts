@@ -409,7 +409,7 @@ export async function sendKey(
 
 /** Makes the page believe it runs on a Mac (`navigator.platform`), before it loads. */
 export async function emulateMac(page: Page) {
-  // Puppeteer re-applies its own override after each navigation; a raw CDP one doesn't.
+  // For the tab's first page only: on Linux, Chrome drops it when the tab navigates.
   const userAgent = await page.browser().userAgent();
   await page.setUserAgent({ userAgent, platform: "MacIntel" });
 }
