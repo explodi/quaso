@@ -20,6 +20,8 @@ import {
   type InterpolationSyntax,
   languageName,
   maskReferences,
+  optionalPlaceholders,
+  placeholderKey,
   placeholdersOf,
   PLURAL_CATEGORIES,
   pluralCategories,
@@ -315,6 +317,8 @@ function stringLine(
   if (mask.maxLength !== undefined) line.maxLength = mask.maxLength;
   const placeholders = placeholdersIn(string.english, context.syntax);
   if (placeholders.length > 0) line.placeholders = placeholders;
+  const optional = optionalIn(string.english, context.syntax, context.targetLanguage);
+  if (optional.length > 0) line.optionalPlaceholders = optional;
   if (mask.references.length > 0) {
     line.references = Object.fromEntries(
       mask.references.map((raw, index) => [`⟦${index + 1}⟧`, referenceText(raw, context)]),
@@ -343,6 +347,21 @@ function placeholdersIn(english: TextValue, syntax: InterpolationSyntax): string
   const texts = typeof english === "string" ? [english] : Object.values(english);
   const raws = texts.flatMap((text) =>
     text === undefined ? [] : placeholdersOf(text, syntax).map((token) => token.raw),
+  );
+  return [...new Set(raws)];
+}
+
+/** The placeholders of the English, as written, that the target language may leave out. */
+function optionalIn(english: TextValue, syntax: InterpolationSyntax, language: string): string[] {
+  const optional = optionalPlaceholders(syntax, language);
+  if (optional.size === 0) return [];
+  const texts = typeof english === "string" ? [english] : Object.values(english);
+  const raws = texts.flatMap((text) =>
+    text === undefined
+      ? []
+      : placeholdersOf(text, syntax)
+          .filter((token) => optional.has(placeholderKey(token)))
+          .map((token) => token.raw),
   );
   return [...new Set(raws)];
 }

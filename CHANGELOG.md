@@ -10,6 +10,10 @@ Release candidates are for deployment and migration testing. The team decides wh
 - `quaso translate --qa` (`qa` in a job's scope) also translates again the green translations that
   fail the quality checks, such as values imported with `--allow-qa-errors`. Blue ones never
   change.
+- Placeholders some languages leave out (`syntax.optional` in Settings): a placeholder such as an
+  English article (`{article}`) may be missing from the translations of the languages listed,
+  without a QA error, and the prompt tells the LLM it may leave it out there. Instances on the
+  previous default prompt get the new one.
 - Other placeholder delimiters (`syntax.extra` in Settings): placeholders an app fills in itself,
   such as `{name}` beside i18next's `{{count}}`, are found, checked, shown as chips and kept by the
   LLM like i18next's. Each string in the prompt lists its `placeholders`; instances on the

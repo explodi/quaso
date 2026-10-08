@@ -225,7 +225,7 @@ test("extra placeholder delimiters are saved and check the app's own placeholder
   assertEquals(qa(), 0, "without extra delimiters, {company} is plain text");
   const syntax = { prefix: "{{", suffix: "}}", extra: [{ prefix: "{", suffix: "}" }] };
   const result = await instance.service.updateSettings(admin, { syntax });
-  assertEquals(result.settings.syntax, syntax);
+  assertEquals(result.settings.syntax, { ...syntax, optional: [] });
   assertEquals(qa(), 2, "{company} is missing and {Firma} isn't in the English");
 });
 
