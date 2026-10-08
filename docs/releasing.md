@@ -50,7 +50,8 @@ on version tags.
 
 A stable `v1.0.0` image receives `:1.0.0`, `:1.0` and `:1`. `:latest` and `:sha-<commit>` come
 from every push to main instead (`.github/workflows/docker.yml`). Prereleases receive their
-full version only, and npm uses the `next` distribution tag rather than `latest`. Check the workflow
+full version only. On npm, the workflow publishes to `latest` until a stable version exists; after
+that, prereleases go to `next`, so `npm install` never picks a release candidate. Check the workflow
 results and registry visibility after publishing. The Docker Hub repository needs to be public for
 anonymous pulls.
 
@@ -64,7 +65,7 @@ changes to a name of its own:
 
 ```sh
 GITHUB_REPOSITORY=<owner>/<repository> deno task build:cli
-cd packages/cli/dist && npm publish --access public --tag next
+cd packages/cli/dist && npm publish --access public
 npm trust github <package> --file release.yml --repo <owner>/<repository>
 ```
 
