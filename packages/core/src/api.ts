@@ -1035,6 +1035,16 @@ export const ProjectSettings = s.object({
   syntax: s.object({
     prefix: s.string({ minLength: 1, maxLength: 10 }),
     suffix: s.string({ minLength: 1, maxLength: 10 }),
+    extra: s
+      .array(
+        s.object({
+          prefix: s.string({ minLength: 1, maxLength: 10 }),
+          suffix: s.string({ minLength: 1, maxLength: 10 }),
+        }),
+        { maxItems: 10 },
+      )
+      .optional()
+      .describe("Delimiters of placeholders the app fills in itself, such as { and } for {name}"),
   }),
   logoUrl: s.string({ maxLength: 2000 }).nullable(),
   links: s.array(

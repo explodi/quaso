@@ -142,6 +142,9 @@ function General({ data }: { data: SettingsResult }) {
   const [logoUrl, setLogoUrl] = useState(data.settings.logoUrl ?? "");
   const [links, setLinks] = useState(data.settings.links);
   const [syntax, setSyntax] = useState(data.settings.syntax);
+  const extra = syntax.extra ?? [];
+  const setExtra = (index: number, delimiters: { prefix: string; suffix: string }) =>
+    setSyntax({ ...syntax, extra: extra.map((item, j) => (j === index ? delimiters : item)) });
   return (
     <>
       <SaveForm
@@ -216,6 +219,45 @@ function General({ data }: { data: SettingsResult }) {
             onChange={(e) => setSyntax({ ...syntax, suffix: e.target.value })}
           />
         </Field>
+        <Fieldset>
+          <legend>Other placeholders</legend>
+          <p>
+            Delimiters of placeholders your app fills in itself, such as <code>{"{"}</code> and{" "}
+            <code>{"}"}</code> for <code>{"{name}"}</code>. They are checked and kept like the
+            others.
+          </p>
+          {extra.map((delimiters, i) => (
+            <div className="record-card" key={i}>
+              <Field label={`Other placeholder ${i + 1} prefix`} path={`syntax.extra.${i}.prefix`}>
+                <Input
+                  value={delimiters.prefix}
+                  required
+                  maxLength={10}
+                  onChange={(e) => setExtra(i, { ...delimiters, prefix: e.target.value })}
+                />
+              </Field>
+              <Field label={`Other placeholder ${i + 1} suffix`} path={`syntax.extra.${i}.suffix`}>
+                <Input
+                  value={delimiters.suffix}
+                  required
+                  maxLength={10}
+                  onChange={(e) => setExtra(i, { ...delimiters, suffix: e.target.value })}
+                />
+              </Field>
+              <Button
+                onClick={() => setSyntax({ ...syntax, extra: extra.filter((_, j) => i !== j) })}
+              >
+                Remove other placeholder {i + 1}
+              </Button>
+            </div>
+          ))}
+          <Button
+            disabled={extra.length >= 10}
+            onClick={() => setSyntax({ ...syntax, extra: [...extra, { prefix: "", suffix: "" }] })}
+          >
+            Add other placeholder
+          </Button>
+        </Fieldset>
       </SaveForm>
     </>
   );

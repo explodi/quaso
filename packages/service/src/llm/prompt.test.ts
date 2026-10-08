@@ -66,7 +66,10 @@ test("prompt: the default template uses every placeholder and splits at the mark
   }
   const rendered = renderPrompt(DEFAULT_PROMPT_TEMPLATE, [COINS], context());
   assertStringIncludes(rendered.system, "from English (en) into Polish (pl)");
-  assertStringIncludes(rendered.system, "Keep every placeholder in double braces");
+  assertStringIncludes(
+    rendered.system,
+    `Keep every placeholder listed in a string's "placeholders"`,
+  );
   assertFalse(rendered.system.includes("%%"), "notes are never sent");
   assertFalse(rendered.system.includes("---STRINGS---"));
   assertStringIncludes(rendered.prompt, "The strings come from the file common.json.");
@@ -88,6 +91,7 @@ test("prompt: a Polish plural string with its forms and example numbers", () => 
       many: "0, 5–21, 25–31, …",
       other: "1.5",
     },
+    placeholders: ["{{count}}"],
   });
   assertStringIncludes(rendered.system, "one (1); few (2–4, 22–24, 32–34, …)");
   assertEquals(rendered.batch.strings[0].forms, ["one", "few", "many", "other"]);
@@ -240,4 +244,19 @@ test("prompt: the output estimate grows with the forms", () => {
   const plural = renderPrompt(DEFAULT_PROMPT_TEMPLATE, [COINS], context());
   assert(expectedOutputTokens(text) > 0);
   assert(expectedOutputTokens(plural) > expectedOutputTokens(text));
+});
+
+test("prompt: a string lists the app's own placeholders beside i18next's", () => {
+  const syntax = { prefix: "{{", suffix: "}}", extra: [{ prefix: "{", suffix: "}" }] };
+  const hiring: PromptString = {
+    id: 14,
+    key: "jobs.title",
+    kind: "text",
+    english: "{companyName} has {{count}} jobs at {companyName}",
+    description: "",
+    maxLength: null,
+  };
+  const rendered = renderPrompt(DEFAULT_PROMPT_TEMPLATE, [hiring], context({ syntax }));
+  const [line] = stringLines(rendered.prompt);
+  assertEquals(line.placeholders, ["{companyName}", "{{count}}"]);
 });

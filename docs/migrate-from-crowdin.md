@@ -50,6 +50,11 @@ Compare one nested file's Quaso download destination with its existing Crowdin e
 path for every language, especially mappings such as `zh-Hans` → `zh`. Correct the config
 before importing. See [Crowdin's layout rules](https://crowdin.github.io/crowdin-cli/advanced).
 
+If your strings also use placeholders that your app fills in itself, such as `{name}` beside
+i18next's `{{count}}`, add their delimiters in **Settings → General → Other placeholders** before
+importing. Crowdin recognizes such placeholders by itself; Quaso checks and keeps only the
+delimiters it knows.
+
 ## 2. Upload the source
 
 ```sh

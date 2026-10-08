@@ -40,10 +40,22 @@ export function isTranslatable(kind: EntryKind): kind is TranslatableKind {
 /** A translatable value: text for `text`, forms for `plural` and `ordinal`. */
 export type TextValue = string | PluralForms;
 
+/** The delimiters around a placeholder, such as `{{` and `}}`. */
+export interface Delimiters {
+  prefix: string;
+  suffix: string;
+}
+
 /** The interpolation syntax of a project (i18next's `interpolation.prefix` and `suffix`). */
 export interface InterpolationSyntax {
   prefix: string;
   suffix: string;
+  /**
+   * Delimiters of placeholders the app fills in itself, besides i18next's: `{` and `}` for
+   * `{name}`. Their placeholders are checked and kept like i18next's; the whole text between
+   * the delimiters is the name.
+   */
+  extra?: Delimiters[];
 }
 
 export const DEFAULT_SYNTAX: InterpolationSyntax = { prefix: "{{", suffix: "}}" };

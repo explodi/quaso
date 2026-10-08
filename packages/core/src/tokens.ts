@@ -3,11 +3,12 @@
  * The tokenizer shared by the editor, the quality checks and the LLM prompts (design §5.2).
  *
  * It finds interpolation placeholders (`{{count}}`, `{{name, uppercase}}`, `{{- html}}`, or
- * with the project's own prefix and suffix) and nesting references (`$t(key)`,
+ * with the project's own prefix and suffix), placeholders in the syntax's extra delimiters
+ * (`{name}`), and nesting references (`$t(key)`,
  * `$t(ns:key)`, `$t(key, {"count": {{n}}})`). A placeholder inside a reference's options
  * belongs to the reference, not to the text.
  */
-import { DEFAULT_SYNTAX, type InterpolationSyntax } from "./types.ts";
+import { DEFAULT_SYNTAX, type Delimiters, type InterpolationSyntax } from "./types.ts";
 
 export interface TextToken {
   type: "text";
@@ -31,6 +32,8 @@ export interface PlaceholderToken {
   format?: string;
   /** `{{- x}}`, with the `-` right after the prefix: i18next's unescaped interpolation. */
   unescaped: boolean;
+  /** The extra delimiters it is written in, such as `{` and `}`; absent for i18next's own. */
+  delimiters?: Delimiters;
   start: number;
   end: number;
 }
@@ -76,9 +79,12 @@ export const NESTING_SUFFIX = ")";
  * - A reference starts at `$t(` and ends at the matching `)`, skipping parentheses and
  *   braces nested inside it and anything inside double or single quotes. Without a
  *   matching `)`, `$t(` is plain text.
+ * - Then the text left between them is searched for the syntax's `extra` delimiters, in
+ *   order (see `extraPlaceholders`), so `{{count}}` stays one i18next placeholder even
+ *   when `{` and `}` are extra delimiters.
  */
 export function tokenize(text: string, syntax: InterpolationSyntax = DEFAULT_SYNTAX): Token[] {
-  const tokens: Token[] = [];
+  let tokens: Token[] = [];
   const references = new ReferenceFinder(text);
   const placeholders = new PlaceholderFinder(text, syntax);
   let pending = 0;
@@ -100,7 +106,69 @@ export function tokenize(text: string, syntax: InterpolationSyntax = DEFAULT_SYN
     at = pending = token.end;
   }
   if (pending < text.length) tokens.push(textToken(text, pending, text.length));
+  for (const delimiters of syntax.extra ?? []) {
+    tokens = tokens.flatMap((token) =>
+      token.type === "text" ? extraPlaceholders(token, delimiters) : [token],
+    );
+  }
   return tokens;
+}
+
+/**
+ * Splits a text token at the placeholders written in `delimiters`: the prefix, at least one
+ * character on the same line, then the first suffix after it. The prefix nearest the suffix
+ * starts it, so `{a {b}` holds `{b}`. A blank name is plain text. The name is the whole
+ * text between the delimiters, trimmed: these are the app's own placeholders, not i18next's,
+ * so there is no format or `-`.
+ */
+function extraPlaceholders(token: TextToken, delimiters: Delimiters): Token[] {
+  const { prefix, suffix } = delimiters;
+  const text = token.text;
+  const pieces: Token[] = [];
+  let pending = 0;
+  let at = 0;
+  while (at < text.length) {
+    const open = text.indexOf(prefix, at);
+    if (open === -1) break;
+    const close = text.indexOf(suffix, open + prefix.length + 1);
+    if (close === -1) break;
+    const start = text.lastIndexOf(prefix, close - prefix.length - 1);
+    const inner = text.slice(start + prefix.length, close);
+    const lineBreak = inner.search(LINE_TERMINATOR_ONCE);
+    if (lineBreak !== -1) {
+      at = start + prefix.length + lineBreak + 1;
+      continue;
+    }
+    const end = close + suffix.length;
+    const name = inner.trim();
+    if (name === "") {
+      at = end;
+      continue;
+    }
+    if (start > pending) pieces.push(offsetText(token, pending, start));
+    pieces.push({
+      type: "placeholder",
+      raw: text.slice(start, end),
+      name,
+      unescaped: false,
+      delimiters: { prefix, suffix },
+      start: token.start + start,
+      end: token.start + end,
+    });
+    at = pending = end;
+  }
+  if (pending < text.length) pieces.push(offsetText(token, pending, text.length));
+  return pieces;
+}
+
+/** The part of a text token from `start` to `end`, offsets relative to the token. */
+function offsetText(token: TextToken, start: number, end: number): TextToken {
+  return {
+    type: "text",
+    text: token.text.slice(start, end),
+    start: token.start + start,
+    end: token.start + end,
+  };
 }
 
 /** The smaller of two positions, where -1 means "none". */
@@ -180,6 +248,8 @@ class PlaceholderFinder {
 
 /** What `.` in a regular expression doesn't match, as in i18next's `(.+?)`. */
 const LINE_TERMINATOR = /[\n\r\u2028\u2029]/g;
+/** The same, for `String.search`, which needs no `lastIndex`. */
+const LINE_TERMINATOR_ONCE = /[\n\r\u2028\u2029]/;
 
 /**
  * The placeholder from `start` to `end`, whose inner text runs from `innerStart` to
@@ -327,7 +397,8 @@ function topLevelComma(text: string): number {
  * lowercase, and options trimmed around `:` and `;`, without quotes around values
  * (`{{val, Number(minimumFractionDigits:2)}}` is `{{val, number(minimumFractionDigits: 2)}}`).
  * A name that starts with `-` without being unescaped keeps a space before it
- * (`{{ - html}}`), so it differs from `{{- html}}`.
+ * (`{{ - html}}`), so it differs from `{{- html}}`. A placeholder in extra delimiters keeps
+ * them, with its name trimmed: `{ name }` is `{name}`.
  */
 export function placeholderKey(token: PlaceholderToken): string {
   return normalizedPlaceholder(token, DEFAULT_SYNTAX);
@@ -341,6 +412,8 @@ export function normalizedPlaceholder(
   token: PlaceholderToken,
   syntax: InterpolationSyntax = DEFAULT_SYNTAX,
 ): string {
+  // The app's own placeholders keep their delimiters: `{name}` and `{{name}}` differ.
+  if (token.delimiters) return `${token.delimiters.prefix}${token.name}${token.delimiters.suffix}`;
   const dash = token.unescaped ? "- " : token.name.startsWith("-") ? " " : "";
   const format = token.format === undefined ? "" : normalizeFormat(token.format);
   const formatted = format === "" ? "" : `, ${format}`;
