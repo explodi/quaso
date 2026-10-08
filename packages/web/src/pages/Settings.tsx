@@ -145,6 +145,12 @@ function General({ data }: { data: SettingsResult }) {
   const extra = syntax.extra ?? [];
   const setExtra = (index: number, delimiters: { prefix: string; suffix: string }) =>
     setSyntax({ ...syntax, extra: extra.map((item, j) => (j === index ? delimiters : item)) });
+  const optional = syntax.optional ?? [];
+  const setOptional = (index: number, entry: { placeholder: string; languages: string[] }) =>
+    setSyntax({
+      ...syntax,
+      optional: optional.map((item, j) => (j === index ? entry : item)),
+    });
   return (
     <>
       <SaveForm
@@ -256,6 +262,62 @@ function General({ data }: { data: SettingsResult }) {
             onClick={() => setSyntax({ ...syntax, extra: [...extra, { prefix: "", suffix: "" }] })}
           >
             Add other placeholder
+          </Button>
+        </Fieldset>
+        <Fieldset>
+          <legend>Placeholders some languages leave out</legend>
+          <p>
+            A placeholder that some languages have no use for, such as an English article filled in
+            as <code>{"{article}"}</code>, in languages without articles. Those languages may leave
+            it out; elsewhere it is required as usual.
+          </p>
+          {optional.map((entry, i) => (
+            <div className="record-card" key={i}>
+              <Field
+                label={`Optional placeholder ${i + 1}`}
+                path={`syntax.optional.${i}.placeholder`}
+              >
+                <Input
+                  value={entry.placeholder}
+                  required
+                  maxLength={100}
+                  onChange={(e) => setOptional(i, { ...entry, placeholder: e.target.value })}
+                />
+              </Field>
+              <Field
+                label={`Languages that may leave out placeholder ${i + 1}, such as pl, tr, ja`}
+                path={`syntax.optional.${i}.languages`}
+              >
+                <Input
+                  value={entry.languages.join(", ")}
+                  required
+                  onChange={(e) =>
+                    setOptional(i, {
+                      ...entry,
+                      languages: e.target.value
+                        .split(",")
+                        .map((tag) => tag.trim())
+                        .filter((tag) => tag !== ""),
+                    })
+                  }
+                />
+              </Field>
+              <Button
+                onClick={() =>
+                  setSyntax({ ...syntax, optional: optional.filter((_, j) => i !== j) })
+                }
+              >
+                Remove optional placeholder {i + 1}
+              </Button>
+            </div>
+          ))}
+          <Button
+            disabled={optional.length >= 50}
+            onClick={() =>
+              setSyntax({ ...syntax, optional: [...optional, { placeholder: "", languages: [] }] })
+            }
+          >
+            Add optional placeholder
           </Button>
         </Fieldset>
       </SaveForm>

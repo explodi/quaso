@@ -260,3 +260,28 @@ test("prompt: a string lists the app's own placeholders beside i18next's", () =>
   const [line] = stringLines(rendered.prompt);
   assertEquals(line.placeholders, ["{companyName}", "{{count}}"]);
 });
+
+test("prompt: a string lists the placeholders the target language may leave out", () => {
+  const syntax = {
+    prefix: "{{",
+    suffix: "}}",
+    extra: [{ prefix: "{", suffix: "}" }],
+    optional: [{ placeholder: "{article}", languages: ["pl"] }],
+  };
+  const seeking: PromptString = {
+    id: 15,
+    key: "jobs.seeking",
+    kind: "text",
+    english: "Looking for work as {article} {profession}",
+    description: "",
+    maxLength: null,
+  };
+  const polish = renderPrompt(DEFAULT_PROMPT_TEMPLATE, [seeking], context({ syntax }));
+  assertEquals(stringLines(polish.prompt)[0].optionalPlaceholders, ["{article}"]);
+  const german = renderPrompt(
+    DEFAULT_PROMPT_TEMPLATE,
+    [seeking],
+    context({ syntax, targetLanguage: "de" }),
+  );
+  assertEquals(stringLines(german.prompt)[0].optionalPlaceholders, undefined);
+});

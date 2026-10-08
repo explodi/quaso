@@ -1060,6 +1060,16 @@ export const ProjectSettings = s.object({
       )
       .optional()
       .describe("Delimiters of placeholders the app fills in itself, such as { and } for {name}"),
+    optional: s
+      .array(
+        s.object({
+          placeholder: s.string({ minLength: 1, maxLength: 100 }),
+          languages: s.array(LanguageTag, { minItems: 1, maxItems: 200 }),
+        }),
+        { maxItems: 50 },
+      )
+      .optional()
+      .describe("Placeholders some languages may leave out, such as {article}"),
   }),
   logoUrl: s.string({ maxLength: 2000 }).nullable(),
   links: s.array(

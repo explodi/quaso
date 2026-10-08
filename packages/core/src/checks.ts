@@ -15,6 +15,7 @@ import {
   MASK_OPEN,
   normalizedPlaceholder,
   placeholderKey,
+  placeholdersOf,
   tokenize,
 } from "./tokens.ts";
 import {
@@ -158,6 +159,7 @@ function checkText(input: CheckInput): CheckResult[] {
     allowed: limitsOf([english]),
     counterpart: english,
     countOptional: false,
+    optional: optionalPlaceholders(syntax, input.language),
     maxLength: input.maxLength,
     syntax,
     glossary: input.glossary,
@@ -197,6 +199,7 @@ function checkForms(input: CheckInput, kind: "plural" | "ordinal"): CheckResult[
         allowed,
         counterpart: english.get(category) ?? other,
         countOptional: coversExactlyOne(language, category, coverage),
+        optional: optionalPlaceholders(syntax, language),
         maxLength: input.maxLength,
         syntax,
         form: category,
@@ -224,6 +227,19 @@ function unexpectedForms(
   return results;
 }
 
+/**
+ * The placeholders (by `placeholderKey`) that `language` may leave out, from the syntax's
+ * `optional` list. Each is written as in the English, in any of the project's delimiters.
+ */
+export function optionalPlaceholders(syntax: InterpolationSyntax, language: string): Set<string> {
+  const keys = new Set<string>();
+  for (const entry of syntax.optional ?? []) {
+    if (!entry.languages.includes(language)) continue;
+    for (const token of placeholdersOf(entry.placeholder, syntax)) keys.add(placeholderKey(token));
+  }
+  return keys;
+}
+
 /** What a text or a form is compared with. */
 interface Comparison {
   /** The English whose placeholders and references must all be there: the text, or `other`. */
@@ -234,6 +250,8 @@ interface Comparison {
   counterpart: Analysis;
   /** Whether placeholders named `count` may be left out. */
   countOptional: boolean;
+  /** Placeholders (by `placeholderKey`) this language may leave out (`syntax.optional`). */
+  optional: ReadonlySet<string>;
   maxLength?: number | null;
   syntax: InterpolationSyntax;
   form?: PluralCategory;
@@ -294,6 +312,7 @@ function compareTokens(
     const count = found.get(key)?.count ?? 0;
     if (count >= english.count) continue;
     if (kind === "placeholders" && comparison.countOptional && english.name === "count") continue;
+    if (kind === "placeholders" && count === 0 && comparison.optional.has(key)) continue;
     const message = missingMessage(kind, english.label, count, form);
     results.push(result(missing, message, { form, value: key }));
   }

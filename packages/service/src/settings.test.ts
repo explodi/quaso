@@ -15,7 +15,7 @@ test("the default settings", () => {
   const settings = defaultSettings("gemini-flash-latest");
   assertEquals(settings.name, "Untitled project");
   assertEquals(settings.sourceLanguage, "en");
-  assertEquals(settings.syntax, { prefix: "{{", suffix: "}}", extra: [] });
+  assertEquals(settings.syntax, { prefix: "{{", suffix: "}}", extra: [], optional: [] });
   assertEquals([settings.logoUrl, settings.links], [null, []]);
   assertEquals(settings.llm.model, "gemini-flash-latest");
   assertEquals(settings.llm.context, {

@@ -1232,3 +1232,27 @@ test("extra delimiters: the app's own placeholders are checked like i18next's", 
     ],
   );
 });
+
+test("optional placeholders: the listed languages may leave them out, the others may not", () => {
+  const syntax = {
+    prefix: "{{",
+    suffix: "}}",
+    extra: [{ prefix: "{", suffix: "}" }],
+    optional: [{ placeholder: "{article}", languages: ["pl", "tr"] }],
+  };
+  const english = "Looking for work as {article} {profession}";
+  const polish = "Szukam pracy jako {profession}";
+  assertEquals(text(english, polish, { syntax, language: "pl" }), []);
+  assertEquals(
+    errorsOf(text(english, "Suche Arbeit als {profession}", { syntax, language: "de" })).map(
+      (result) => [result.check, result.value],
+    ),
+    [["placeholder_missing", "{article}"]],
+  );
+  assertEquals(
+    errorsOf(text(english, "Szukam pracy jako {article}", { syntax, language: "pl" })).map(
+      (result) => [result.check, result.value],
+    ),
+    [["placeholder_missing", "{profession}"]],
+  );
+});

@@ -56,6 +56,17 @@ export interface InterpolationSyntax {
    * the delimiters is the name.
    */
   extra?: Delimiters[];
+  /**
+   * Placeholders some languages may leave out, such as an English article filled in as
+   * `{article}`, in languages without articles. Elsewhere they are required as usual.
+   */
+  optional?: OptionalPlaceholder[];
+}
+
+/** A placeholder as written in the English (`{article}`), and the languages that may omit it. */
+export interface OptionalPlaceholder {
+  placeholder: string;
+  languages: string[];
 }
 
 export const DEFAULT_SYNTAX: InterpolationSyntax = { prefix: "{{", suffix: "}}" };
