@@ -108,6 +108,21 @@ test("download --language and --file narrow the request", async () => {
   });
 });
 
+test("download asks to leave untranslated strings out when the config says so", async () => {
+  const omitting = { ...PROJECT, "quaso.config.json": { ...CONFIG, untranslated: "omit" } };
+  await withProject(omitting, async (dir) => {
+    const fetch = server(FILES);
+    const run = await runCli(["download"], { cwd: dir, env: ENV, fetch });
+    assertEquals(run.code, 0, run.stderr);
+    assertEquals(new URL(fetch.requests[0].url).searchParams.get("untranslated"), "omit");
+  });
+  await withProject(PROJECT, async (dir) => {
+    const fetch = server(FILES);
+    await runCli(["download"], { cwd: dir, env: ENV, fetch });
+    assertEquals(new URL(fetch.requests[0].url).searchParams.get("untranslated"), null);
+  });
+});
+
 // Regression: --file with a translation path downloaded that file in every language.
 test("download --file with a translation path downloads that language only", async () => {
   await withProject(PROJECT, async (dir) => {

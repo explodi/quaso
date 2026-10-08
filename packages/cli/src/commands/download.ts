@@ -150,7 +150,12 @@ export const download: Command = {
     let exported: ExportResult;
     try {
       exported = await client.get<ExportResult>("/export", {
-        query: { languages, files: askFiles ? wanted : undefined, at },
+        query: {
+          languages,
+          files: askFiles ? wanted : undefined,
+          at,
+          untranslated: project.config.untranslated,
+        },
         timeoutMs: LONG_TIMEOUT_MS,
       });
     } catch (error) {

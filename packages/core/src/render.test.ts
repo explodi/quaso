@@ -928,3 +928,51 @@ test("renderFile renders 3000 strings into 10 languages well under a second", ()
   assert(bytes > 1_000_000, String(bytes));
   assert(elapsed < 1000, `rendering took ${elapsed.toFixed(0)} ms`);
 });
+
+/** Renders English JSON in Polish with `untranslated: "omit"`, back as plain data. */
+function renderOmitting(english: unknown, translations: [string, TextValue][]): unknown {
+  const { entries, format } = readSource(JSON.stringify(english, null, 2));
+  return JSON.parse(
+    renderFile(entries, new Map(translations), {
+      language: "pl",
+      format,
+      untranslated: "omit",
+    }),
+  );
+}
+
+test("untranslated omit: untranslated texts are left out, translated ones written", () => {
+  const english = {
+    title: "Wayfarer",
+    menu: { play: "Play", quit: "Quit" },
+    back: "$t(menu.quit)",
+  };
+  assertEquals(renderOmitting(english, [[entryKey("text", ["menu", "play"]), "Graj"]]), {
+    menu: { play: "Graj" },
+    back: "$t(menu.quit)",
+  });
+});
+
+test("untranslated omit: a plural group keeps only its translated forms", () => {
+  const english = {
+    coins_one: "{{count}} coin",
+    coins_other: "{{count}} coins",
+    gems_one: "{{count}} gem",
+    gems_other: "{{count}} gems",
+  };
+  const partial: PluralForms = { one: "{{count}} moneta", other: "{{count}} monety" };
+  assertEquals(renderOmitting(english, [[entryKey("plural", ["coins"]), partial]]), {
+    coins_one: "{{count}} moneta",
+    coins_other: "{{count}} monety",
+  });
+});
+
+test("untranslated omit: an array with an untranslated element is left out whole", () => {
+  const english = { tips: ["One", "Two"], greetings: ["Hi", "Hello"] };
+  const translations: [string, TextValue][] = [
+    [entryKey("text", ["tips", 0]), "Jeden"],
+    [entryKey("text", ["greetings", 0]), "Cześć"],
+    [entryKey("text", ["greetings", 1]), "Dzień dobry"],
+  ];
+  assertEquals(renderOmitting(english, translations), { greetings: ["Cześć", "Dzień dobry"] });
+});

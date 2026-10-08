@@ -10,6 +10,10 @@ Release candidates are for deployment and migration testing. The team decides wh
 - Every push to main publishes its CLI to npm under the tag `main`, as
   `<version>.main.g<commit>` (`-main.g<commit>` after a stable version), next to the image's
   `sha-<commit>`.
+- `"untranslated": "omit"` in `quaso.config.json` (`untranslated=omit` on `GET /export`): download
+  leaves out untranslated strings, missing plural forms and incomplete arrays instead of writing
+  the source text, for apps whose i18n falls back to the source language. Published files are
+  unchanged.
 - `quaso translate --qa` (`qa` in a job's scope) also translates again the green translations that
   fail the quality checks, such as values imported with `--allow-qa-errors`. Blue ones never
   change.

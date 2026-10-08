@@ -11,6 +11,7 @@ import {
   type ExportResult,
   type JsonFormat,
   renderFile,
+  type Untranslated,
   SCHEMA_VERSION,
   sha256Hex,
   type SourceEntry,
@@ -64,6 +65,7 @@ export function exportFiles(ctx: Context, query: ExportQuery): ExportResult {
   return exportResult(english, languages, translations, {
     revision: getRevision(sql),
     sourceLanguage: settings.sourceLanguage,
+    untranslated: query.untranslated,
   });
 }
 
@@ -115,6 +117,7 @@ export async function exportFilesAsync(
   return exportResult(entriesFromRows(files, strings as StringRow[]), languages, translations, {
     revision: Number(revision[0].revision),
     sourceLanguage: settings.sourceLanguage,
+    untranslated: query.untranslated,
   });
 }
 
@@ -122,7 +125,7 @@ function exportResult(
   english: FileEntries[],
   languages: Language[],
   translated: Map<string, Map<number, TextValue>>,
-  project: { revision: number; sourceLanguage: string },
+  project: { revision: number; sourceLanguage: string; untranslated?: Untranslated },
 ): ExportResult {
   const out: ExportFile[] = [];
   for (const language of languages) {
@@ -137,6 +140,7 @@ function exportResult(
         language: language.tag,
         format: file.format,
         pluralOverride: language.pluralOverride,
+        untranslated: project.untranslated,
       });
       out.push({
         path: file.file.path,

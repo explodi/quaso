@@ -28,7 +28,15 @@ export interface RenderOptions {
   /** The English file's format. The output always ends with a newline (FMT-3). */
   format: JsonFormat;
   pluralOverride?: PluralOverride;
+  /**
+   * What an untranslated entry becomes: the English (`source`, the default, FMT-2), or
+   * nothing (`omit`), for apps whose i18n falls back to the source language by itself.
+   */
+  untranslated?: Untranslated;
 }
+
+/** See `RenderOptions.untranslated`. */
+export type Untranslated = "source" | "omit";
 
 /**
  * Renders one file in one language. Walks the English entries in their order, rebuilding
@@ -44,6 +52,11 @@ export interface RenderOptions {
  * |                    | it lacks the form, from the English form of the same category;   |
  * |                    | when English lacks that too, from the English `other`.            |
  * | reference, literal | copied from English                                               |
+ *
+ * With `untranslated: "omit"`, nothing of the English is written instead of a translation:
+ * an untranslated text is left out, a plural group keeps only the forms its translation has
+ * (and is left out without any), and an array with an untranslated element is left out
+ * whole, so the app falls back to the source language's array instead of shifted indices.
  *
  * `translations` maps `entryKey()` to the value to write; a value of the wrong shape (forms
  * for a text entry, or a string for a plural one) counts as untranslated. The output uses
@@ -62,10 +75,14 @@ export function renderFile(
 ): string {
   const tree = new TreeBuilder();
   const categories = new CategoryCache(options);
+  const omit = options.untranslated === "omit";
+  const incompleteArrays = omit ? arraysWithUntranslated(entries, translations) : new Set();
   for (const entry of entries) {
+    if (omit && incompleteArrays.has(outermostArray(entry.keyPath))) continue;
     switch (entry.kind) {
       case "text": {
         const translation = translations.get(entryKey(entry.kind, entry.keyPath));
+        if (omit && typeof translation !== "string") break;
         tree.put(entry.keyPath, stringNode(translation, entry.value));
         break;
       }
@@ -76,6 +93,7 @@ export function renderFile(
         const base = pluralBase(entry);
         const parent = entry.keyPath.slice(0, -1);
         for (const category of categories.get(entry)) {
+          if (omit && typeof forms?.[category] !== "string") continue;
           const key = pluralKeyName(base, entry.kind, category);
           tree.put([...parent, key], pluralForm(entry, forms, category));
         }
@@ -90,6 +108,37 @@ export function renderFile(
     }
   }
   return stringifyJson(tree.finish(), { ...options.format, finalNewline: true });
+}
+
+/**
+ * The outermost array an entry sits in, as its key path up to that array (`["jobs"]` for
+ * `jobs[2].title`), joined; `""` when it is in none.
+ */
+function outermostArray(keyPath: KeyPath): string {
+  const index = keyPath.findIndex((segment) => typeof segment === "number");
+  return index === -1 ? "" : JSON.stringify(keyPath.slice(0, index));
+}
+
+/** The outermost arrays (as `outermostArray` names them) holding an untranslated entry. */
+function arraysWithUntranslated(
+  entries: readonly SourceEntry[],
+  translations: ReadonlyMap<string, TextValue>,
+): Set<string> {
+  const incomplete = new Set<string>();
+  for (const entry of entries) {
+    const array = outermostArray(entry.keyPath);
+    if (
+      array === "" ||
+      (entry.kind !== "text" && entry.kind !== "plural" && entry.kind !== "ordinal")
+    ) {
+      continue;
+    }
+    const translation = translations.get(entryKey(entry.kind, entry.keyPath));
+    const translated =
+      entry.kind === "text" ? typeof translation === "string" : isForms(translation);
+    if (!translated) incomplete.add(array);
+  }
+  return incomplete;
 }
 
 /** A string node with the translation if it is a string, or else the English. */

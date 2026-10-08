@@ -28,6 +28,7 @@ import { getRevision, transaction } from "./db.ts";
 import { forbidden } from "./errors.ts";
 import { exportFiles } from "./export.ts";
 import {
+  checkPublishedQuery,
   exportPublishedFiles,
   getFileVersion,
   getFileVersions,
@@ -257,16 +258,16 @@ export function createService(options: ServiceOptions): Service {
       }
     },
     exportFiles: (actor, input) =>
-      call(actor, "download", ExportQuery, input, (query, actor) =>
-        query.at === undefined
-          ? exportFiles(ctx, query)
-          : exportPublishedFiles(
-              publishedSql(actor, "download"),
-              options.store,
-              query,
-              ctx.defaultModel,
-            ),
-      ),
+      call(actor, "download", ExportQuery, input, (query, actor) => {
+        checkPublishedQuery(query);
+        if (query.at === undefined) return exportFiles(ctx, query);
+        return exportPublishedFiles(
+          publishedSql(actor, "download"),
+          options.store,
+          query,
+          ctx.defaultModel,
+        );
+      }),
     getFileVersions: (actor, input) =>
       call(actor, "download", FileVersionsQuery, input, (query, actor) =>
         getFileVersions(publishedSql(actor, "download"), query),

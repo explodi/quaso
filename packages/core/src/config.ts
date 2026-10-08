@@ -84,6 +84,12 @@ export const QuasoConfig = s.object({
       "Maximum lengths, such as for app store fields (FMT-4). They win over limits set on the website.",
     ),
   pluralExclusions: s.array(PluralExclusion).optional(),
+  untranslated: s
+    .enum(["source", "omit"])
+    .optional()
+    .describe(
+      "What download writes for untranslated strings: the source text (default) or nothing, for apps that fall back to the source language themselves",
+    ),
 });
 
 export type QuasoConfig = Infer<typeof QuasoConfig>;

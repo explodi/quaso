@@ -103,6 +103,7 @@ never writes outside it. `quaso init` writes a starter file.
 | `files[].exclude`     | Globs of source files to leave out, relative to the project folder. Optional.                                                                                                                                                                                    |
 | `limits`              | Maximum lengths, such as for app store fields, in user-perceived characters. `file` is the file's path as the instance knows it (below the folder where the glob starts). They win over limits set on the website. Optional.                                     |
 | `pluralExclusions`    | Groups of keys that only look like plurals (`menu.power_one`, `menu.power_other`), named without the category. Optional.                                                                                                                                         |
+| `untranslated`        | What `download` writes for a string that isn't translated: `"source"` (the default), its source text, so every file has every key; or `"omit"`, nothing, for apps whose i18n falls back to the source language by itself (i18next's `fallbackLng`). Optional.    |
 
 **Globs** use `/` on every system: `*` matches within a folder, `**` matches any number of folders,
 `?` one character, `{a,b}` either alternative, and `[abc]`, `[a-z]` or `[!abc]` one character of a
@@ -207,7 +208,11 @@ the command waits for that job.
 ### `quaso download`
 
 Writes every language's files where the config's `translation` pattern says. Strings that aren't
-translated yet are written in the source language, so the game always has every key. Files whose
+translated yet are written in the source language, so the game always has every key; with
+`"untranslated": "omit"` in the config they are left out instead, as are the plural forms a
+translation lacks, and an array with an untranslated element (the app then falls back to the
+source language's array). `--at` can't be combined with `omit`: published versions are stored with
+the source text. Files whose
 content hasn't changed are left alone: a second download writes nothing.
 
 | Option              | Meaning                                                                                                                                                                                               |
