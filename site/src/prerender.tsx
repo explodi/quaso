@@ -11,12 +11,11 @@ import { Document, Shell } from "./Layout.tsx";
 import { NotFound } from "./NotFound.tsx";
 import { GFM_CSS, HOME, SITE_CSS } from "./paths.ts";
 
-export const TITLE =
-  "Quaso: an open-source localization platform for apps and games that use i18next";
+export const TITLE = "Quaso — open-source game localization";
 
 const DESCRIPTION =
-  "Upload i18next files with a CLI, an LLM translates them at once, people " +
-  "proofread on a website, and the CLI downloads the translations. Open source (MIT).";
+  "Your game. Everyone’s adventure. Translate your game with LLMs, your team, and " +
+  "your community. Open source, self-hosted localization with your own API keys.";
 
 const DOCS_DESCRIPTION =
   "Documentation for Quaso, an open-source localization platform for " +
