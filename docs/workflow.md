@@ -23,7 +23,7 @@ translation jobs as well as downloads.
 Run in your game's repository root:
 
 ```sh
-npm install --save-dev quaso-cli
+npm install --save-dev @quaso-i18n/cli
 ```
 
 The CLI should appear in `devDependencies`. Keep the package lock so the team uses the
@@ -40,7 +40,7 @@ scripts:
 ```json
 {
   "scripts": {
-    "quaso": "node --env-file=.env node_modules/quaso-cli/quaso.mjs",
+    "quaso": "node --env-file=.env node_modules/@quaso-i18n/cli/quaso.mjs",
     "l10n:upload": "npm run quaso -- upload",
     "l10n:download": "npm run quaso -- download"
   }
@@ -147,8 +147,8 @@ For a game using Deno 2.9 or later for tasks, keep the same npm-installed CLI an
 ```json
 {
   "tasks": {
-    "l10n:upload": "node node_modules/quaso-cli/quaso.mjs upload",
-    "l10n:download": "node node_modules/quaso-cli/quaso.mjs download"
+    "l10n:upload": "node node_modules/@quaso-i18n/cli/quaso.mjs upload",
+    "l10n:download": "node node_modules/@quaso-i18n/cli/quaso.mjs download"
   }
 }
 ```

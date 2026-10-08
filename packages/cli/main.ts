@@ -7,8 +7,8 @@
  * built-ins and web APIs.
  *
  * ```sh
- * deno run -A npm:quaso-cli upload
- * npx quaso-cli download
+ * deno run -A npm:@quaso-i18n/cli upload
+ * npx @quaso-i18n/cli download
  * ```
  *
  * `run()` runs it in-process, for scripts: it returns the exit code.

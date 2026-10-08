@@ -41,12 +41,12 @@ publishing. A separate validation gate also requires the complete checks, app bu
 Cloudflare checks, documentation build and Docker smoke test to pass. The website workflow also runs
 on version tags.
 
-| Artifact                       | Destination                      | Authentication                                             |
-| ------------------------------ | -------------------------------- | ---------------------------------------------------------- |
-| CLI bundle                     | npm `quaso-cli`, with provenance | npm trusted publishing (the workflow's OIDC token)         |
-| Server and built website image | Docker Hub `<image>` (see below) | Repository secrets `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` |
-| Project website and docs       | GitHub Pages                     | Workflow Pages permission and OIDC                         |
-| Release notes                  | GitHub release for the tag       | Workflow `GITHUB_TOKEN` with contents write permission     |
+| Artifact                       | Destination                            | Authentication                                             |
+| ------------------------------ | -------------------------------------- | ---------------------------------------------------------- |
+| CLI bundle                     | npm `@quaso-i18n/cli`, with provenance | npm trusted publishing (the workflow's OIDC token)         |
+| Server and built website image | Docker Hub `<image>` (see below)       | Repository secrets `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` |
+| Project website and docs       | GitHub Pages                           | Workflow Pages permission and OIDC                         |
+| Release notes                  | GitHub release for the tag             | Workflow `GITHUB_TOKEN` with contents write permission     |
 
 A stable `v1.0.0` image receives `:1.0.0`, `:1.0` and `:1`. `:latest` and `:sha-<commit>` come
 from every push to main instead (`.github/workflows/docker.yml`). Prereleases receive their

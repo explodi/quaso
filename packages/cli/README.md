@@ -1,4 +1,4 @@
-# quaso-cli
+# @quaso-i18n/cli
 
 The command line of Quaso, open-source localization for i18next JSON files. It uploads your source
 files to your team's Quaso instance, writes the translations back into your repository, shows
@@ -9,8 +9,8 @@ happened, so it works the same on a laptop, in CI and for AI agents.
 It runs on Node 22 or later and Deno 2.9 or later: one file, no dependencies.
 
 ```sh
-npm install --save-dev quaso-cli    # then: npx quaso …
-deno run -A npm:quaso-cli status    # or with Deno, from npm
+npm install --save-dev @quaso-i18n/cli    # then: npx quaso …
+deno run -A npm:@quaso-i18n/cli status    # or with Deno, from npm
 ```
 
 ## Connecting
