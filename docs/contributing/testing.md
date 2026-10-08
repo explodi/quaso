@@ -56,10 +56,13 @@ security headers. It builds the website when stale. Install Chromium once with `
 where possible; intercept only behavior that is hard to cause deterministically. Browser tests are
 separate from the fast unit suite because they start a browser and may need an initial download.
 
-Screenshots in the project website should come from the demo project in this same UI, in light and
-dark themes. Regenerate them with `deno run -A site/screenshots.ts`; it uses disposable in-memory
-storage and a real signed-in demo account. Optimize the resulting PNGs without changing their
-content. Visual screenshots supplement assertions; they do not replace keyboard or permission tests.
+Screenshots in the project website use Quaso Quest's actual French source files, with English
+translations, in light and dark themes. Install the game's dependencies with
+`npm ci --prefix examples/demo-game`, then regenerate them with `deno run -A site/screenshots.ts`.
+The script uses disposable in-memory storage and a real signed-in account. It also captures the
+playable game using English files exported from Quaso, without changing the example's deliberately
+empty tracked translation files. Optimize the resulting PNGs without changing their content.
+Visual screenshots supplement assertions; they do not replace keyboard or permission tests.
 A human VoiceOver/NVDA pass is still part of release review.
 
 ## Cloudflare and upgrade fixtures

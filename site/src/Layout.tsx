@@ -73,22 +73,35 @@ export function Shell({ page, section, repositoryUrl, children }: ShellProps) {
           </A>
           <nav aria-label="Main">
             <ul className="site-nav">
-              <li>
-                <A href={relativeHref(page, HOME)} aria-current={current(HOME, false)}>
-                  Home
-                </A>
-              </li>
+              {section === "home" ? (
+                <>
+                  <li>
+                    <A href="#why-quaso">Why Quaso</A>
+                  </li>
+                  <li>
+                    <A href="#how-it-works">How it works</A>
+                  </li>
+                </>
+              ) : (
+                <li>
+                  <A href={relativeHref(page, HOME)} aria-current={current(HOME, false)}>
+                    Home
+                  </A>
+                </li>
+              )}
               <li>
                 <A
                   href={relativeHref(page, DOCS_HOME)}
                   aria-current={current(DOCS_HOME, section === "docs")}
                 >
-                  Documentation
+                  Docs
                 </A>
               </li>
               {repositoryUrl && (
                 <li>
-                  <A href={repositoryUrl}>Source code</A>
+                  <A href={repositoryUrl}>
+                    GitHub <span aria-hidden="true">↗</span>
+                  </A>
                 </li>
               )}
             </ul>
@@ -109,6 +122,7 @@ export function Shell({ page, section, repositoryUrl, children }: ShellProps) {
             )}
             .
           </p>
+          <span className="footer-note">Made with care. And a little butter.</span>
         </div>
       </footer>
     </>

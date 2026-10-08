@@ -27,7 +27,7 @@ up before installing release artifacts; development works from this repository.
 
 ![Quaso dashboard with progress for each language](site/public/screenshots/dashboard.png)
 
-![Polish plural editing with source text and quality checks](site/public/screenshots/editor-pl.png)
+![Quaso Quest’s French-to-English plural editing with source text and quality checks](site/public/screenshots/editor-plurals.png)
 
 ![The Quaso translation workspace in dark mode](site/public/screenshots/editor-dark.png)
 
