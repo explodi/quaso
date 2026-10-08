@@ -7,14 +7,7 @@ import * as fs from "node:fs/promises";
  * on private D1/R2 storage; other deployments use the local data folder.
  */
 import { CreateApiTokenRequest, formatIssue, PublicationTime, validate } from "@quaso/core";
-import {
-  type Logger,
-  type ServiceApi,
-  type Store,
-  ServiceError,
-  ServiceTransportError,
-  SYSTEM,
-} from "@quaso/service";
+import { type Logger, type ServiceApi, type Store, ServiceError, SYSTEM } from "@quaso/service";
 import { join } from "node:path";
 import { createApp } from "./app.ts";
 import { type Config, type Env, loadConfig, readEnvironment } from "./config.ts";
@@ -27,7 +20,6 @@ import { InFlight, stopServer } from "./shutdown.ts";
 import { restoreFile, storedBackupSnapshot } from "./storage/backup_files.ts";
 import { createFolderStore } from "./storage/folder_store.ts";
 import { LockBusyError } from "./storage/lock.ts";
-import { connectRemoteService, RemoteSetupError } from "./storage/remote.ts";
 import { VERSION } from "./version.ts";
 
 export const USAGE = `Quaso server ${VERSION}
@@ -100,8 +92,10 @@ async function extractBackup(config: Config, args: string[]): Promise<number> {
     console.error("Usage: quaso backup <store-key> <file>, or quaso backup --at <UTC time> <file>");
     return 2;
   }
-  if (config.cloudflare || config.servicesUrl !== null) {
-    console.error("Use the Cloudflare backup download and restore commands for remote storage.");
+  if (config.cloudflare) {
+    console.error(
+      "Use the Cloudflare backup download and restore commands for Cloudflare storage.",
+    );
     return 1;
   }
   const input = timed ? { at: args[1] } : { file: args[0] };
@@ -222,13 +216,13 @@ interface OpenStorage {
 }
 
 /**
- * Cloudflare storage when `SERVICES_URL` is set, local storage otherwise; or null after
- * explaining why it can't be used.
+ * Private Cloudflare storage in the Cloudflare container, local storage otherwise; or null
+ * after explaining why it can't be used.
  */
 async function openStorage(
   config: Config,
   log: Logger,
-  options: { backups?: boolean; llm?: boolean; hint?: string; requireAnswer?: boolean } = {},
+  options: { backups?: boolean; llm?: boolean; hint?: string } = {},
 ): Promise<OpenStorage | null> {
   if (config.cloudflare) {
     const cloud = await startCloudflareService({
@@ -242,23 +236,6 @@ async function openStorage(
       close: cloud.close,
       secretKey: cloud.secretKey,
     };
-  }
-  if (config.servicesUrl) {
-    try {
-      const service = await connectRemoteService(config, log, {
-        requireAnswer: options.requireAnswer,
-      });
-      return {
-        kind: "cloudflare",
-        service,
-        close() {},
-        secretKey: config.secretKey ?? undefined,
-      };
-    } catch (error) {
-      if (!(error instanceof RemoteSetupError)) throw error;
-      console.error(error.message);
-      return null;
-    }
   }
   const local = await openOrExplain(config, log, options);
   return (
@@ -324,7 +301,6 @@ async function token(config: Config, log: Logger, args: string[]): Promise<numbe
   }
   const storage = await openStorage(config, log, {
     hint: "Stop it first (docker compose stop quaso), then run this command again.",
-    requireAnswer: true,
   });
   if (!storage) return 1;
   try {
@@ -337,8 +313,7 @@ async function token(config: Config, log: Logger, args: string[]): Promise<numbe
     return 0;
   } catch (error) {
     if (!(error instanceof ServiceError)) throw error;
-    const detail = error instanceof ServiceTransportError ? ` (${error.detail})` : "";
-    console.error(`Couldn't create the API key: ${error.message}${detail}`);
+    console.error(`Couldn't create the API key: ${error.message}`);
     return 1;
   } finally {
     storage.close();
@@ -348,7 +323,7 @@ async function token(config: Config, log: Logger, args: string[]): Promise<numbe
 /**
  * `restore <file>`: a backup (a SQLite file, or JSON, gzip-compressed or not) into a new,
  * empty instance: the data folder, while the server is stopped (this takes its lock), or
- * Cloudflare storage with `SERVICES_URL` (the Durable Object must be empty).
+ * private Cloudflare storage (the database must be empty).
  */
 async function restore(config: Config, log: Logger, args: string[]): Promise<number> {
   const [file, ...extra] = args.filter((arg) => arg !== "--");
@@ -367,11 +342,10 @@ async function restore(config: Config, log: Logger, args: string[]): Promise<num
   }
   const storage = await openStorage(config, log, {
     hint: "Stop it first (docker compose stop quaso), then run this command again.",
-    requireAnswer: true,
   });
   if (!storage) return 1;
   try {
-    const where = storage.kind === "local" ? config.dataDir : config.servicesUrl;
+    const where = storage.kind === "local" ? config.dataDir : "Cloudflare storage";
     console.error(`Restoring ${file} into ${where}…`);
     const result = await restoreFile(storage.service, file, { tempDir: storage.backups?.tempDir });
     const rows = Object.values(result.tables).reduce((sum, n) => sum + n, 0);
@@ -392,8 +366,7 @@ async function restore(config: Config, log: Logger, args: string[]): Promise<num
     return 0;
   } catch (error) {
     if (!(error instanceof ServiceError)) throw error;
-    const detail = error instanceof ServiceTransportError ? ` (${error.detail})` : "";
-    console.error(`Couldn't restore ${file}: ${error.message}${detail}`);
+    console.error(`Couldn't restore ${file}: ${error.message}`);
     return 1;
   } finally {
     storage.close();
@@ -406,7 +379,7 @@ async function seedDev(config: Config, log: Logger): Promise<number> {
     console.error("seed-dev only runs on a development instance (QUASO_DEV=1).");
     return 2;
   }
-  if (config.cloudflare || config.servicesUrl) {
+  if (config.cloudflare) {
     console.error("seed-dev only seeds local storage.");
     return 2;
   }

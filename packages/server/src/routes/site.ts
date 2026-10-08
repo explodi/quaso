@@ -16,7 +16,7 @@ export interface SiteRoutesOptions {
   version: string;
   publicUrl: string;
   apiRoutes: ApiRoute[];
-  /** Where the data is: local storage, or Cloudflare storage (`SERVICES_URL`). */
+  /** Where the data is: local storage, or private Cloudflare storage (D1 and R2). */
   storage?: "local" | "cloudflare";
 }
 

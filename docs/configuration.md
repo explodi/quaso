@@ -6,9 +6,8 @@ invalid settings together. The supplied [environment template](../deploy/.env.ex
 every variable.
 
 “Docker” includes a local binary or development server. “Both” means local storage and Cloudflare;
-on Cloudflare use Worker secrets for credentials and environment `vars` in `wrangler.jsonc` for
-ordinary settings. The container forwards account settings; LLM settings belong to the Durable
-Object. Do not put secrets in git. See [Docker](deploy-docker.md) and
+on Cloudflare set credentials as Worker secrets, and the Worker passes them to the server in the
+container. Do not put secrets in git. See [Docker](deploy-docker.md) and
 [Cloudflare](deploy-cloudflare.md) setup.
 
 ## Required for your setup
@@ -43,21 +42,23 @@ The server no longer reads `GEMINI_API_KEY`, `GEMINI_MODEL`, `LLM_CONCURRENCY` o
 
 ## Storage and backups
 
-| Variable   | Default                      | Applies to | Example | Meaning                                                               |
-| ---------- | ---------------------------- | ---------- | ------- | --------------------------------------------------------------------- |
-| `DATA_DIR` | /data; .quaso in development | Docker     | `/data` | Local database, key and backups directory. Ignored with SERVICES_URL. |
+| Variable   | Default                      | Applies to | Example | Meaning                                                                     |
+| ---------- | ---------------------------- | ---------- | ------- | --------------------------------------------------------------------------- |
+| `DATA_DIR` | /data; .quaso in development | Docker     | `/data` | Local database, key and backups directory. Ignored with Cloudflare storage. |
 
 ## Cloudflare
 
-`QUASO_CLOUDFLARE` set to `true` selects the server's private D1/R2 host. The container controller
-sets it; leave it unset for Docker and VM deployments. This mode generates its credentials in the database and uses the fixed outbound storage hostnames without `SERVICES_URL` or `SERVICE_TOKEN`.
+`QUASO_CLOUDFLARE` set to `true` selects the server's private D1 and R2 storage. The container
+controller sets it; leave it unset for Docker and VM deployments. This mode generates its
+credentials in the database and reaches storage through fixed private hostnames.
 
-| Variable                | Default            | Applies to | Example                                  | Meaning                                                                                                                        |
-| ----------------------- | ------------------ | ---------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `SERVICES_URL`          | unset              | Both       | `https://translate.example.com/internal` | Selects Cloudflare storage. HTTPS required except local development hosts. Container derives it from PUBLIC_URL when deployed. |
-| `SERVICE_TOKEN`         | unset              | Both       | `openssl rand -hex 32`                   | Shared internal API secret. Required with SERVICES_URL; must match the Worker.                                                 |
-| `LOCATION_HINT`         | unset              | Cloudflare | `weur`                                   | Initial Durable Object location: wnam, enam, sam, weur, eeur, apac, oc, afr or me. Does not move an existing object.           |
-| `CONTAINER_SLEEP_AFTER` | 10m; 5m in staging | Cloudflare | `30m`                                    | Worker variable: inactivity timeout before the container sleeps.                                                               |
+The Worker's own settings come from the instance's `quaso.cloudflare.jsonc`, not from the server's
+environment:
+
+| Setting        | Default            | Example | Meaning                                                                                    |
+| -------------- | ------------------ | ------- | ------------------------------------------------------------------------------------------ |
+| `sleepAfter`   | 10m; 5m in staging | `30m`   | Inactivity timeout before the container sleeps (the Worker's `CONTAINER_SLEEP_AFTER`).     |
+| `locationHint` | unset              | `weur`  | Where D1, R2 and the container controller are created: wnam, enam, weur, eeur, apac or oc. |
 
 ## Operations
 
