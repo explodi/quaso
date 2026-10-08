@@ -48,7 +48,7 @@ up before installing release artifacts; development works from this repository.
 You need [Deno](https://deno.com/) 2.9.6 (pinned in `.dvmrc`) and git:
 
 ```sh
-git clone 'https://github.com/<org>/quaso.git'
+git clone 'https://github.com/explodi/quaso.git'
 cd quaso
 deno install --frozen-lockfile
 deno task dev
