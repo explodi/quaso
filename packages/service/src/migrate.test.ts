@@ -10,6 +10,7 @@ const FAKE: Migration[] = [
     version: 1,
     name: "meta and notes",
     sql: `CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL) STRICT;
+          INSERT INTO meta (key, value) VALUES ('schema_generation', 'beta-2');
           CREATE TABLE notes (id INTEGER PRIMARY KEY, text TEXT NOT NULL) STRICT;`,
   },
   {

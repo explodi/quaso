@@ -128,7 +128,10 @@ export const UPLOAD_CASES: { name: string; run(sql: Sql): Promise<void> }[] = [
           [{ n: 0 }],
           [{ n: 0 }],
           [{ n: 0 }],
-          [{ key: "schema_version", value: String(DATABASE_VERSION) }],
+          [
+            { key: "schema_generation", value: "beta-2" },
+            { key: "schema_version", value: String(DATABASE_VERSION) },
+          ],
         ],
       );
     },

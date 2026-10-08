@@ -58,7 +58,10 @@ test("validateInput: 400 validation_failed with a detail per problem", () => {
   const error = assertThrows(
     () =>
       validateInput(UploadRequest, {
-        files: [{ path: "../common.json", content: "{}" }, { path: "a.txt" }],
+        files: [
+          { path: "../common.json", repoPath: "common.json", content: "{}" },
+          { path: "a.txt", repoPath: "src/a.json" },
+        ],
         extra: true,
       }),
     ServiceError,

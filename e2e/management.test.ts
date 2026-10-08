@@ -316,11 +316,10 @@ browserTest(
       }),
     });
     const target = (await getStrings(server, "fr")).strings[0];
-    const tab = await openTab(browser, server, `/translate/fr?id=${target.id}`, async (page) => {
-      await (
-        await page.createCDPSession()
-      ).send("Network.setCacheDisabled", { cacheDisabled: true });
-    });
+    // Anonymous reads are cacheable for 30 seconds; the reload below must see the change.
+    const tab = await openTab(browser, server, `/translate/fr?id=${target.id}`, (page) =>
+      page.setCacheEnabled(false),
+    );
     await sources(server, "Start playing");
     await tab.page.goto(`${server.url}/translate/fr?id=${target.id}`, {
       waitUntil: "networkidle0",
@@ -400,13 +399,13 @@ browserTest(
       document.querySelector(".estimate")?.textContent?.includes("1 strings"),
     );
     await click(tab.page, "Start translation");
-    await waitFor(tab.page, () => document.querySelector(".job-card") !== null);
+    // The dialog closes; the header shows the job until a notification says it finished.
+    await waitFor(tab.page, () => document.querySelector(".job-indicator") !== null);
     await server.service.alarm();
     const completedJobs = await server.service.listJobs(SYSTEM, {});
     assertEquals(completedJobs.jobs[0].status, "done");
-    await waitFor(
-      tab.page,
-      () => document.querySelector(".job-card .status")?.textContent === "done",
+    await waitFor(tab.page, () =>
+      document.body.textContent?.includes("Translation finished: 1 translated, 0 failed"),
     );
     const target = (await getStrings(server, "fr")).strings[0];
     assertEquals(target.translation?.colour, "green");

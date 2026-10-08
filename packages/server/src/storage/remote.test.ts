@@ -70,6 +70,8 @@ test("remote: the API works through the internal API, as with local storage", as
       storage: "cloudflare",
       schemaVersion: DATABASE_VERSION,
       revision: 0,
+      busy: false,
+      nextWakeUp: null,
     });
 
     const key = await service.createApiToken(SYSTEM, { name: "CI", scope: "upload" });

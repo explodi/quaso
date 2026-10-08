@@ -32,12 +32,12 @@ const HOSTILE = [
 browserTest(
   "an unverified email sign-in link explains recovery and the password reset works",
   {
-    env: {
-      EMAIL_PROVIDER: "resend",
-      EMAIL_API_KEY: "unused-browser-test-key",
-      EMAIL_FROM: "Quaso <quaso@example.com>",
-    },
     async prepare(service) {
+      // Email is configured in Settings → Email, as an administrator would.
+      await service.updateSettings(SYSTEM, {
+        email: { provider: "resend", from: "Quaso <quaso@example.com>", accountId: "" },
+      });
+      await service.setSecret(SYSTEM, { name: "email_api_key", value: "unused-browser-test-key" });
       const setup = await service.ensureSetupToken(SYSTEM, {});
       await service.completeSetup(ANONYMOUS, {
         token: setup.token!,
@@ -150,6 +150,10 @@ browserTest(
         if (path === "/api/v1/auth/session") {
           return Response.json(session, { headers: { "Cache-Control": "no-store" } });
         }
+        // The session is faked, so the header's job poll can't reach the real server.
+        if (path === "/api/v1/jobs") {
+          return Response.json({ jobs: [] }, { headers: { "Cache-Control": "no-store" } });
+        }
         if (path === "/api/v1/auth/signin" && request.method === "POST") {
           const body = await request.json();
           assertEquals(body.email, "mia@example.com");
@@ -204,6 +208,10 @@ browserTest(
           return Response.json(signedIn ? MANAGER_SESSION : SIGNED_OUT_SESSION, {
             headers: { "Cache-Control": "no-store", "X-Sessions": String(sessions) },
           });
+        }
+        // The session is faked, so the header's job poll can't reach the real server.
+        if (url.pathname === "/api/v1/jobs") {
+          return Response.json({ jobs: [] }, { headers: { "Cache-Control": "no-store" } });
         }
         if (url.pathname === "/test/sessions") return Response.json({ sessions, saves });
         if (url.pathname === "/test/sign-out") {

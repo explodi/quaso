@@ -93,7 +93,7 @@ test("app: the service decides who may do what", async () => {
   const read = service.addToken("read").secret;
   const upload = service.addToken("upload").secret;
   const { app } = testApp(service);
-  const body = { files: [{ path: "common.json", content: "{}" }] };
+  const body = { files: [{ path: "common.json", repoPath: "common.json", content: "{}" }] };
 
   const anonymous = await call(app, "/api/v1/sources", { method: "POST", json: body });
   assertEquals(anonymous.status, 401);

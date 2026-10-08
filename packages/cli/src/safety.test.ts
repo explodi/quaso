@@ -3,9 +3,9 @@ import * as fs from "node:fs/promises";
 import { test } from "node:test";
 /**
  * CLI-1 and CLI-5 in the source: the CLI's code (tests and their helpers aside) runs on
- * Node and Deno from one source, so it uses only `node:` built-ins, web APIs and
- * `@quaso/core`, never the Deno namespace, and nothing that starts a process. The build
- * checks the bundle the same way (scripts/build_cli.ts).
+ * Node and Deno from one source, so it uses only `node:` built-ins, web APIs, `@quaso/core`
+ * and js-yaml (bundled, for Crowdin configs), never the Deno namespace, and nothing that
+ * starts a process. The build checks the bundle the same way (scripts/build_cli.ts).
  */
 import { assertEquals } from "@std/assert";
 import { fileURLToPath as fromFileUrl } from "node:url";
@@ -32,7 +32,7 @@ async function sourceFiles(dir: string): Promise<string[]> {
   return files.sort();
 }
 
-test("the CLI's code uses only node: built-ins, web APIs and @quaso/core", async () => {
+test("the CLI's code uses only node: built-ins, web APIs, @quaso/core and js-yaml", async () => {
   const problems: string[] = [];
   for (const file of await sourceFiles(CLI)) {
     const name = relative(CLI, file);
@@ -43,7 +43,7 @@ test("the CLI's code uses only node: built-ins, web APIs and @quaso/core", async
         /\bfrom\s+["']([^"']+)["']|\bimport\(\s*["']([^"']+)["']/g,
       )) {
         const specifier = match[1] ?? match[2];
-        if (!/^(node:|\.{1,2}\/|@quaso\/core$)/.test(specifier)) {
+        if (!/^(node:|\.{1,2}\/|@quaso\/core$|js-yaml$)/.test(specifier)) {
           problems.push(`${where} imports ${specifier}`);
         }
       }

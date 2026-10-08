@@ -260,7 +260,7 @@ export const PUBLICATION_CASES: { name: string; run(sql: Sql): Promise<void> }[]
       await api.alarm();
       await api.importTranslations(SYSTEM, {
         language: "de",
-        files: [{ ...FILE, content: '{"hello":"Hallo"}' }],
+        files: [{ path: FILE.path, content: '{"hello":"Hallo"}' }],
         as: "blue",
       });
       checkEqual((await pending(sql))?.due, 10100);
@@ -452,7 +452,7 @@ export const PUBLICATION_CASES: { name: string; run(sql: Sql): Promise<void> }[]
       const meta = await api.backupTables(SYSTEM, { table: "meta" });
       checkEqual(
         meta.rows.map((row) => row[meta.columns.indexOf("key")]),
-        ["schema_version", "revision", "file_version_id"],
+        ["schema_generation", "schema_version", "revision", "file_version_id"],
       );
     },
   },

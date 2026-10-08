@@ -161,48 +161,50 @@ browserTest(
           .click();
       });
       await waitForList(page, strings.total);
-      const failures = await page.evaluate(
-        async (keys: string[]) => {
-          const problems: string[] = [];
-          const list = document.querySelector<HTMLElement>(".string-list")!;
-          const pause = () => new Promise((done) => setTimeout(done, 20));
-          for (let index = 0; index < keys.length; index++) {
-            list.scrollTop = index * 60;
-            let link: HTMLAnchorElement | null = null;
-            for (let i = 0; i < 100 && !link; i++) {
-              link = list.querySelector<HTMLAnchorElement>(`[data-index="${index}"] .row-link`);
-              if (!link) await pause();
-            }
-            if (!link) {
-              problems.push(`row ${index} not rendered`);
-              continue;
-            }
-            link.click();
-            let shown = false;
-            for (let i = 0; i < 200 && !shown; i++) {
-              shown =
-                document.querySelector(".panel-key code")?.textContent === keys[index] &&
-                document.querySelector(".signin-prompt") !== null;
-              if (!shown) await pause();
-            }
-            if (!shown) problems.push(`${keys[index]}: not shown with the sign-in prompt`);
-            const panel = document.querySelector(".pane-panel")!;
-            if (panel.querySelector("textarea")) problems.push(`${keys[index]}: an input`);
-            const actions = [...panel.querySelectorAll("button")]
-              .map((b) => b.textContent?.trim() ?? "")
-              .filter((label) =>
-                /^(Save|Suggest|Approve|Unapprove|Delete|Looks good|Translate with the LLM)$/.test(
-                  label,
-                ),
-              );
-            if (actions.length > 0) problems.push(`${keys[index]}: ${actions.join(", ")}`);
+      // The editor lists strings in queue order, so each row says which key it is.
+      const browsed = await page.evaluate(async (count: number) => {
+        const problems: string[] = [];
+        const seen: string[] = [];
+        const list = document.querySelector<HTMLElement>(".string-list")!;
+        const pause = () => new Promise((done) => setTimeout(done, 20));
+        for (let index = 0; index < count; index++) {
+          list.scrollTop = index * 60;
+          let link: HTMLAnchorElement | null = null;
+          for (let i = 0; i < 100 && !link; i++) {
+            link = list.querySelector<HTMLAnchorElement>(`[data-index="${index}"] .row-link`);
+            if (!link) await pause();
           }
-          if (document.querySelector(".row-check")) problems.push("selection checkboxes");
-          return problems;
-        },
-        strings.strings.map((s) => s.key),
-      );
-      assertEquals(failures, [], language.tag);
+          if (!link) {
+            problems.push(`row ${index} not rendered`);
+            continue;
+          }
+          const key = link.querySelector(".row-key code")?.textContent ?? "";
+          seen.push(key);
+          link.click();
+          let shown = false;
+          for (let i = 0; i < 200 && !shown; i++) {
+            shown =
+              document.querySelector(".panel-key code")?.textContent === key &&
+              document.querySelector(".signin-prompt") !== null;
+            if (!shown) await pause();
+          }
+          if (!shown) problems.push(`${key}: not shown with the sign-in prompt`);
+          const panel = document.querySelector(".pane-panel")!;
+          if (panel.querySelector("textarea")) problems.push(`${key}: an input`);
+          const actions = [...panel.querySelectorAll("button")]
+            .map((b) => b.textContent?.trim() ?? "")
+            .filter((label) =>
+              /^(Save|Suggest|Approve|Unapprove|Delete|Looks good|Translate with the LLM)$/.test(
+                label,
+              ),
+            );
+          if (actions.length > 0) problems.push(`${key}: ${actions.join(", ")}`);
+        }
+        if (document.querySelector(".row-check")) problems.push("selection checkboxes");
+        return { problems, seen };
+      }, strings.total);
+      assertEquals(browsed.problems, [], language.tag);
+      assertEquals(browsed.seen.toSorted(), strings.strings.map((s) => s.key).toSorted());
       assertStringIncludes(await text(page, ".signin-prompt"), "Sign in to suggest a translation");
     }
 
@@ -278,22 +280,20 @@ browserTest(
   async ({ server, browser }) => {
     const tab = await openTab(browser, server, "/");
     const { page } = tab;
-    await waitFor(page, () => document.querySelector(".theme-select") !== null);
+    await waitFor(page, () => document.querySelector(".theme-menu .dropdown-trigger") !== null);
+    // The bg tokens of packages/web/src/styles/tokens.ts: ink 950 (dark) and paper 50 (light).
     const background = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
     await page.emulateMediaFeatures([{ name: "prefers-color-scheme", value: "dark" }]);
-    assertEquals(await background(), "rgb(13, 17, 23)");
+    assertEquals(await background(), "rgb(38, 18, 48)");
     await page.emulateMediaFeatures([{ name: "prefers-color-scheme", value: "light" }]);
-    assertEquals(await background(), "rgb(245, 247, 249)");
-    await page.evaluate(() => {
-      const select = document.querySelector<HTMLSelectElement>(".theme-select")!;
-      select.value = "dark";
-      select.dispatchEvent(new Event("change", { bubbles: true }));
-    });
+    assertEquals(await background(), "rgb(244, 244, 241)");
+    await page.click(".theme-menu .dropdown-trigger");
+    await page.click('.theme-menu input[type="radio"][value="dark"]');
     await waitFor(page, () => document.documentElement.dataset.theme === "dark");
-    assertEquals(await background(), "rgb(13, 17, 23)");
+    assertEquals(await background(), "rgb(38, 18, 48)");
     await page.reload({ waitUntil: "networkidle0" });
     await waitFor(page, () => document.documentElement.dataset.theme === "dark");
-    assertEquals(await background(), "rgb(13, 17, 23)");
+    assertEquals(await background(), "rgb(38, 18, 48)");
     assertEquals(tab.problems, []);
   },
 );
