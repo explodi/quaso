@@ -11,7 +11,7 @@ import {
   type FileVersionResult,
   type FileVersionsResult,
 } from "@quaso/core";
-import { notFound, ServiceError } from "./errors.ts";
+import { notFound, ServiceError, badRequest } from "./errors.ts";
 import type { Sql, Store } from "./ports.ts";
 import type { FileVersion } from "./publisher.ts";
 import { settingsFromData } from "./settings.ts";
@@ -111,6 +111,18 @@ export async function getPublishedFile(
   await sql.read([]);
   return { version: info(row), content: text };
 }
+/**
+ * Refuses `at` with `untranslated: "omit"`: published versions are stored as rendered, with
+ * the source text in untranslated entries.
+ */
+export function checkPublishedQuery(query: ExportQuery): void {
+  if (query.at !== undefined && query.untranslated === "omit") {
+    throw badRequest(
+      "Published versions (at) always contain the source text; leave out untranslated=omit.",
+    );
+  }
+}
+
 export async function exportPublishedFiles(
   sql: ReadSql,
   store: Store | undefined,

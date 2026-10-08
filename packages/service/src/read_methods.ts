@@ -30,6 +30,7 @@ import { listCommentsAsync } from "./comments.ts";
 import { FALLBACK_MODEL } from "./context.ts";
 import { exportFilesAsync } from "./export.ts";
 import {
+  checkPublishedQuery,
   exportPublishedFiles,
   getFileVersion,
   getFileVersions,
@@ -252,11 +253,11 @@ export function asyncReadMethods(options: ReadOptions): AsyncReadMethods {
         getStatusAsync(sql, model, language),
       ),
     exportFiles: (actor, input) =>
-      call(actor, "download", ExportQuery, input, (sql, query) =>
-        query.at === undefined
-          ? exportFilesAsync(sql, query, model)
-          : exportPublishedFiles(sql, options.store, query, model),
-      ),
+      call(actor, "download", ExportQuery, input, (sql, query) => {
+        checkPublishedQuery(query);
+        if (query.at === undefined) return exportFilesAsync(sql, query, model);
+        return exportPublishedFiles(sql, options.store, query, model);
+      }),
     getFileVersions: (actor, input) =>
       call(actor, "download", FileVersionsQuery, input, (sql, query) =>
         getFileVersions(sql, query),

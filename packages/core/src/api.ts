@@ -503,6 +503,10 @@ export const ExportQuery = s.object({
   languages: s.array(LanguageTag).optional(),
   files: s.array(FilePath).optional(),
   at: PublicationTime.optional(),
+  untranslated: s
+    .enum(["source", "omit"])
+    .optional()
+    .describe("Untranslated entries as the English (default) or left out"),
 });
 export type ExportQuery = Infer<typeof ExportQuery>;
 

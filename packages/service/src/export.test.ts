@@ -84,6 +84,25 @@ test("untranslated strings fall back to the English (FMT-2)", async () => {
   assertEquals(files["de/hud.json"], { hp: "HP" });
 });
 
+test("untranslated omit leaves the English out; published versions can't", async () => {
+  using instance = await project();
+  write(instance, "common.json", "menu.play", "de", "Spielen");
+  const query = { languages: ["de"], untranslated: "omit" as const };
+  const files = content(await instance.service.exportFiles(SYSTEM, query));
+  assertEquals(files["de/common.json"], {
+    menu: { play: "Spielen" },
+    back: "$t(menu.quit)",
+    version: 3,
+  });
+  assertEquals(files["de/hud.json"], {});
+  const at = new Date().toISOString().slice(0, 16) + "Z";
+  const error = await assertRejects(
+    () => instance.service.exportFiles(SYSTEM, { ...query, at }),
+    ServiceError,
+  );
+  assertEquals(error.code, "bad_request");
+});
+
 test("a Polish plural gets one, few, many and other", async () => {
   using instance = await project();
   write(instance, "common.json", "coins", "pl", {
