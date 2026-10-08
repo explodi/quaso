@@ -26,6 +26,8 @@ export const WEB_DIST = join(ROOT, "packages/web/dist");
 
 /** Everything the website is built from: a change in any of them makes the build stale. */
 const WEB_SOURCES = [
+  "packages/design-system/src",
+  "packages/design-system/package.json",
   "packages/web/src",
   "packages/web/public",
   "packages/web/index.html",

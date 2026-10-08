@@ -1,16 +1,23 @@
 // SPDX-License-Identifier: MIT
-import { TextArea } from "./TextArea.tsx";
-import { Label, Select, Fieldset, Checkbox } from "./Controls.tsx";
-import { H1 } from "./Typography.tsx";
+import {
+  TextArea,
+  Label,
+  Select,
+  Fieldset,
+  Checkbox,
+  H1,
+  Button,
+  Dialog,
+  Loading,
+} from "@quaso/design-system";
+
 /** Shared, keyboard-accessible controls for the management pages. */
 import { type ReactNode, useId, useState } from "react";
 import type { Action } from "../lib/permissions.ts";
 import { useSession } from "../lib/session.tsx";
 import { useProject } from "../lib/hooks.ts";
 import { useToast } from "./Toast.tsx";
-import { Button, ButtonLink } from "./Button.tsx";
-import { Dialog } from "./Dialog.tsx";
-import { Loading } from "./Spinner.tsx";
+import { ButtonLink } from "./Button.tsx";
 
 export function Access({ action, children }: { action?: Action; children: ReactNode }) {
   const session = useSession();

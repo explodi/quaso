@@ -2,7 +2,7 @@
 /* Documentation uses the same semantic colors as the product. */
 .markdown-body {
   color: var(--fg);
-  font: 1rem / 1.7 var(--font);
+  font: var(--text-md) / 1.7 var(--font);
   overflow-wrap: anywhere;
   min-width: 0;
 }
@@ -10,12 +10,12 @@
   margin-top: 0;
 }
 .markdown-body :is(p, ul, ol, dl, blockquote, table, pre, details) {
-  margin: 0 0 1.25rem;
+  margin: 0 0 var(--space-5);
 }
 .markdown-body :is(h1, h2, h3, h4) {
-  margin: 2rem 0 1rem;
+  margin: var(--space-6) 0 var(--space-4);
   line-height: 1.15;
-  scroll-margin-top: 2rem;
+  scroll-margin-top: var(--space-6);
 }
 .markdown-body h1 {
   font-size: var(--heading-1);
@@ -30,17 +30,17 @@
   font-size: var(--heading-4);
 }
 .markdown-body :is(ul, ol) {
-  padding-inline-start: 1.5rem;
+  padding-inline-start: var(--space-5);
 }
 .markdown-body li > :is(ul, ol, p) {
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--space-2);
 }
 .markdown-body li + li {
-  margin-top: 0.3rem;
+  margin-top: var(--space-1);
 }
 .markdown-body pre {
   overflow: auto;
-  padding: 1rem;
+  padding: var(--space-4);
   background: var(--surface-alt);
   border: 1px solid var(--border);
   border-radius: var(--radius-small);
@@ -51,7 +51,7 @@
 }
 .markdown-body blockquote {
   color: var(--fg-muted);
-  padding-inline-start: 1rem;
+  padding-inline-start: var(--space-4);
   border-inline-start: 3px solid var(--brand);
 }
 .markdown-body table {
@@ -63,7 +63,7 @@
 .markdown-body th,
 .markdown-body td {
   text-align: start;
-  padding: 0.5rem 0.75rem;
+  padding: var(--space-2) var(--space-3);
   border: 1px solid var(--border);
 }
 .markdown-body th {
@@ -76,9 +76,10 @@
 .markdown-body hr {
   border: 0;
   border-top: 1px solid var(--border);
-  margin: 2rem 0;
+  margin: var(--space-6) 0;
 }
 .markdown-body summary {
+  min-height: var(--control-height);
   cursor: pointer;
   font-weight: 600;
 }

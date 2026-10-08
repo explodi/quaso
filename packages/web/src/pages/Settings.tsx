@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
-import { TextArea } from "../components/TextArea.tsx";
 import {
+  TextArea,
   Fieldset,
   Label,
   Checkbox,
@@ -9,8 +9,12 @@ import {
   Summary,
   Select,
   A,
-} from "../components/Controls.tsx";
-import { H2, H3, H1 } from "../components/Typography.tsx";
+  H2,
+  H3,
+  H1,
+  Button,
+  Loading,
+} from "@quaso/design-system";
 import { createContext, type ReactNode, useContext, useState } from "react";
 import {
   AddLanguageRequest,
@@ -35,9 +39,7 @@ import {
   UpdateSettingsRequest,
   UpdateStringRequest,
 } from "@quaso/core";
-import { Button } from "../components/Button.tsx";
 import { Access, ConfirmButton, LanguagePicker, OneTimeSecret } from "../components/Management.tsx";
-import { Loading } from "../components/Spinner.tsx";
 import { apiUrl, errorMessage, request } from "../lib/api.ts";
 import { queryCache, useQuery } from "../lib/data.ts";
 import { fieldError, validated } from "../lib/forms.ts";

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="packages/web/src/assets/quaso-cat.svg" width="256" height="208" alt="Quaso, a tiny gray cat tucked into a golden croissant" />
+  <img src="packages/design-system/src/assets/quaso-cat.svg" width="256" height="208" alt="Quaso, a tiny gray cat tucked into a golden croissant" />
 </p>
 
 # Quaso

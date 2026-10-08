@@ -22,8 +22,7 @@ import {
 } from "react";
 import { focusMainHeading } from "../lib/router.tsx";
 import { Link } from "../lib/router.tsx";
-import { IconButton } from "./Button.tsx";
-import { CheckIcon, CloseIcon, InfoIcon, WarningIcon } from "./Icons.tsx";
+import { IconButton, CheckIcon, CloseIcon, InfoIcon, WarningIcon } from "@quaso/design-system";
 
 export type ToastKind = "success" | "error" | "info";
 

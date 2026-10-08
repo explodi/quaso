@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
-import { Kbd } from "../../components/Typography.tsx";
-import { Table } from "../../components/Controls.tsx";
+import { Kbd, Table, Dialog } from "@quaso/design-system";
+
 /** The editor's keyboard shortcuts, in a dialog ("?" opens it). */
-import { Dialog } from "../../components/Dialog.tsx";
+
 import { isMac, shortcutList } from "../../lib/shortcuts.ts";
 
 export function ShortcutsDialog({ open, onClose }: { open: boolean; onClose(): void }) {

@@ -7,7 +7,7 @@ import { queryCache, useQuery } from "../lib/data.ts";
 import { count } from "../lib/format.ts";
 import { getJob, listActiveJobs } from "../lib/management-api.ts";
 import { Link } from "../lib/router.tsx";
-import { Label, Progress } from "./Controls.tsx";
+import { Label, Progress } from "@quaso/design-system";
 import { activeJob, jobProgress } from "./JobProgress.tsx";
 import { useToast } from "./Toast.tsx";
 

@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { A } from "../../packages/web/src/components/Controls.tsx";
-import { H1 } from "../../packages/web/src/components/Typography.tsx";
+import { A, H1 } from "@quaso/design-system";
 /** The page GitHub Pages shows for an address that has no page. */
 import { DOCS_HOME, HOME, relativeHref } from "./paths.ts";
 

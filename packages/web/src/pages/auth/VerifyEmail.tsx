@@ -2,9 +2,8 @@
 /** Confirming an email address with the link the server sent (`/verify-email?token=`). */
 import { useEffect, useRef, useState } from "react";
 import { ButtonLink } from "../../components/Button.tsx";
-import { ErrorMessage, Notice } from "../../components/ErrorMessage.tsx";
-import { CheckIcon } from "../../components/Icons.tsx";
-import { Spinner } from "../../components/Spinner.tsx";
+import { Notice, CheckIcon, Spinner } from "@quaso/design-system";
+import { ErrorMessage } from "../../components/ErrorMessage.tsx";
 import { verifyEmail } from "../../lib/api.ts";
 import { useMutation } from "../../lib/data.ts";
 import { useRoute } from "../../lib/router.tsx";

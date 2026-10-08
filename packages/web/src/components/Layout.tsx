@@ -1,6 +1,15 @@
 // SPDX-License-Identifier: MIT
-import { Button, ButtonLink } from "./Button.tsx";
-import { A } from "./Controls.tsx";
+import {
+  Button,
+  A,
+  ThemeSwitch,
+  LogoIcon,
+  UserIcon,
+  Wordmark,
+  Dropdown,
+} from "@quaso/design-system";
+import { ButtonLink } from "./Button.tsx";
+
 /**
  * The page frame: a skip link, the header (the project, the navigation, the theme switch
  * and the sign-in state), the main landmark and the footer.
@@ -12,10 +21,6 @@ import type { Action } from "../lib/permissions.ts";
 import { roleLabel } from "../lib/permissions.ts";
 import { href, Link, useRoute } from "../lib/router.tsx";
 import { useSession } from "../lib/session.tsx";
-import { ThemeSwitch } from "./ThemeSwitch.tsx";
-import { LogoIcon, UserIcon } from "./Icons.tsx";
-import { Wordmark } from "./Typography.tsx";
-import { Dropdown } from "./Dropdown.tsx";
 import { MainNavigation, type NavigationItem } from "./MainNavigation.tsx";
 import { useToast } from "./Toast.tsx";
 import { VolunteerDialog } from "./VolunteerDialog.tsx";

@@ -65,7 +65,7 @@ export function renderDoc(options: DocOptions): string {
       page={page}
       title={title.includes("Quaso") ? title : `${title} · Quaso`}
       description={options.description ?? DOCS_DESCRIPTION}
-      stylesheets={[GFM_CSS, SITE_CSS]}
+      stylesheets={[SITE_CSS, GFM_CSS]}
     >
       <Shell page={page} section="docs" repositoryUrl={repositoryUrl}>
         <DocPage page={page} html={html} pages={pages} sourceUrl={sourceUrl} />

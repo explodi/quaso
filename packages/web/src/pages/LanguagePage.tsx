@@ -1,6 +1,16 @@
 // SPDX-License-Identifier: MIT
-import { Label, Input, Checkbox } from "../components/Controls.tsx";
-import { H1, H2 } from "../components/Typography.tsx";
+import {
+  Label,
+  Input,
+  Checkbox,
+  H1,
+  H2,
+  EmptyState,
+  ArrowLeftIcon,
+  SearchIcon,
+  Loading,
+} from "@quaso/design-system";
+
 /**
  * A language (design §5.9, S7.4): its progress, the file tree with progress per file, a
  * filter, "Hide completed", and "Translate all", which opens the editor.
@@ -9,12 +19,9 @@ import type { LanguageFilesResult, LanguageProgress } from "@quaso/core";
 import { useMemo, useState } from "react";
 import { ButtonLink } from "../components/Button.tsx";
 import { AutoTranslateButton } from "../components/AutoTranslate.tsx";
-import { EmptyState } from "../components/EmptyState.tsx";
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import { FileTree } from "../components/FileTree.tsx";
-import { ArrowLeftIcon, SearchIcon } from "../components/Icons.tsx";
 import { ProgressBar } from "../components/ProgressBar.tsx";
-import { Loading } from "../components/Spinner.tsx";
 import { listFiles } from "../lib/api.ts";
 import { useQuery } from "../lib/data.ts";
 import { count, formatNumber, languageLabel, progressText, wordsLeftText } from "../lib/format.ts";

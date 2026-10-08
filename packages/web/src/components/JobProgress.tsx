@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
-import { Label, Progress, Details, Summary } from "./Controls.tsx";
-import { H2 } from "./Typography.tsx";
+import { Label, Progress, Details, Summary, H2, Loading } from "@quaso/design-system";
+
 /** Job progress is shared by the queue, the auto-translate dialog and the editor. */
 import type { JobInfo } from "@quaso/core";
 import { useEffect, useRef } from "react";
@@ -12,7 +12,6 @@ import { formatNumber } from "../lib/format.ts";
 import { editorHref } from "../pages/LanguagePage.tsx";
 import { ErrorMessage } from "./ErrorMessage.tsx";
 import { ConfirmButton } from "./Management.tsx";
-import { Loading } from "./Spinner.tsx";
 
 export function activeJob(job: JobInfo): boolean {
   return job.status === "queued" || job.status === "running";

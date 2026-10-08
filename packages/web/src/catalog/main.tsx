@@ -2,12 +2,11 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider } from "../lib/router.tsx";
-import { initTheme } from "../lib/theme.ts";
-import { ToastProvider } from "../design-system.ts";
+import { initTheme } from "@quaso/design-system";
+import { ToastProvider } from "../components/Toast.tsx";
 import { Catalog } from "./Catalog.tsx";
-import "../styles/theme.css";
+import "@quaso/design-system/styles.css";
 import "../styles/base.css";
-import "../styles/foundations.css";
 import "../styles/components.css";
 import "../styles/pages.css";
 import "../styles/editor.css";

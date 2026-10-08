@@ -1,15 +1,21 @@
 // SPDX-License-Identifier: MIT
-import { Card, Label, Checkbox } from "../components/Controls.tsx";
-import { H1, H2 } from "../components/Typography.tsx";
+import {
+  Card,
+  Label,
+  Checkbox,
+  H1,
+  H2,
+  Button,
+  Dialog,
+  Field,
+  Loading,
+} from "@quaso/design-system";
+
 /** Public terminology, with edits limited to the manager's languages. */
 import { type GlossaryTerm, languageName } from "@quaso/core";
 import { useState } from "react";
-import { Button } from "../components/Button.tsx";
-import { Dialog } from "../components/Dialog.tsx";
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
-import { Field } from "../components/Field.tsx";
 import { ConfirmButton, SelectField, TextField } from "../components/Management.tsx";
-import { Loading } from "../components/Spinner.tsx";
 import { useToast } from "../components/Toast.tsx";
 import {
   createGlossaryTerm,

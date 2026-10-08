@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { NavLink, useRoute } from "../lib/router.tsx";
-import { Dropdown } from "./Dropdown.tsx";
+import { Dropdown } from "@quaso/design-system";
 
 export interface NavigationItem {
   to: string;

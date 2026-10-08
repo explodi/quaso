@@ -4,10 +4,17 @@
  * sign-in link by email when it has an email service; and, in development, one click.
  */
 import { type FormEvent, useState } from "react";
-import { Button, AnchorButton } from "../../components/Button.tsx";
-import { ErrorMessage, Notice } from "../../components/ErrorMessage.tsx";
-import { Field } from "../../components/Field.tsx";
-import { ChatIcon, GitHubIcon, MailIcon, UserIcon } from "../../components/Icons.tsx";
+import {
+  Button,
+  AnchorButton,
+  Notice,
+  Field,
+  ChatIcon,
+  GitHubIcon,
+  MailIcon,
+  UserIcon,
+} from "@quaso/design-system";
+import { ErrorMessage } from "../../components/ErrorMessage.tsx";
 import { useToast } from "../../components/Toast.tsx";
 import { ApiError, browserAuthUrl, requestEmailLink, signIn } from "../../lib/api.ts";
 import { useMutation } from "../../lib/data.ts";

@@ -4,10 +4,8 @@
  * without one, an administrator creates a reset link on the Team page and passes it on.
  */
 import { type FormEvent, useState } from "react";
-import { Button } from "../../components/Button.tsx";
-import { ErrorMessage, Notice } from "../../components/ErrorMessage.tsx";
-import { Field } from "../../components/Field.tsx";
-import { InfoIcon, MailIcon } from "../../components/Icons.tsx";
+import { Button, Notice, Field, InfoIcon, MailIcon } from "@quaso/design-system";
+import { ErrorMessage } from "../../components/ErrorMessage.tsx";
 import { requestPasswordReset } from "../../lib/api.ts";
 import { useMutation } from "../../lib/data.ts";
 import { Link } from "../../lib/router.tsx";

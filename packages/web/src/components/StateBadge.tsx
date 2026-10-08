@@ -5,30 +5,15 @@
  * one, proofread (blue) a square with a check; outdated adds a clock, pending an hourglass
  * and QA problems a warning triangle.
  */
+import { StateIcon, ClockIcon, HourglassIcon, WarningIcon } from "@quaso/design-system";
 import type { StringSummary } from "@quaso/core";
 import {
   COLOUR_DESCRIPTIONS,
   COLOUR_LABELS,
   colourOf,
   flagsOf,
-  type StateColour,
   stateSentence,
 } from "../lib/states.ts";
-import {
-  CheckSquareIcon,
-  ClockIcon,
-  EmptySquareIcon,
-  HalfSquareIcon,
-  HourglassIcon,
-  WarningIcon,
-} from "./Icons.tsx";
-
-export function StateIcon({ colour, size }: { colour: StateColour; size?: number }) {
-  const className = `state-icon state-${colour}`;
-  if (colour === "blue") return <CheckSquareIcon className={className} size={size} />;
-  if (colour === "green") return <HalfSquareIcon className={className} size={size} />;
-  return <EmptySquareIcon className={className} size={size} />;
-}
 
 type Summary = Pick<StringSummary, "translation" | "pending">;
 
@@ -76,16 +61,6 @@ export function StateBadge({ summary, describe }: { summary: Summary; describe?:
         </span>
       )}
       {describe && <span className="sr-only">{COLOUR_DESCRIPTIONS[colour]}</span>}
-    </span>
-  );
-}
-
-/** A colour change, as in the history: icon and label before and after. */
-export function ColourLabel({ colour }: { colour: StateColour }) {
-  return (
-    <span className={`colour-label colour-${colour}`}>
-      <StateIcon colour={colour} />
-      {COLOUR_LABELS[colour]}
     </span>
   );
 }

@@ -1,5 +1,13 @@
 // SPDX-License-Identifier: MIT
-import { A, Checkbox } from "./Controls.tsx";
+import {
+  A,
+  Checkbox,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  FileIcon,
+  FolderIcon,
+  Button,
+} from "@quaso/design-system";
 /**
  * The file tree with progress per file (design §5.9), following the WAI-ARIA tree pattern:
  * ↑ and ↓ move, → opens a folder or moves into it, ← closes it or moves to its parent,
@@ -10,9 +18,7 @@ import type { Progress } from "@quaso/core";
 import { type KeyboardEvent, type ReactNode, useMemo, useRef, useState } from "react";
 import { count, formatDateTime, formatPercent, wordsLeftText } from "../lib/format.ts";
 import { hasProgress, leaves, parentPath, type TreeNode, visibleNodes } from "../lib/tree.ts";
-import { ChevronDownIcon, ChevronRightIcon, FileIcon, FolderIcon } from "./Icons.tsx";
 import { ProgressBar } from "./ProgressBar.tsx";
-import { Button } from "./Button.tsx";
 
 export interface FileTreeProps {
   nodes: TreeNode[];

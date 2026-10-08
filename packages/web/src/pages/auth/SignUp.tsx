@@ -5,10 +5,8 @@
  */
 import type { InviteCheck } from "@quaso/core";
 import { type FormEvent, useState } from "react";
-import { Button } from "../../components/Button.tsx";
-import { ErrorMessage, Notice } from "../../components/ErrorMessage.tsx";
-import { Field } from "../../components/Field.tsx";
-import { InfoIcon } from "../../components/Icons.tsx";
+import { Button, Notice, Field, InfoIcon } from "@quaso/design-system";
+import { ErrorMessage } from "../../components/ErrorMessage.tsx";
 import { useToast } from "../../components/Toast.tsx";
 import { ApiError, checkInvite, signUp } from "../../lib/api.ts";
 import { useMutation, useQuery } from "../../lib/data.ts";

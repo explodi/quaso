@@ -59,5 +59,5 @@ export function repositoryFileUrl(repositoryUrl: string, path: string, folder = 
 /** The site's style sheet, from src/styles.css. */
 export const SITE_CSS = "assets/site.css";
 
-/** github-markdown-css's style sheet, for the Markdown on documentation pages. */
+/** Documentation typography and layout, layered over the shared design system. */
 export const GFM_CSS = "assets/gfm.css";

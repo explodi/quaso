@@ -38,7 +38,11 @@ export default tseslint.config(
   },
   { files: ["**/*.test.ts"], rules: { "no-loss-of-precision": "off" } },
   {
-    files: ["packages/web/src/**/*.{ts,tsx}", "site/src/**/*.{ts,tsx}"],
+    files: [
+      "packages/design-system/src/**/*.{ts,tsx}",
+      "packages/web/src/**/*.{ts,tsx}",
+      "site/src/**/*.{ts,tsx}",
+    ],
     plugins: { "react-hooks": reactHooks },
     rules: {
       "react-hooks/rules-of-hooks": "error",
@@ -47,13 +51,17 @@ export default tseslint.config(
     },
   },
   {
-    files: ["packages/web/src/**/*.tsx", "site/src/**/*.tsx"],
+    files: [
+      "packages/design-system/src/**/*.tsx",
+      "packages/web/src/**/*.tsx",
+      "site/src/**/*.tsx",
+    ],
     ignores: [
-      "packages/web/src/components/Controls.tsx",
-      "packages/web/src/components/Button.tsx",
-      "packages/web/src/components/TextArea.tsx",
-      "packages/web/src/components/Typography.tsx",
-      "packages/web/src/components/Dialog.tsx",
+      "packages/design-system/src/components/Controls.tsx",
+      "packages/design-system/src/components/Button.tsx",
+      "packages/design-system/src/components/TextArea.tsx",
+      "packages/design-system/src/components/Typography.tsx",
+      "packages/design-system/src/components/Dialog.tsx",
     ],
     rules: {
       "no-restricted-syntax": [
@@ -62,7 +70,46 @@ export default tseslint.config(
           selector:
             "JSXOpeningElement[name.type='JSXIdentifier'][name.name=/^(button|input|select|textarea|a|label|fieldset|table|progress|details|summary|dialog|h[1-4]|kbd)$/]",
           message:
-            "Use the shared Quaso component from design-system.ts so the catalog and app stay in sync.",
+            "Use a shared component from @quaso/design-system so the app, website, and catalog stay in sync.",
+        },
+      ],
+    },
+  },
+  {
+    files: ["packages/design-system/src/**/*.{ts,tsx}"],
+    ignores: ["**/*.test.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              regex: "^(?:@quaso/|(?:\\.\\.?/).*(?:web|core|service|server|cli|cloudflare|site)/)",
+              message:
+                "The design system must be independent of consumers and application domain code.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["packages/web/**/*.{ts,tsx}", "site/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              regex: "(?:^@quaso/design-system/src/|(?:^|/)design-system/(?:src|public)/)",
+              message: "Import the design system through its public package exports.",
+            },
+            {
+              regex: "(?:^@quaso/web/|(?:^|/)packages/web/)",
+              message:
+                "The website must use @quaso/design-system instead of application implementation files.",
+            },
+          ],
         },
       ],
     },

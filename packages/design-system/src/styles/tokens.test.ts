@@ -10,6 +10,26 @@ import { assert, assertEquals } from "@std/assert";
 import { colourDifference, contrastRatio, lightness, type Vision } from "../lib/contrast.ts";
 import { CONTRAST_CHECKS, faviconSvg, THEME_CSS_URL, themeCss, THEMES } from "./tokens.ts";
 
+const STYLE_ROOTS = [
+  new URL("../", import.meta.url),
+  new URL("../../../web/src/", import.meta.url),
+  new URL("../../../../site/src/", import.meta.url),
+];
+
+async function stylesheets(): Promise<{ name: string; css: string }[]> {
+  const styles: { name: string; css: string }[] = [];
+  for (const root of STYLE_ROOTS) {
+    const files = await fs.readdir(root, { recursive: true });
+    for (const file of files.filter((name) => name.endsWith(".css"))) {
+      styles.push({
+        name: new URL(file, root).pathname,
+        css: await fs.readFile(new URL(file, root), "utf8"),
+      });
+    }
+  }
+  return styles;
+}
+
 test("theme.css is generated from tokens.ts", async () => {
   const css = await fs.readFile(THEME_CSS_URL, "utf8");
   assertEquals(css, themeCss(), "theme.css is out of date: run deno task design:tokens");
@@ -62,8 +82,7 @@ test("no stylesheet fades text: the contrast checks above would no longer hold",
   // Disabled buttons (WCAG exempts inactive controls) and invisible inputs may use it.
   const allowed = [/:disabled\b/, /\.visually-hidden-input\b/];
   const failures: string[] = [];
-  for (const name of ["base.css", "components.css", "pages.css", "editor.css"]) {
-    const css = await fs.readFile(new URL(name, import.meta.url), "utf8");
+  for (const { name, css } of await stylesheets()) {
     const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, "");
     for (const [, selector, body] of withoutComments.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
       const opacity = /(?:^|[;\s])opacity:\s*([\d.]+)/.exec(body);
@@ -79,7 +98,7 @@ test("no stylesheet fades text: the contrast checks above would no longer hold",
 
 test("favicons use the shared brand palette", async () => {
   assertEquals(
-    await fs.readFile(new URL("../../public/favicon.svg", import.meta.url), "utf8"),
+    await fs.readFile(new URL("../../../web/public/favicon.svg", import.meta.url), "utf8"),
     faviconSvg(),
   );
   assertEquals(
@@ -90,19 +109,10 @@ test("favicons use the shared brand palette", async () => {
 
 test("authored stylesheets use palette variables instead of literal colors", async () => {
   const failures: string[] = [];
-  const roots = [
-    new URL("../", import.meta.url),
-    new URL("../../../../site/src/", import.meta.url),
-  ];
-  for (const root of roots) {
-    const files = await fs.readdir(root, { recursive: true });
-    for (const file of files.filter(
-      (name) => name.endsWith(".css") && name !== "styles/theme.css",
-    )) {
-      const css = await fs.readFile(new URL(file, root), "utf8");
-      const literal = /#[\da-f]{3,8}\b|\b(?:rgb|rgba|hsl|hsla|oklch|oklab|lab|lch)\s*\(/i.exec(css);
-      if (literal) failures.push(`${file}: ${literal[0]}`);
-    }
+  for (const { name, css } of await stylesheets()) {
+    if (name === THEME_CSS_URL.pathname) continue;
+    const literal = /#[\da-f]{3,8}\b|\b(?:rgb|rgba|hsl|hsla|oklch|oklab|lab|lch)\s*\(/i.exec(css);
+    if (literal) failures.push(`${name}: ${literal[0]}`);
   }
   assertEquals(failures, []);
 });

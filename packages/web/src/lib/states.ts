@@ -9,23 +9,12 @@
  */
 import type { Progress, StateFilter, StringSummary, TranslationInfo } from "@quaso/core";
 
-export type StateColour = "red" | "green" | "blue";
+import { COLOUR_LABELS, type StateColour } from "@quaso/design-system";
+export { COLOUR_LABELS, COLOUR_DESCRIPTIONS, type StateColour } from "@quaso/design-system";
 
 export function colourOf(translation: TranslationInfo | null | undefined): StateColour {
   return translation ? translation.colour : "red";
 }
-
-export const COLOUR_LABELS: Record<StateColour, string> = {
-  red: "Untranslated",
-  green: "Translated",
-  blue: "Proofread",
-};
-
-export const COLOUR_DESCRIPTIONS: Record<StateColour, string> = {
-  red: "No translation yet: the app shows the English.",
-  green: "Translated by the LLM (or imported), waiting for a person to proofread it.",
-  blue: "Proofread: written or approved by a person.",
-};
 
 export interface StateFlags {
   outdated: boolean;

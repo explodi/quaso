@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { writeFile } from "node:fs/promises";
-import { faviconSvg, THEME_CSS_URL, themeCss } from "../packages/web/src/styles/tokens.ts";
+import { faviconSvg, THEME_CSS_URL, themeCss } from "@quaso/design-system/tokens";
 
 await writeFile(THEME_CSS_URL, themeCss());
 await writeFile(new URL("../packages/web/public/favicon.svg", import.meta.url), faviconSvg());

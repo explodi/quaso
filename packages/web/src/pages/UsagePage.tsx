@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
-import { H1, H2 } from "../components/Typography.tsx";
-import { Table } from "../components/Controls.tsx";
+import { H1, H2, Table, Loading } from "@quaso/design-system";
+
 /** Requests and tokens per UTC day/month, with a table as the chart's text alternative. */
 import type { UsageRow, UsageTotals } from "@quaso/core";
 import { useState } from "react";
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import { Access, SelectField } from "../components/Management.tsx";
-import { Loading } from "../components/Spinner.tsx";
 import { useQuery } from "../lib/data.ts";
 import { useDocumentTitle } from "../lib/hooks.ts";
 import { getUsage } from "../lib/management-api.ts";

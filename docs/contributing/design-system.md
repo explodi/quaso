@@ -4,24 +4,43 @@ Run `deno task dev` and open [the catalog](http://localhost:5173/design.html). I
 React entry point: no account, seeded data, or API calls are needed to use it. `deno task build:web`
 also builds `design.html` for the normal static server.
 
-The catalog renders the product's components. Editing their implementation or shared CSS changes
-both the catalog and the app. The public website imports the same foundations and React primitives;
-its static build includes the shared CSS and font without adding client-side JavaScript.
+The app, catalog, and public website depend on the workspace package `@quaso/design-system` in
+`packages/design-system`. It owns the React primitives, shared CSS, theme tokens, icons, mascot,
+and licensed fonts. Editing the package updates all three consumers. The website's static build
+bundles the package's styles and referenced assets without adding client-side JavaScript.
+
+The package has no dependency on the application, API types, router, or translation domain.
+Application workflows and route adapters stay in `packages/web`; landing-page and documentation
+layouts stay in `site`. Import through the package's exports, not relative paths into its source.
+ESLint and the package's dependency test enforce that boundary.
 
 ## Use shared controls
 
-Import from `packages/web/src/design-system.ts`, or directly from the component's module inside the
-component library. Use `Button`, `Input`, `Select`, `Checkbox`, `Radio`, `Switch`, `TextArea`,
+Import components from `@quaso/design-system`, and load the shared stylesheet once before your
+consumer's layout styles:
+
+```tsx
+import { Button, Field, H1, Input } from "@quaso/design-system";
+import "@quaso/design-system/styles.css";
+```
+
+`@quaso/design-system/icons`, `/tokens`, and `/contrast` expose the icon collection, palette data,
+and color calculations. `@quaso/design-system/assets/*` exposes the mascot, patterns, fonts, and
+font licenses for builds that copy assets.
+
+Use `Button`, `Input`, `Select`, `Checkbox`, `Radio`, `Switch`, `TextArea`,
 `Label`, `Fieldset`, `Progress`, `Table`, `Details`, `Summary`, and `Dialog`. `Field` adds an associated
 label, hint, and validation error to an input. Native props, event handlers, and refs still work.
 
-Use `Link` and `ButtonLink` for application routes; use `A` and `AnchorButton` for browser navigation,
-external destinations, and downloads. `Button` defaults to `type="button"`; forms submit explicitly
+The app keeps its router-aware `Link` and `ButtonLink` adapters locally; both compose package
+primitives. Use the package's `A` and `AnchorButton` for browser navigation, external destinations,
+and downloads. `Button` defaults to `type="button"`; forms submit explicitly
 with `type="submit"`. Busy buttons keep keyboard focus and ignore repeated clicks.
 
-The catalog also includes tabs, file trees, notices, empty states, toasts, translation status,
-progress, placeholder chips, icons, and a working translation composition. Business workflows can
-remain in their own components; their controls and colors still come from the system.
+The package also provides tabs, dropdowns, notices, empty states, progress, chips, status markers,
+and icons. File trees, toasts, translation status, placeholders, and the working translation
+composition in the catalog demonstrate application components built with these primitives.
+Business workflows remain in the app; their controls and colors come from the system.
 
 `MainNavigation` keeps common pages visible and groups the rest in a `Dropdown`, switching to a
 single menu on narrow screens. `Dropdown` also powers the account menu: it closes on Escape,
@@ -35,7 +54,7 @@ in this library and the catalog. Layout elements such as `section`, `div`, `span
 
 ## Color has a single source
 
-`packages/web/src/styles/tokens.ts` defines named palette families and shades. The light and dark
+`packages/design-system/src/styles/tokens.ts` defines named palette families and shades. The light and dark
 maps assign those shades to semantic roles. Component styles use roles such as `var(--surface)`,
 `var(--fg)`, `var(--danger)`, and `var(--selected)` instead of literal colors. Brand specimens can use
 palette variables such as `var(--lime-400)` directly. Transparency mixes declared palette
@@ -50,7 +69,7 @@ After editing the palette or theme roles, run:
 
 ```sh
 deno task design:tokens
-deno test -A packages/web/src/styles/tokens.test.ts
+deno test -A packages/design-system
 ```
 
 The generator updates `theme.css` and both favicons. Commit the generated files with the palette.
@@ -59,7 +78,8 @@ translation states for common red–green color-vision deficiencies. Authored st
 introduce literal colors outside the palette.
 
 Themes follow the system until someone chooses light or dark. The catalog switch and the app's
-three-way theme selector use the same preference, stored as `quaso.theme` in browser local storage.
+three-way theme menu use the package's theme store, persisted as `quaso.theme` in browser local
+storage. The public website follows the system preference with CSS and works without JavaScript.
 
 ## Typography and comfort
 
@@ -93,7 +113,7 @@ empty, half-filled, and checked squares. Shadows have a solid offset without blu
 choice controls keep native keyboard behavior inside square outlines.
 
 `Wordmark` combines the Quaso cat with Jersey 25. `QuasoMascot` displays the same mark on its own.
-The source is `packages/web/src/assets/quaso-cat.svg`, drawn on a **32×26** grid with nine colors.
+The source is `packages/design-system/src/assets/quaso-cat.svg`, drawn on a **32×26** grid with nine colors.
 It uses only pixel-aligned paths and `shape-rendering="crispEdges"`. Prefer the SVG at arbitrary
 sizes; the 32×26 PNG and 768×624 nearest-neighbor PNG ship alongside it. Never smooth the sprite.
 
@@ -115,10 +135,11 @@ narrow screens, keyboard focus, and long or right-to-left text when relevant. Ta
 ```sh
 deno task lint:react
 deno task typecheck
-deno test -A packages/web/src/styles/tokens.test.ts
-deno test -A e2e/catalog.test.ts --timeout 60000
+deno test -A packages/design-system
+deno test -A e2e/catalog.test.ts e2e/design_system.test.ts
 deno task site:build
 ```
 
 The Jersey fonts are distributed under the SIL Open Font License. Each font's license ships in
-`packages/web/public/fonts/Jersey-*-OFL.txt` and the public website's assets.
+`packages/design-system/src/assets/Jersey-*-OFL.txt`. Both consumer builds copy these licenses
+alongside the bundled fonts.

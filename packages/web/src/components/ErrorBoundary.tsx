@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
-import { Button } from "./Button.tsx";
-import { H1 } from "./Typography.tsx";
+import { Button, H1 } from "@quaso/design-system";
+
 /** Catches a page's rendering errors, so one broken page doesn't blank the whole website. */
 import { Component, type ErrorInfo, type ReactNode } from "react";
 

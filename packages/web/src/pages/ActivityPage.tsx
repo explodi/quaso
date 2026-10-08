@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
-import { H1 } from "../components/Typography.tsx";
-/** Activity (design §5.9): uploads, jobs, reviews, imports and renames, newest first, paged. */
-import type { ActivityItem, ActivityResult } from "@quaso/core";
-import { useEffect, useRef, useState } from "react";
-import { Button } from "../components/Button.tsx";
-import { EmptyState } from "../components/EmptyState.tsx";
-import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import {
+  H1,
+  Button,
+  EmptyState,
   ActivityIcon,
   CheckSquareIcon,
   FileIcon,
   SparklesIcon,
   UploadIcon,
-} from "../components/Icons.tsx";
-import { Loading } from "../components/Spinner.tsx";
+  Loading,
+} from "@quaso/design-system";
+/** Activity (design §5.9): uploads, jobs, reviews, imports and renames, newest first, paged. */
+import type { ActivityItem, ActivityResult } from "@quaso/core";
+import { useEffect, useRef, useState } from "react";
+import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import { getActivity, request } from "../lib/api.ts";
 import { useMutation, useQuery } from "../lib/data.ts";
 import { ConfirmButton } from "../components/Management.tsx";

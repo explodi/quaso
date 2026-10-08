@@ -35,6 +35,7 @@ import { walk } from "@std/fs/walk";
 import { fileURLToPath as fromFileUrl } from "node:url";
 import { dirname, join, relative, sep as SEPARATOR } from "node:path";
 import * as posix from "node:path/posix";
+import { bundleStylesheet } from "./styles.ts";
 import type { DocLink } from "./src/DocPage.tsx";
 import { renderDoc, renderLanding, renderNotFound } from "./src/prerender.tsx";
 import {
@@ -257,12 +258,12 @@ async function writeOutput(path: string, contents: string): Promise<void> {
   await fs.writeFile(file, contents);
 }
 
-/** Check rendered links and fragments, including landing-page links and screenshots. */
+/** Check rendered links and fragments, including screenshots, stylesheets and icons. */
 export function brokenOutputLinks(pages: Map<string, string>, files: Set<string>): string[] {
   const errors: string[] = [];
   const base = "https://quaso.invalid/";
   for (const [source, html] of pages) {
-    for (const match of html.matchAll(/<(?:a|img)\s[^>]*?(?:href|src)="([^"]+)"/g)) {
+    for (const match of html.matchAll(/<(?:a|img|link)\s[^>]*?(?:href|src)="([^"]+)"/g)) {
       const href = unescapeHtml(match[1]);
       if (!href || /^(?:[a-z][\w+.-]*:|\/\/)/i.test(href)) continue;
       const url = new URL(href, base + source);
@@ -371,26 +372,15 @@ export async function build(): Promise<string[]> {
   const hasDoc = (source: string) => byPage.has(docPagePath(source));
   await writeOutput(HOME, renderLanding({ hasDoc, repositoryUrl }));
   await writeOutput("404.html", renderNotFound({ baseHref: baseHref(), repositoryUrl }));
-  let siteStyles = await fs.readFile(join(SITE, "src", "styles.css"), "utf8");
-  for (const [directive, source] of siteStyles.matchAll(/@import "([^"]+)";/g)) {
-    const shared = await fs.readFile(join(SITE, "src", source), "utf8");
-    siteStyles = siteStyles.replace(directive, shared);
+  const styles = await bundleStylesheet(new URL("./src/styles.css", import.meta.url));
+  await writeOutput(SITE_CSS, styles.css);
+  for (const [name, source] of styles.assets) {
+    await fs.copyFile(source, join(OUT, "assets", name));
   }
-  await writeOutput(SITE_CSS, siteStyles);
   for (const font of [10, 15, 20, 25]) {
     await fs.copyFile(
-      join(REPOSITORY, `packages/web/src/assets/jersey-${font}.ttf`),
-      join(OUT, `assets/jersey-${font}.ttf`),
-    );
-    await fs.copyFile(
-      join(REPOSITORY, `packages/web/public/fonts/Jersey-${font}-OFL.txt`),
+      new URL(import.meta.resolve(`@quaso/design-system/assets/Jersey-${font}-OFL.txt`)),
       join(OUT, `assets/Jersey-${font}-OFL.txt`),
-    );
-  }
-  for (const asset of ["quaso-cat.svg", "pixel-weave.svg"]) {
-    await fs.copyFile(
-      join(REPOSITORY, "packages/web/src/assets", asset),
-      join(OUT, "assets", asset),
     );
   }
   await writeOutput(GFM_CSS, await fs.readFile(join(SITE, "src", "markdown.css"), "utf8"));

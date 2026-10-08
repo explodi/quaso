@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { H1 } from "../components/Typography.tsx";
+import { H1 } from "@quaso/design-system";
 /** The page for addresses the website doesn't know. */
 import { ButtonLink } from "../components/Button.tsx";
 import { useDocumentTitle } from "../lib/hooks.ts";

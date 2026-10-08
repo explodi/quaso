@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { Fieldset, Label, Checkbox } from "./Controls.tsx";
+import { Fieldset, Label, Checkbox, Button, Dialog, Field, Loading } from "@quaso/design-system";
 /** Managers choose a scope, get a live dry-run estimate, and follow the created job. */
 import { languageName, type JobScope } from "@quaso/core";
 import { useMemo, useState } from "react";
@@ -9,12 +9,8 @@ import { fieldError } from "../lib/forms.ts";
 import { useDebounced, useProject } from "../lib/hooks.ts";
 import { checkJobRequest } from "../lib/management-api.ts";
 import { useSession } from "../lib/session.tsx";
-import { Button } from "./Button.tsx";
-import { Dialog } from "./Dialog.tsx";
 import { ErrorMessage } from "./ErrorMessage.tsx";
-import { Field } from "./Field.tsx";
 import { LanguagePicker, SelectField, TextField } from "./Management.tsx";
-import { Loading } from "./Spinner.tsx";
 import { FileTree } from "./FileTree.tsx";
 import { buildTree, type TreeNode } from "../lib/tree.ts";
 import { Link } from "../lib/router.tsx";
