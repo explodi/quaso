@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: MIT
 # Every push to main: builds the official image (deploy/Dockerfile, the `deno compile`
-# binary on distroless) for amd64 and arm64, and pushes it to Docker Hub as
-# explodi/quaso:latest and explodi/quaso:sha-<commit>.
+# binary on distroless), runs the Docker smoke test against the amd64 build, and only then
+# pushes it for amd64 and arm64 to Docker Hub as explodi/quaso:latest and :sha-<commit>.
+# Pull requests build and test the image without pushing it.
 #
 # Repository secrets: DOCKERHUB_USERNAME, and DOCKERHUB_TOKEN, a Docker Hub access token
 # with Read & Write access to explodi/quaso.
@@ -10,6 +11,7 @@ name: Docker image
 on:
   push:
     branches: [main]
+  pull_request:
 
 permissions:
   contents: read
@@ -23,23 +25,42 @@ env:
 
 jobs:
   publish:
-    name: Publish explodi/quaso
+    name: Build, test and publish explodi/quaso
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version-file: .dvmrc
+      - run: deno install --frozen-lockfile
       - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+      - name: Build the amd64 image to test
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile
+          platforms: linux/amd64
+          load: true
+          tags: quaso:candidate
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Smoke test (acceptance test 1) on the image
+        run: deno run -A scripts/docker_smoke.ts --image quaso:candidate
+      - if: github.event_name == 'push'
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - id: meta
+        if: github.event_name == 'push'
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.IMAGE }}
           tags: |
             type=raw,value=latest
             type=sha,format=short
-      - uses: docker/build-push-action@v6
+      - if: github.event_name == 'push'
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: deploy/Dockerfile
