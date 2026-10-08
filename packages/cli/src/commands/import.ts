@@ -353,6 +353,7 @@ function renderImport(out: Output, summary: ImportSummary): void {
     if (result.skippedIdentical > 0) {
       parts.push(`${result.skippedIdentical} identical to the English (skipped)`);
     }
+    if (result.skippedEmpty > 0) parts.push(`${result.skippedEmpty} empty (skipped)`);
     if (result.droppedForms > 0) {
       parts.push(`${result.droppedForms} unused plural forms dropped`);
     }
