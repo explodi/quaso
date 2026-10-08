@@ -41,6 +41,7 @@ function result(request: ImportRequest, overrides: Partial<ImportResult> = {}): 
     imported: request.files.length,
     unchanged: 0,
     skippedIdentical: 0,
+    droppedForms: 0,
     skippedBlue: 0,
     refused: [],
     unknownKeys: [],

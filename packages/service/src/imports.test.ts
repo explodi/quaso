@@ -85,6 +85,7 @@ test("import writes green translations through the write path", async () => {
     imported: 3,
     unchanged: 0,
     skippedIdentical: 0,
+    droppedForms: 0,
     skippedBlue: 0,
     refused: [],
     unknownKeys: [],
@@ -153,6 +154,23 @@ test("values identical to the English are skipped unless keepIdentical", async (
   assertEquals(count(instance.sql, "activity", "type = 'import'"), 0);
   const kept = await importPl(instance, file, { keepIdentical: true });
   assertEquals([kept.imported, kept.skippedIdentical], [3, 0]);
+});
+
+test("plural forms the language doesn't use are ignored, not refused", async () => {
+  using instance = await startTestService();
+  await uploadJson(instance.service, { "common.json": COMMON }, { languages: ["ja"] });
+  const result = await instance.service.importTranslations(SYSTEM, {
+    language: "ja",
+    as: "green",
+    files: [
+      jsonFile("common.json", { coins_one: "コイン{{count}}枚", coins_other: "コイン{{count}}枚" }),
+    ],
+  });
+  assertEquals([result.imported, result.droppedForms, result.refused], [1, 1, []]);
+  assertEquals(
+    translations(instance).map((row) => [row.key, row.value]),
+    [["coins", '{"other":"コイン{{count}}枚"}']],
+  );
 });
 
 test("values that fail the checks are refused, with the checks", async () => {

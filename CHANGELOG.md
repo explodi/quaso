@@ -5,6 +5,11 @@ Release candidates are for deployment and migration testing. The team decides wh
 
 ## [Unreleased]
 
+### Changed
+
+- `quaso import` ignores plural forms a language doesn't use, such as `_one` in Japanese, instead
+  of refusing the whole translation, and counts them as `droppedForms`.
+
 ### Removed
 
 - The server's remote-storage mode (`SERVICES_URL`, `SERVICE_TOKEN`) and its `LOCATION_HINT`

@@ -554,6 +554,8 @@ export interface ImportResult {
   /** Already there with the same value and colour. */
   unchanged: number;
   skippedIdentical: number;
+  /** Plural forms in the files that the language doesn't use, such as `one` in Japanese: ignored. */
+  droppedForms: number;
   /** Blue translations left alone (no `overwrite`). */
   skippedBlue: number;
   refused: RefusedValue[];
