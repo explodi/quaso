@@ -304,15 +304,16 @@ Imports translation files you already have, such as those from Crowdin, from whe
 `translation` pattern points. Upload the English first: keys the English doesn't have are skipped
 and listed.
 
-| Option              | Meaning                                                                                                                                         |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--as <colour>`     | `green` (translated, not proofread) or `blue` (proofread). Required.                                                                            |
-| `--from <folder>`   | Read translation patterns under this existing folder instead of the project. Files are only read.                                               |
-| `--language <lang>` | Only these languages. Repeatable, or a comma list. Default: the config's `languages`.                                                           |
-| `--file <path>`     | Only this file: its path on the instance or a local source path (in every language), or a local translation path (in its language). Repeatable. |
-| `--overwrite`       | Also replace blue (proofread) translations on the instance. Without it, they stay.                                                              |
-| `--keep-identical`  | Keep values identical to the English. Without it, they are skipped, because tools such as Crowdin write the English into untranslated entries.  |
-| `--dry-run`         | Show what would be imported without saving anything.                                                                                            |
+| Option              | Meaning                                                                                                                                          |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--as <colour>`     | `green` (translated, not proofread) or `blue` (proofread). Required.                                                                             |
+| `--from <folder>`   | Read translation patterns under this existing folder instead of the project. Files are only read.                                                |
+| `--language <lang>` | Only these languages. Repeatable, or a comma list. Default: the config's `languages`.                                                            |
+| `--file <path>`     | Only this file: its path on the instance or a local source path (in every language), or a local translation path (in its language). Repeatable.  |
+| `--overwrite`       | Also replace blue (proofread) translations on the instance. Without it, they stay.                                                               |
+| `--keep-identical`  | Keep values identical to the English. Without it, they are skipped, because tools such as Crowdin write the English into untranslated entries.   |
+| `--allow-qa-errors` | Import values that fail the quality checks, with their QA errors, instead of refusing them. They are listed, and the instance counts them in QA. |
+| `--dry-run`         | Show what would be imported without saving anything.                                                                                             |
 
 To preserve Crowdin's proofread state, import its approved-only export first with
 `quaso import --as blue --from /tmp/crowdin-approved`, then import the full export with
@@ -324,7 +325,8 @@ Blue translations stay, and values identical to English are skipped in both runs
 Plural forms a language doesn't use are ignored rather than refused: files that repeat the English
 categories, such as `coins_one` beside `coins_other` in Japanese, import their `other` form, and the
 summary counts the unused forms dropped. Values that fail the quality checks are refused and listed,
-and the exit code is 6; the other values are imported:
+and the exit code is 6; the other values are imported (with `--allow-qa-errors`, they are imported
+too, listed under "Imported with QA errors", and the exit code stays 0):
 
 ```text
 Refused by the quality checks (1):

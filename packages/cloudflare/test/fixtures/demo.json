@@ -379,6 +379,7 @@
         "droppedForms": 0,
         "skippedBlue": 0,
         "refused": [],
+        "flagged": [],
         "unknownKeys": [],
         "unknownFiles": []
       },
@@ -391,6 +392,7 @@
         "droppedForms": 0,
         "skippedBlue": 0,
         "refused": [],
+        "flagged": [],
         "unknownKeys": [],
         "unknownFiles": []
       },
@@ -403,6 +405,7 @@
         "droppedForms": 0,
         "skippedBlue": 0,
         "refused": [],
+        "flagged": [],
         "unknownKeys": [],
         "unknownFiles": []
       }

@@ -44,6 +44,7 @@ function result(request: ImportRequest, overrides: Partial<ImportResult> = {}): 
     droppedForms: 0,
     skippedBlue: 0,
     refused: [],
+    flagged: [],
     unknownKeys: [],
     unknownFiles: [],
     ...overrides,
