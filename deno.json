@@ -31,6 +31,7 @@
     "docker": "docker build -f deploy/Dockerfile -t quaso:dev .",
     "docker:smoke": "deno task docker && deno run -A scripts/docker_smoke.ts",
     "e2e": "deno test -A e2e/",
+    "e2e:browser": "npx --no-install puppeteer browsers install chrome",
     "site": "cd site && vite",
     "site:build": "deno run -A site/build.ts",
     "site:preview": "deno task site:build && cd site && vite preview",

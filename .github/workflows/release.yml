@@ -56,7 +56,7 @@ jobs:
       - run: deno task check
       - run: deno task build
       - run: deno task test:binary
-      - run: deno run -A npm:puppeteer browsers install chrome
+      - run: deno task e2e:browser
       - run: deno task e2e
       - run: deno task site:build
       - run: deno task cf:check

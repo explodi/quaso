@@ -52,7 +52,7 @@ awaiting the provider; no test should depend on an actual model's prose.
 ## Browser tests
 
 [e2e/\_setup.ts](../../e2e/_setup.ts) starts an in-process server with in-memory SQLite and the real
-security headers. It builds the website when stale. Install Chromium once with `deno run -A npm:puppeteer browsers install chrome`; Puppeteer starts it for each test. Tests collect console errors, failed requests and CSP violations. Use real routes
+security headers. It builds the website when stale. Install Chromium once with `deno task e2e:browser` (it needs Node: Puppeteer's installer stops before extracting under Deno); Puppeteer starts it for each test. Tests collect console errors, failed requests and CSP violations. Use real routes
 where possible; intercept only behavior that is hard to cause deterministically. Browser tests are
 separate from the fast unit suite because they start a browser and may need an initial download.
 

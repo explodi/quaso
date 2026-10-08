@@ -55,7 +55,7 @@ jobs:
           path: ~/.cache/puppeteer
           key: puppeteer-${{ runner.os }}-${{ hashFiles('deno.lock') }}
       - run: deno task build:web
-      - run: deno run -A npm:puppeteer browsers install chrome
+      - run: deno task e2e:browser
       - run: deno task e2e
 
   cli:

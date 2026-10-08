@@ -59,7 +59,7 @@ jobs:
         with:
           deno-version-file: .dvmrc
       - run: deno install --frozen-lockfile
-      - run: deno run -A npm:puppeteer browsers install chrome
+      - run: deno task e2e:browser
       - run: deno task build:cli
       - run: docker compose build quaso
       - run: docker compose up -d --wait --wait-timeout 120 quaso
@@ -97,7 +97,7 @@ jobs:
         with:
           deno-version-file: .dvmrc
       - run: deno install --frozen-lockfile
-      - run: deno run -A npm:puppeteer browsers install chrome
+      - run: deno task e2e:browser
       - run: deno task build:cli
       # The staging Worker/domain/bucket and its secrets must already be configured.
       - run: deno task cf:deploy --env staging
@@ -124,7 +124,7 @@ jobs:
         with:
           deno-version-file: .dvmrc
       - run: deno install --frozen-lockfile
-      - run: deno run -A npm:puppeteer browsers install chrome
+      - run: deno task e2e:browser
       - run: deno task build:cli
       - run: deno task docker
       - name: Start the server with remote storage
