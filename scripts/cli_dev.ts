@@ -8,16 +8,17 @@ import * as fs from "node:fs/promises";
  *
  * Tasks run in the repository's root, so the CLI runs where `deno task` was started
  * (`INIT_CWD`). Without a `quaso.config.json` there or in a parent folder, and without
- * `--cwd` or `--config`, it uses `examples/demo-game/`: `deno task cli status` works from the
+ * `--cwd` or `--config`, it uses the development seed fixture: `deno task cli status` works from the
  * repository's root.
  */
 import { fileURLToPath as fromFileUrl } from "node:url";
 import { join, relative } from "node:path";
 import { run } from "../packages/cli/src/run.ts";
 import { findConfig } from "../packages/cli/src/config.ts";
+import { demoDir } from "../packages/server/src/dev_seed.ts";
 
 const ROOT = fromFileUrl(new URL("..", import.meta.url));
-const DEMO = join(ROOT, "examples", "demo-game");
+const DEMO = demoDir();
 export const DEV_URL = "http://localhost:8000";
 
 /** The environment for the CLI: the development server and key, unless already set. */
@@ -34,7 +35,7 @@ export async function devEnv(
   return result;
 }
 
-/** The arguments, with `--cwd examples/demo-game` when no project is chosen or found. */
+/** The arguments, with the seed fixture's `--cwd` when no project is chosen or found. */
 export async function devArgs(args: string[], cwd: string): Promise<string[]> {
   const chosen = args.some(
     (arg) =>

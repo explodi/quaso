@@ -20,6 +20,8 @@ const ALLOWED = new Set([
   "CC0-1.0",
   "Unlicense",
   "Python-2.0",
+  // Self-hosted font assets, distributed with their original licence notices.
+  "OFL-1.1",
   // Data only (such as caniuse-lite), not code.
   "CC-BY-4.0",
 ]);
@@ -79,7 +81,12 @@ function licenseOf(pkg: Record<string, unknown>): string {
 
 async function checkNpm(problems: string[]): Promise<number> {
   let count = 0;
-  const roots = ["node_modules", "packages/cloudflare/node_modules", "site/node_modules"];
+  const roots = [
+    "node_modules",
+    "packages/cloudflare/node_modules",
+    "site/node_modules",
+    "examples/demo-game/node_modules",
+  ];
   for (const root of roots) {
     try {
       await fs.stat(root);
@@ -109,7 +116,12 @@ async function checkNpm(problems: string[]): Promise<number> {
       const excepted = DEV_TOOL_EXCEPTIONS.some(
         (exception) =>
           (exception.root === root ||
-            (exception.root === "node_modules" && root === "packages/cloudflare/node_modules")) &&
+            (exception.root === "node_modules" &&
+              [
+                "packages/cloudflare/node_modules",
+                "site/node_modules",
+                "examples/demo-game/node_modules",
+              ].includes(root))) &&
           exception.name.test(pkg.name as string) &&
           exception.license === license,
       );

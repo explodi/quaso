@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: MIT
+# A private, disposable translation playground. Production: ../../deploy/compose.yaml.
+name: quaso-quest
+
+services:
+  quaso:
+    image: explodi/quaso:latest
+    build:
+      context: ../..
+      dockerfile: deploy/Dockerfile
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      PUBLIC_URL: http://127.0.0.1:8000
+      SETUP_KEY: quaso-quest-local-playground
+      TRUST_PROXY: "false"
+    volumes:
+      - quaso-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    stop_grace_period: 30s
+
+volumes:
+  quaso-data:

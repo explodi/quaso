@@ -25,6 +25,11 @@ deno task cli status
 
 `deno task dev:reset` wipes `.quaso/` and seeds again.
 
+The development seed and root CLI use a stable, partly translated
+[fixture](packages/server/src/testing/fixtures/translation-project/README.md). For a playable game
+that starts with untranslated English and German targets, follow
+[Quaso Quest's setup](examples/demo-game/README.md), which runs its own Docker instance.
+
 ## Front-end toolchain
 
 Both frontends use Vite 8.3.2 and React Compiler 1.0 through the React plugin's Babel preset.

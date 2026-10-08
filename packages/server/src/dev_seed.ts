@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 import * as fs from "node:fs/promises";
 /**
- * The development seed (design §5.13): the demo project from `examples/demo-game/`,
+ * The development seed (design §5.13): the translation fixture from `testing/fixtures/`,
  * uploaded and partly translated, and a development API key. `deno task dev` runs it once,
  * on a new database, through `quaso seed-dev`.
  */
@@ -18,9 +18,9 @@ import { glob } from "node:fs/promises";
 import { fileURLToPath as fromFileUrl } from "node:url";
 import { join, relative, sep as SEPARATOR } from "node:path";
 
-/** `examples/demo-game/` in the repository. */
+/** A stable, partly translated project for development, tests and model evaluation. */
 export function demoDir(): string {
-  return fromFileUrl(new URL("../../../examples/demo-game/", import.meta.url));
+  return fromFileUrl(new URL("./testing/fixtures/translation-project/", import.meta.url));
 }
 
 /** The demo's translations to import, and how. */

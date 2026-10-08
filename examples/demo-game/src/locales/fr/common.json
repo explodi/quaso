@@ -1,17 +1,27 @@
 {
-  "play": "Jouer",
-  "back": "Retour",
-  "continue": "Continuer",
-  "greeting": "Bon retour, {{name}} !",
-  "coins_one": "{{count}} pièce",
-  "coins_many": "{{count}} de pièces",
-  "coins_other": "{{count}} pièces",
-  "items_zero": "Ton sac est vide",
-  "items_one": "{{count}} objet dans ton sac",
-  "items_many": "{{count}} d’objets dans ton sac",
-  "items_other": "{{count}} objets dans ton sac",
-  "level": "Niveau {{current}} sur {{total}}",
-  "hints": [
-    "Saute deux fois pour atteindre les rebords élevés."
-  ]
+  "edition": "LES PETITES AVENTURES",
+  "eyebrow": "UNE AVENTURE À SAVOURER",
+  "tagline": "Un chat. Un croissant. Une mission très beurrée.",
+  "language": "Langue du jeu",
+  "soundOn": "Activer les petits bruits",
+  "soundOff": "Couper les petits bruits",
+  "seal": {
+    "line1": "FAIT AVEC",
+    "line2": "100 %",
+    "line3": "PUR BEURRE"
+  },
+  "controls": {
+    "move": "se déplacer",
+    "space": "espace",
+    "dash": "foncer",
+    "click": "ou clique là où tu veux aller"
+  },
+  "footer": "Un petit jeu fait avec amour et beaucoup de beurre.",
+  "translation": {
+    "title": "Ce petit jeu parle ta langue ?",
+    "body": "Quaso Quest est aussi un terrain de jeu pour la traduction. Le français est prêt ; l'anglais et l'allemand attendent tes mots.",
+    "workflow": "Envoie les textes à ton instance Quaso, traduis-les, puis télécharge-les et recharge le jeu.",
+    "fallback": "Les textes non traduits s'affichent en français. À toi de leur donner de nouveaux mots !",
+    "readme": "Ouvrir le guide de traduction ↗"
+  }
 }

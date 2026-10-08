@@ -3,13 +3,11 @@ import { test } from "node:test";
 import * as fs from "node:fs/promises";
 /** The CLI's build, development and end-to-end scripts. */
 import { assert, assertEquals, assertThrows } from "@std/assert";
-import { fileURLToPath as fromFileUrl } from "node:url";
 import { join } from "node:path";
 import { checkBundle, FORBIDDEN, HEADER, packageJson } from "./build_cli.ts";
 import { DEV_URL, devArgs, devEnv } from "./cli_dev.ts";
 import { parseOptions } from "./cli_e2e.ts";
-
-const ROOT = fromFileUrl(new URL("..", import.meta.url));
+import { demoDir } from "../packages/server/src/dev_seed.ts";
 
 test("checkBundle refuses code that could start a process, and imports that aren't node:", () => {
   assertEquals(
@@ -60,7 +58,7 @@ test("deno task cli: the development server and key, unless set", async () => {
 });
 
 test("deno task cli uses the demo when no project is found or chosen", async () => {
-  const demo = join(ROOT, "examples", "demo-game");
+  const demo = demoDir();
   const outside = await Deno.makeTempDir();
   try {
     assertEquals(await devArgs(["status"], outside), ["--cwd", demo, "status"]);

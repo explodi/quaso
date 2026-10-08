@@ -33,15 +33,16 @@ up before installing release artifacts; development works from this repository.
 
 ## Quick start
 
-| I want to…                       | Read                                                         |
-| -------------------------------- | ------------------------------------------------------------ |
-| Deploy Quaso with Docker Compose | [docs/deploy-docker.md](docs/deploy-docker.md)               |
-| Deploy Quaso on Cloudflare       | [docs/deploy-cloudflare.md](docs/deploy-cloudflare.md)       |
-| Add Quaso to my game             | [docs/add-to-your-game.md](docs/add-to-your-game.md)         |
-| Run the translation workflow     | [docs/workflow.md](docs/workflow.md)                         |
-| Use the CLI                      | [docs/cli.md](docs/cli.md)                                   |
-| Move from Crowdin                | [docs/migrate-from-crowdin.md](docs/migrate-from-crowdin.md) |
-| Work on Quaso                    | [CONTRIBUTING.md](CONTRIBUTING.md)                           |
+| I want to…                         | Read                                                         |
+| ---------------------------------- | ------------------------------------------------------------ |
+| Deploy Quaso with Docker Compose   | [docs/deploy-docker.md](docs/deploy-docker.md)               |
+| Deploy Quaso on Cloudflare         | [docs/deploy-cloudflare.md](docs/deploy-cloudflare.md)       |
+| Add Quaso to my game               | [docs/add-to-your-game.md](docs/add-to-your-game.md)         |
+| Play a game and try translating it | [Quaso Quest](examples/demo-game/README.md)                  |
+| Run the translation workflow       | [docs/workflow.md](docs/workflow.md)                         |
+| Use the CLI                        | [docs/cli.md](docs/cli.md)                                   |
+| Move from Crowdin                  | [docs/migrate-from-crowdin.md](docs/migrate-from-crowdin.md) |
+| Work on Quaso                      | [CONTRIBUTING.md](CONTRIBUTING.md)                           |
 
 ## Working on Quaso
 
@@ -57,6 +58,10 @@ deno task dev
 `deno task dev` starts a working Quaso with a demo project, hot reloading, a signed-in developer
 account and a fake translator, with no accounts, keys, Docker or cloud services. See
 [CONTRIBUTING.md](CONTRIBUTING.md).
+
+This populated development project uses a stable translation fixture. To try translating a game
+from scratch, [Quaso Quest](examples/demo-game/README.md) has French source text, empty English and
+German targets, and its own Docker Compose setup.
 
 ## Licence
 

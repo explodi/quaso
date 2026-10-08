@@ -78,17 +78,6 @@ export async function prepareRelease(
     throw new Error("package.json has no version");
   }
   files.set("package.json", workspace.replace(/("version"\s*:\s*")[^"]+"/, `$1${version}"`));
-  // The example game pins the published CLI, under the name in packages/cli/package.json.
-  const cliPackage = await fs.readFile(join(root, "packages/cli/package.json"), "utf8");
-  const cliName: string = JSON.parse(cliPackage).name;
-  const examplePath = "examples/demo-game/package.json";
-  const example = await fs.readFile(join(root, examplePath), "utf8");
-  const pinned = JSON.parse(example).devDependencies?.[cliName];
-  if (!pinned) throw new Error(`${examplePath} has no ${cliName} pin`);
-  files.set(
-    examplePath,
-    example.replace(`"${cliName}": "${pinned}"`, `"${cliName}": "${version}"`),
-  );
   files.set(
     "CHANGELOG.md",
     releaseChangelog(

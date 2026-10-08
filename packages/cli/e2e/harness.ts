@@ -3,20 +3,20 @@ import * as fs from "node:fs/promises";
 /**
  * The CLI's end-to-end harness (S4.10, S4.11): a real server in this process (the server's
  * app and the real service on an in-memory database, on a random port), temporary copies of
- * `examples/demo-game/`, and the CLI run in-process or as the built bundle under Node or
+ * the translation fixture, and the CLI run in-process or as the built bundle under Node or
  * Deno. Test code: it may start processes; the CLI never does.
  */
 import { cp } from "node:fs/promises";
-import { fileURLToPath as fromFileUrl } from "node:url";
 import { join } from "node:path";
 import { createFakeTranslator, type Service, SYSTEM, TimerScheduler } from "@quaso/service";
 import { createApp } from "../../server/src/app.ts";
 import { createLogger } from "../../server/src/log.ts";
+import { demoDir } from "../../server/src/dev_seed.ts";
 import { testConfig } from "../../server/src/testing/helpers.ts";
 import { realService } from "../../server/src/testing/real_service.ts";
 import { run } from "../src/run.ts";
 
-export const DEMO_DIR = fromFileUrl(new URL("../../../examples/demo-game/", import.meta.url));
+export const DEMO_DIR = demoDir();
 /** The demo's languages, as its config lists them. */
 export const DEMO_LANGUAGES = ["de", "fr", "pl", "ja", "ar", "pt-BR"];
 export const DEMO_FILES = ["common.json", "menus.json", "store.json"];
@@ -86,7 +86,7 @@ export async function tempDir(
   return { dir, remove: () => fs.rm(dir, { recursive: true }).catch(() => {}) };
 }
 
-/** Copies `examples/demo-game/` into `parent` and returns the copy's folder. */
+/** Copies the translation fixture into `parent` and returns the copy's folder. */
 export async function copyDemo(parent: string, name = "demo-game"): Promise<string> {
   const target = join(parent, name);
   await cp(DEMO_DIR, target, { recursive: true });

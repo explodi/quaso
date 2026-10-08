@@ -1,8 +1,8 @@
 {
-  "$schema": "http://localhost:8000/schema/config-v1.json",
-  "hostname": "http://localhost:8000",
-  "sourceLanguage": "en",
-  "languages": ["de", "fr", "pl", "ja", "ar", "pt-BR"],
-  "files": [{ "source": "src/locales/en/**/*.json", "translation": "src/locales/{lang}/{path}" }],
-  "limits": [{ "file": "store.json", "key": "title", "maxLength": 30 }]
+  "$schema": "http://127.0.0.1:8000/schema/config-v1.json",
+  "hostname": "http://127.0.0.1:8000",
+  "sourceLanguage": "fr",
+  "languages": ["en", "de"],
+  "files": [{ "source": "src/locales/fr/**/*.json", "translation": "src/locales/{lang}/{path}" }],
+  "limits": [{ "file": "game.json", "key": "welcome.start", "maxLength": 24 }]
 }

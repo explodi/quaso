@@ -2,9 +2,8 @@
 
 Quaso reads i18next JSON v4 files. Keep the source language in your repository and let Quaso write
 the other languages. First [deploy an instance](deploy-docker.md) and create an upload API key in
-Settings. The `@quaso-i18n/cli` npm names must be reserved and published before these install
-commands work. Before publication, run `deno task cli` from a Quaso checkout against its development
-instance.
+Settings. For local Quaso development, run `deno task cli` from a checkout against its development
+instance, or follow [Quaso Quest's Docker setup](../examples/demo-game/README.md).
 
 ## Connect and upload
 
@@ -82,7 +81,8 @@ file filtering, renames, imports, pruning, JSON output and exit codes.
 
 Set repository variable `QUASO_HOSTNAME` to your instance and repository secret `QUASO_API_KEY` to a
 named upload key. Use a separate read key if the download workflow lives in a separate environment.
-Copy the workflows from [the demo game](../examples/demo-game/):
+Copy the workflows from [Quaso Quest](../examples/demo-game/), adjusting the source language path
+for your game:
 
 - `translations-upload.yml` uploads when source files or the config change on `main`.
 - `translations-download.yml` runs manually or as a reusable workflow before your release. It
@@ -97,20 +97,21 @@ do not start most other Actions workflows. Keep that policy in your game's workf
 
 If source files are at the game repository root, keep the example workflows unchanged. When running
 inside a monorepo, set `defaults.run.working-directory` and adjust the trigger and pull-request
-paths. Commit your lockfile after installing the pinned CLI; the example uses `npm install` because
-its release-candidate package is not published yet. A real game should use `npm ci` with its
-lockfile.
+paths. Commit your lockfile after installing the pinned CLI, then use `npm ci` for repeatable
+workflow installs.
 
 ## Load the downloaded files
 
-The demo's [src/i18n.js](../examples/demo-game/src/i18n.js) loads JSON namespaces with i18next and
-Node's built-in filesystem APIs. Run it without a build step:
+The playable [Quaso Quest example](../examples/demo-game/README.md) starts in French, with English
+and German ready to translate. Its [src/i18n.js](../examples/demo-game/src/i18n.js) loads JSON
+namespaces with i18next and falls back to French while translations are missing:
 
 ```sh
 cd examples/demo-game
 npm install
-node src/i18n.js pl
+npm run dev
 ```
 
-A browser game can load the same files with its existing asset pipeline. Quaso needs no runtime
-connection from the game: translated JSON files are ordinary game assets.
+Follow the example's README to start a local Quaso instance with Docker Compose, upload its French
+strings, and download your translations. Select English or German in the game to see the result.
+Quaso needs no runtime connection from the game: translated JSON files are ordinary game assets.

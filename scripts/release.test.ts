@@ -44,24 +44,22 @@ test("release accepts semantic versions and rejects unsafe or malformed input", 
 test("release changes the version in the root package.json only, and validates before writing", async () => {
   const root = await Deno.makeTempDir();
   try {
-    await fs.mkdir(`${root}/packages/cli`, { recursive: true });
     await fs.mkdir(`${root}/examples/demo-game`, { recursive: true });
     await fs.writeFile(`${root}/package.json`, '{ "name": "acme", "version": "0.1.0" }\n');
-    await fs.writeFile(`${root}/packages/cli/package.json`, '{ "name": "@acme/quaso-cli" }\n');
     await fs.writeFile(
       `${root}/examples/demo-game/package.json`,
       '{ "devDependencies": { "@acme/quaso-cli": "0.1.0" } }\n',
     );
     await fs.writeFile(`${root}/CHANGELOG.md`, NOTES);
     const files = await prepareRelease("1.0.0-rc.1", root, new Date("2026-10-01T00:00:00Z"));
-    assertEquals(files, ["package.json", "examples/demo-game/package.json", "CHANGELOG.md"]);
+    assertEquals(files, ["package.json", "CHANGELOG.md"]);
     assertEquals(
       await fs.readFile(`${root}/package.json`, "utf8"),
       '{ "name": "acme", "version": "1.0.0-rc.1" }\n',
     );
     assertEquals(
       await fs.readFile(`${root}/examples/demo-game/package.json`, "utf8"),
-      '{ "devDependencies": { "@acme/quaso-cli": "1.0.0-rc.1" } }\n',
+      '{ "devDependencies": { "@acme/quaso-cli": "0.1.0" } }\n',
     );
     await fs.writeFile(`${root}/CHANGELOG.md`, "invalid changelog");
     await assertRejects(() => prepareRelease("1.0.0", root), Error, "Unreleased");

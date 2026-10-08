@@ -2,7 +2,7 @@
 import * as fs from "node:fs/promises";
 /**
  * The CLI's end-to-end test for CI's matrix (S4.1, S4.11): starts a server in this process
- * (Deno), copies `examples/demo-game/` to a temporary folder, and runs the built bundle
+ * (Deno), copies the translation fixture to a temporary folder, and runs the built bundle
  * (`deno task build:cli`) through the scenario with the runtime given:
  *
  *   deno run -A scripts/cli_e2e.ts --runtime node

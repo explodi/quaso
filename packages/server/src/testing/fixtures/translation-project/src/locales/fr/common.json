@@ -1,0 +1,17 @@
+{
+  "play": "Jouer",
+  "back": "Retour",
+  "continue": "Continuer",
+  "greeting": "Bon retour, {{name}} !",
+  "coins_one": "{{count}} pièce",
+  "coins_many": "{{count}} de pièces",
+  "coins_other": "{{count}} pièces",
+  "items_zero": "Ton sac est vide",
+  "items_one": "{{count}} objet dans ton sac",
+  "items_many": "{{count}} d’objets dans ton sac",
+  "items_other": "{{count}} objets dans ton sac",
+  "level": "Niveau {{current}} sur {{total}}",
+  "hints": [
+    "Saute deux fois pour atteindre les rebords élevés."
+  ]
+}
