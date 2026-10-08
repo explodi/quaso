@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 /** Choosing a new password with a reset link (`/reset-password?token=`). */
 import { type FormEvent, useState } from "react";
-import { Button, ButtonLink } from "../../components/Button.tsx";
-import { ErrorMessage, Notice } from "../../components/ErrorMessage.tsx";
-import { Field } from "../../components/Field.tsx";
-import { CheckIcon } from "../../components/Icons.tsx";
+import { Button, Notice, Field, CheckIcon } from "@quaso/design-system";
+import { ButtonLink } from "../../components/Button.tsx";
+import { ErrorMessage } from "../../components/ErrorMessage.tsx";
 import { resetPassword } from "../../lib/api.ts";
 import { useMutation } from "../../lib/data.ts";
 import { useRoute } from "../../lib/router.tsx";

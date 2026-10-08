@@ -29,6 +29,10 @@ and keeps all its data in one SQLite database. A deployment serves one game, for
 
 - **The website** (`packages/web`) is a static React app. It only talks to the HTTP API, so anything
   it does can also be scripted.
+- **The design system** (`packages/design-system`) supplies shared React primitives, themes,
+  typography and assets to the app and public project website (`site`). Consumers import
+  `@quaso/design-system`; the package does not import the app, its router, or domain types.
+  See the [design-system guide](design-system.md) for component and styling conventions.
 - **The server** (`packages/server`) serves the website's files and the API. It authenticates people
   and API keys, validates requests, and calls the service.
 - **The service** (`packages/service`) holds the logic and the data: files, strings, translations,

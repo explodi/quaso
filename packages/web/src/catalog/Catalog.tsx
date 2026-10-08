@@ -5,7 +5,6 @@ import {
   A,
   AnchorButton,
   Button,
-  ButtonLink,
   Card,
   Checkbox,
   Chip,
@@ -14,7 +13,6 @@ import {
   Dialog,
   Dropdown,
   EmptyState,
-  ErrorMessage,
   Field,
   Fieldset,
   H1,
@@ -26,18 +24,13 @@ import {
   Kbd,
   Label,
   Loading,
-  MainNavigation,
   Notice,
   PixelPattern,
   Progress,
-  ProgressBar,
   QuasoMascot,
   Radio,
   Select,
-  SourceText,
   Spinner,
-  StateBadge,
-  StateMarker,
   Summary,
   Switch,
   Table,
@@ -46,14 +39,20 @@ import {
   ThemeSwitch,
   Wordmark,
   useDarkTheme,
-  useToast,
-} from "../design-system.ts";
-import * as Icons from "../components/Icons.tsx";
+} from "@quaso/design-system";
+import { ButtonLink } from "../components/Button.tsx";
+import { ErrorMessage } from "../components/ErrorMessage.tsx";
+import { MainNavigation } from "../components/MainNavigation.tsx";
+import { ProgressBar } from "../components/ProgressBar.tsx";
+import { SourceText } from "../components/SourceText.tsx";
+import { StateBadge, StateMarker } from "../components/StateBadge.tsx";
+import { useToast } from "../components/Toast.tsx";
+import * as Icons from "@quaso/design-system/icons";
 import { FileTree } from "../components/FileTree.tsx";
 import { SelectField, TextField, ConfirmButton } from "../components/Management.tsx";
 import { buildTree } from "../lib/tree.ts";
-import { contrastRatio } from "../lib/contrast.ts";
-import { PALETTE, THEMES, TOKENS } from "../styles/tokens.ts";
+import { contrastRatio } from "@quaso/design-system/contrast";
+import { PALETTE, THEMES, TOKENS } from "@quaso/design-system/tokens";
 
 const SECTIONS = [
   ["principles", "The idea"],
@@ -1060,15 +1059,16 @@ export function Catalog() {
               <div>
                 <H3>Start with what’s here.</H3>
                 <p>
-                  Import shared controls from <code>src/design-system.ts</code>. Repeated buttons,
+                  Import shared controls from <code>@quaso/design-system</code>. Repeated buttons,
                   inputs, selects, radios, and other controls belong in the system.
                 </p>
               </div>
               <div>
                 <H3>Give color a purpose.</H3>
                 <p>
-                  Use semantic CSS variables. The palette in <code>styles/tokens.ts</code> defines
-                  every shade; <code>deno task design:tokens</code> generates the themes.
+                  Use semantic CSS variables. The palette in{" "}
+                  <code>@quaso/design-system/tokens</code> defines every shade;{" "}
+                  <code>deno task design:tokens</code> generates the themes.
                 </p>
               </div>
               <div>

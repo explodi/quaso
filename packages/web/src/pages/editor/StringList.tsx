@@ -1,5 +1,23 @@
 // SPDX-License-Identifier: MIT
-import { Label, Checkbox, Input, Fieldset, Radio, Select } from "../../components/Controls.tsx";
+import {
+  Label,
+  Checkbox,
+  Input,
+  Fieldset,
+  Radio,
+  Select,
+  Button,
+  EmptyState,
+  CheckSquareIcon,
+  ClockIcon,
+  EmptySquareIcon,
+  HalfSquareIcon,
+  HourglassIcon,
+  SearchIcon,
+  SparklesIcon,
+  WarningIcon,
+  Loading,
+} from "@quaso/design-system";
 /**
  * The editor's middle pane (design §5.9, S7.5): the strings, virtualized, each with its
  * state marker, its English (placeholders highlighted) and its key; filters by state,
@@ -14,21 +32,8 @@ import {
   textDirection,
 } from "@quaso/core";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { Button } from "../../components/Button.tsx";
-import { EmptyState } from "../../components/EmptyState.tsx";
 import { ErrorMessage } from "../../components/ErrorMessage.tsx";
-import {
-  CheckSquareIcon,
-  ClockIcon,
-  EmptySquareIcon,
-  HalfSquareIcon,
-  HourglassIcon,
-  SearchIcon,
-  SparklesIcon,
-  WarningIcon,
-} from "../../components/Icons.tsx";
 import { SourceText } from "../../components/SourceText.tsx";
-import { Loading } from "../../components/Spinner.tsx";
 import { StateMarker } from "../../components/StateBadge.tsx";
 import { VirtualList } from "../../components/VirtualList.tsx";
 import { count, formatNumber, sourcePreview } from "../../lib/format.ts";

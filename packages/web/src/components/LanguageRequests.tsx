@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { H2, H3 } from "./Typography.tsx";
+import { H2, H3, Button, Dialog, Field, Label, Select, Loading } from "@quaso/design-system";
 /** Community requests on the dashboard and administrator decisions in Settings. */
 import { SUPPORTED_LANGUAGES, type LanguageRequestInfo } from "@quaso/core";
 import { useState } from "react";
@@ -12,14 +12,9 @@ import { queryCache, useQuery } from "../lib/data.ts";
 import { fieldError } from "../lib/forms.ts";
 import { useProject } from "../lib/hooks.ts";
 import { useSession } from "../lib/session.tsx";
-import { Button } from "./Button.tsx";
-import { Dialog } from "./Dialog.tsx";
 import { ErrorMessage } from "./ErrorMessage.tsx";
-import { Field } from "./Field.tsx";
 import { HumanCheck } from "./HumanCheck.tsx";
-import { Label, Select } from "./Controls.tsx";
 import { TextField } from "./Management.tsx";
-import { Loading } from "./Spinner.tsx";
 import { useToast } from "./Toast.tsx";
 
 function useRequests() {

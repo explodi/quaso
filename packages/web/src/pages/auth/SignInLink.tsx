@@ -3,7 +3,8 @@
  * Signing in with a link sent by email (`/signin/link?token=`). It asks for a click first,
  * so a mail scanner that opens links doesn't use up the one-time link.
  */
-import { Button, ButtonLink } from "../../components/Button.tsx";
+import { Button } from "@quaso/design-system";
+import { ButtonLink } from "../../components/Button.tsx";
 import { ErrorMessage } from "../../components/ErrorMessage.tsx";
 import { useToast } from "../../components/Toast.tsx";
 import { isApiError, signInWithLink } from "../../lib/api.ts";

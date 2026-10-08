@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: MIT
-import { Fieldset } from "../../components/Controls.tsx";
+import { Fieldset, Button, Notice, Field, InfoIcon } from "@quaso/design-system";
 /**
  * Initial setup asks for the operator key before creating the first administrator.
  */
 import { type FormEvent, useState } from "react";
-import { Button, ButtonLink } from "../../components/Button.tsx";
-import { ErrorMessage, Notice } from "../../components/ErrorMessage.tsx";
-import { Field } from "../../components/Field.tsx";
-import { InfoIcon } from "../../components/Icons.tsx";
+import { ButtonLink } from "../../components/Button.tsx";
+import { ErrorMessage } from "../../components/ErrorMessage.tsx";
 import { useToast } from "../../components/Toast.tsx";
 import { setUp } from "../../lib/api.ts";
 import { useMutation } from "../../lib/data.ts";

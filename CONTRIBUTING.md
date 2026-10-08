@@ -27,10 +27,10 @@ deno task cli status
 
 ## Front-end toolchain
 
-Both React packages use Vite 8.3.2 and React Compiler 1.0 through the React plugin's Babel preset.
+Both frontends use Vite 8.3.2 and React Compiler 1.0 through the React plugin's Babel preset.
 Keep the application and project website on the same Vite toolchain. `deno task lint:react` runs
 ESLint's `react-hooks/set-state-in-effect` and `react-hooks/set-state-in-render` as errors, and is
-part of `deno task check`. Derive values during rendering and perform state changes in event
+part of `deno task check`. These rules cover the app, website, and shared design system. Derive values during rendering and perform state changes in event
 handlers or external-store subscriptions; do not suppress these rules to mirror props into local
 state.
 
@@ -50,21 +50,23 @@ state.
 
 ## Where things live
 
-| Folder                | Contents                                                                                                                                                                                       |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/core`       | i18next files and quality: JSON reader and writer, plural rules, tokenizer, renderer, checks, the schema module and the API types. Pure TypeScript, no I/O.                                    |
-| `packages/service`    | the service: upload, download, review, accounts, permissions, LLM jobs. Runs in Deno and in a Cloudflare Durable Object, so it only uses web-standard APIs and its ports (`Sql`, `Scheduler`). |
-| `packages/server`     | the Deno application: HTTP routes, sign-in, local storage, the website's files                                                                                                                 |
-| `packages/web`        | the React website, built with Vite                                                                                                                                                             |
-| `packages/cli`        | the `quaso` command, for Node ≥ 22 and Deno ≥ 2.9                                                                                                                                              |
-| `packages/cloudflare` | optional: the Durable Object, the Worker and `wrangler.jsonc`                                                                                                                                  |
-| `deploy/`             | the Dockerfile, `compose.yaml`, `Caddyfile` and `.env.example`                                                                                                                                 |
-| `examples/`           | a small i18next app with `quaso.config.json` and CI workflows                                                                                                                                  |
-| `docs/`               | documentation for users, operators and contributors                                                                                                                                            |
-| `site/`               | the project's public website                                                                                                                                                                   |
+| Folder                   | Contents                                                                                                                                                                                       |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/core`          | i18next files and quality: JSON reader and writer, plural rules, tokenizer, renderer, checks, the schema module and the API types. Pure TypeScript, no I/O.                                    |
+| `packages/service`       | the service: upload, download, review, accounts, permissions, LLM jobs. Runs in Deno and in a Cloudflare Durable Object, so it only uses web-standard APIs and its ports (`Sql`, `Scheduler`). |
+| `packages/server`        | the Deno application: HTTP routes, sign-in, local storage, the website's files                                                                                                                 |
+| `packages/design-system` | shared React controls, themes, typography, icons and brand assets for both frontends                                                                                                           |
+| `packages/web`           | the React application and design-system catalog, built with Vite                                                                                                                               |
+| `packages/cli`           | the `quaso` command, for Node ≥ 22 and Deno ≥ 2.9                                                                                                                                              |
+| `packages/cloudflare`    | optional: the Durable Object, the Worker and `wrangler.jsonc`                                                                                                                                  |
+| `deploy/`                | the Dockerfile, `compose.yaml`, `Caddyfile` and `.env.example`                                                                                                                                 |
+| `examples/`              | a small i18next app with `quaso.config.json` and CI workflows                                                                                                                                  |
+| `docs/`                  | documentation for users, operators and contributors                                                                                                                                            |
+| `site/`                  | the project's public website                                                                                                                                                                   |
 
 [docs/contributing/architecture.md](docs/contributing/architecture.md) explains how the parts fit
-together.
+together. The [design-system guide](docs/contributing/design-system.md) covers shared UI conventions
+and package boundaries.
 
 ## Conventions
 

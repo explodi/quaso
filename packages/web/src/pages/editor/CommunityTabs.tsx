@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: MIT
-import { H3 } from "../../components/Typography.tsx";
-import { Label, Checkbox } from "../../components/Controls.tsx";
+import { H3, Label, Checkbox, Button, Loading } from "@quaso/design-system";
+
 /** The editor's discussions and matching terminology. */
 import type { CommentInfo, StringDetail } from "@quaso/core";
 import { useState } from "react";
-import { Button } from "../../components/Button.tsx";
 import { ErrorMessage } from "../../components/ErrorMessage.tsx";
 import { ConfirmButton, TextField } from "../../components/Management.tsx";
-import { Loading } from "../../components/Spinner.tsx";
 import { useToast } from "../../components/Toast.tsx";
 import {
   addComment,

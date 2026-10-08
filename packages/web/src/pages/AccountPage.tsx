@@ -1,11 +1,8 @@
 // SPDX-License-Identifier: MIT
-import { H1, H2, H3 } from "../components/Typography.tsx";
+import { H1, H2, H3, Button, AnchorButton, Dialog, Field } from "@quaso/design-system";
 /** Account credentials, linked sign-in methods and privacy-preserving deletion. */
 import { useState } from "react";
-import { Button, AnchorButton } from "../components/Button.tsx";
-import { Dialog } from "../components/Dialog.tsx";
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
-import { Field } from "../components/Field.tsx";
 import { Access, ConfirmButton } from "../components/Management.tsx";
 import { useToast } from "../components/Toast.tsx";
 import { browserAuthUrl } from "../lib/api.ts";

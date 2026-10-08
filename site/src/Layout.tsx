@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
-import { A } from "../../packages/web/src/components/Controls.tsx";
+import { A, Wordmark } from "@quaso/design-system";
 /**
  * The frame around every page: the HTML document (pre-rendering only) and the header,
  * navigation and footer (pre-rendering and the development server).
  */
-import { Wordmark } from "../../packages/web/src/components/Typography.tsx";
 import type { ReactNode } from "react";
 import { DOCS_HOME, HOME, relativeHref, repositoryFileUrl } from "./paths.ts";
 
@@ -69,7 +68,7 @@ export function Shell({ page, section, repositoryUrl, children }: ShellProps) {
       </A>
       <header className="site-header">
         <div className="container site-header-inner">
-          <A className="brand" href={relativeHref(page, HOME)}>
+          <A className="site-brand" href={relativeHref(page, HOME)} aria-label="Quaso home">
             <Wordmark />
           </A>
           <nav aria-label="Main">

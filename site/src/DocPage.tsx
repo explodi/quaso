@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { H2 } from "../../packages/web/src/components/Typography.tsx";
-import { A } from "../../packages/web/src/components/Controls.tsx";
+import { A, H2 } from "@quaso/design-system";
 /** A documentation page: Markdown from docs/, rendered to HTML, with the list of pages. */
 import { relativeHref } from "./paths.ts";
 

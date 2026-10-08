@@ -284,14 +284,20 @@ browserTest(
     const tab = await openTab(browser, server, "/");
     const { page } = tab;
     await waitFor(page, () => document.querySelector(".theme-menu .dropdown-trigger") !== null);
-    // The bg tokens of packages/web/src/styles/tokens.ts: ink 950 (dark) and paper 50 (light).
+    // The bg tokens of packages/design-system/src/styles/tokens.ts: ink 950 and paper 50.
     const background = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
     await page.emulateMediaFeatures([{ name: "prefers-color-scheme", value: "dark" }]);
-    assertEquals(await background(), "rgb(38, 18, 48)");
+    await waitFor(
+      page,
+      () => getComputedStyle(document.body).backgroundColor === "rgb(38, 18, 48)",
+    );
     await page.emulateMediaFeatures([{ name: "prefers-color-scheme", value: "light" }]);
-    assertEquals(await background(), "rgb(244, 244, 241)");
+    await waitFor(
+      page,
+      () => getComputedStyle(document.body).backgroundColor === "rgb(244, 244, 241)",
+    );
     await page.click(".theme-menu .dropdown-trigger");
-    await page.click('.theme-menu input[type="radio"][value="dark"]');
+    await page.click('.theme-menu input[value="dark"]');
     await waitFor(page, () => document.documentElement.dataset.theme === "dark");
     assertEquals(await background(), "rgb(38, 18, 48)");
     await page.reload({ waitUntil: "networkidle0" });

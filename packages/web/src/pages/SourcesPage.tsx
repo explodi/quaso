@@ -1,12 +1,9 @@
 // SPDX-License-Identifier: MIT
 import type { SourceFilesResult } from "@quaso/core";
 import { useEffect, useMemo, useRef } from "react";
-import { H1, H2 } from "../components/Typography.tsx";
-import { Input, Label } from "../components/Controls.tsx";
-import { EmptyState } from "../components/EmptyState.tsx";
+import { H1, H2, Input, Label, EmptyState, Loading } from "@quaso/design-system";
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import { FileTree } from "../components/FileTree.tsx";
-import { Loading } from "../components/Spinner.tsx";
 import { listSources } from "../lib/api.ts";
 import { useQuery } from "../lib/data.ts";
 import { count } from "../lib/format.ts";

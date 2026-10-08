@@ -1,6 +1,24 @@
 // SPDX-License-Identifier: MIT
-import { Label } from "../../components/Controls.tsx";
-import { H2, H3 } from "../../components/Typography.tsx";
+import {
+  Label,
+  H2,
+  H3,
+  Button,
+  Chip,
+  Dialog,
+  Notice,
+  CheckSquareIcon,
+  CopyIcon,
+  InfoIcon,
+  SparklesIcon,
+  TrashIcon,
+  UndoIcon,
+  UserIcon,
+  WarningIcon,
+  Loading,
+  TextArea,
+} from "@quaso/design-system";
+
 /**
  * The editor's translation panel (design §5.9, S7.6): the key, the description and the
  * maximum length; the English with placeholder and reference chips; one input per plural
@@ -28,24 +46,10 @@ import {
   useRef,
   useState,
 } from "react";
-import { Button, ButtonLink } from "../../components/Button.tsx";
-import { Chip } from "../../components/Chip.tsx";
-import { Dialog } from "../../components/Dialog.tsx";
-import { ErrorMessage, Notice } from "../../components/ErrorMessage.tsx";
-import {
-  CheckSquareIcon,
-  CopyIcon,
-  InfoIcon,
-  SparklesIcon,
-  TrashIcon,
-  UndoIcon,
-  UserIcon,
-  WarningIcon,
-} from "../../components/Icons.tsx";
+import { ButtonLink } from "../../components/Button.tsx";
+import { ErrorMessage } from "../../components/ErrorMessage.tsx";
 import { SourceText } from "../../components/SourceText.tsx";
-import { Loading } from "../../components/Spinner.tsx";
 import { StateBadge } from "../../components/StateBadge.tsx";
-import { TextArea } from "../../components/TextArea.tsx";
 import { useToast } from "../../components/Toast.tsx";
 import { JobProgress } from "../../components/JobProgress.tsx";
 import {

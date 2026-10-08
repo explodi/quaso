@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { assertEquals } from "@std/assert";
+import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import { brokenOutputLinks, type LinkContext, type PathKind, rewriteHref } from "./build.ts";
 import { docPagePath, relativeHref } from "./src/paths.ts";
+import { renderDoc, renderLanding, renderNotFound } from "./src/prerender.tsx";
 
 test("docPagePath maps Markdown files in docs/ to pages", () => {
   assertEquals(docPagePath("README.md"), "docs/index.html");
@@ -99,8 +100,34 @@ test("rendered site checks page links, fragments and screenshots", () => {
   assertEquals(brokenOutputLinks(pages, files), []);
   pages.set(
     "docs/bad.html",
-    '<a href="absent.html">Missing</a><a href="./#unknown">Bad anchor</a><img src="absent.png">',
+    '<a href="absent.html">Missing</a><a href="./#unknown">Bad anchor</a><img src="absent.png"><link rel="stylesheet" href="absent.css">',
   );
   files.add("docs/bad.html");
-  assertEquals(brokenOutputLinks(pages, files).length, 3);
+  assertEquals(brokenOutputLinks(pages, files).length, 4);
+});
+
+test("static documents use shared primitives without shipping JavaScript at nested paths", () => {
+  const landing = renderLanding({ hasDoc: () => true });
+  const doc = renderDoc({
+    page: "docs/contributing/design-system.html",
+    title: "Design system",
+    html: '<h1 id="design-system">Design system</h1>',
+    pages: [{ page: "docs/index.html", title: "Overview" }],
+  });
+  const missing = renderNotFound({ baseHref: "/quaso/" });
+  for (const html of [landing, doc, missing]) {
+    assert(!html.includes("<script"), "The published site works without JavaScript");
+    assertStringIncludes(html, 'class="skip-link" href="#site-content"');
+    assertStringIncludes(html, 'id="site-content" tabindex="-1"');
+    assertStringIncludes(html, 'class="wordmark ');
+  }
+  assertStringIncludes(doc, 'href="../../assets/site.css"');
+  assertStringIncludes(doc, 'href="../../assets/gfm.css"');
+  assertStringIncludes(doc, 'href="../"');
+  assertStringIncludes(missing, '<base href="/quaso/"');
+  for (const colour of ["red", "green", "blue"]) {
+    assertStringIncludes(landing, `colour-label colour-${colour}`);
+    assertStringIncludes(landing, `state-icon state-${colour}`);
+  }
+  assertStringIncludes(landing, "Translated by the LLM");
 });

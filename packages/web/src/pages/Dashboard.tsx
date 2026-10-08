@@ -1,6 +1,21 @@
 // SPDX-License-Identifier: MIT
-import { Label, Input, Select } from "../components/Controls.tsx";
-import { H1, H2 } from "../components/Typography.tsx";
+import {
+  Label,
+  Input,
+  Select,
+  H1,
+  H2,
+  EmptyState,
+  Notice,
+  ClockIcon,
+  HourglassIcon,
+  InfoIcon,
+  SearchIcon,
+  UploadIcon,
+  WarningIcon,
+  Loading,
+} from "@quaso/design-system";
+
 /**
  * The dashboard, the home page (design §5.9, S7.3): every language with its progress bar,
  * "translated % • proofread %" and the words left, with search and sort; the project's
@@ -8,18 +23,8 @@ import { H1, H2 } from "../components/Typography.tsx";
  */
 import type { LanguageProgress, ProjectInfo } from "@quaso/core";
 import { useMemo, useState } from "react";
-import { EmptyState } from "../components/EmptyState.tsx";
-import { ErrorMessage, Notice } from "../components/ErrorMessage.tsx";
-import {
-  ClockIcon,
-  HourglassIcon,
-  InfoIcon,
-  SearchIcon,
-  UploadIcon,
-  WarningIcon,
-} from "../components/Icons.tsx";
+import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import { ProgressBar } from "../components/ProgressBar.tsx";
-import { Loading } from "../components/Spinner.tsx";
 import {
   count,
   formatDateTime,

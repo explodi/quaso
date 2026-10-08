@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { A } from "../components/Controls.tsx";
+import { A } from "@quaso/design-system";
 /**
  * A small router on the History API (design §5.9: a dozen pages don't need a library):
  * routes with parameters, `<Link>`, `navigate()`, `useRoute()`, scroll restoration on back

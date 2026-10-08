@@ -9,7 +9,16 @@ export interface FieldProps extends InputHTMLAttributes<HTMLInputElement> {
   error?: string | null;
 }
 
-export function Field({ label, hint, error, id, className, ...rest }: FieldProps) {
+export function Field({
+  label,
+  hint,
+  error,
+  id,
+  className,
+  "aria-describedby": describedBy,
+  "aria-invalid": invalid,
+  ...rest
+}: FieldProps) {
   const generated = useId();
   const inputId = id ?? generated;
   const hintId = hint ? `${inputId}-hint` : undefined;
@@ -21,8 +30,8 @@ export function Field({ label, hint, error, id, className, ...rest }: FieldProps
       </Label>
       <Input
         id={inputId}
-        aria-describedby={[hintId, errorId].filter(Boolean).join(" ") || undefined}
-        aria-invalid={error ? true : undefined}
+        aria-describedby={[describedBy, hintId, errorId].filter(Boolean).join(" ") || undefined}
+        aria-invalid={error ? true : invalid}
         {...rest}
       />
       {hint && (

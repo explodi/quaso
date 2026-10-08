@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: MIT
 import {
+  A,
+  AnchorButton,
+  ColourLabel,
   H1,
   H2,
   H3,
   PixelPattern,
   QuasoMascot,
-} from "../../packages/web/src/components/Typography.tsx";
-import { AnchorButton } from "../../packages/web/src/components/Button.tsx";
-import { A } from "../../packages/web/src/components/Controls.tsx";
+} from "@quaso/design-system";
 /**
  * The landing page: what Quaso is, how the translation workflow goes, and where to read
  * more. Screenshots show the real demo project in the development server.
@@ -208,7 +209,7 @@ export function Landing({ page, hasDoc, repositoryUrl }: LandingProps) {
                 strings arrive untranslated, and changed ones mark their old translations as
                 outdated.
               </p>
-              <p className="state state-red">Untranslated</p>
+              <ColourLabel colour="red">Untranslated</ColourLabel>
             </li>
             <li>
               <H3>The LLM translates at once</H3>
@@ -217,7 +218,7 @@ export function Landing({ page, hasDoc, repositoryUrl }: LandingProps) {
                 results that pass the quality checks, such as placeholders and plural forms, are
                 saved.
               </p>
-              <p className="state state-green">Translated by the LLM</p>
+              <ColourLabel colour="green">Translated by the LLM</ColourLabel>
             </li>
             <li>
               <H3>People proofread on the website</H3>
@@ -225,7 +226,7 @@ export function Landing({ page, hasDoc, repositoryUrl }: LandingProps) {
                 Anyone can browse the translations. Volunteers suggest fixes, managers approve them,
                 and the LLM never overwrites a proofread translation.
               </p>
-              <p className="state state-blue">Proofread</p>
+              <ColourLabel colour="blue">Proofread</ColourLabel>
             </li>
             <li>
               <H3>Download with the CLI</H3>
@@ -329,7 +330,7 @@ export function Landing({ page, hasDoc, repositoryUrl }: LandingProps) {
         <div className="container">
           <H2 id="adopt-title">Connect your game</H2>
           <p>
-            Install <code>@quaso-i18n/cli</code>, set your instance hostname and API key, then run
+            Install <code>@quaso-i18n/cli</code>, set your instance hostname and API key, then run{" "}
             <code>npx quaso init --languages de,fr,pl</code>. Your config maps source globs to
             language folders. Use the same commands locally and in CI.
           </p>

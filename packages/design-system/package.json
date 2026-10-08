@@ -1,0 +1,25 @@
+{
+  "name": "@quaso/design-system",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles.css": "./src/styles.css",
+    "./tokens": "./src/styles/tokens.ts",
+    "./icons": "./src/components/Icons.tsx",
+    "./contrast": "./src/lib/contrast.ts",
+    "./assets/*": "./src/assets/*"
+  },
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "peerDependencies": {
+    "react": "^19.3.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "react-dom": "^19.3.0"
+  }
+}

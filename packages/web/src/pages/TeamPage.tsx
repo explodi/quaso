@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
-import { H3, H1, H2 } from "../components/Typography.tsx";
+import { H3, H1, H2, Button, Loading } from "@quaso/design-system";
 /** Administrators manage roles, language limits, volunteer requests and one-time links. */
 import type { CreateInviteRequest, MemberInfo, Role } from "@quaso/core";
 import { useState } from "react";
-import { Button } from "../components/Button.tsx";
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import {
   Access,
@@ -12,7 +11,6 @@ import {
   OneTimeSecret,
   SelectField,
 } from "../components/Management.tsx";
-import { Loading } from "../components/Spinner.tsx";
 import { useToast } from "../components/Toast.tsx";
 import { useMutation, useQuery } from "../lib/data.ts";
 import { fieldError } from "../lib/forms.ts";

@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: MIT
-import { H1 } from "../../components/Typography.tsx";
-import { Card } from "../../components/Controls.tsx";
+import { H1, Card, Notice, InfoIcon } from "@quaso/design-system";
+
 /** The frame of the sign-in pages, and what they share. */
 import type { ReactNode } from "react";
-import { Notice } from "../../components/ErrorMessage.tsx";
-import { InfoIcon } from "../../components/Icons.tsx";
 import { useDocumentTitle } from "../../lib/hooks.ts";
 import { useSession } from "../../lib/session.tsx";
 

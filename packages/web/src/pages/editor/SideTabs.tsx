@@ -14,13 +14,17 @@ import {
   type TextValue,
 } from "@quaso/core";
 import { useState } from "react";
-import { Button } from "../../components/Button.tsx";
-import { EmptyState } from "../../components/EmptyState.tsx";
+import {
+  Button,
+  EmptyState,
+  ArrowLeftIcon,
+  WarningIcon,
+  Loading,
+  ColourLabel,
+  Tabs,
+} from "@quaso/design-system";
 import { ErrorMessage } from "../../components/ErrorMessage.tsx";
-import { ArrowLeftIcon, WarningIcon } from "../../components/Icons.tsx";
-import { Loading } from "../../components/Spinner.tsx";
-import { ColourLabel, StateMarker } from "../../components/StateBadge.tsx";
-import { Tabs } from "../../components/Tabs.tsx";
+import { StateMarker } from "../../components/StateBadge.tsx";
 import { useToast } from "../../components/Toast.tsx";
 import { ApiError, getHistory, reviewSuggestions, withdrawSuggestion } from "../../lib/api.ts";
 import { useQuery } from "../../lib/data.ts";

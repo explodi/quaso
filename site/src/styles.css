@@ -5,28 +5,19 @@
  * Light and dark themes follow the visitor's system setting.
  */
 
-@import "../../packages/web/src/styles/theme.css";
-@import "../../packages/web/src/styles/base.css";
-@import "../../packages/web/src/styles/foundations.css";
-@import "../../packages/web/src/styles/components.css";
+@import "@quaso/design-system/styles.css";
 
 :root {
-  --bg-subtle: var(--surface-alt);
-  --primary-bg: var(--primary);
-  --code-bg: var(--surface-alt);
-  --width: 72rem;
+  --site-width: 72rem;
 }
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
+/* The site header scrolls with the document. */
+html {
+  scroll-padding-top: var(--space-4);
 }
 
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--fg);
+body,
+#root {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -36,60 +27,11 @@ main {
   flex: 1;
 }
 
-main:focus {
-  outline: none;
-}
-
-a {
-  color: var(--link);
-  text-underline-offset: 0.15em;
-}
-
-:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
-}
-
-code {
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-  font-size: 0.9em;
-  background: var(--code-bg);
-  border-radius: 0;
-  padding: 0.1em 0.35em;
-}
-
 .container {
   width: 100%;
-  max-width: var(--width);
+  max-width: var(--site-width);
   margin: 0 auto;
-  padding: 0 1.5rem;
-}
-
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-.skip-link {
-  position: absolute;
-  left: 16px;
-  top: -4rem;
-  z-index: 10;
-  padding: 0.5rem 1rem;
-  background: var(--bg);
-  border: 2px solid var(--focus);
-  border-radius: var(--radius);
-}
-
-.skip-link:focus {
-  top: 0.5rem;
+  padding-inline: var(--space-5);
 }
 
 /* Header and footer */
@@ -103,30 +45,34 @@ code {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem 1.5rem;
-  padding-top: 0.75rem;
-  padding-bottom: 0.75rem;
+  gap: var(--space-2) var(--space-5);
+  padding-top: var(--space-3);
+  padding-bottom: var(--space-3);
 }
 
-.brand {
+.site-brand {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
   color: var(--fg);
-  font-weight: 700;
+  min-height: var(--control-height);
   text-decoration: none;
 }
 
 .site-nav {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem 1.25rem;
+  gap: var(--space-1) var(--space-5);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .site-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-height);
+  min-width: var(--control-height);
   color: var(--fg-muted);
   text-decoration: none;
 }
@@ -140,18 +86,18 @@ code {
 .site-footer {
   border-top: 1px solid var(--border);
   color: var(--fg-muted);
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
 }
 
 /* Landing page */
 
 .hero {
-  padding: 3rem 0;
+  padding: var(--space-7) 0;
   text-align: center;
 }
 .hero-stage {
   position: relative;
-  padding: 4rem 2rem 3rem;
+  padding: var(--space-8) var(--space-6) var(--space-7);
   background: var(--surface-alt);
   border: 2px solid var(--fg);
   box-shadow: 8px 8px 0 var(--border);
@@ -168,38 +114,42 @@ code {
   display: block;
   width: 10rem;
   height: 7rem;
-  margin: 0 auto 1rem;
+  margin: 0 auto var(--space-4);
 }
 
 .status {
   display: inline-block;
-  margin: 0 0 1rem;
-  padding: 0.125rem 0.75rem;
+  margin: 0 0 var(--space-4);
+  padding: 0.125rem var(--space-3);
   border: 1px solid var(--accent-fg);
   border-radius: 0;
   color: var(--accent-fg);
   background: var(--accent-alt);
-  font: 0.75rem / 1.6 var(--mono);
+  font: var(--text-xs) / 1.6 var(--mono);
 }
 
 .hero h1.heading {
   font-size: clamp(3.5rem, 8vw, 7rem);
-  margin: 1.5rem auto;
+  margin: var(--space-5) auto;
   max-width: 62rem;
 }
 .hero .lead {
   max-width: 39rem;
-  margin: 1.5rem auto;
-  font-size: 1.125rem;
+  margin: var(--space-5) auto;
+  font-size: var(--text-lg);
   line-height: 1.7;
   color: var(--fg-muted);
 }
 .hero .actions {
   justify-content: center;
 }
+.hero .actions .btn {
+  max-width: 100%;
+  white-space: normal;
+}
 .hero-product {
   max-width: 64rem;
-  margin: 3.5rem auto 0;
+  margin: var(--space-7) auto 0;
 }
 .hero-product img {
   display: block;
@@ -210,7 +160,7 @@ code {
   box-shadow: var(--shadow);
 }
 .hero-product figcaption {
-  margin-top: 1rem;
+  margin-top: var(--space-4);
   color: var(--fg-muted);
   font-size: var(--text-sm);
 }
@@ -218,44 +168,43 @@ code {
 .actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-top: 2rem;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
 }
 
 .section {
-  padding: 4rem 0;
+  padding: var(--space-8) 0;
 }
 
 .section-subtle {
-  background: var(--bg-subtle);
+  background: var(--surface-alt);
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
 }
 
 .section h2 {
   margin-top: 0;
-  font-size: clamp(2rem, 3.5vw, 3rem);
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--space-5);
 }
 
 .steps,
 .features,
 .cards {
   display: grid;
-  gap: 1.5rem;
+  gap: var(--space-5);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .steps {
-  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
   counter-reset: step;
 }
 
 .steps > li {
   counter-increment: step;
-  padding: 1.25rem;
+  padding: var(--space-5);
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }
@@ -268,67 +217,38 @@ code {
 .steps h3,
 .features h3,
 .cards h3 {
-  margin: 0 0 0.5rem;
-  font-size: 1.75rem;
+  margin: 0 0 var(--space-2);
 }
 
 .steps p,
 .features p,
 .cards p {
-  margin: 0 0 0.75rem;
-}
-
-.state {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
-.state::before {
-  content: "";
-  width: 0.75rem;
-  height: 0.75rem;
-  border-radius: 0;
-  background: currentColor;
-}
-
-.state-red {
-  color: var(--state-red);
-}
-
-.state-green {
-  color: var(--state-green);
-}
-
-.state-blue {
-  color: var(--state-blue);
+  margin: 0 0 var(--space-3);
 }
 
 .features {
-  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
 }
 
 .cards {
-  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-  margin-top: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  margin-top: var(--space-5);
 }
 
 .cards > li {
-  padding: 1.25rem;
+  padding: var(--space-5);
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }
 
 .guides {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: var(--space-5);
 }
 
 .guides h3 {
-  margin: 0 0 0.5rem;
+  margin: 0 0 var(--space-2);
   font-size: var(--heading-compact);
 }
 
@@ -339,18 +259,18 @@ code {
 }
 
 .guides li {
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--space-3);
 }
 
 .guide-summary {
   display: block;
   color: var(--fg-muted);
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
 }
 
 .soon {
   color: var(--fg-muted);
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   font-weight: normal;
 }
 
@@ -359,47 +279,44 @@ code {
 .docs-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 2rem;
-  padding-top: 2rem;
-  padding-bottom: 3rem;
+  gap: var(--space-6);
+  padding-top: var(--space-6);
+  padding-bottom: var(--space-7);
 }
 
 @media (min-width: 60rem) {
   .docs-layout {
     grid-template-columns: minmax(0, 1fr) 15rem;
-    gap: 3rem;
+    gap: var(--space-7);
   }
 }
 
-.markdown-body {
-  background: transparent;
+.docs-content {
+  min-width: 0;
 }
 
 .docs-source {
-  margin-top: 2rem;
-  padding-top: 1rem;
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
   border-top: 1px solid var(--border);
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
 }
 
 .docs-nav {
   align-self: start;
-  font-size: 0.9375rem;
+  font-size: var(--text-sm);
 }
 
 @media (min-width: 60rem) {
   .docs-nav {
     position: sticky;
-    top: 1rem;
+    top: var(--space-4);
   }
 }
 
-.docs-nav h2 {
-  margin: 0 0 0.75rem;
-  color: var(--fg-muted);
-  font-size: 0.875rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+.docs-nav h2.heading {
+  margin: 0 0 var(--space-3);
+  font-size: var(--heading-compact);
 }
 
 .docs-nav ul {
@@ -410,9 +327,11 @@ code {
 }
 
 .docs-nav a {
-  display: block;
+  display: flex;
+  align-items: center;
+  min-height: var(--control-height);
   margin-left: -1px;
-  padding: 0.25rem 0 0.25rem 0.75rem;
+  padding: var(--space-1) 0 var(--space-1) var(--space-3);
   border-left: 2px solid transparent;
   color: var(--fg-muted);
   text-decoration: none;
@@ -432,7 +351,7 @@ code {
 .screenshots {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 28rem), 1fr));
-  gap: 1.5rem;
+  gap: var(--space-5);
 }
 .screenshots figure {
   margin: 0;
@@ -445,49 +364,43 @@ code {
   border-radius: var(--radius);
 }
 .screenshots figcaption {
-  margin-top: 0.5rem;
+  margin-top: var(--space-2);
   color: var(--fg-muted);
 }
 
 .site-footer {
-  padding: 1.5rem 0;
+  padding: var(--space-5) 0;
 }
 .section > .container > p {
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-4);
   line-height: 1.7;
 }
-.site-header .brand {
-  font-size: inherit;
-  flex: none;
-}
-.docs-nav h2.heading {
-  font-size: var(--heading-compact);
-  letter-spacing: normal;
-  text-transform: none;
-}
 @media (max-width: 40rem) {
+  .container {
+    padding-inline: var(--space-4);
+  }
   .site-header-inner {
-    gap: 0.75rem;
+    gap: var(--space-3);
   }
   .site-header nav {
     width: 100%;
   }
   .hero {
-    padding-top: 1.5rem;
+    padding-top: var(--space-5);
   }
   .hero-stage {
-    padding: 3rem 1rem 2rem;
+    padding: var(--space-7) var(--space-4) var(--space-6);
   }
   .hero h1.heading {
     font-size: clamp(3rem, 12vw, 4.5rem);
   }
   .hero .lead {
-    font-size: 1rem;
+    font-size: var(--text-md);
   }
   .section {
-    padding: 2.5rem 0;
+    padding: var(--space-6) 0;
   }
   .hero-product {
-    margin-top: 2rem;
+    margin-top: var(--space-6);
   }
 }

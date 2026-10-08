@@ -3,7 +3,7 @@
 import { StrictMode, useEffect } from "react";
 import { ErrorBoundary } from "./components/ErrorBoundary.tsx";
 import { Layout } from "./components/Layout.tsx";
-import { Loading } from "./components/Spinner.tsx";
+import { Loading } from "@quaso/design-system";
 import { ToastProvider } from "./components/Toast.tsx";
 import { matchRoutes } from "./lib/match.ts";
 import { ParamsProvider, RouterProvider, useRoute } from "./lib/router.tsx";

@@ -1,5 +1,16 @@
 // SPDX-License-Identifier: MIT
-import { H1, H2 } from "../../components/Typography.tsx";
+import {
+  H1,
+  H2,
+  Button,
+  IconButton,
+  EmptyState,
+  ArrowLeftIcon,
+  CloseIcon,
+  FileIcon,
+  KeyboardIcon,
+  Loading,
+} from "@quaso/design-system";
 /**
  * The editor (design §5.9, WEB-2, WEB-3): three panes like Crowdin's, the files, the
  * strings and the translation panel with its tabs. The file, the state filter, the search
@@ -14,13 +25,9 @@ import {
   type StringSummary,
 } from "@quaso/core";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, IconButton } from "../../components/Button.tsx";
-import { EmptyState } from "../../components/EmptyState.tsx";
 import { ErrorMessage } from "../../components/ErrorMessage.tsx";
 import { FileTree } from "../../components/FileTree.tsx";
-import { ArrowLeftIcon, CloseIcon, FileIcon, KeyboardIcon } from "../../components/Icons.tsx";
 import { ProgressBar } from "../../components/ProgressBar.tsx";
-import { Loading } from "../../components/Spinner.tsx";
 import { useToast } from "../../components/Toast.tsx";
 import {
   approveTranslation,

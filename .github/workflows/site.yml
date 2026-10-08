@@ -11,10 +11,7 @@ on:
     paths:
       - "site/**"
       - "docs/**"
-      - "packages/web/src/styles/**"
-      - "packages/web/src/assets/**"
-      - "packages/web/src/components/**"
-      - "packages/web/public/fonts/**"
+      - "packages/design-system/**"
       - "package.json"
       - "deno.json"
       - "deno.lock"

@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
-import { H2, H3, H1 } from "../components/Typography.tsx";
+import { H2, H3, H1, Loading } from "@quaso/design-system";
 import type { AdminInfo } from "@quaso/core";
 import { Access } from "../components/Management.tsx";
-import { Loading } from "../components/Spinner.tsx";
 import { errorMessage, request } from "../lib/api.ts";
 import { useQuery } from "../lib/data.ts";
 

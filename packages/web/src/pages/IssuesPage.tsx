@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
-import { H1 } from "../components/Typography.tsx";
+import { H1, Button, Loading } from "@quaso/design-system";
 /** Managers' unresolved problems in the English, linked back to the editor. */
-import { Button } from "../components/Button.tsx";
+
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import { Access } from "../components/Management.tsx";
-import { Loading } from "../components/Spinner.tsx";
 import { listComments } from "../lib/community-api.ts";
 import { queryCache, useQuery } from "../lib/data.ts";
 import { useDocumentTitle, useProject } from "../lib/hooks.ts";
