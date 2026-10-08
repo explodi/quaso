@@ -590,6 +590,10 @@ export const JobScope = s.object({
     .boolean()
     .optional()
     .describe("Also re-translate green strings (never blue ones, LLM-4)"),
+  qa: s
+    .boolean()
+    .optional()
+    .describe("Also re-translate the green translations that fail the quality checks"),
   outdated: s
     .boolean()
     .optional()

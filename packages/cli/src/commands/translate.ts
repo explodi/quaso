@@ -56,6 +56,12 @@ export const translate: Command = {
       description: "Also translate green (not proofread) strings again; blue ones never change",
     },
     {
+      name: "qa",
+      type: "boolean",
+      description:
+        "Also translate again the green strings that fail the quality checks, such as imported ones",
+    },
+    {
       name: "instruction",
       type: "string",
       value: "<text>",
@@ -111,6 +117,7 @@ export const translate: Command = {
     };
     if (files) request.files = files;
     if (flag(ctx.args, "retranslate")) request.retranslate = true;
+    if (flag(ctx.args, "qa")) request.qa = true;
     const instruction = option(ctx.args, "instruction");
     if (instruction !== undefined && instruction.trim() !== "") request.instruction = instruction;
     const model = option(ctx.args, "model");

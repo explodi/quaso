@@ -363,6 +363,22 @@ test("jobs: a manager limited to some languages runs and cancels jobs in those o
   assertEquals((await service.cancelJob(admin, { id: german.job!.id })).status, "cancelled");
 });
 
+test("jobs: qa re-translates the green translations that fail the checks, and only those", async () => {
+  using instance = await project();
+  await drain(instance);
+  const title = stringId(instance.sql, "common.json", "title");
+  instance.sql.run(
+    "UPDATE translations SET qa_errors = 1 WHERE string_id = ? AND language = 'pl'",
+    title,
+  );
+  const plain = await instance.service.createJob(SYSTEM, { dryRun: true });
+  const qa = await instance.service.createJob(SYSTEM, { qa: true, dryRun: true });
+  assertEquals([plain.estimate!.strings, qa.estimate!.strings], [0, 1]);
+  instance.sql.run("UPDATE translations SET colour = 'blue' WHERE string_id = ?", title);
+  const blue = await instance.service.createJob(SYSTEM, { qa: true, dryRun: true });
+  assertEquals(blue.estimate!.strings, 0, "blue translations never change");
+});
+
 test("jobs: the scope is checked, and a dry run only estimates", async () => {
   using instance = await project();
   const check = async (request: Parameters<typeof instance.service.createJob>[1], code: string) => {
