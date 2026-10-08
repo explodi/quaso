@@ -21,8 +21,11 @@ RUN case "$TARGETARCH" in \
 # The data folder, owned by the runtime's non-root user (65532) when copied below.
 RUN mkdir -p /out/data
 
-# --- Run: glibc and nothing else; no shell, no package manager.
-FROM gcr.io/distroless/cc-debian12:nonroot
+# --- Run: glibc and libgcc_s, which is all the binary links; no OpenSSL (Deno uses rustls),
+# no shell, no package manager. libgcc_s comes from the same distroless release's cc image.
+FROM gcr.io/distroless/cc-debian12:nonroot AS libgcc
+FROM gcr.io/distroless/base-nossl-debian12:nonroot
+COPY --from=libgcc /lib/*-linux-gnu/libgcc_s.so.1 /lib/
 COPY --from=build /src/dist/quaso /app/quaso
 COPY --from=build --chown=65532:65532 /out/data /data
 ENV DATA_DIR=/data PORT=8000

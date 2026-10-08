@@ -221,7 +221,9 @@ test(`acceptance 1–11 against ${url}`, { timeout: 300000 }, async (t) => {
         });
         try {
           const page = await browser.newPage();
-          await page.goto(`${url}/languages/de?file=${encodeURIComponent(file("upload"))}`);
+          await page.goto(`${url}/languages/de?file=${encodeURIComponent(file("upload"))}`, {
+            waitUntil: "networkidle0",
+          });
           assertStringIncludes(await page.evaluate(() => document.body.innerText), "German");
         } finally {
           await browser.close();

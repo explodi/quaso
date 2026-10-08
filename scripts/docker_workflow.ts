@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 /** Run the Beta 2 workflow against the production image with Gemini isolated on a private network. */
-import { mkdtemp, rm, chmod } from "node:fs/promises";
+import { mkdtemp, rm, chmod, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { assertEquals } from "@std/assert";
@@ -45,6 +45,9 @@ async function ready(url: string) {
   throw new Error("Workflow container did not become healthy");
 }
 try {
+  // A CA that signs the stub's certificate: rustls (Deno) refuses a self-signed
+  // certificate that is its own CA (CaUsedAsEndEntity).
+  const stubHost = "generativelanguage.googleapis.com";
   await run([
     "openssl",
     "req",
@@ -55,15 +58,54 @@ try {
     "-days",
     "1",
     "-subj",
-    "/CN=generativelanguage.googleapis.com",
+    "/CN=Quaso workflow CA",
     "-addext",
-    "subjectAltName=DNS:generativelanguage.googleapis.com",
+    "basicConstraints=critical,CA:TRUE",
+    "-addext",
+    "keyUsage=critical,keyCertSign",
+    "-keyout",
+    join(certs, "ca-key.pem"),
+    "-out",
+    join(certs, "ca.pem"),
+  ]);
+  await run([
+    "openssl",
+    "req",
+    "-newkey",
+    "rsa:2048",
+    "-nodes",
+    "-subj",
+    `/CN=${stubHost}`,
     "-keyout",
     join(certs, "key.pem"),
+    "-out",
+    join(certs, "stub.csr"),
+  ]);
+  await writeFile(
+    join(certs, "stub.ext"),
+    `subjectAltName=DNS:${stubHost}\nbasicConstraints=CA:FALSE\nextendedKeyUsage=serverAuth\n`,
+  );
+  await run([
+    "openssl",
+    "x509",
+    "-req",
+    "-in",
+    join(certs, "stub.csr"),
+    "-CA",
+    join(certs, "ca.pem"),
+    "-CAkey",
+    join(certs, "ca-key.pem"),
+    "-CAcreateserial",
+    "-days",
+    "1",
+    "-extfile",
+    join(certs, "stub.ext"),
     "-out",
     join(certs, "cert.pem"),
   ]);
   await chmod(certs, 0o755);
+  // The stub runs as a non-root user and reads its key from the mount.
+  await chmod(join(certs, "key.pem"), 0o644);
   await run(["docker", "network", "create", name]);
   await run([
     "docker",
@@ -102,9 +144,9 @@ try {
     "-p",
     `127.0.0.1:${port}:8000`,
     "-v",
-    `${join(certs, "cert.pem")}:/cert.pem:ro`,
+    `${join(certs, "ca.pem")}:/ca.pem:ro`,
     "-e",
-    "DENO_CERT=/cert.pem",
+    "DENO_CERT=/ca.pem",
     "-e",
     "TRUST_PROXY=false",
     "-e",
