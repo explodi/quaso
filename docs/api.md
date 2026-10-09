@@ -82,8 +82,7 @@ are unique and sorted, and `keyUpdatedAt` identifies the tested version of the k
 shows these models and hides a previous result after replacing or removing the key. Save a
 draft key before testing it. A missing/rejected key or no compatible models returns `400`;
 an unavailable provider returns `503`. Provider diagnostics and credential values are never
-included in the response. Email runtime configuration and the remaining Settings controls
-are still being migrated.
+included in the response.
 
 `PATCH /api/v1/settings` also accepts `fileHistoryDays` (integer 0–36500, default 90)
 and `backupRetentionDays` (integer 1–36500, default 30). They apply to the next cleanup

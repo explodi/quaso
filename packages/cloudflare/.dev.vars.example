@@ -5,15 +5,10 @@
 
 # openssl rand -hex 32
 SECRET_KEY=
-# For LLM translation, passed to the server in the container. Empty: LLM translation is off,
-# unless a key is entered in Settings.
-GEMINI_API_KEY=
+# The Gemini key and email are entered in Settings, like every other setting.
 
 # Optional, passed to the server as they are. Deployed, set them with wrangler secret put.
 # SETUP_KEY=
-# EMAIL_PROVIDER=
-# EMAIL_API_KEY=
-# EMAIL_FROM=
 # GITHUB_CLIENT_ID=
 # GITHUB_CLIENT_SECRET=
 # DISCORD_CLIENT_ID=

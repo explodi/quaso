@@ -18,8 +18,8 @@ registers: `d1.quaso.internal` (`src/d1_handler.ts`, SQL batches against the `DB
 `QuasoContainer` (`src/container.ts`) is the container controller, a Durable Object that holds no
 project data. Before letting the container sleep it asks the server's `/healthz` whether it is
 `busy` and when its `nextWakeUp` is, and schedules a wake-up for it: LLM jobs and the nightly export
-depend on that, so preserve both when changing scheduling. `GEMINI_API_KEY` reaches the server as an
-environment variable; the container's disk is ephemeral and holds no project data.
+depend on that, so preserve both when changing scheduling. The Gemini key is entered in Settings and
+kept in D1, like every other setting; the container's disk is ephemeral and holds no project data.
 
 `src/data_object.ts` and `src/nightly_backup.ts` belong to the earlier design, where a `QuasoData`
 Durable Object held the database; `wrangler.jsonc` no longer binds it.
@@ -34,7 +34,7 @@ cp packages/cloudflare/.dev.vars.example packages/cloudflare/.dev.vars
 ```
 
 Fill in `SECRET_KEY` with a long random value, for example the output of `openssl rand -hex 32`.
-Set `GEMINI_API_KEY` only if exercising real translation. Then:
+To exercise real translation, enter a Gemini key in Settings after setup. Then:
 
 ```sh
 deno task cf:dev

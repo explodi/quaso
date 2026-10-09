@@ -45,15 +45,18 @@ The [quick start](README.md) has the short version of this guide.
 
 Caddy obtains and renews the HTTPS certificate and proxies requests to Quaso. Quaso is one compiled
 Deno application serving the API and website. Its image runs as user 65532 on a read-only root
-filesystem. The named `quaso-data` volume is mounted at `/data`, containing `quaso.sqlite`, its WAL,
-`secret-key` when generated locally, `quaso.lock`, and `backups/`. Compose prefixes volume names
-with the deployment directory or project name. Caddy has separate certificate and configuration
+filesystem. The named `quaso-data` volume is mounted at `/data`, containing `quaso.sqlite` and its
+WAL, `quaso.lock`, and `store/`, which holds the published files and the backups. Compose prefixes
+volume names with the deployment directory or project name. Caddy has separate certificate and configuration
 volumes. Never run `docker compose down -v` against data you want to keep.
 
 Without Compose, use an existing reverse proxy for HTTPS:
 
 ```sh
-docker run -d --name quaso --restart unless-stopped   -p 127.0.0.1:8000:8000 -v quaso-data:/data   -e PUBLIC_URL=https://translate.example.com   'explodi/quaso:latest'
+docker run -d --name quaso --restart unless-stopped \
+  -p 127.0.0.1:8000:8000 -v quaso-data:/data \
+  -e PUBLIC_URL=https://translate.example.com \
+  'explodi/quaso:latest'
 ```
 
 The loopback binding lets a proxy on this VM reach Quaso. Set `TRUST_PROXY=true` only when a trusted
@@ -77,7 +80,7 @@ docker compose up -d quaso
 ```
 
 `docker compose exec quaso /app/quaso token create …` cannot open local storage while the running
-server holds its lock. With Cloudflare storage the command can run alongside the server.
+server holds its lock.
 
 ## Upgrades and rollback
 
@@ -111,9 +114,8 @@ cp rollback.sqlite rollback/
 cd rollback
 ```
 
-Edit the copied `compose.yaml` to use the previous image version. Put the original `SECRET_KEY` in
-its `.env`, including the generated key if the original environment left it empty. Restore into a
-new named volume and start it:
+Edit the copied `compose.yaml` to use the previous image version. Restore into a new named volume
+and start it:
 
 ```sh
 docker compose -p quaso-rollback run --rm -v "$PWD/rollback.sqlite:/rollback.sqlite:ro" quaso restore /rollback.sqlite
@@ -127,8 +129,8 @@ resuming writes. Writes made since the snapshot are absent; retain the newer vol
 ## Backups and a restore drill
 
 Scheduled SQLite copies go under the store's `backups/` prefix in `/data/store` every hour.
-Every copy is kept for 48 hours, then the newest copy per UTC day for 30 days. Pre-migration
-copies are kept separately. Copy backups off the VM: the volume alone does not protect against a lost VM.
+Every copy is kept for 48 hours, then the newest copy per UTC day for the window set in
+**Settings → Retention** (30 days by default). Pre-migration copies are kept separately. Copy backups off the VM: the volume alone does not protect against a lost VM.
 
 To retrieve a retained copy, sign in as an administrator and download
 `/api/v1/backup?at=2026-10-02T00:00Z`. This returns the newest copy at or before that time,
@@ -139,22 +141,21 @@ a retained copy without starting or migrating the database. It refuses an existi
 file. `quaso backup <store-key> <file>` extracts a named scheduled or pre-migration copy.
 
 Administrators can download SQLite or JSON backups from **Settings → Backups** while Quaso runs. You
-can also copy the whole `/data` directory while Quaso is stopped. Keep the original `SECRET_KEY`
-with your backup, separately and securely: it is needed for existing passwords. A backup download
-contains account data and API keys, so protect it like the live database.
+can also copy the whole `/data` directory while Quaso is stopped. A backup download contains account
+data and hashed API keys, so protect it like the live database. It leaves out the Gemini and email
+API keys: after a restore, Settings lists them to enter again.
 
 Practice this on a separate, empty instance:
 
-1. Download a backup as `backup.sqlite`, and retain the original `SECRET_KEY` (or
-   `/data/secret-key`). Record `quaso status --json` and save downloaded translation files for
-   comparison.
+1. Download a backup as `backup.sqlite`. Record `quaso status --json` and save downloaded
+   translation files for comparison.
 2. Use the same or a newer Quaso image on a separate test VM. In its deployment directory copy the
-   three deployment files, use a different hostname, and set the original `SECRET_KEY` in its
-   `.env`.
+   three deployment files, and use a different hostname.
 3. Restore before claiming the new instance. An explicit project name gives it a new volume:
 
    ```sh
-   docker compose -p quaso-drill run --rm      -v "$PWD/backup.sqlite:/backup.sqlite:ro" quaso restore /backup.sqlite
+   docker compose -p quaso-drill run --rm \
+     -v "$PWD/backup.sqlite:/backup.sqlite:ro" quaso restore /backup.sqlite
    docker compose -p quaso-drill up -d
    ```
 
@@ -165,7 +166,8 @@ Practice this on a separate, empty instance:
    settings.
 
 The server subcommand is `quaso restore <file>`; it accepts `.sqlite`, `.json` and `.json.gz` and
-refuses a nonempty destination. People sign in again because restores omit sessions. Older schemas
+refuses a nonempty destination. People sign in again because restores omit sessions; their
+passwords and API keys keep working. Older schemas
 are migrated; newer schemas require upgrading the restoring image first. If a restore is
 interrupted, retry before using that destination. See [operations](operations.md) for cross-storage
 drills.

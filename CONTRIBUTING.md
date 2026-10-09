@@ -15,9 +15,9 @@ deno task dev      # a working Quaso at http://localhost:5173, with a demo proje
 deno task test     # every test that matters, in seconds, offline
 ```
 
-`deno task dev` creates `.quaso/` (git-ignored) with a SQLite database and a generated secret key,
-seeds a demo project, signs you in as a developer, and uses a fake translator unless
-`GEMINI_API_KEY` is set. It prints a development API key for the CLI:
+`deno task dev` creates `.quaso/` (git-ignored) with a SQLite database, seeds a demo project, signs
+you in as a developer, and uses a fake translator until you enter a Gemini key in Settings → LLM
+translation. It prints a development API key for the CLI:
 
 ```sh
 deno task cli status

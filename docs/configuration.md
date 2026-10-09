@@ -12,10 +12,10 @@ container. Do not put secrets in git. See [Docker](deploy-docker.md) and
 
 ## Required for your setup
 
-| Variable       | Default           | Applies to | Example                 | Meaning                                                                                                |
-| -------------- | ----------------- | ---------- | ----------------------- | ------------------------------------------------------------------------------------------------------ |
-| `QUASO_DOMAIN` | unset             | Docker     | `translate.example.com` | Hostname Caddy serves. Sets the default PUBLIC_URL; needed by the supplied Compose file.               |
-| `SECRET_KEY`   | generated locally | Both       | `openssl rand -hex 32`  | Legacy remote-service mode only. Supported Beta 2 hosts generate instance credentials in the database. |
+| Variable       | Default | Applies to | Example                 | Meaning                                                                                          |
+| -------------- | ------- | ---------- | ----------------------- | ------------------------------------------------------------------------------------------------ |
+| `QUASO_DOMAIN` | unset   | Docker     | `translate.example.com` | Hostname Caddy serves. Sets the default PUBLIC_URL; needed by the supplied Compose file.         |
+| `SECRET_KEY`   | unset   | Cloudflare | `openssl rand -hex 32`  | The Worker's own key, which `cf:setup` generates. The server generates its keys in its database. |
 
 ## Sign-in and email
 

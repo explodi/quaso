@@ -355,8 +355,8 @@ async function restore(config: Config, log: Logger, args: string[]): Promise<num
         : `, migrated from schema version ${result.schemaVersion.from} to ${result.schemaVersion.to}`;
     console.error(
       `Restored ${rows} rows in ${Object.keys(result.tables).length} tables${migrated}. ` +
-        "People sign in again: sessions aren't part of backups. Their passwords work with " +
-        "the SECRET_KEY of the instance the backup comes from.",
+        "People sign in again: sessions aren't part of backups. Their passwords and API " +
+        "keys keep working.",
     );
     if (result.missingSecrets.length > 0) {
       console.error(

@@ -148,11 +148,11 @@ state.
 
 ## Optional settings
 
-The Worker passes these to the server when they are set: `EMAIL_PROVIDER`, `EMAIL_API_KEY`,
-`EMAIL_FROM`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `DISCORD_CLIENT_ID`,
-`DISCORD_CLIENT_SECRET`, `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`, `LOG_LEVEL` and
-`CORS_ORIGINS` (only when the website is served from another origin; the Worker's cache then keeps
-one copy of each anonymous read per origin). The [configuration reference](configuration.md)
+The Worker passes these to the server when they are set: `GITHUB_CLIENT_ID`,
+`GITHUB_CLIENT_SECRET`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `TURNSTILE_SITE_KEY`,
+`TURNSTILE_SECRET_KEY`, `LOG_LEVEL` and `CORS_ORIGINS` (only when the website is served from
+another origin; the Worker's cache then keeps one copy of each anonymous read per origin). Email
+and the LLM are set up in Settings instead. The [configuration reference](configuration.md)
 explains each. Set one as a Worker secret, which Wrangler asks for:
 
 ```sh

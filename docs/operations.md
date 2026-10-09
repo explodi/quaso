@@ -36,9 +36,8 @@ Use `quaso backup <store-key> <file>` for a named pre-migration copy. Both refus
 overwrite an existing output file.
 
 Backups include accounts, roles, API keys, translations, history, settings and jobs. Portable
-restores omit sessions and transient authentication tokens. Users sign in again. Passwords need the
-original `SECRET_KEY`; store the key separately from the backup. Do not rely on sessions surviving a
-restore.
+restores omit sessions and transient authentication tokens, so people sign in again. Passwords and
+API keys keep working: they don't depend on the instance's keys.
 
 ## Restore drills and moving between setups
 
@@ -47,9 +46,9 @@ Run a drill on a separate hostname and empty storage. Never rehearse on producti
 1. Record the source version, schema, string/language counts and last backup time from Admin.
    Download translations and `quaso status --json` with a read key as a baseline.
 2. Download a SQLite or JSON backup from Settings. For Cloudflare, also exercise the R2 download
-   shown in its deployment guide. Verify that you can retrieve the original secret key.
-3. Create the empty destination using the same or a newer release. Set the source `SECRET_KEY`. Do
-   not claim it or upload strings before restoring.
+   shown in its deployment guide.
+3. Create the empty destination using the same or a newer release. Do not claim it or upload
+   strings before restoring.
 4. For Docker, follow the new-volume `quaso restore <file>` drill in the
    [Docker guide](deploy-docker.md#backups-and-a-restore-drill). For Cloudflare, use the
    [`cf:restore --file` command](deploy-cloudflare.md#backups-and-recovery) with the setup key.
@@ -83,7 +82,7 @@ curl --fail https://translate.example.com/healthz
 
 Local storage takes a pre-migration snapshot before changing the schema. Retain that snapshot and
 the previous image. To roll back, stop the server, restore the snapshot into a new volume with the
-previous image and the same key, then switch the deployment to it. Keep the newer volume for
+previous image, then switch the deployment to it. Keep the newer volume for
 investigating and recovering later writes. Never run an older image against an upgraded database.
 
 For Cloudflare, test staging and retain a portable backup and a pre-upgrade UTC timestamp. Set the
@@ -116,7 +115,7 @@ Record which later writes were lost and keep a backup of the newer state before 
 
 The local `quaso.lock` uses an operating system lock, released on normal exit or a crash. A second
 process gets “Another Quaso server is using …”. Stop the owner; deleting the file while a process
-holds it is unsafe. Remote storage has no local lock or snapshots.
+holds it is unsafe.
 
 ## Performance expectations
 
@@ -138,13 +137,11 @@ from the regions your contributors use; its command and cold-start options are i
 guide. Run `QUASO_SMOKE=1 deno task test` for the large local dataset. Measure production-sized data
 before choosing hardware or setting alert thresholds.
 
-## Secret rotation and access
+## Keys and access
 
-Changing `SECRET_KEY` invalidates signed sessions **and password hashes**. Everyone must sign in
-again; password users need password resets. Plan working email delivery or administrator reset links
-before rotation. Preserve the old key for old backups, and test recovery with it. Rotate only as an
-intentional maintenance operation; replacing a lost secret with a random value does not recover
-users.
+Each instance generates the key that signs its session cookies, and keeps it in its database.
+Passwords are hashed with a salt of their own and API keys are hashed, so neither depends on that
+key: a restore into another instance keeps both working, and only ends sessions.
 
 For account recovery, use password reset. Email sign-in links require an already verified address.
 Resetting an unverified account verifies its email, removes previously linked OAuth identities,
@@ -162,9 +159,9 @@ login disabled publicly, restrict administrator roles, install supported image u
 backups encrypted or access-controlled. See [configuration](configuration.md) for proxy and CORS
 settings.
 
-## Beta 2 starts fresh
+## Coming from 1.0.0-rc.1
 
-Beta 2 has a rewritten initial schema and no upgrade path from 1.0.0-rc.1. Its restore
-commands reject Beta 1 SQLite, JSON and compressed JSON backups. Start a fresh instance
+1.0.0-rc.2 has a rewritten initial schema and no upgrade path from 1.0.0-rc.1. Its restore
+commands reject 1.0.0-rc.1 SQLite, JSON and compressed JSON backups. Start a fresh instance
 and import the translation files instead. For local development, use `deno task dev:reset`
 to replace old development data.
