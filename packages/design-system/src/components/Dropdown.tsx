@@ -47,7 +47,11 @@ export function Dropdown({
       className={`dropdown ${className}`}
       ref={root}
       onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+        // Safari doesn't focus the link or button being clicked, so a click inside the menu
+        // blurs to nowhere (no relatedTarget); outside clicks close it in onPointer.
+        const focusMovedOut =
+          event.relatedTarget !== null && !event.currentTarget.contains(event.relatedTarget);
+        if (focusMovedOut) setOpen(false);
       }}
       onKeyDown={(event) => {
         if (event.key !== "Escape" || !open) return;
