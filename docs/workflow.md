@@ -131,7 +131,9 @@ git diff -- src/locales
 
 The preview reports the files it would write. Download writes only changed files and
 reconstructs their keys and formatting from the source. Entries without an accepted
-translation use English; pending proposals are not downloaded. Publication may take up
+translation use English; pending proposals are not downloaded. Green translations are downloaded:
+you can ship them before anyone proofreads them, and a later download brings the proofread
+versions. Publication may take up
 to one minute after a write, so retry once the instance has published the latest version
 if a just-saved change is not present yet.
 
