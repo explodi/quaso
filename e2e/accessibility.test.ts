@@ -49,6 +49,40 @@ function focusButton(page: Page, label: string, scope = ".pane-panel") {
 }
 
 browserTest(
+  "menu links work in Safari, which doesn't focus the link being clicked",
+  {
+    seed: true,
+    session: {
+      ...MANAGER_SESSION,
+      user: { ...MANAGER_SESSION.user!, role: "administrator" },
+    },
+  },
+  async ({ server, browser }) => {
+    const { page } = await openTab(browser, server, "/", async (page) => {
+      // What Safari does on a click: what had focus loses it, and the target doesn't get it.
+      await page.evaluateOnNewDocument(() => {
+        document.addEventListener(
+          "mousedown",
+          (event) => {
+            if (!(event.target as Element).closest("a, button")) return;
+            event.preventDefault();
+            (document.activeElement as HTMLElement | null)?.blur();
+          },
+          true,
+        );
+      });
+    });
+    await waitFor(page, () => document.querySelector(".user-name") !== null);
+    await page.click(".nav-overflow button");
+    await page.click('.nav .menu a[href="/team"]');
+    await waitFor(page, () => location.pathname === "/team");
+    await page.click(".user-button");
+    await page.click('.user-menu a[href="/account"]');
+    await waitFor(page, () => location.pathname === "/account");
+  },
+);
+
+browserTest(
   "the header fits every screen and keeps all navigation reachable",
   {
     seed: true,

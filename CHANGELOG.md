@@ -48,6 +48,11 @@ Release candidates are for deployment and migration testing. The team decides wh
   setting. The Cloudflare Worker no longer serves the internal API that mode called; a Cloudflare
   deployment keeps its data in D1 and R2 (`deno task cf:setup`).
 
+### Fixed
+
+- In Safari, the links in the header's menus (Team, Settings, Account and the others) work: the
+  menu closed before the click reached them, because Safari doesn't focus a clicked link.
+
 ## [1.0.0-rc.2] - 2026-10-08
 
 ### Added
