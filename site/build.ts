@@ -9,10 +9,13 @@ import * as fs from "node:fs/promises";
  * `vite build` step: Vite only runs the development server (`deno task site`).
  *
  * - The landing page (src/Landing.tsx) becomes index.html.
- * - Each Markdown file in docs/ becomes a page, rendered with marked and Quaso’s documentation styles: docs/README.md becomes docs/index.html, docs/contributing/architecture.md becomes
+ * - Each Markdown file in docs/ becomes a page, rendered with marked and Quaso’s documentation
+ *   styles: docs/README.md becomes docs/index.html, docs/contributing/architecture.md becomes
  *   docs/contributing/architecture.html. Links to Markdown files in docs/ point to their
  *   pages; links to other files of the repository point to GitHub. Other files in docs/,
  *   such as images, are copied.
+ * - The sidebar lists the pages in the groups of navigation.ts.
+ * - A region between `<!-- tabs -->` and `<!-- /tabs -->` becomes tabs (see renderTabs).
  * - 404.html is the page GitHub Pages serves for missing addresses.
  *
  * Links between pages are relative, so the site works at any address, such as
@@ -36,7 +39,8 @@ import { fileURLToPath as fromFileUrl } from "node:url";
 import { dirname, join, relative, sep as SEPARATOR } from "node:path";
 import * as posix from "node:path/posix";
 import { bundleStylesheet } from "./styles.ts";
-import type { DocLink } from "./src/DocPage.tsx";
+import { NAVIGATION, type NavigationGroup } from "./navigation.ts";
+import type { DocGroup } from "./src/DocPage.tsx";
 import { renderDoc, renderLanding, renderNotFound } from "./src/prerender.tsx";
 import {
   docPagePath,
@@ -155,25 +159,47 @@ export function rewriteHref(
   return { href: repositoryFileUrl(context.repositoryUrl, target, kind === "folder") + suffix };
 }
 
-/**
- * Rewrites the links of a rendered Markdown file for the site. Returns the HTML, and the
- * documentation pages it links to, in order.
- */
-export function rewriteLinks(
-  html: string,
-  from: LinkSource,
-  context: LinkContext,
-): { html: string; pages: string[] } {
-  const pages: string[] = [];
-  const rewritten = html.replace(
+/** Rewrites the links of a rendered Markdown file for the site. */
+export function rewriteLinks(html: string, from: LinkSource, context: LinkContext): string {
+  return html.replace(
     /(<a\s[^>]*?\bhref=")([^"]*)(")/g,
-    (_match, before: string, value: string, after: string) => {
-      const link = rewriteHref(unescapeHtml(value), from, context);
-      if (link.page) pages.push(link.page);
-      return before + escapeAttribute(link.href) + after;
-    },
+    (_match, before: string, value: string, after: string) =>
+      before + escapeAttribute(rewriteHref(unescapeHtml(value), from, context).href) + after,
   );
-  return { html: rewritten, pages };
+}
+
+/**
+ * Turns each region of rendered Markdown between `<!-- tabs -->` and `<!-- /tabs -->` into
+ * tabs: one per heading at the level of the region's first heading, named by the heading.
+ * On GitHub, where comments are invisible, the region reads as one subsection per tab.
+ *
+ * The tabs are radio buttons, each followed by its label and its panel, so they work
+ * without JavaScript: CSS shows the panel after the checked button.
+ */
+export function renderTabs(html: string): string {
+  let group = 0;
+  return html.replace(/<!-- tabs -->([\s\S]*?)<!-- \/tabs -->/g, (_region, content: string) => {
+    group++;
+    const level = /<h([1-6])\b/.exec(content)?.[1];
+    const [before, ...sections] = content.split(new RegExp(`(?=<h${level}\\b)`));
+    if (level === undefined || before.trim() !== "") {
+      throw new Error("A tabs region must start with a heading for its first tab.");
+    }
+    const tabs = sections.map((section, index) => {
+      const [, attributes, title, panel] = new RegExp(
+        `^<h${level}([^>]*)>([\\s\\S]*?)</h${level}>([\\s\\S]*)$`,
+      ).exec(section)!;
+      const headingId = /\bid="([^"]*)"/.exec(attributes)?.[1];
+      const input = `tabs-${group}-${index + 1}`;
+      return (
+        `<input type="radio" class="doc-tab-input" name="tabs-${group}" id="${input}"` +
+        `${index === 0 ? " checked" : ""}>` +
+        `<label class="tab doc-tab" for="${input}">${title}</label>` +
+        `<div class="doc-tab-panel"${headingId ? ` id="${headingId}"` : ""}>${panel}</div>`
+      );
+    });
+    return `<div class="doc-tabs">${tabs.join("")}</div>`;
+  });
 }
 
 function textOf(html: string): string {
@@ -194,6 +220,38 @@ function firstParagraph(html: string): string | undefined {
   const text = match ? textOf(match[1]) : "";
   if (text === "") return undefined;
   return text.length <= 160 ? text : `${text.slice(0, 157).replace(/\s+\S*$/, "")}…`;
+}
+
+/**
+ * The sidebar's groups, with each page's title. Every page must be listed exactly once, and
+ * every listed file must exist.
+ */
+export function navigationGroups(
+  groups: NavigationGroup[],
+  titles: Map<string, string>,
+): DocGroup[] {
+  const listed = groups.flatMap((group) => group.sources);
+  const problems = [
+    ...listed
+      .filter((source) => !titles.has(source))
+      .map((source) => `navigation.ts lists docs/${source}, which is missing`),
+    ...listed
+      .filter((source, index) => listed.indexOf(source) !== index)
+      .map((source) => `navigation.ts lists docs/${source} more than once`),
+    ...[...titles.keys()]
+      .filter((source) => !listed.includes(source))
+      .map((source) => `docs/${source} is missing from navigation.ts`),
+  ];
+  if (problems.length > 0) {
+    throw new Error(`The documentation's sidebar is out of date:\n${problems.join("\n")}`);
+  }
+  return groups.map((group) => ({
+    title: group.title,
+    links: group.sources.map((source) => ({
+      page: docPagePath(source),
+      title: titles.get(source)!,
+    })),
+  }));
 }
 
 /** A title for a Markdown file without a heading, from its name. */
@@ -249,7 +307,6 @@ interface Doc extends LinkSource {
   title: string;
   description?: string;
   html: string;
-  links: string[];
 }
 
 async function writeOutput(path: string, contents: string): Promise<void> {
@@ -308,7 +365,7 @@ export async function build(): Promise<string[]> {
     if (source.split("/").some((part) => part.startsWith("."))) continue;
     if (/\.md$/i.test(source)) {
       const markdown = await fs.readFile(entry.path, "utf8");
-      docs.push({ source, page: docPagePath(source), markdown, title: "", html: "", links: [] });
+      docs.push({ source, page: docPagePath(source), markdown, title: "", html: "" });
     } else {
       await mkdir(dirname(join(OUT, "docs", source)), { recursive: true });
       await fs.copyFile(entry.path, join(OUT, "docs", source));
@@ -316,42 +373,17 @@ export async function build(): Promise<string[]> {
   }
   docs.sort((a, b) => a.page.localeCompare(b.page));
 
-  const renderDocs = (list: Doc[]) => {
-    for (const doc of list) {
-      const rendered = rewriteLinks(render(doc.markdown), doc, context);
-      doc.html = rendered.html;
-      doc.links = rendered.pages;
-      doc.title = firstHeading(doc.html) ?? titleFromName(doc.source);
-      doc.description = firstParagraph(doc.html);
-    }
-  };
-  renderDocs(docs);
-
-  // Without docs/README.md, the documentation's index lists every page.
-  let index = docs.find((doc) => doc.page === DOCS_HOME);
-  if (!index) {
-    const list = docs.map((doc) => `- [${doc.title}](${encodeURI(doc.source)})`).join("\n");
-    index = {
-      source: "README.md",
-      page: DOCS_HOME,
-      markdown: `# Documentation\n\n${list}\n`,
-      title: "",
-      html: "",
-      links: [],
-    };
-    renderDocs([index]);
-    docs.unshift(index);
+  for (const doc of docs) {
+    doc.html = rewriteLinks(renderTabs(render(doc.markdown)), doc, context);
+    doc.title = firstHeading(doc.html) ?? titleFromName(doc.source);
+    doc.description = firstParagraph(doc.html);
   }
-
-  // The navigation follows the index's order, then lists the pages it doesn't link to.
-  const byPage = new Map(docs.map((doc) => [doc.page, doc]));
-  const order = [DOCS_HOME, ...index.links, ...docs.map((doc) => doc.page)];
-  const navigation: DocLink[] = [...new Set(order)]
-    .filter((page) => byPage.has(page))
-    .map((page) => ({ page, title: page === DOCS_HOME ? "Overview" : byPage.get(page)!.title }));
+  const navigation = navigationGroups(
+    NAVIGATION,
+    new Map(docs.map((doc) => [doc.source, doc.title])),
+  );
 
   for (const doc of docs) {
-    const exists = kindOf(`docs/${doc.source}`) === "file";
     await writeOutput(
       doc.page,
       renderDoc({
@@ -359,17 +391,14 @@ export async function build(): Promise<string[]> {
         title: doc.title,
         description: doc.description,
         html: doc.html,
-        pages: navigation,
+        navigation,
         repositoryUrl,
-        sourceUrl:
-          repositoryUrl && exists
-            ? repositoryFileUrl(repositoryUrl, `docs/${doc.source}`)
-            : undefined,
+        sourceUrl: repositoryUrl && repositoryFileUrl(repositoryUrl, `docs/${doc.source}`),
       }),
     );
   }
 
-  const hasDoc = (source: string) => byPage.has(docPagePath(source));
+  const hasDoc = (source: string) => docs.some((doc) => doc.source === source);
   await writeOutput(HOME, renderLanding({ hasDoc, repositoryUrl }));
   await writeOutput("404.html", renderNotFound({ baseHref: baseHref(), repositoryUrl }));
   const styles = await bundleStylesheet(new URL("./src/styles.css", import.meta.url));

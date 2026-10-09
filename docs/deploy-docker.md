@@ -4,10 +4,7 @@ Quaso runs on a Linux VM with Docker Engine and the Compose plugin installed. Gi
 address and a hostname you control. Allow inbound TCP ports 80 and 443; UDP 443 is optional for
 HTTP/3. Do not expose port 8000 when Caddy is the public entry point.
 
-Throughout these guides, replace `<org>` with the organization publishing your Quaso image and
-repository. The package name `@quaso-i18n/cli` must be reserved before the first public release. Until
-images are published, build from a checkout with `deno task docker`, and use `quaso:dev` as the
-image.
+The [quick start](README.md) has the short version of this guide.
 
 ## Five steps
 
@@ -19,9 +16,9 @@ image.
    ```sh
    mkdir quaso
    cd quaso
-   curl -L 'https://raw.githubusercontent.com/<org>/quaso/main/deploy/compose.yaml' -o compose.yaml
-   curl -L 'https://raw.githubusercontent.com/<org>/quaso/main/deploy/Caddyfile' -o Caddyfile
-   curl -L 'https://raw.githubusercontent.com/<org>/quaso/main/deploy/.env.example' -o .env
+   curl -L 'https://raw.githubusercontent.com/explodi/quaso/main/deploy/compose.yaml' -o compose.yaml
+   curl -L 'https://raw.githubusercontent.com/explodi/quaso/main/deploy/Caddyfile' -o Caddyfile
+   curl -L 'https://raw.githubusercontent.com/explodi/quaso/main/deploy/.env.example' -o .env
    chmod 600 .env
    ```
 

@@ -24,9 +24,8 @@ reaches the build after. Each game runs its own instance, for example at
   is kept in history.
 - **Easy to run.** One Deno application and one SQLite database, in one Docker container.
 
-Quaso 1.0 is in release-candidate testing. See the [documentation](docs/README.md) and
-[release process](docs/releasing.md). The public package names and registry publishing must be set
-up before installing release artifacts; development works from this repository.
+Quaso 1.0 is in release-candidate testing: the server is `explodi/quaso` on Docker Hub, and the
+CLI is `@quaso-i18n/cli` on npm.
 
 ![Quaso dashboard with progress for each language](site/public/screenshots/dashboard.png)
 
@@ -36,13 +35,20 @@ up before installing release artifacts; development works from this repository.
 
 ## Quick start
 
+The [quick start](docs/README.md) takes you from nothing to a game that ships in every language:
+
+1. **Host your Quaso**, with Docker Compose on a VM or on Cloudflare.
+2. **Connect your game:** `npm install --save-dev @quaso-i18n/cli`, `npx quaso init` and
+   `npx quaso upload`.
+3. **Translate** with the LLM (`npx quaso translate`), by hand on the website, or both.
+4. **Download and ship:** `npx quaso download` writes every language into your repository.
+
 | I want to…                         | Read                                                         |
 | ---------------------------------- | ------------------------------------------------------------ |
+| Play a game and try translating it | [Quaso Quest](examples/demo-game/README.md)                  |
 | Deploy Quaso with Docker Compose   | [docs/deploy-docker.md](docs/deploy-docker.md)               |
 | Deploy Quaso on Cloudflare         | [docs/deploy-cloudflare.md](docs/deploy-cloudflare.md)       |
-| Add Quaso to my game               | [docs/add-to-your-game.md](docs/add-to-your-game.md)         |
-| Play a game and try translating it | [Quaso Quest](examples/demo-game/README.md)                  |
-| Run the translation workflow       | [docs/workflow.md](docs/workflow.md)                         |
+| Add Quaso to my game and CI        | [docs/add-to-your-game.md](docs/add-to-your-game.md)         |
 | Use the CLI                        | [docs/cli.md](docs/cli.md)                                   |
 | Move from Crowdin                  | [docs/migrate-from-crowdin.md](docs/migrate-from-crowdin.md) |
 | Work on Quaso                      | [CONTRIBUTING.md](CONTRIBUTING.md)                           |

@@ -1023,10 +1023,19 @@ main {
   padding-bottom: var(--space-7);
 }
 
+/* The sidebar comes after the page in the HTML, so phones show the page first; wide
+   screens put it on the left. */
 @media (min-width: 60rem) {
   .docs-layout {
-    grid-template-columns: minmax(0, 1fr) 15rem;
+    grid-template-columns: 15rem minmax(0, 1fr);
+    grid-template-areas: "nav content";
     gap: var(--space-7);
+  }
+  .docs-content {
+    grid-area: content;
+  }
+  .docs-nav {
+    grid-area: nav;
   }
 }
 
@@ -1050,12 +1059,21 @@ main {
   .docs-nav {
     position: sticky;
     top: var(--space-4);
+    max-height: calc(100vh - 2 * var(--space-4));
+    overflow-y: auto;
+    scrollbar-width: thin;
   }
 }
 
 .docs-nav h2.heading {
   margin: 0 0 var(--space-3);
   font-size: var(--heading-compact);
+}
+
+.docs-nav h3.heading {
+  margin: var(--space-5) 0 var(--space-2);
+  font-size: var(--text-lg);
+  color: var(--fg-muted);
 }
 
 .docs-nav ul {
@@ -1078,6 +1096,12 @@ main {
 
 .docs-nav a:hover {
   color: var(--fg);
+}
+
+@media (min-width: 60rem) {
+  .docs-nav a {
+    min-height: 2rem;
+  }
 }
 
 .docs-nav a[aria-current="page"] {

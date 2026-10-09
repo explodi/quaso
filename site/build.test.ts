@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
-import { assert, assertEquals, assertStringIncludes } from "@std/assert";
-import { brokenOutputLinks, type LinkContext, type PathKind, rewriteHref } from "./build.ts";
+import { assert, assertEquals, assertStringIncludes, assertThrows } from "@std/assert";
+import {
+  brokenOutputLinks,
+  type LinkContext,
+  navigationGroups,
+  type PathKind,
+  renderTabs,
+  rewriteHref,
+} from "./build.ts";
 import { docPagePath, relativeHref } from "./src/paths.ts";
 import { renderDoc, renderLanding, renderNotFound } from "./src/prerender.tsx";
 
@@ -112,7 +119,9 @@ test("static documents use shared primitives without shipping JavaScript at nest
     page: "docs/contributing/design-system.html",
     title: "Design system",
     html: '<h1 id="design-system">Design system</h1>',
-    pages: [{ page: "docs/index.html", title: "Overview" }],
+    navigation: [
+      { title: "Get started", links: [{ page: "docs/index.html", title: "Quick start" }] },
+    ],
   });
   const missing = renderNotFound({ baseHref: "/quaso/" });
   for (const html of [landing, doc, missing]) {
@@ -130,4 +139,59 @@ test("static documents use shared primitives without shipping JavaScript at nest
     assertStringIncludes(landing, `state-icon state-${colour}`);
   }
   assertStringIncludes(landing, "Translated by the LLM");
+});
+
+test("renderTabs makes a tab of each heading in a tabs region", () => {
+  const html =
+    "<p>Pick one:</p>\n<!-- tabs -->\n" +
+    '<h3 id="docker-compose">Docker Compose</h3>\n<p>On a VM.</p>\n' +
+    '<h3 id="cloudflare">Cloudflare</h3>\n<p>On Workers.</p>\n<h4 id="details">Details</h4>\n' +
+    "<!-- /tabs -->\n<p>Then sign in.</p>";
+  assertEquals(
+    renderTabs(html),
+    "<p>Pick one:</p>\n" +
+      '<div class="doc-tabs">' +
+      '<input type="radio" class="doc-tab-input" name="tabs-1" id="tabs-1-1" checked>' +
+      '<label class="tab doc-tab" for="tabs-1-1">Docker Compose</label>' +
+      '<div class="doc-tab-panel" id="docker-compose">\n<p>On a VM.</p>\n</div>' +
+      '<input type="radio" class="doc-tab-input" name="tabs-1" id="tabs-1-2">' +
+      '<label class="tab doc-tab" for="tabs-1-2">Cloudflare</label>' +
+      '<div class="doc-tab-panel" id="cloudflare">\n<p>On Workers.</p>\n<h4 id="details">Details</h4>\n</div>' +
+      "</div>\n<p>Then sign in.</p>",
+  );
+});
+
+test("renderTabs numbers the regions of a page, and refuses text before the first tab", () => {
+  const region = "<!-- tabs -->\n<h3>One</h3>\n<p>1</p>\n<!-- /tabs -->\n";
+  const twice = renderTabs(region + region);
+  assertStringIncludes(twice, 'name="tabs-1"');
+  assertStringIncludes(twice, 'name="tabs-2"');
+  assertThrows(() => renderTabs("<!-- tabs -->\n<p>Stray</p>\n<h3>One</h3>\n<!-- /tabs -->"));
+});
+
+test("navigationGroups titles the sidebar's pages", () => {
+  const titles = new Map([
+    ["README.md", "Quick start"],
+    ["contributing/testing.md", "Testing"],
+  ]);
+  const groups = [
+    { title: "Get started", sources: ["README.md"] },
+    { title: "Contribute", sources: ["contributing/testing.md"] },
+  ];
+  assertEquals(navigationGroups(groups, titles), [
+    { title: "Get started", links: [{ page: "docs/index.html", title: "Quick start" }] },
+    { title: "Contribute", links: [{ page: "docs/contributing/testing.html", title: "Testing" }] },
+  ]);
+});
+
+test("navigationGroups refuses pages missing from the sidebar, and entries without a page", () => {
+  const titles = new Map([
+    ["README.md", "Quick start"],
+    ["cli.md", "The CLI"],
+  ]);
+  const groups = [{ title: "Get started", sources: ["README.md", "README.md", "gone.md"] }];
+  const error = assertThrows(() => navigationGroups(groups, titles), Error);
+  assertStringIncludes(error.message, "navigation.ts lists docs/gone.md, which is missing");
+  assertStringIncludes(error.message, "navigation.ts lists docs/README.md more than once");
+  assertStringIncludes(error.message, "docs/cli.md is missing from navigation.ts");
 });

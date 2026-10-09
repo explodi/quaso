@@ -1,6 +1,7 @@
 # From your repository to every language
 
-Use this workflow after [deploying with Docker](deploy-docker.md) or
+This is the [quick start](README.md) in more depth: a walk through every screen, from your first
+upload to a reviewed commit. Use it after [deploying with Docker](deploy-docker.md) or
 [deploying on Cloudflare](deploy-cloudflare.md). If you already use Crowdin, start with
 [the migration guide](migrate-from-crowdin.md), then return here.
 
@@ -9,10 +10,6 @@ i18next JSON v4 source files in your repository. The examples use English source
 `src/locales/en/`, Spanish and French targets, and `translate.example.com`. Replace the
 hostname and language tags with yours. The operator must configure an LLM provider and
 key before the auto-translation step.
-
-This guide describes Beta 2. Until its CLI package is published, use a CLI built from the
-same checkout as your instance: run `deno task build:cli` in Quaso, then install its
-`packages/cli/dist` folder in your game instead of the npm package below.
 
 ## 1. Connect the repository
 

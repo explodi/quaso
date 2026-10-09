@@ -1,4 +1,4 @@
-# Move from Crowdin
+# Bring your Crowdin AI prompt
 
 Follow [Migrate from Crowdin](migrate-from-crowdin.md) for layout conversion and two-pass imports,
 then [From your repository to every language](workflow.md) for the ongoing workflow.

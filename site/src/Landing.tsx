@@ -200,10 +200,7 @@ export function Landing({ page, hasDoc, repositoryUrl }: LandingProps) {
                 community proofread at their own pace, and each fix ships in the build after.
               </p>
               <div className="actions">
-                <AnchorButton
-                  variant="primary"
-                  href={relativeHref(page, docPagePath("deploy-docker.md"))}
-                >
+                <AnchorButton variant="primary" href={relativeHref(page, DOCS_HOME)}>
                   Get started <span aria-hidden="true">→</span>
                 </AnchorButton>
                 <A className="text-link" href="#how-it-works">
@@ -617,10 +614,7 @@ export function Landing({ page, hasDoc, repositoryUrl }: LandingProps) {
             <p>Ship their language with your next build. Make it better with every one after.</p>
           </div>
           <div className="closing-actions">
-            <AnchorButton
-              variant="primary"
-              href={relativeHref(page, docPagePath("deploy-docker.md"))}
-            >
+            <AnchorButton variant="primary" href={relativeHref(page, DOCS_HOME)}>
               Let’s get you set up <span aria-hidden="true">→</span>
             </AnchorButton>
             {repositoryUrl && (
