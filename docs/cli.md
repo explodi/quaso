@@ -31,12 +31,12 @@ npm install --save-dev @quaso-i18n/cli
 npx quaso status
 ```
 
-Or run a version without installing it: `npx @quaso-i18n/cli@1.0.0-rc.1 status`.
+Or run a version without installing it: `npx @quaso-i18n/cli@1.0.0-rc.2 status`.
 
 **With Deno**, run it from npm:
 
 ```sh
-deno run -A npm:@quaso-i18n/cli@1.0.0-rc.1 status
+deno run -A npm:@quaso-i18n/cli@1.0.0-rc.2 status
 ```
 
 To install a global `quaso` command, run `deno install --global -A --name quaso npm:@quaso-i18n/cli`.

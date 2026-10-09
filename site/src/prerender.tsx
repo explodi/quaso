@@ -5,7 +5,7 @@
  */
 import type { ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { type DocLink, DocPage } from "./DocPage.tsx";
+import { type DocGroup, DocPage } from "./DocPage.tsx";
 import { Landing } from "./Landing.tsx";
 import { Document, Shell } from "./Layout.tsx";
 import { NotFound } from "./NotFound.tsx";
@@ -50,8 +50,8 @@ export interface DocOptions {
   description?: string;
   /** The rendered Markdown. */
   html: string;
-  /** Every documentation page, for the navigation. */
-  pages: DocLink[];
+  /** Every documentation page, in the sidebar's groups. */
+  navigation: DocGroup[];
   repositoryUrl?: string;
   /** The Markdown file on GitHub. */
   sourceUrl?: string;
@@ -59,7 +59,7 @@ export interface DocOptions {
 
 /** A documentation page. */
 export function renderDoc(options: DocOptions): string {
-  const { page, title, html, pages, repositoryUrl, sourceUrl } = options;
+  const { page, title, html, navigation, repositoryUrl, sourceUrl } = options;
   return toHtml(
     <Document
       page={page}
@@ -68,7 +68,7 @@ export function renderDoc(options: DocOptions): string {
       stylesheets={[SITE_CSS, GFM_CSS]}
     >
       <Shell page={page} section="docs" repositoryUrl={repositoryUrl}>
-        <DocPage page={page} html={html} pages={pages} sourceUrl={sourceUrl} />
+        <DocPage page={page} html={html} navigation={navigation} sourceUrl={sourceUrl} />
       </Shell>
     </Document>,
   );

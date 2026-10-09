@@ -86,3 +86,50 @@
 .markdown-body input[type="checkbox"] {
   accent-color: var(--primary);
 }
+
+/* Tabs from a `<!-- tabs -->` region (build.ts): each radio button is followed by its label
+   and its panel; the labels wrap into one row above the panels. */
+.markdown-body .doc-tabs {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-1);
+  margin: 0 0 var(--space-5);
+}
+.markdown-body .doc-tab-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.markdown-body .doc-tab {
+  order: 0;
+  z-index: 1;
+  min-height: var(--control-height);
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  user-select: none;
+}
+.markdown-body .doc-tab-input:checked + .doc-tab {
+  color: var(--fg);
+  border-bottom-color: var(--fg);
+}
+.markdown-body .doc-tab-input:focus-visible + .doc-tab {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+.markdown-body .doc-tab-panel {
+  display: none;
+  order: 1;
+  width: 100%;
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border);
+}
+.markdown-body .doc-tab-input:checked + .doc-tab + .doc-tab-panel {
+  display: block;
+}
+.markdown-body .doc-tab-panel > :last-child {
+  margin-bottom: 0;
+}
