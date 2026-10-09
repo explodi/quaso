@@ -11,11 +11,12 @@ import { Document, Shell } from "./Layout.tsx";
 import { NotFound } from "./NotFound.tsx";
 import { GFM_CSS, HOME, SITE_CSS } from "./paths.ts";
 
-export const TITLE = "Quaso — open-source game localization";
+export const TITLE = "Quaso — ship every language today, proofread tomorrow";
 
 const DESCRIPTION =
-  "Your game. Everyone’s adventure. Translate your game with LLMs, your team, and " +
-  "your community. Open source, self-hosted localization with your own API keys.";
+  "Open-source game localization that never holds up a release. An LLM translates new " +
+  "strings as you upload them, so your next build ships in every language; your team and " +
+  "community proofread at their own pace. Self-hosted, with your own API keys.";
 
 const DOCS_DESCRIPTION =
   "Documentation for Quaso, an open-source localization platform for " +

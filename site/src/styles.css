@@ -291,20 +291,40 @@ main {
   font-size: var(--text-xl);
   color: var(--fg);
 }
-.translation-proof {
+.build-history {
+  display: grid;
+  gap: var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.build-label {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2) var(--space-4);
   align-items: center;
   justify-content: space-between;
-  margin-top: var(--space-5);
-  font-size: 0.625rem;
+  gap: var(--space-1) var(--space-3);
 }
-.translation-proof > span:last-child {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
+.build-label > span:last-child {
   color: var(--fg-muted);
+  font: 0.6875rem / 1.5 var(--mono);
+}
+.build-history .example-string {
+  margin-top: var(--space-2);
+}
+/* The earlier build's wording is history now, not a mistake: it shipped. */
+.build-history li:first-child .example-string {
+  color: var(--fg-muted);
+}
+.translation-proof {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
 }
 .scene-caption {
   display: block;
@@ -342,7 +362,8 @@ main {
 .section {
   padding-block: var(--section-gap);
 }
-.why-section {
+.why-section,
+.features-section {
   background: var(--surface-alt);
   border-block: 1px solid var(--border);
 }
@@ -361,6 +382,81 @@ main {
 .section-heading > p {
   max-width: 19rem;
   padding-bottom: var(--space-1);
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+  line-height: 1.75;
+}
+.release-compare {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5);
+}
+.release-lane {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-6);
+  border: 1px solid var(--border-strong);
+  background: var(--bg);
+}
+.release-quaso {
+  background: var(--lime-400);
+  color: var(--ink-950);
+  border-color: var(--ink-950);
+  box-shadow: 6px 6px 0 var(--ink-950);
+}
+.release-lane h3.heading {
+  margin-bottom: var(--space-5);
+  font-size: 2.375rem;
+  line-height: 1.05;
+}
+.release-steps {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0 0 var(--space-6);
+  padding: 0;
+  list-style: none;
+}
+.release-steps li {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  gap: var(--space-4);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+.release-when {
+  padding-top: 0.125rem;
+  font: 0.6875rem / 1.6 var(--mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.release-usual .release-steps,
+.release-usual .release-when {
+  color: var(--fg-muted);
+}
+.release-outcome {
+  margin-top: auto;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-strong);
+  font: 1.625rem / 1.15 var(--font-h2);
+}
+.release-quaso .release-outcome {
+  border-color: var(--ink-950);
+}
+.safeguards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-6);
+  margin-top: var(--space-7);
+  padding: var(--space-6) 0 0;
+  border-top: 1px solid var(--border-strong);
+  list-style: none;
+}
+.safeguards h3.heading {
+  margin-bottom: var(--space-3);
+  font-size: 1.625rem;
+  line-height: 1.1;
+}
+.safeguards p {
   color: var(--fg-muted);
   font-size: var(--text-sm);
   line-height: 1.75;
@@ -611,6 +707,32 @@ main {
   gap: var(--space-5);
   padding-block: var(--space-5);
 }
+.workflow-loop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-5);
+  margin-top: var(--space-8);
+  padding: var(--space-5);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+}
+.loop-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  flex: none;
+  background: var(--accent);
+  color: var(--accent-fg);
+  border: 1px solid var(--accent-fg);
+  font-size: 1.75rem;
+}
+.workflow-loop p {
+  flex: 1 1 24rem;
+  font-size: var(--text-sm);
+  line-height: 1.75;
+}
 .step-game .terminal {
   margin-block: var(--space-5);
 }
@@ -756,6 +878,13 @@ main {
   .features {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .release-compare,
+  .safeguards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .safeguards {
+    gap: var(--space-5);
+  }
   .section-heading {
     align-items: start;
     flex-direction: column;
@@ -855,6 +984,13 @@ main {
   }
   .feature {
     padding: var(--space-5);
+  }
+  .release-lane {
+    padding: var(--space-5);
+  }
+  .release-steps li {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
   }
   .feature-top {
     margin-bottom: var(--space-5);

@@ -5,18 +5,21 @@
 # Quaso
 
 An open-source localization platform for games that use [i18next](https://www.i18next.com/)
-JSON files.
+JSON files. **Ship every language today, proofread tomorrow:** translations never hold up a
+release.
 
 Developers write in one source language and upload the files with a CLI. An LLM translates new
-strings at once, people proofread its work on a public website, and the CLI downloads the
-translation files back into the repository. Each game runs its own instance, for example at
+strings at once, and the CLI downloads them into the repository, so the next build ships in every
+language. Your team and community proofread on a public website at their own pace, and each fix
+reaches the build after. Each game runs its own instance, for example at
 `translate.yourgame.com`, with Docker Compose on a VM or on Cloudflare.
 
 - **No limits** on words, strings or languages. Only storage and the LLM bill limit an instance.
-- **LLM first, people second.** New strings can be translated automatically after an upload;
-  volunteers and managers proofread afterwards.
+- **Ship now, proofread later.** LLM translations pass the quality checks and go into the next
+  download; proofreading improves them build after build. `quaso status --fail-on green` holds a
+  release for a language that must be proofread first.
 - **Your files are never at risk.** The CLI never changes the source files, downloads are
-  byte-stable, and unreviewed work never reaches the files.
+  byte-stable, and suggestions waiting for review never reach the files.
 - **Human work is never lost.** The LLM never overwrites a proofread translation, and every change
   is kept in history.
 - **Easy to run.** One Deno application and one SQLite database, in one Docker container.

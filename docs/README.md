@@ -1,5 +1,9 @@
 # Quaso documentation
 
+Quaso's LLM translates your game's new strings as soon as you upload them, so every build can ship
+in every language. People proofread afterwards, at their own pace, and each download brings their
+fixes into your repository.
+
 ## For teams using Quaso
 
 - [Add Quaso to your game](add-to-your-game.md)
