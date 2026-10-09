@@ -394,6 +394,18 @@ main {
 .feature-top > span {
   font: 0.6875rem / 1.5 var(--mono);
 }
+/* An inventory slot; padding, border and bevel are whole art pixels (2 px) so the grid stays even. */
+.feature-art {
+  box-sizing: content-box;
+  padding: 6px;
+  border: 2px solid var(--border-strong);
+  background: var(--surface);
+  box-shadow: inset -2px -2px 0 var(--border);
+  image-rendering: pixelated;
+}
+.feature-lime .feature-art {
+  border-color: var(--ink-950);
+}
 .feature h3.heading {
   font-size: 1.875rem;
   margin-bottom: var(--space-3);

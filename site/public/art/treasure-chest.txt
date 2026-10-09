@@ -1,0 +1,40 @@
+# treasure-chest: 24×24 pixel art on the Quaso palette
+# Rows: the row number (y), then a cell per column (x = 0…23) in groups of four.
+# Legend: a character, then a palette colour. paint adds colours by name.
+# Read from treasure-chest-3.raw.jpg: 42.0 px blocks on a 24×24 grid, alignment 0.67, background #fa00f8 keyed out
+. transparent
+K #261230 plum
+o #a87608 ochre
+a #e8b14a amber
+y #fbf236 yellow
+c #663931 cocoa
+b #8f563b brown
+C #c48755 caramel
+s #eec39a sand
+B #ffe59a butter
+W #ffffff white
+#   0    4    8    12   16   20
+00  .... .... .... .... .... ....
+01  ...K KKKK KKKK KKKK KKK. ....
+02  ..KB aCCC CCCC CCCC CBaK ....
+03  .KBa CCCC CCCC CCCC Baoo K...
+04  KBab bbbb bbbb bbbB aocb oK..
+05  Kaab cccc cccc ccca aobc boK.
+06  .KKK KKKK KKKK KKKK Kobb caK.
+07  ..Kb bKcc cccc cccc cKob baK.
+08  ...K bKcc cccc cccc ccKo baK.
+09  .... Kbcc cKKK Kccb bbcK aaK.
+10  .... .KKK KayW yaoK cbbK oK..
+11  ...K KayB ayoB yayo aKKK KK..
+12  .KKa Byoa yoBy ayoa yaKK aK..
+13  KaKK KKKK KKKK KKKK KKao oK..
+14  Kaaa aoaB BBao aaaa aaoc oK..
+15  Kacc cKaa KaaK cccc aocb oK..
+16  Kacb bKaa KaaK bbbc aobb oK..
+17  KabC CbKa aaKb CCCb aobb oK..
+18  KabC CCbK KKbC CCCb aobc oK..
+19  Kacc cbbb bbbb bbbc aocb oK..
+20  Kbab CCCC CCCC CCCa bcbc oK..
+21  Ksba bbbb bbbb bbab soco K...
+22  KCsb aaaa aaaa aabs CoKK ....
+23  .KKK KKKK KKKK KKKK KK.. ....
