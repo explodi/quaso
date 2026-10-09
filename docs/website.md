@@ -240,9 +240,8 @@ Administrators choose a section in **Settings**:
   to apply it. Unknown prompt placeholders are rejected. Provider credentials stay on the server.
 - **API keys**: create named `read` or `upload` keys, copy the secret once, and revoke unused keys.
   Read keys download and inspect status. Upload keys also upload, import and start translation jobs.
-- **Backups**: download SQLite or JSON and inspect the last backup. Store exports privately,
-  alongside a secure copy of the original instance secret key. See [operations](operations.md) for
-  restore drills.
+- **Backups**: download SQLite or JSON and inspect the last backup. Store exports privately: they
+  hold account data. See [operations](operations.md) for restore drills.
 
 **Admin** shows the release version, storage mode, schema/revision, translator and job health,
 recent errors and last backup. It is a diagnostic page for administrators. On Cloudflare, operators

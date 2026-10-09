@@ -245,7 +245,7 @@ test("translate: usage errors, and the instance's refusals with hints", async ()
         {
           error: {
             code: "llm_unavailable",
-            message: "LLM translation is off: set GEMINI_API_KEY.",
+            message: "LLM translation is off: enter a Gemini API key in Settings.",
           },
         },
         503,
@@ -253,8 +253,14 @@ test("translate: usage errors, and the instance's refusals with hints", async ()
     );
     const unavailable = await runCli(["translate"], { cwd: dir, env: ENV, fetch: off });
     assertEquals(unavailable.code, 4);
-    assertStringIncludes(unavailable.stderr, "LLM translation is off: set GEMINI_API_KEY.");
-    assertStringIncludes(unavailable.stderr, "its operator sets GEMINI_API_KEY");
+    assertStringIncludes(
+      unavailable.stderr,
+      "LLM translation is off: enter a Gemini API key in Settings.",
+    );
+    assertStringIncludes(
+      unavailable.stderr,
+      "An administrator enters the Gemini API key in the instance's Settings → LLM translation.",
+    );
     assertEquals(off.requests.length, 1, "not retried");
 
     const missing = fakeFetch(() =>

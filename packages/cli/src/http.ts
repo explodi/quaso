@@ -261,11 +261,14 @@ function hintFor(code: string, status: number): string | undefined {
     case "payload_too_large":
       return "Send fewer files at a time with --file.";
     case "llm_unavailable":
-      return "The instance has no LLM: its operator sets GEMINI_API_KEY.";
+      return (
+        "An administrator enters the Gemini API key in the instance's " +
+        "Settings → LLM translation."
+      );
     case "budget_exceeded":
       return (
-        "LLM translation resumes next month, or when the instance's operator raises " +
-        "LLM_MONTHLY_TOKEN_BUDGET."
+        "LLM translation resumes next month, or when an administrator raises the monthly " +
+        "token budget in Settings → LLM translation."
       );
   }
   return status >= 500

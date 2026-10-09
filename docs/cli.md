@@ -278,7 +278,7 @@ Dry run: nothing was translated.
 ```
 
 The estimate counts characters / 4 of each request's prompt and the expected answer; thinking models
-use more, and retries add some. An instance without an LLM (no `GEMINI_API_KEY`) answers with exit
+use more, and retries add some. An instance without an LLM (no Gemini key in its Settings) answers with exit
 code 4 and says so; an API key needs the `upload` scope.
 
 ### `quaso status`
