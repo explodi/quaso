@@ -12,10 +12,8 @@ import {
   H3,
   MonitorIcon,
   PixelPattern,
-  SparklesIcon,
   Summary,
   UploadIcon,
-  UserIcon,
 } from "@quaso/design-system";
 import type { ReactNode } from "react";
 import { docPagePath, DOCS_HOME, relativeHref, repositoryFileUrl } from "./paths.ts";
@@ -28,39 +26,40 @@ export interface LandingProps {
   repositoryUrl?: string;
 }
 
+/** Each feature's art is a game inventory item that plays on its headline, in the mascot's pixel style. */
 const FEATURES = [
   {
-    icon: GitHubIcon,
+    art: "treasure-chest",
     title: "Open source. All yours.",
     text: "MIT licensed and self-hosted. No per-seat pricing, word limits, or language caps. Make yourself at home.",
     note: "Free to use. Free to make your own.",
   },
   {
-    icon: MonitorIcon,
+    art: "coin-stack",
     title: "Small stack. Small bill.",
     text: "One Quaso container and a SQLite database. Run it on your own VM with Docker Compose, or deploy on Cloudflare.",
     note: "Your hosting. Your budget.",
   },
   {
-    icon: SparklesIcon,
+    art: "magic-key",
     title: "Your LLM key. Your call.",
     text: "Bring your Gemini API key for a first draft. Choose your model, set a token budget, and pay your provider directly.",
     note: "A head start, on your terms.",
   },
   {
-    icon: UserIcon,
+    art: "campfire",
     title: "Made for your whole party.",
     text: "Translate with your team, invite volunteer suggestions, or let an LLM help. Managers review; human proofreading stays protected.",
     note: "People give every language its voice.",
   },
   {
-    icon: FileIcon,
+    art: "scroll",
     title: "Made for game strings.",
     text: "i18next JSON with plural forms, placeholders, and quality checks built in. More of your game’s files are on the way.",
     note: "Steam VDF + Markdown · coming soon",
   },
   {
-    icon: CheckIcon,
+    art: "sailboat",
     title: "Ship files. Keep your freedom.",
     text: "Translations come back as ordinary JSON files in your repository. Your game runs on its own, with no connection to Quaso.",
     note: "Fits your build. Works in CI.",
@@ -253,10 +252,16 @@ export function Landing({ page, hasDoc, repositoryUrl }: LandingProps) {
             </p>
           </div>
           <ul className="features">
-            {FEATURES.map(({ icon: Icon, title, text, note }, index) => (
+            {FEATURES.map(({ art, title, text, note }, index) => (
               <li key={title} className={index === 0 ? "feature feature-lime" : "feature"}>
                 <div className="feature-top">
-                  <Icon size={24} />
+                  <img
+                    className="feature-art"
+                    src={relativeHref(page, `art/${art}.svg`)}
+                    width="48"
+                    height="48"
+                    alt=""
+                  />
                   <span>0{index + 1}</span>
                 </div>
                 <H3>{title}</H3>
