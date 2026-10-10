@@ -56,7 +56,7 @@ export function PersonalApiKeys() {
 
   return (
     <section className="management-section account-keys">
-      <H2>API keys</H2>
+      <H2 ui>API keys</H2>
       <p>
         The Quaso CLI signs in with an API key: put it in <code>QUASO_API_KEY</code>, in your
         environment or a <code>.env</code> file next to <code>quaso.config.json</code>. A key never
@@ -114,7 +114,7 @@ export function PersonalApiKeys() {
       {tokens.data && own.length === 0 && <p>You have no API keys yet.</p>}
       {own.map((key) => (
         <article className="record-card" key={key.id}>
-          <H3>{key.name}</H3>
+          <H3 ui>{key.name}</H3>
           <p>
             <code>{key.prefix}</code> · {key.scope} · Created{" "}
             {new Date(key.createdAt).toLocaleString()} · Last used{" "}

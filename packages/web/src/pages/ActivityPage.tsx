@@ -146,8 +146,11 @@ export function ActivityPage() {
 
   return (
     <div className="page narrow activity-page">
-      <div className="page-head">
-        <H1>Activity</H1>
+      <div className="page-head workspace-heading">
+        <div>
+          <H1 ui>Activity</H1>
+          <p className="muted">A shared history of what changed and who helped it happen.</p>
+        </div>
       </div>
       {first.error !== undefined && !first.data && (
         <ErrorMessage error={first.error} onRetry={() => first.refresh()} />

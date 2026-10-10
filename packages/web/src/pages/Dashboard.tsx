@@ -14,13 +14,12 @@ import {
   UploadIcon,
   WarningIcon,
   Loading,
+  QuasoMascot,
+  PixelPattern,
+  ChevronRightIcon,
+  Details as Disclosure,
+  Summary,
 } from "@quaso/design-system";
-
-/**
- * The dashboard, the home page (design §5.9, S7.3): every language with its progress bar,
- * "translated % • proofread %" and the words left, with search and sort; the project's
- * description and details.
- */
 import type { LanguageProgress, ProjectInfo } from "@quaso/core";
 import { useMemo, useState } from "react";
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
@@ -38,6 +37,9 @@ import { fillPattern, Link, useRoute } from "../lib/router.tsx";
 import { useSession } from "../lib/session.tsx";
 import { LanguageRequests } from "../components/LanguageRequests.tsx";
 import { AutoTranslateButton } from "../components/AutoTranslate.tsx";
+import { ButtonLink } from "../components/Button.tsx";
+import { preferredLanguage } from "../lib/hooks.ts";
+import { editorHref } from "./LanguagePage.tsx";
 
 const SORTS = {
   name: "Name",
@@ -63,7 +65,7 @@ export function Dashboard() {
   const { query, setQuery } = useRoute();
   const [search, setSearch] = useState(query.q ?? "");
   const sort: Sort = Object.hasOwn(SORTS, query.sort ?? "") ? (query.sort as Sort) : "name";
-  useDocumentTitle("Dashboard");
+  useDocumentTitle("Overview");
 
   const languages = useMemo(() => {
     const all = project.data?.languages ?? [];
@@ -78,10 +80,20 @@ export function Dashboard() {
   }, [project.data, search, sort]);
 
   const data = project.data;
+  const allLanguages = data?.languages ?? [];
+  const editableLanguages = allLanguages.filter((language) => session.can("suggest", language.tag));
+  const resumeLanguages = editableLanguages.length > 0 ? editableLanguages : allLanguages;
+  const preferred = preferredLanguage(resumeLanguages.map((language) => language.tag));
+  const resume = data?.languages.find((language) => language.tag === preferred);
   return (
     <div className="page dashboard">
       <div className="page-head">
-        <H1>{data?.name ?? "Dashboard"}</H1>
+        <div>
+          <H1 ui>Overview</H1>
+          <p className="page-intro">
+            {data?.name ?? "Your project"} · A little progress, in every language.
+          </p>
+        </div>
         <AutoTranslateButton />
       </div>
       {session.info.setupRequired && (
@@ -101,10 +113,71 @@ export function Dashboard() {
       )}
       {!data && project.error === undefined && <Loading label="Loading the project…" />}
       {data && (
-        <div className="dashboard-grid">
+        <>
+          {resume && (
+            <section className="workspace-start" aria-labelledby="start-heading">
+              <div className="workspace-start-content">
+                <p className="workspace-eyebrow">Your translation workspace</p>
+                <H2 ui id="start-heading">
+                  Continue translating
+                </H2>
+                <p>
+                  {resume.name} has {count(resume.untranslated, "untranslated string")} and{" "}
+                  {count(resume.green, "string")} ready to proofread.
+                </p>
+                <div className="page-actions">
+                  <ButtonLink
+                    variant="primary"
+                    className="workspace-resume"
+                    to={editorHref(resume.tag)}
+                  >
+                    Continue in {resume.name} <ChevronRightIcon />
+                  </ButtonLink>
+                  <Link to={fillPattern("/languages/:lang", { lang: resume.tag })}>
+                    Browse files
+                  </Link>
+                </div>
+              </div>
+              <div className="workspace-start-art" aria-hidden="true">
+                <PixelPattern tone="mint" />
+                <QuasoMascot decorative />
+              </div>
+            </section>
+          )}
+          <dl className="workspace-metrics" aria-label="Project at a glance">
+            <div>
+              <dt>Languages</dt>
+              <dd>{formatNumber(data.languages.length)}</dd>
+            </div>
+            <div>
+              <dt>Source strings</dt>
+              <dd>{formatNumber(data.details.strings)}</dd>
+            </div>
+            <div>
+              <dt>To translate</dt>
+              <dd>
+                {formatNumber(
+                  data.languages.reduce((total, language) => total + language.untranslated, 0),
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>To proofread</dt>
+              <dd>
+                {formatNumber(
+                  data.languages.reduce((total, language) => total + language.green, 0),
+                )}
+              </dd>
+            </div>
+          </dl>
           <section className="card languages-card" aria-labelledby="languages-heading">
             <div className="card-head">
-              <H2 id="languages-heading">Languages</H2>
+              <div>
+                <H2 ui id="languages-heading">
+                  Your languages
+                </H2>
+                <p className="muted">Open a workspace or choose a language to explore its files.</p>
+              </div>
               <div className="toolbar">
                 <div className="search">
                   <SearchIcon className="search-icon" />
@@ -175,10 +248,24 @@ export function Dashboard() {
                 ))}
               </ul>
             )}
+            <ul className="legend language-legend" aria-label="Translation progress legend">
+              <li>
+                <span className="legend-swatch legend-blue" aria-hidden="true" />
+                Proofread
+              </li>
+              <li>
+                <span className="legend-swatch legend-green" aria-hidden="true" />
+                Translated, needs proofreading
+              </li>
+              <li>
+                <span className="legend-swatch legend-rest" aria-hidden="true" />
+                Untranslated
+              </li>
+            </ul>
           </section>
-          <Details project={data} />
+          <ProjectDetails project={data} />
           {data.languageRequestsEnabled && <LanguageRequests />}
-        </div>
+        </>
       )}
     </div>
   );
@@ -215,6 +302,14 @@ function LanguageRow({ language }: { language: LanguageProgress }) {
           )}
         </span>
       </Link>
+      <ButtonLink
+        className="language-open"
+        size="small"
+        to={editorHref(language.tag)}
+        aria-label={`Open ${language.name} editor`}
+      >
+        Open editor <ChevronRightIcon />
+      </ButtonLink>
     </li>
   );
 }
@@ -225,67 +320,55 @@ function Description({ text }: { text: string }) {
   return <p className="description">{text}</p>;
 }
 
-function Details({ project }: { project: ProjectInfo }) {
+function ProjectDetails({ project }: { project: ProjectInfo }) {
   const { details } = project;
   return (
-    <aside className="card details-card" aria-labelledby="details-heading">
-      <H2 id="details-heading">About this project</H2>
-      <Description text={project.description} />
-      <dl className="details">
-        <div>
-          <dt>Source language</dt>
-          <dd>{project.sourceLanguageName}</dd>
-        </div>
-        <div>
-          <dt>Strings</dt>
-          <dd>{formatNumber(details.strings)}</dd>
-        </div>
-        <div>
-          <dt>Words</dt>
-          <dd>{formatNumber(details.words)}</dd>
-        </div>
-        <div>
-          <dt>Files</dt>
-          <dd>{formatNumber(details.files)}</dd>
-        </div>
-        <div>
-          <dt>Languages</dt>
-          <dd>{formatNumber(project.languages.length)}</dd>
-        </div>
-        <div>
-          <dt>Members</dt>
-          <dd>{formatNumber(details.members)}</dd>
-        </div>
-        <div>
-          <dt>Last activity</dt>
-          <dd>
-            {details.lastActivity === null ? (
-              "None yet"
-            ) : (
-              <time
-                dateTime={new Date(details.lastActivity).toISOString()}
-                title={formatDateTime(details.lastActivity)}
-              >
-                {formatRelative(details.lastActivity)}
-              </time>
-            )}
-          </dd>
-        </div>
-      </dl>
-      <p className="legend-intro">What the colours mean:</p>
-      <ul className="legend">
-        <li>
-          <span className="legend-swatch legend-blue" aria-hidden="true" /> Blue: proofread by a
-          person
-        </li>
-        <li>
-          <span className="legend-swatch legend-green" aria-hidden="true" /> Green: translated by
-          the LLM, not yet proofread
-        </li>
-        <li>
-          <span className="legend-swatch legend-rest" aria-hidden="true" /> Grey: untranslated
-        </li>
-      </ul>
-    </aside>
+    <Disclosure className="card project-details">
+      <Summary>About {project.name}</Summary>
+      <div className="details-card">
+        <Description text={project.description} />
+        <dl className="details">
+          <div>
+            <dt>Source language</dt>
+            <dd>{project.sourceLanguageName}</dd>
+          </div>
+          <div>
+            <dt>Strings</dt>
+            <dd>{formatNumber(details.strings)}</dd>
+          </div>
+          <div>
+            <dt>Words</dt>
+            <dd>{formatNumber(details.words)}</dd>
+          </div>
+          <div>
+            <dt>Files</dt>
+            <dd>{formatNumber(details.files)}</dd>
+          </div>
+          <div>
+            <dt>Languages</dt>
+            <dd>{formatNumber(project.languages.length)}</dd>
+          </div>
+          <div>
+            <dt>Members</dt>
+            <dd>{formatNumber(details.members)}</dd>
+          </div>
+          <div>
+            <dt>Last activity</dt>
+            <dd>
+              {details.lastActivity === null ? (
+                "None yet"
+              ) : (
+                <time
+                  dateTime={new Date(details.lastActivity).toISOString()}
+                  title={formatDateTime(details.lastActivity)}
+                >
+                  {formatRelative(details.lastActivity)}
+                </time>
+              )}
+            </dd>
+          </div>
+        </dl>
+      </div>
+    </Disclosure>
   );
 }

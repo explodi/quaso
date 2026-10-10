@@ -43,7 +43,8 @@ import { Access, ConfirmButton, LanguagePicker, OneTimeSecret } from "../compone
 import { apiUrl, errorMessage, request } from "../lib/api.ts";
 import { queryCache, useQuery } from "../lib/data.ts";
 import { fieldError, validated } from "../lib/forms.ts";
-import { useRoute } from "../lib/router.tsx";
+import { href, Link, useRoute } from "../lib/router.tsx";
+import { useDocumentTitle } from "../lib/hooks.ts";
 import { AdminDetails } from "./Admin.tsx";
 import { LanguageRequestsAdmin } from "../components/LanguageRequests.tsx";
 
@@ -64,7 +65,7 @@ function SaveForm({
   const [saved, setSaved] = useState(false);
   return (
     <section className="management-section">
-      <H2>{title}</H2>
+      <H2 ui>{title}</H2>
       <form
         onChange={() => setSaved(false)}
         onSubmit={async (event) => {
@@ -98,10 +99,12 @@ function SaveForm({
             {errorMessage(error)}
           </p>
         )}
-        {saved && <p role="status">Saved.</p>}
-        <Button type="submit" busy={busy}>
-          {label}
-        </Button>
+        <div className="settings-save">
+          <Button type="submit" variant="primary" busy={busy}>
+            {label}
+          </Button>
+          {saved && <p role="status">Saved.</p>}
+        </div>
       </form>
     </section>
   );
@@ -343,6 +346,7 @@ const PLACEHOLDER_HELP: Record<(typeof PROMPT_PLACEHOLDERS)[number], string> = {
   "%customInstruction%": "Instructions for this job",
 };
 function Llm({ data }: { data: SettingsResult }) {
+  const { location } = useRoute();
   const [llm, setLlm] = useState(data.settings.llm);
   const update = <K extends keyof LlmSettings>(key: K, value: LlmSettings[K]) =>
     setLlm({ ...llm, [key]: value });
@@ -351,58 +355,64 @@ function Llm({ data }: { data: SettingsResult }) {
       {!data.llmAvailable && (
         <p role="status">Translation is off. Enter a Gemini API key above to turn it on.</p>
       )}
-      <Check
-        label="Automatically translate on upload"
-        checked={llm.autoTranslate}
-        change={(v) => update("autoTranslate", v)}
-      />
-      <Check
-        label="Update outdated green translations"
-        checked={llm.updateOutdated}
-        change={(v) => update("updateOutdated", v)}
-      />
-      <Check
-        label="Propose updates for outdated proofread translations"
-        checked={llm.proposeForProofread}
-        change={(v) => update("proposeForProofread", v)}
-      />
-      <Field label="Model" path="llm.model">
-        <Input
-          list="llm-models"
-          value={llm.model}
-          required
-          onChange={(e) => update("model", e.target.value)}
+      <Fieldset className="settings-field-group">
+        <legend>Automatic translation</legend>
+        <Check
+          label="Automatically translate on upload"
+          checked={llm.autoTranslate}
+          change={(v) => update("autoTranslate", v)}
         />
-        <datalist id="llm-models">
-          {data.models.map((m) => (
-            <option key={m} value={m} />
-          ))}
-        </datalist>
-      </Field>
-      <Field label="Requests in parallel" path="llm.concurrency">
-        <Input
-          type="number"
-          min={1}
-          max={64}
-          required
-          value={llm.concurrency}
-          onChange={(event) => update("concurrency", Number(event.target.value))}
+        <Check
+          label="Update outdated green translations"
+          checked={llm.updateOutdated}
+          change={(v) => update("updateOutdated", v)}
         />
-      </Field>
-      <Field label="Monthly token budget (blank for unlimited)" path="llm.monthlyTokenBudget">
-        <Input
-          type="number"
-          min={1}
-          max={Number.MAX_SAFE_INTEGER}
-          value={llm.monthlyTokenBudget ?? ""}
-          onChange={(event) =>
-            update(
-              "monthlyTokenBudget",
-              event.target.value === "" ? null : Number(event.target.value),
-            )
-          }
+        <Check
+          label="Propose updates for outdated proofread translations"
+          checked={llm.proposeForProofread}
+          change={(v) => update("proposeForProofread", v)}
         />
-      </Field>
+      </Fieldset>
+      <Fieldset className="settings-field-group">
+        <legend>Model & budget</legend>
+        <Field label="Model" path="llm.model">
+          <Input
+            list="llm-models"
+            value={llm.model}
+            required
+            onChange={(e) => update("model", e.target.value)}
+          />
+          <datalist id="llm-models">
+            {data.models.map((m) => (
+              <option key={m} value={m} />
+            ))}
+          </datalist>
+        </Field>
+        <Field label="Requests in parallel" path="llm.concurrency">
+          <Input
+            type="number"
+            min={1}
+            max={64}
+            required
+            value={llm.concurrency}
+            onChange={(event) => update("concurrency", Number(event.target.value))}
+          />
+        </Field>
+        <Field label="Monthly token budget (blank for unlimited)" path="llm.monthlyTokenBudget">
+          <Input
+            type="number"
+            min={1}
+            max={Number.MAX_SAFE_INTEGER}
+            value={llm.monthlyTokenBudget ?? ""}
+            onChange={(event) =>
+              update(
+                "monthlyTokenBudget",
+                event.target.value === "" ? null : Number(event.target.value),
+              )
+            }
+          />
+        </Field>
+      </Fieldset>
       <Field label="Project instructions" path="llm.projectInstructions">
         <TextArea
           autoGrow={false}
@@ -411,88 +421,106 @@ function Llm({ data }: { data: SettingsResult }) {
           onChange={(e) => update("projectInstructions", e.target.value)}
         />
       </Field>
-      <Field label="Prompt template" path="llm.promptTemplate">
-        <TextArea
-          autoGrow={false}
-          className="prompt-template"
-          rows={16}
-          value={llm.promptTemplate}
-          onChange={(e) => update("promptTemplate", e.target.value)}
-        />
-      </Field>
-      <ConfirmButton
-        variant="secondary"
-        title="Reset the prompt?"
-        description="This replaces the draft with Quaso’s default prompt. Save to apply it."
-        onConfirm={() => {
-          update("promptTemplate", data.defaultPromptTemplate);
-          return Promise.resolve();
-        }}
-      >
-        Reset to default
-      </ConfirmButton>
-      <Details>
-        <Summary>Prompt placeholders</Summary>
-        <dl>
-          {PROMPT_PLACEHOLDERS.map((p) => (
-            <div key={p}>
-              <dt>
-                <code>{p}</code>
-              </dt>
-              <dd>{PLACEHOLDER_HELP[p]}</dd>
-            </div>
-          ))}
-        </dl>
+      <Details className="settings-disclosure">
+        <Summary>Customize the prompt</Summary>
+        <div className="settings-disclosure-body">
+          <Field label="Prompt template" path="llm.promptTemplate">
+            <TextArea
+              autoGrow={false}
+              className="prompt-template"
+              rows={16}
+              value={llm.promptTemplate}
+              onChange={(e) => update("promptTemplate", e.target.value)}
+            />
+          </Field>
+          <ConfirmButton
+            variant="secondary"
+            title="Reset the prompt?"
+            description="This replaces the draft with Quaso’s default prompt. Save to apply it."
+            onConfirm={() => {
+              update("promptTemplate", data.defaultPromptTemplate);
+              return Promise.resolve();
+            }}
+          >
+            Reset to default
+          </ConfirmButton>
+          <Details>
+            <Summary>Prompt placeholders</Summary>
+            <dl>
+              {PROMPT_PLACEHOLDERS.map((p) => (
+                <div key={p}>
+                  <dt>
+                    <code>{p}</code>
+                  </dt>
+                  <dd>{PLACEHOLDER_HELP[p]}</dd>
+                </div>
+              ))}
+            </dl>
+          </Details>
+        </div>
       </Details>
-      <div id="reference-languages">
-        <LanguagePicker
-          label="Reference languages"
-          value={llm.context.otherLanguages}
-          onChange={(v) => update("context", { ...llm.context, otherLanguages: v ?? [] })}
-        />
-      </div>
-      {(
-        [
-          ["identicalStrings", "Include identical proofread strings"],
-          ["fileContext", "Include file context"],
-          ["glossary", "Include glossary"],
-        ] as const
-      ).map(([key, label]) => (
-        <Check
-          key={key}
-          label={label}
-          checked={llm.context[key]}
-          change={(v) => update("context", { ...llm.context, [key]: v })}
-        />
-      ))}
-      {(
-        [
-          ["batchSize", "Strings per batch", 1, 100],
-          ["neighbours", "Neighbouring strings", 0, 20],
-          ["retries", "Retries", 0, 5],
-        ] as const
-      ).map(([key, label, min, max]) => (
-        <Field key={key} label={label} path={`llm.${key}`}>
-          <Input
-            type="number"
-            min={min}
-            max={max}
-            required
-            value={llm[key]}
-            onChange={(e) => update(key, e.target.valueAsNumber)}
-          />
-        </Field>
-      ))}
-      <Field label="Safety level" path="llm.safety">
-        <Select
-          value={llm.safety}
-          onChange={(e) => update("safety", e.target.value as LlmSettings["safety"])}
-        >
-          {["permissive", "default", "strict"].map((s) => (
-            <option key={s}>{s}</option>
+      <Details
+        className="settings-disclosure"
+        open={location.hash === "#reference-languages" || undefined}
+      >
+        <Summary>Translation context & reference languages</Summary>
+        <div className="settings-disclosure-body">
+          <div id="reference-languages">
+            <LanguagePicker
+              label="Reference languages"
+              value={llm.context.otherLanguages}
+              onChange={(v) => update("context", { ...llm.context, otherLanguages: v ?? [] })}
+            />
+          </div>
+          {(
+            [
+              ["identicalStrings", "Include identical proofread strings"],
+              ["fileContext", "Include file context"],
+              ["glossary", "Include glossary"],
+            ] as const
+          ).map(([key, label]) => (
+            <Check
+              key={key}
+              label={label}
+              checked={llm.context[key]}
+              change={(v) => update("context", { ...llm.context, [key]: v })}
+            />
           ))}
-        </Select>
-      </Field>
+        </div>
+      </Details>
+      <Details className="settings-disclosure">
+        <Summary>Advanced translation settings</Summary>
+        <div className="settings-disclosure-body">
+          {(
+            [
+              ["batchSize", "Strings per batch", 1, 100],
+              ["neighbours", "Neighbouring strings", 0, 20],
+              ["retries", "Retries", 0, 5],
+            ] as const
+          ).map(([key, label, min, max]) => (
+            <Field key={key} label={label} path={`llm.${key}`}>
+              <Input
+                type="number"
+                min={min}
+                max={max}
+                required
+                value={llm[key]}
+                onChange={(e) => update(key, e.target.valueAsNumber)}
+              />
+            </Field>
+          ))}
+          <Field label="Safety level" path="llm.safety">
+            <Select
+              value={llm.safety}
+              onChange={(e) => update("safety", e.target.value as LlmSettings["safety"])}
+            >
+              {["permissive", "default", "strict"].map((s) => (
+                <option key={s}>{s}</option>
+              ))}
+            </Select>
+          </Field>
+        </div>
+      </Details>
     </SaveForm>
   );
 }
@@ -1071,18 +1099,84 @@ function Retention({ data }: { data: SettingsResult }) {
   );
 }
 
+const SETTINGS_SECTIONS = [
+  {
+    id: "general",
+    label: "Project details",
+    group: "Project",
+    description: "Give your project a name, context and placeholder rules.",
+  },
+  {
+    id: "languages",
+    label: "Languages",
+    group: "Project",
+    description:
+      "Choose the languages you support and give translators language-specific guidance.",
+  },
+  {
+    id: "files",
+    label: "Files & length limits",
+    group: "Project",
+    description: "Explain where strings appear and how much space translations can use.",
+  },
+  {
+    id: "requests",
+    label: "Language requests",
+    group: "Project",
+    description: "Let your community help decide which languages to add next.",
+  },
+  {
+    id: "llm",
+    label: "AI translation",
+    group: "Connections",
+    description: "Connect Gemini, guide the translator and control automatic translation.",
+  },
+  {
+    id: "email",
+    label: "Email delivery",
+    group: "Connections",
+    description: "Connect email for account verification, sign-in links and password resets.",
+  },
+  {
+    id: "keys",
+    label: "API keys",
+    group: "Connections",
+    description: "Give your CLI and continuous integration access to the project.",
+  },
+  {
+    id: "backups",
+    label: "Backups",
+    group: "Data",
+    description: "Download a copy of the project and check your automatic backups.",
+  },
+  {
+    id: "retention",
+    label: "History & retention",
+    group: "Data",
+    description: "Choose how long to keep replaced files and project backups.",
+  },
+] as const;
+
 function SettingsContent() {
-  const { query: routeQuery } = useRoute();
+  useDocumentTitle("Settings");
+  const { query: routeQuery, setQuery } = useRoute();
   const query = useQuery(["settings"], ({ fresh }) =>
     request<SettingsResult>("/settings", { fresh }),
   );
   const secrets = useQuery(["settings-secrets"], ({ fresh }) =>
     request<SecretsResult>("/settings/secrets", { fresh }),
   );
-  const [section, setSection] = useState(routeQuery.section ?? "general");
+  const current =
+    SETTINGS_SECTIONS.find((entry) => entry.id === routeQuery.section) ?? SETTINGS_SECTIONS[0];
+  const section = current.id;
   return (
-    <div className="page management-page">
-      <H1>Settings</H1>
+    <div className="page management-page settings-page">
+      <div className="page-head workspace-heading">
+        <div>
+          <H1 ui>Settings</H1>
+          <p className="muted">Make Quaso work the way your team translates.</p>
+        </div>
+      </div>
       {secrets.data && secrets.data.missingSecrets.length > 0 && (
         <p role="alert">
           This backup omitted credentials. Enter them again:{" "}
@@ -1097,97 +1191,127 @@ function SettingsContent() {
           </Button>
         </p>
       )}
-      <Label className="field">
-        Section
-        <Select value={section} onChange={(e) => setSection(e.target.value)}>
-          {[
-            ["general", "General"],
-            ["languages", "Languages"],
-            ["files", "Files and length limits"],
-            ["llm", "LLM translation"],
-            ["email", "Email"],
-            ["keys", "API keys"],
-            ["backups", "Backups"],
-            ["retention", "Retention"],
-            ["requests", "Language requests"],
-          ].map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </Select>
-      </Label>
-      {query.loading && <Loading label="Loading settings…" />}
-      {query.error !== undefined && (
-        <p role="alert">
-          {errorMessage(query.error)}{" "}
-          <Button onClick={() => void query.refresh().catch(() => {})}>Try again</Button>
-        </p>
-      )}
-      {query.data && (
-        <>
-          {section === "general" && <General data={query.data} />}
-          {section === "retention" && <Retention data={query.data} />}
-          {section === "requests" && <LanguageRequestSettings data={query.data} />}
-          {section === "languages" && (
-            <>
-              <Languages data={query.data} refresh={query.refresh} />
-            </>
-          )}
-          {section === "llm" && (
-            <>
-              {secrets.data?.secrets
-                .filter((secret) => secret.name === "gemini_api_key")
-                .map((secret) => (
-                  <SecretCredential key={secret.name} status={secret} refresh={secrets.refresh} />
-                ))}
-              <Llm data={query.data} />
-            </>
-          )}
-          {section === "email" && (
-            <>
-              {secrets.data?.secrets
-                .filter((secret) => secret.name === "email_api_key")
-                .map((secret) => (
-                  <SecretCredential key={secret.name} status={secret} refresh={secrets.refresh} />
-                ))}
-              <EmailConfiguration
-                data={query.data}
-                credential={secrets.data?.secrets.find((secret) => secret.name === "email_api_key")}
-              />
-            </>
-          )}
-          {section === "files" && (
-            <>
-              {query.data.files.length === 0 && (
-                <p>Upload your source files to add file context and length limits.</p>
-              )}
-              {query.data.files.map((f) => (
-                <FileContext key={f.id} file={f} />
+      <div className="settings-layout">
+        <nav className="settings-navigation" aria-label="Settings sections">
+          {["Project", "Connections", "Data"].map((group) => (
+            <div className="settings-navigation-group" key={group}>
+              <p>{group}</p>
+              {SETTINGS_SECTIONS.filter((entry) => entry.group === group).map((entry) => (
+                <Link
+                  key={entry.id}
+                  to={href("/settings", { ...routeQuery, section: entry.id })}
+                  quiet
+                  aria-current={section === entry.id ? "page" : undefined}
+                >
+                  {entry.label}
+                </Link>
               ))}
-              <Limits language={query.data.languages[0]?.tag} />
+            </div>
+          ))}
+        </nav>
+        <div className="settings-content">
+          <Label className="field settings-mobile-section">
+            Section
+            <Select
+              value={section}
+              onChange={(e) => setQuery({ section: e.target.value }, { replace: false })}
+            >
+              {SETTINGS_SECTIONS.map((entry) => (
+                <option key={entry.id} value={entry.id}>
+                  {entry.label}
+                </option>
+              ))}
+            </Select>
+          </Label>
+          <div className="settings-section-intro">
+            <H2 ui>{current.label}</H2>
+            <p className="muted">{current.description}</p>
+          </div>
+          {query.loading && <Loading label="Loading settings…" />}
+          {query.error !== undefined && (
+            <p role="alert">
+              {errorMessage(query.error)}{" "}
+              <Button onClick={() => void query.refresh().catch(() => {})}>Try again</Button>
+            </p>
+          )}
+          {query.data && (
+            <>
+              {section === "general" && <General data={query.data} />}
+              {section === "retention" && <Retention data={query.data} />}
+              {section === "requests" && <LanguageRequestSettings data={query.data} />}
+              {section === "languages" && (
+                <>
+                  <Languages data={query.data} refresh={query.refresh} />
+                </>
+              )}
+              {section === "llm" && (
+                <>
+                  {secrets.data?.secrets
+                    .filter((secret) => secret.name === "gemini_api_key")
+                    .map((secret) => (
+                      <SecretCredential
+                        key={secret.name}
+                        status={secret}
+                        refresh={secrets.refresh}
+                      />
+                    ))}
+                  <Llm data={query.data} />
+                </>
+              )}
+              {section === "email" && (
+                <>
+                  {secrets.data?.secrets
+                    .filter((secret) => secret.name === "email_api_key")
+                    .map((secret) => (
+                      <SecretCredential
+                        key={secret.name}
+                        status={secret}
+                        refresh={secrets.refresh}
+                      />
+                    ))}
+                  <EmailConfiguration
+                    data={query.data}
+                    credential={secrets.data?.secrets.find(
+                      (secret) => secret.name === "email_api_key",
+                    )}
+                  />
+                </>
+              )}
+              {section === "files" && (
+                <>
+                  {query.data.files.length === 0 && (
+                    <p>Upload your source files to add file context and length limits.</p>
+                  )}
+                  {query.data.files.map((f) => (
+                    <FileContext key={f.id} file={f} />
+                  ))}
+                  <Limits language={query.data.languages[0]?.tag} />
+                </>
+              )}
+              {section === "keys" && <ApiKeys />}
+              {section === "backups" && (
+                <section className="management-section">
+                  <H2>Backups</H2>
+                  <p>
+                    Backups include user records and API key hashes. Keep them in private storage.
+                  </p>
+                  <p>
+                    <A href={apiUrl("/backup", { format: "sqlite" })} download>
+                      Download SQLite backup
+                    </A>
+                  </p>
+                  <p>
+                    <A href={apiUrl("/backup", { format: "json" })} download>
+                      Download JSON backup
+                    </A>
+                  </p>
+                  <AdminDetails backupsOnly />
+                </section>
+              )}
             </>
           )}
-          {section === "keys" && <ApiKeys />}
-          {section === "backups" && (
-            <section className="management-section">
-              <H2>Backups</H2>
-              <p>Backups include user records and API key hashes. Keep them in private storage.</p>
-              <p>
-                <A href={apiUrl("/backup", { format: "sqlite" })} download>
-                  Download SQLite backup
-                </A>
-              </p>
-              <p>
-                <A href={apiUrl("/backup", { format: "json" })} download>
-                  Download JSON backup
-                </A>
-              </p>
-              <AdminDetails backupsOnly />
-            </section>
-          )}
-        </>
-      )}
+        </div>
+      </div>
     </div>
   );
 }

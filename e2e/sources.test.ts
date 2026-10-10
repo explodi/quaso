@@ -82,6 +82,25 @@ browserTest(
     );
     await page.reload({ waitUntil: "networkidle0" });
     assert(await page.$('a.tree-name[href="/translate/fr?file=common.json"]'));
+    assertEquals(
+      await page.$eval(
+        ".source-language-choice select",
+        (select) => (select as HTMLSelectElement).value,
+      ),
+      "fr",
+    );
+    await page.select(".source-language-choice select", "de");
+    await waitFor(page, () => new URLSearchParams(location.search).get("language") === "de");
+    assert(await page.$('a.tree-name[href="/translate/de?file=common.json"]'));
+    await page.reload({ waitUntil: "networkidle0" });
+    assertEquals(
+      await page.$eval(
+        ".source-language-choice select",
+        (select) => (select as HTMLSelectElement).value,
+      ),
+      "de",
+    );
+    assert(await page.$('a.tree-name[href="/translate/de?file=common.json"]'));
     await page.type('.sources-page input[type="search"]', "menus");
     await waitFor(
       page,

@@ -1,0 +1,477 @@
+/* SPDX-License-Identifier: MIT */
+.workspace-heading {
+  align-items: center;
+  padding-block-end: var(--space-2);
+}
+.workspace-heading > div:first-child,
+.auth-heading {
+  display: grid;
+  gap: var(--space-2);
+}
+.workspace-heading .muted {
+  max-width: 42rem;
+}
+.workspace-eyebrow {
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
+  font-weight: 650;
+  text-transform: uppercase;
+}
+.workspace-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.workspace-metrics > div {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  border-inline-start: 0;
+}
+.workspace-metrics > div + div {
+  border-inline-start: 1px solid var(--border);
+}
+.workspace-metrics dt {
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+}
+.workspace-metrics dd {
+  font-size: var(--text-xl);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.source-language-choice {
+  min-width: 12rem;
+}
+.source-language-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.sources-page,
+.glossary-page,
+.issues-page {
+  display: grid;
+  gap: var(--space-5);
+}
+.glossary-page .community-filters {
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.glossary-list {
+  gap: 0;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.glossary-list .community-record {
+  display: grid;
+  grid-template-columns: minmax(10rem, 1fr) minmax(0, 2fr) auto;
+  align-items: start;
+  gap: var(--space-5);
+  border: 0;
+  border-block-end: 1px solid var(--border);
+  padding: var(--space-5);
+}
+.glossary-list .community-record:last-child {
+  border-block-end: 0;
+}
+.glossary-term-name {
+  display: grid;
+  gap: var(--space-2);
+}
+.glossary-term-name > .muted,
+.glossary-term-label {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.glossary-list .glossary-term-label {
+  margin-block-start: 0;
+}
+.glossary-list .glossary-term-value {
+  line-height: 1.65;
+}
+.glossary-list .actions {
+  margin-block-start: 0;
+}
+.settings-layout {
+  display: grid;
+  grid-template-columns: 13rem minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+.settings-navigation {
+  position: sticky;
+  top: calc(var(--header-block-size, var(--header-height)) + var(--space-5));
+  display: grid;
+  gap: var(--space-5);
+}
+.settings-navigation-group {
+  display: grid;
+  gap: var(--space-1);
+}
+.settings-navigation-group > p {
+  padding: var(--space-2) var(--space-3);
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
+  font-weight: 650;
+  text-transform: uppercase;
+}
+.settings-navigation a {
+  display: flex;
+  align-items: center;
+  min-height: var(--control-height);
+  padding: var(--space-2) var(--space-3);
+  color: var(--fg);
+  text-decoration: none;
+}
+.settings-navigation a:hover {
+  background: var(--hover);
+}
+.settings-navigation a[aria-current="page"] {
+  background: var(--selected);
+  font-weight: 650;
+}
+.settings-content {
+  display: grid;
+  gap: var(--space-5);
+  min-width: 0;
+  max-width: 52rem;
+}
+.settings-section-intro {
+  display: grid;
+  gap: var(--space-2);
+  padding-block: var(--space-2) var(--space-4);
+  border-block-end: 1px solid var(--border);
+}
+.settings-mobile-section {
+  display: none;
+}
+.settings-content .management-section > form,
+.settings-fields,
+.settings-field-group,
+.settings-disclosure-body,
+.account-field-group {
+  display: grid;
+  gap: var(--space-4);
+}
+.settings-disclosure {
+  border: 1px solid var(--border);
+  padding: var(--space-3);
+}
+.settings-disclosure-body {
+  margin-block-start: var(--space-4);
+}
+.settings-field-group > legend {
+  padding-inline: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 650;
+}
+.settings-page .settings-fields {
+  border: 0;
+  padding: 0;
+}
+.settings-save {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  border-block-start: 1px solid var(--border);
+  padding-block-start: var(--space-4);
+}
+.settings-save p {
+  color: var(--success);
+  font-size: var(--text-sm);
+}
+.team-requests .record-list:empty {
+  display: none;
+}
+.team-members,
+.workspace-job-section {
+  display: grid;
+  gap: var(--space-4);
+}
+.team-members > .record-list {
+  gap: 0;
+  border: 1px solid var(--border);
+}
+.team-members .team-member {
+  border: 0;
+  border-block-end: 1px solid var(--border);
+  padding: var(--space-5);
+}
+.team-members .team-member:last-child {
+  border-block-end: 0;
+}
+.team-member .record-head {
+  justify-content: space-between;
+}
+.member-access[open] > summary {
+  margin-block-end: var(--space-4);
+}
+.usage-budget > .record-head {
+  justify-content: space-between;
+}
+.usage-budget .btn {
+  justify-self: start;
+}
+.usage-breakdowns {
+  display: grid;
+  gap: var(--space-5);
+}
+.usage-page .table-scroll td {
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+.review-page .management-filters {
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.review-page .review-diff {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+.review-diff > div {
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+}
+.review-diff > .review-source {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 8rem minmax(0, 1fr);
+  gap: var(--space-4);
+  background: var(--surface-alt);
+}
+.review-diff > .review-proposal {
+  background: var(--surface-alt);
+}
+.review-card {
+  padding: var(--space-5);
+}
+.review-card-selected {
+  background: var(--selected);
+  border-color: var(--border-strong);
+}
+.review-card-selected .review-diff > div {
+  background: var(--surface);
+}
+.review-toolbar-selected {
+  position: sticky;
+  top: calc(var(--header-block-size, var(--header-height)) + var(--space-2));
+  z-index: 5;
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow);
+}
+.review-comment {
+  flex: 1;
+  min-width: min(18rem, 100%);
+}
+.review-comment > summary {
+  min-height: var(--control-height);
+  padding: var(--space-3);
+}
+.review-comment[open] > .field {
+  margin-top: var(--space-3);
+}
+.activity-page .activity-list {
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.activity-page .activity-item {
+  padding: var(--space-5);
+}
+.activity-page .activity-item:last-child {
+  border-block-end: 0;
+}
+.activity-page .activity-body {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.account-page {
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  align-items: start;
+}
+.account-page > .workspace-heading {
+  grid-column: 1 / -1;
+}
+.account-keys,
+.account-danger {
+  grid-column: 1 / -1;
+}
+.account-field-group > legend {
+  padding-inline: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 650;
+}
+.account-signins > .record-card {
+  background: var(--surface-alt);
+}
+.account-keys > p,
+.account-keys > .form {
+  max-width: 48rem;
+}
+.account-danger {
+  border-color: var(--danger);
+}
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5);
+  align-items: start;
+}
+.admin-facts {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-3) var(--space-5);
+}
+.admin-facts dt,
+.admin-usage dt {
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+}
+.admin-facts dd {
+  overflow-wrap: anywhere;
+  text-align: end;
+}
+.admin-usage {
+  display: grid;
+  gap: var(--space-2);
+}
+.admin-usage > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+.auth-page {
+  max-width: 62rem;
+  padding-block: var(--space-7);
+}
+.auth-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: var(--space-7);
+  align-items: start;
+}
+.auth-context {
+  display: grid;
+  gap: var(--space-4);
+  padding-block: var(--space-5);
+  min-width: 0;
+}
+.auth-context .quaso-mascot {
+  width: 8rem;
+  height: 6.5rem;
+}
+.auth-context > .muted {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.auth-pattern {
+  height: 7rem;
+  margin-block-start: var(--space-5);
+}
+.auth-form-area {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.auth-card {
+  padding: var(--space-6);
+  box-shadow: var(--shadow);
+}
+
+@media (max-width: 64rem) {
+  .glossary-list .community-record {
+    grid-template-columns: minmax(10rem, 1fr) minmax(0, 2fr);
+  }
+  .glossary-list .actions {
+    grid-column: 2;
+  }
+  .account-page {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 52rem) {
+  .settings-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .settings-navigation {
+    display: none;
+  }
+  .settings-mobile-section {
+    display: grid;
+  }
+  .auth-page {
+    max-width: 34rem;
+    padding-block: var(--space-5);
+  }
+  .auth-layout,
+  .admin-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .auth-layout {
+    gap: var(--space-5);
+  }
+  .auth-context {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: var(--space-2) var(--space-4);
+    padding: 0;
+  }
+  .auth-context .quaso-mascot {
+    grid-row: span 3;
+    width: 4rem;
+    height: 3.25rem;
+  }
+  .auth-context > .muted,
+  .auth-pattern {
+    display: none;
+  }
+  .auth-context a {
+    grid-column: 2;
+    font-size: var(--text-sm);
+  }
+}
+@media (max-width: 40rem) {
+  .workspace-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .workspace-metrics > div {
+    padding: var(--space-3);
+  }
+  .workspace-metrics > div:nth-child(odd) {
+    border-inline-start: 0;
+  }
+  .workspace-metrics > div:nth-child(n + 3) {
+    border-block-start: 1px solid var(--border);
+  }
+  .workspace-metrics dd {
+    font-size: var(--text-lg);
+  }
+  .workspace-metrics dt {
+    font-size: var(--text-xs);
+  }
+  .glossary-list .community-record,
+  .review-page .review-diff,
+  .review-diff > .review-source {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .glossary-list .actions {
+    grid-column: auto;
+  }
+  .review-toolbar-selected {
+    position: static;
+  }
+  .auth-card,
+  .review-card,
+  .activity-page .activity-item {
+    padding: var(--space-4);
+  }
+}

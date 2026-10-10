@@ -3,6 +3,7 @@ import {
   Label,
   H2,
   H3,
+  Kbd,
   Button,
   Chip,
   Dialog,
@@ -19,13 +20,7 @@ import {
   TextArea,
 } from "@quaso/design-system";
 
-/**
- * The editor's translation panel (design §5.9, S7.6): the key, the description and the
- * maximum length; the source with placeholder and reference chips; one input per plural
- * form with its example numbers; live quality checks from core (errors block saving,
- * warnings don't); a length counter; and the actions the person's role allows. People who
- * can't write see the translation and an invitation to sign in instead (S7.8).
- */
+/** A source-to-translation workspace with local drafts, quality checks, and revision conflicts. */
 import {
   type CheckResult,
   checkTranslation,
@@ -274,7 +269,12 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
   const colour = current?.colour ?? "red";
 
   useEffect(() => {
-    if (props.autoFocus && writable) inputs.current.get(forms[0])?.focus();
+    if (props.autoFocus) {
+      const target = writable
+        ? inputs.current.get(forms[0])
+        : document.getElementById("panel-heading");
+      target?.focus();
+    }
     // Only when the string is first shown.
   }, []);
 
@@ -518,9 +518,12 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
       )}
 
       <section className="panel-source" aria-labelledby="source-heading">
-        <H3 ui id="source-heading" className="panel-label">
-          {project.sourceLanguageName}
-        </H3>
+        <div className="panel-section-head">
+          <H3 ui id="source-heading" className="panel-label">
+            Source
+          </H3>
+          <span className="muted small">{project.sourceLanguageName}</span>
+        </div>
         {typeof detail.source === "string" ? (
           <p className="source" lang={project.sourceLanguage} dir={sourceDirection}>
             <SourceText
@@ -574,9 +577,40 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
 
       {writable && (
         <section className="panel-edit" aria-labelledby="edit-heading">
-          <H3 ui id="edit-heading" className="panel-label">
-            {canEdit ? "Translation" : "Your suggestion"} ({language.name})
-          </H3>
+          <div className="panel-section-head">
+            <H3 ui id="edit-heading" className="panel-label">
+              {canEdit ? "Translation" : "Your suggestion"} ({language.name})
+            </H3>
+            {dirty && (
+              <span className="panel-draft-state" role="status">
+                Unsaved changes
+              </span>
+            )}
+          </div>
+          <div className="panel-assist" role="group" aria-label="Translation tools">
+            <Button
+              size="small"
+              variant="ghost"
+              icon={<CopyIcon />}
+              onClick={copySource}
+              title="Ctrl+Shift+C"
+            >
+              Copy the {project.sourceLanguageName}
+            </Button>
+            {canTranslate && !(colour === "blue" && !current?.outdated) && (
+              <Button
+                size="small"
+                variant="ghost"
+                icon={<SparklesIcon />}
+                busy={busy === "llm"}
+                disabled={!project.llmAvailable || busy !== null}
+                aria-describedby={project.llmAvailable ? undefined : "llm-off"}
+                onClick={translateWithLlm}
+              >
+                Translate with the LLM
+              </Button>
+            )}
+          </div>
           {masking.chips.length > 0 && (
             <div
               className="chips"
@@ -711,16 +745,22 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
 
           <div className="panel-actions">
             <Button
-              variant="primary"
+              variant={dirty ? "primary" : "secondary"}
               busy={busy === "save"}
               disabled={!dirty || errors.length > 0 || busy !== null}
               onClick={() => submit()}
               aria-describedby={errors.length > 0 ? "save-blocked" : undefined}
+              title={
+                canEdit
+                  ? "Save and go to the next string to do"
+                  : "Suggest and go to the next string to do"
+              }
             >
               {canEdit ? "Save" : "Suggest"}
             </Button>
             {canSuggest && colour === "green" && !dirty && (
               <Button
+                variant="primary"
                 busy={busy === "approval"}
                 disabled={busy !== null}
                 icon={<CheckSquareIcon />}
@@ -731,6 +771,7 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
             )}
             {canEdit && !dirty && (colour === "green" || current?.outdated) && (
               <Button
+                variant="primary"
                 busy={busy === "approve"}
                 disabled={busy !== null}
                 icon={<CheckSquareIcon />}
@@ -744,33 +785,31 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
                 Approve
               </Button>
             )}
-            {canEdit && colour === "blue" && !dirty && (
-              <Button
-                busy={busy === "unapprove"}
-                disabled={busy !== null}
-                icon={<UndoIcon />}
-                onClick={() => action("unapprove")}
-              >
-                Unapprove
+            {!dirty && (
+              <Button variant="ghost" disabled={busy !== null} onClick={props.onNext}>
+                Next to do
               </Button>
             )}
-            <Button variant="ghost" icon={<CopyIcon />} onClick={copySource} title="Ctrl+Shift+C">
-              Copy the {project.sourceLanguageName}
-            </Button>
-            {canTranslate && !(colour === "blue" && !current?.outdated) && (
+            <span className="panel-save-hint">
+              {canEdit ? "Save" : "Suggest"} & continue <Kbd>Ctrl / ⌘ + Enter</Kbd>
+            </span>
+          </div>
+          {canEdit && current && !dirty && (
+            <div className="panel-maintenance" role="group" aria-label="Manage this translation">
+              {colour === "blue" && (
+                <Button
+                  size="small"
+                  variant="ghost"
+                  busy={busy === "unapprove"}
+                  disabled={busy !== null}
+                  icon={<UndoIcon />}
+                  onClick={() => action("unapprove")}
+                >
+                  Unapprove
+                </Button>
+              )}
               <Button
-                variant="ghost"
-                icon={<SparklesIcon />}
-                busy={busy === "llm"}
-                disabled={!project.llmAvailable || busy !== null}
-                aria-describedby={project.llmAvailable ? undefined : "llm-off"}
-                onClick={translateWithLlm}
-              >
-                Translate with the LLM
-              </Button>
-            )}
-            {canEdit && current && !dirty && (
-              <Button
+                size="small"
                 variant="ghost"
                 className="btn-danger-text"
                 icon={<TrashIcon />}
@@ -778,8 +817,8 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
               >
                 Delete
               </Button>
-            )}
-          </div>
+            </div>
+          )}
           {errors.length > 0 && (
             <p id="save-blocked" className="field-error">
               {canEdit ? "Saving" : "Suggesting"} waits until the errors are fixed.

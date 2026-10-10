@@ -88,6 +88,7 @@ export function SignUp() {
   return (
     <AuthCard
       title="Create an account"
+      description="Join the people bringing this project to more languages."
       footer={
         <p>
           Already have one? <Link to={href("/signin", { next: query.next })}>Sign in</Link>

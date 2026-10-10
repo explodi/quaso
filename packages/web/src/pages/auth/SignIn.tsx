@@ -63,6 +63,7 @@ export function SignIn() {
   return (
     <AuthCard
       title="Sign in"
+      description="Pick up where your team left off."
       footer={
         <p>
           New here? <Link to={href("/signup", { next: query.next })}>Create an account</Link>

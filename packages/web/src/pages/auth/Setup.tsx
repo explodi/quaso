@@ -70,7 +70,7 @@ export function Setup() {
   }
 
   return (
-    <AuthCard title="Set up Quaso">
+    <AuthCard title="Set up Quaso" description="Create your project and its first administrator.">
       <NoAccounts />
       {!session.info.setupKeyConfigured ? (
         <p>

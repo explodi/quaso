@@ -6,17 +6,13 @@ import {
   IconButton,
   EmptyState,
   ArrowLeftIcon,
+  ChevronRightIcon,
   CloseIcon,
   FileIcon,
   KeyboardIcon,
   Loading,
 } from "@quaso/design-system";
-/**
- * The editor (design §5.9, WEB-2, WEB-3): three panes like Crowdin's, the files, the
- * strings and the translation panel with its tabs. The file, the state filter, the search
- * and the selected string are in the address (`?file=&state=&q=&id=`), so links are
- * shareable. New translations appear by polling the project's revision.
- */
+/** Filters and the selected string live in the address so a workspace can be shared. */
 import {
   type LanguageFilesResult,
   STATE_FILTERS,
@@ -38,7 +34,7 @@ import {
 } from "../../lib/api.ts";
 import { AutoTranslateButton } from "../../components/AutoTranslate.tsx";
 import { queryCache, useQuery } from "../../lib/data.ts";
-import { count, languageLabel, progressText } from "../../lib/format.ts";
+import { count, formatNumber, languageLabel, progressText } from "../../lib/format.ts";
 import { useDocumentTitle, useProject, useRememberLanguage } from "../../lib/hooks.ts";
 import { fillPattern, href, Link, Redirect, useRoute } from "../../lib/router.tsx";
 import { useSession } from "../../lib/session.tsx";
@@ -101,6 +97,9 @@ export function EditorPage() {
   const [tab, setTab] = useState<SideTab>("history");
   const [help, setHelp] = useState(false);
   const [filesOpen, setFilesOpen] = useState(false);
+  const [mobilePane, setMobilePane] = useState<"strings" | "translation">(
+    id === null ? "strings" : "translation",
+  );
   const [focusPanel, setFocusPanel] = useState(false);
   const panel = useRef<PanelHandle>(null);
 
@@ -112,9 +111,7 @@ export function EditorPage() {
     document.querySelector(".pane-panel")?.scrollTo(0, 0);
   }, [id]);
 
-  // The files open over the page on narrow screens: focus goes in, and back when they close,
-  // unless they closed because focus left them (Tab past the last file): then it stays
-  // where it went, which the closed overlay no longer hides.
+  // Returning to the scope control keeps focus visible when the file drawer closes.
   const filesWereOpen = useRef(false);
   const returnFocusFromFiles = useRef(true);
   useEffect(() => {
@@ -163,6 +160,7 @@ export function EditorPage() {
 
   const open = (stringId: number, focus: boolean) => {
     setFocusPanel(focus);
+    if (focus) setMobilePane("translation");
     setQuery({ id: stringId });
   };
 
@@ -323,19 +321,20 @@ export function EditorPage() {
   const canTranslate = tag !== null && session.can("translate", tag);
 
   return (
-    <div className="editor">
+    <div className="editor" data-mobile-pane={mobilePane}>
       <div className="editor-bar">
-        <Link
-          to={fillPattern("/languages/:lang", { lang: tag ?? params.lang })}
-          className="editor-back"
-        >
-          <ArrowLeftIcon />
-          <span className="sr-only">Back to the files of</span> {name}
-        </Link>
-        <H1 ui className="editor-title">
-          Translate into {name}
-          {language && <span className="heading-tag">{language.tag}</span>}
-        </H1>
+        <div className="editor-identity">
+          <Link
+            to={fillPattern("/languages/:lang", { lang: tag ?? params.lang })}
+            className="editor-back"
+          >
+            <ArrowLeftIcon /> Language overview
+          </Link>
+          <H1 ui className="editor-title">
+            Translate into {name}
+            {language && <span className="heading-tag">{language.tag}</span>}
+          </H1>
+        </div>
         {language && (
           <div className="editor-progress">
             <ProgressBar progress={language} size="small" />
@@ -344,18 +343,6 @@ export function EditorPage() {
         )}
         <div className="editor-bar-end">
           <AutoTranslateButton language={tag ?? undefined} file={file} />
-          <Button
-            size="small"
-            variant="ghost"
-            id="files-toggle"
-            className="files-toggle"
-            icon={<FileIcon />}
-            aria-expanded={filesOpen}
-            aria-controls="editor-files"
-            onClick={() => setFilesOpen(!filesOpen)}
-          >
-            Files
-          </Button>
           <Button
             size="small"
             variant="ghost"
@@ -373,144 +360,234 @@ export function EditorPage() {
       {!project.data && project.error === undefined && <Loading label="Loading the editor…" />}
 
       {language && project.data && (
-        <div className="editor-panes">
-          <nav
-            id="editor-files"
-            className={`pane pane-files${filesOpen ? " is-open" : ""}`}
-            aria-label="Files"
-            onKeyDown={(event) => {
-              if (event.key === "Escape" && filesOpen) setFilesOpen(false);
-            }}
-            onBlur={(event) => {
-              // Over the page on narrow screens, the files close when focus leaves them, so
-              // they never hide the element that has focus (WCAG 2.4.11).
-              const next = event.relatedTarget as Node | null;
-              if (!filesOpen || !next || event.currentTarget.contains(next)) return;
-              returnFocusFromFiles.current = false;
-              setFilesOpen(false);
-            }}
-          >
-            <div className="pane-title-row">
-              <H2 ui className="pane-title">
-                Files
-              </H2>
-              <IconButton
-                className="files-close"
-                label="Close the files"
-                icon={<CloseIcon />}
-                onClick={() => setFilesOpen(false)}
-              />
-            </div>
-            {files.error !== undefined && !files.data && (
-              <ErrorMessage error={files.error} onRetry={() => files.refresh()} />
-            )}
-            {files.loading && <Loading label="Loading the files…" />}
-            {files.data && (
-              <FileTree
-                nodes={tree}
-                label="Files"
-                compact
-                selected={file ?? null}
-                onOpen={(path) => {
-                  setQuery({ file: path, id: undefined });
-                  setFilesOpen(false);
-                }}
-                hrefFor={(path) => href(editorPath, { file: path, state, q, order })}
-                before={
+        <>
+          <div className="editor-mobile-switch" role="group" aria-label="Editor view">
+            <Button
+              variant="plain"
+              aria-pressed={mobilePane === "strings"}
+              aria-controls="editor-strings"
+              onClick={() => setMobilePane("strings")}
+            >
+              Strings <span className="muted">{formatNumber(list.total)}</span>
+            </Button>
+            <Button
+              variant="plain"
+              aria-pressed={mobilePane === "translation"}
+              aria-controls="editor-translation"
+              onClick={() => setMobilePane("translation")}
+            >
+              Translation
+            </Button>
+          </div>
+          <div className="editor-panes">
+            <nav
+              id="editor-files"
+              className={`pane pane-files${filesOpen ? " is-open" : ""}`}
+              aria-label="Files"
+              onKeyDown={(event) => {
+                if (event.key === "Escape" && filesOpen) setFilesOpen(false);
+              }}
+              onBlur={(event) => {
+                // Close before the drawer can hide the next focused element.
+                const next = event.relatedTarget as Node | null;
+                if (!filesOpen || !next || event.currentTarget.contains(next)) return;
+                returnFocusFromFiles.current = false;
+                setFilesOpen(false);
+              }}
+            >
+              <div className="pane-title-row">
+                <H2 ui className="pane-title">
+                  Files
+                </H2>
+                <IconButton
+                  className="files-close"
+                  label="Close the files"
+                  icon={<CloseIcon />}
+                  onClick={() => setFilesOpen(false)}
+                />
+              </div>
+              {files.error !== undefined && !files.data && (
+                <ErrorMessage error={files.error} onRetry={() => files.refresh()} />
+              )}
+              {files.loading && <Loading label="Loading the files…" />}
+              {files.data && (
+                <FileTree
+                  nodes={tree}
+                  label="Files"
+                  compact
+                  selected={file ?? null}
+                  onOpen={(path) => {
+                    setQuery({ file: path, id: undefined });
+                    setFilesOpen(false);
+                  }}
+                  hrefFor={(path) => href(editorPath, { file: path, state, q, order })}
+                  before={
+                    <Button
+                      type="button"
+                      className={`tree-all${file ? "" : " is-selected"}`}
+                      aria-pressed={!file}
+                      onClick={() => {
+                        setQuery({ file: undefined, id: undefined });
+                        setFilesOpen(false);
+                      }}
+                    >
+                      All files
+                    </Button>
+                  }
+                />
+              )}
+            </nav>
+
+            <section
+              id="editor-strings"
+              className="pane pane-strings"
+              aria-labelledby="strings-title"
+              onFocus={() => setMobilePane("strings")}
+            >
+              <div className="strings-heading">
+                <H2 ui id="strings-title" className="pane-title">
+                  Strings
+                  {file && (
+                    <>
+                      {" "}
+                      <span className="muted">in {file}</span>
+                    </>
+                  )}
+                </H2>
+              </div>
+              <StringList
+                list={list}
+                scope={
                   <Button
-                    type="button"
-                    className={`tree-all${file ? "" : " is-selected"}`}
-                    aria-pressed={!file}
-                    onClick={() => {
-                      setQuery({ file: undefined, id: undefined });
-                      setFilesOpen(false);
-                    }}
+                    size="small"
+                    variant="ghost"
+                    id="files-toggle"
+                    className="files-toggle"
+                    icon={<FileIcon />}
+                    aria-expanded={filesOpen}
+                    aria-controls="editor-files"
+                    aria-label={file ? `Choose file: ${file}` : "Choose a file"}
+                    onClick={() => setFilesOpen(!filesOpen)}
                   >
-                    All files
+                    <span>{file ? file.split("/").at(-1) : "All files"}</span>
                   </Button>
                 }
+                sourceLanguage={project.data.sourceLanguage}
+                language={language.tag}
+                syntax={project.data.syntax}
+                progress={fileProgress ?? language}
+                file={file}
+                state={state}
+                order={order}
+                onOrder={(order) => setQuery({ order, id: undefined })}
+                queue={
+                  list.toDoIds
+                    ? {
+                        counter: queueCounter(list.toDoIds, list.strings, id, list.queueLoaded),
+                        previous: () => goToDo(-1, false),
+                        next: () => goToDo(1, false),
+                      }
+                    : undefined
+                }
+                search={q ?? ""}
+                onSearch={(text) => setQuery({ q: text || undefined })}
+                onState={(filter) => setQuery({ state: filter })}
+                selectedId={id}
+                hrefFor={hrefFor}
+                onOpen={() => {
+                  setMobilePane("translation");
+                  const narrow = window.matchMedia("(max-width: 44rem)").matches;
+                  setFocusPanel(narrow);
+                  if (narrow) {
+                    requestAnimationFrame(() => {
+                      panel.current?.focusInput();
+                      if (!document.activeElement?.closest(".pane-panel")) {
+                        document.getElementById("panel-heading")?.focus();
+                      }
+                    });
+                  }
+                }}
+                selection={selection}
+                onSelection={setSelection}
+                bulk={{
+                  approve: canApprove,
+                  translate: canTranslate,
+                  llmAvailable: project.data.llmAvailable,
+                  onApprove: bulkApprove,
+                  onTranslate: bulkTranslate,
+                }}
               />
-            )}
-          </nav>
+            </section>
 
-          <section className="pane pane-strings" aria-labelledby="strings-title">
-            <H2 ui id="strings-title" className="pane-title">
-              Strings
-              {file && (
-                <>
-                  {" "}
-                  <span className="muted">in {file}</span>
-                </>
-              )}
-            </H2>
-            <StringList
-              list={list}
-              sourceLanguage={project.data.sourceLanguage}
-              syntax={project.data.syntax}
-              progress={fileProgress ?? language}
-              file={file}
-              state={state}
-              order={order}
-              onOrder={(order) => setQuery({ order, id: undefined })}
-              queue={
-                list.toDoIds
-                  ? {
-                      counter: queueCounter(list.toDoIds, list.strings, id, list.queueLoaded),
-                      previous: () => goToDo(-1, false),
-                      next: () => goToDo(1, false),
-                    }
-                  : undefined
-              }
-              search={q ?? ""}
-              onSearch={(text) => setQuery({ q: text || undefined })}
-              onState={(filter) => setQuery({ state: filter })}
-              selectedId={id}
-              hrefFor={hrefFor}
-              onOpen={() => setFocusPanel(false)}
-              selection={selection}
-              onSelection={setSelection}
-              bulk={{
-                approve: canApprove,
-                translate: canTranslate,
-                llmAvailable: project.data.llmAvailable,
-                onApprove: bulkApprove,
-                onTranslate: bulkTranslate,
-              }}
-            />
-          </section>
-
-          <section className="pane pane-panel" aria-label="Translation">
-            {id === null ? (
-              list.strings.length === 0 && !list.loading ? (
-                <EmptyState title="No string selected" />
-              ) : (
-                <Loading />
-              )
-            ) : (
-              <>
-                <TranslationPanel
-                  ref={panel}
-                  id={id}
-                  language={language}
-                  project={project.data}
-                  summary={summary}
-                  onNext={() => handlers.current.goToDo(1, true)}
-                  onChanged={onChanged}
-                  onJobStarted={() => setFast(true)}
-                  autoFocus={focusPanel}
-                />
-                <DetailTabs
-                  id={id}
-                  language={language.tag}
-                  tab={tab}
-                  onTab={setTab}
-                  onChanged={onChanged}
-                  sourceLanguage={project.data.sourceLanguage}
-                />
-              </>
-            )}
-          </section>
-        </div>
+            <section
+              id="editor-translation"
+              className="pane pane-panel"
+              aria-label="Translation"
+              onFocus={() => setMobilePane("translation")}
+            >
+              <div className="editor-string-navigation" role="group" aria-label="String navigation">
+                <Button
+                  size="small"
+                  variant="ghost"
+                  icon={<ArrowLeftIcon />}
+                  disabled={selectedIndex === 0 || list.strings.length === 0}
+                  title="Alt+↑"
+                  onClick={() => go(-1, true)}
+                >
+                  Previous
+                </Button>
+                <span className="muted small">
+                  {selectedIndex >= 0
+                    ? `${formatNumber(selectedIndex + 1)} of ${formatNumber(list.total)}`
+                    : "Selected string"}
+                </span>
+                <Button
+                  size="small"
+                  variant="ghost"
+                  disabled={
+                    list.strings.length === 0 ||
+                    (!list.hasMore && selectedIndex === list.strings.length - 1)
+                  }
+                  title="Alt+↓"
+                  onClick={() => go(1, true)}
+                >
+                  Next <ChevronRightIcon />
+                </Button>
+              </div>
+              <div className="translation-workspace">
+                {id === null ? (
+                  list.strings.length === 0 && !list.loading ? (
+                    <EmptyState title="No string selected" />
+                  ) : (
+                    <Loading />
+                  )
+                ) : (
+                  <>
+                    <TranslationPanel
+                      ref={panel}
+                      id={id}
+                      language={language}
+                      project={project.data}
+                      summary={summary}
+                      onNext={() => handlers.current.goToDo(1, true)}
+                      onChanged={onChanged}
+                      onJobStarted={() => setFast(true)}
+                      autoFocus={focusPanel}
+                    />
+                    <DetailTabs
+                      id={id}
+                      language={language.tag}
+                      tab={tab}
+                      onTab={setTab}
+                      onChanged={onChanged}
+                      sourceLanguage={project.data.sourceLanguage}
+                    />
+                  </>
+                )}
+              </div>
+            </section>
+          </div>
+        </>
       )}
       <ShortcutsDialog open={help} onClose={() => setHelp(false)} />
     </div>
@@ -541,6 +618,9 @@ function DetailTabs({
   if (!detail.data) return null;
   return (
     <div className="panel-tabs">
+      <H2 ui className="panel-tabs-title">
+        Context & review
+      </H2>
       <SideTabs
         detail={detail.data}
         tab={tab}

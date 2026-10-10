@@ -7,6 +7,11 @@ import {
   Radio,
   Select,
   Button,
+  Details,
+  Summary,
+  IconButton,
+  ArrowLeftIcon,
+  ChevronRightIcon,
   EmptyState,
   CheckSquareIcon,
   ClockIcon,
@@ -18,12 +23,7 @@ import {
   WarningIcon,
   Loading,
 } from "@quaso/design-system";
-/**
- * The editor's middle pane (design §5.9, S7.5): the strings, virtualized, each with its
- * state marker, its English (placeholders highlighted) and its key; filters by state,
- * search by key or text, and selecting several strings (checkboxes, Shift-click for a
- * range) for bulk actions.
- */
+/** A virtualized queue with source and translation previews, filters, and bulk selection. */
 import {
   type InterpolationSyntax,
   type Progress,
@@ -42,7 +42,7 @@ import { Link } from "../../lib/router.tsx";
 import { FILTER_LABELS, filterCount } from "../../lib/states.ts";
 import type { StringList as List } from "./useStringList.ts";
 
-const ROW_HEIGHT = 60;
+const ROW_HEIGHT = 92;
 /** The API's longest search (`q`). */
 export const SEARCH_MAX_LENGTH = 200;
 
@@ -55,6 +55,8 @@ const FILTER_ICONS: Record<StateFilter, ReactNode> = {
   qa: <WarningIcon className="flag-qa" />,
 };
 
+const FILTER_NAMES = { ...FILTER_LABELS, green: "To review", blue: "Proofread" };
+
 export interface BulkActions {
   approve: boolean;
   translate: boolean;
@@ -65,7 +67,9 @@ export interface BulkActions {
 
 export interface StringListProps {
   list: List;
+  scope: ReactNode;
   sourceLanguage: string;
+  language: string;
   syntax: InterpolationSyntax;
   /** Progress of what the filters apply to (the file, or the language), for the counts. */
   progress?: Progress;
@@ -94,6 +98,7 @@ export function StringList(props: StringListProps) {
   );
   const lastToggled = useRef<number | null>(null);
   const [busy, setBusy] = useState<"approve" | "translate" | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const canBulk = bulk.approve || bulk.translate;
 
   const onSearch = props.onSearch;
@@ -111,6 +116,12 @@ export function StringList(props: StringListProps) {
 
   // Moving to another string with the keyboard (Alt+↓) while in the list: focus follows.
   const container = useRef<HTMLDivElement>(null);
+  const closeFilters = () => {
+    setFiltersOpen(false);
+    requestAnimationFrame(() =>
+      container.current?.querySelector<HTMLElement>(".strings-filters > summary")?.focus(),
+    );
+  };
   useEffect(() => {
     if (
       selectedIndex < 0 ||
@@ -213,6 +224,19 @@ export function StringList(props: StringListProps) {
             <span className="row-source" lang={props.sourceLanguage} dir={sourceDirection}>
               <SourceText text={sourcePreview(summary.source)} syntax={props.syntax} />
             </span>
+            <span
+              className="row-translation muted"
+              lang={props.language}
+              dir={textDirection(props.language)}
+            >
+              {summary.translation ? (
+                <SourceText text={sourcePreview(summary.translation.value)} syntax={props.syntax} />
+              ) : (
+                <span lang="en" dir="ltr">
+                  Not translated yet
+                </span>
+              )}
+            </span>
             <span className="row-key">
               <code>{summary.key}</code>
               {summary.kind !== "text" && <span className="row-kind">{summary.kind}</span>}
@@ -247,59 +271,70 @@ export function StringList(props: StringListProps) {
             }}
           />
         </div>
-        <Fieldset className="state-filter">
-          <legend className="sr-only">Show strings</legend>
-          {filters.map((filter) => {
-            const checked = props.state === filter;
-            const n =
-              filter && props.progress
-                ? filterCount(props.progress, filter)
-                : props.progress?.strings;
-            return (
-              <Label key={filter ?? "all"} className={`filter-chip${checked ? " is-checked" : ""}`}>
-                <Radio
-                  name="state-filter"
-                  className="visually-hidden-input"
-                  checked={checked}
-                  onChange={() => props.onState(filter)}
-                />
-                <span className="filter-chip-body">
-                  {filter ? FILTER_ICONS[filter] : null}
-                  {filter ? FILTER_LABELS[filter] : "All"}
-                  {n !== undefined && (
-                    <>
-                      {" "}
-                      <span className="filter-count">{formatNumber(n)}</span>
-                    </>
-                  )}
-                </span>
-              </Label>
-            );
-          })}
-        </Fieldset>
-      </div>
-      <div className="strings-order">
-        <Label>
-          Order
-          <Select
-            value={props.order}
-            onChange={(event) => props.onOrder(event.target.value === "file" ? "file" : "queue")}
+        <div className="strings-scope">
+          <Details
+            className="strings-filters"
+            open={filtersOpen}
+            onToggle={(event) => setFiltersOpen(event.currentTarget.open)}
           >
-            <option value="queue">To do first</option>
-            <option value="file">File order</option>
-          </Select>
-        </Label>
-        {props.queue && (
-          <div className="queue-navigation" aria-label="Translation queue">
-            <Button size="small" variant="ghost" onClick={props.queue.previous}>
-              Previous to do
-            </Button>
-            <span role="status">{props.queue.counter}</span>
-            <Button size="small" variant="ghost" onClick={props.queue.next}>
-              Next to do
-            </Button>
-          </div>
-        )}
+            <Summary>
+              <span className="muted">Filter:</span>{" "}
+              {props.state ? FILTER_NAMES[props.state] : "All strings"}
+            </Summary>
+            <Fieldset className="state-filter">
+              <legend className="sr-only">Show strings</legend>
+              {filters.map((filter) => {
+                const checked = props.state === filter;
+                const n =
+                  filter && props.progress
+                    ? filterCount(props.progress, filter)
+                    : props.progress?.strings;
+                return (
+                  <Label
+                    key={filter ?? "all"}
+                    className={`filter-chip${checked ? " is-checked" : ""}`}
+                  >
+                    <Radio
+                      name="state-filter"
+                      className="visually-hidden-input"
+                      checked={checked}
+                      onChange={() => {
+                        props.onState(filter);
+                        closeFilters();
+                      }}
+                    />
+                    <span className="filter-chip-body">
+                      {filter ? FILTER_ICONS[filter] : null}
+                      {filter ? FILTER_NAMES[filter] : "All"}
+                      {n !== undefined && (
+                        <>
+                          {" "}
+                          <span className="filter-count">{formatNumber(n)}</span>
+                        </>
+                      )}
+                    </span>
+                  </Label>
+                );
+              })}
+            </Fieldset>
+            <div className="strings-order">
+              <Label>
+                Order
+                <Select
+                  value={props.order}
+                  onChange={(event) => {
+                    props.onOrder(event.target.value === "file" ? "file" : "queue");
+                    closeFilters();
+                  }}
+                >
+                  <option value="queue">To do first</option>
+                  <option value="file">File order</option>
+                </Select>
+              </Label>
+            </div>
+          </Details>
+          {props.scope}
+        </div>
       </div>
       <div className="strings-status">
         {canBulk && (
@@ -325,6 +360,17 @@ export function StringList(props: StringListProps) {
               : count(list.total, "string")}
           {list.previous && " (updating…)"}
         </p>
+        {props.queue && (
+          <div className="queue-navigation" aria-label="Translation queue">
+            <IconButton
+              label="Previous to do"
+              icon={<ArrowLeftIcon />}
+              onClick={props.queue.previous}
+            />
+            <span role="status">{props.queue.counter}</span>
+            <IconButton label="Next to do" icon={<ChevronRightIcon />} onClick={props.queue.next} />
+          </div>
+        )}
       </div>
       {canBulk && selection.size > 0 && (
         <div className="bulk-bar" role="region" aria-label="Selected strings">

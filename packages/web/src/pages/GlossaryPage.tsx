@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import {
-  Card,
+  EmptyState,
   Label,
   Checkbox,
   H1,
@@ -55,10 +55,10 @@ export function GlossaryPage() {
   };
   return (
     <div className="page glossary-page">
-      <div className="page-head">
+      <div className="page-head workspace-heading">
         <div>
-          <H1>Glossary</H1>
-          <p className="muted">Consistent terms for translations and the AI translator.</p>
+          <H1 ui>Glossary</H1>
+          <p className="muted">The words your team agrees on, in every language.</p>
         </div>
         {session.can("glossary") && (
           <Button variant="primary" onClick={() => setEditing("new")}>
@@ -99,28 +99,48 @@ export function GlossaryPage() {
         </p>
       )}
       {glossary.data?.terms.length === 0 && (
-        <Card className="pad">
+        <EmptyState
+          title={
+            search || query.language ? "No matching terms" : "Start with the words that matter"
+          }
+        >
           <p>
-            {search
-              ? "No terms match your search."
-              : "No glossary terms yet. Managers can add translations and names to keep unchanged."}
+            {search || query.language
+              ? "Try another search or language to find the term you need."
+              : "Add product names and preferred translations so people and the AI translator use the same vocabulary."}
           </p>
-        </Card>
+          {search || query.language ? (
+            <Button onClick={() => setQuery({ q: undefined, language: undefined })}>
+              Clear filters
+            </Button>
+          ) : (
+            session.can("glossary") && (
+              <Button variant="primary" onClick={() => setEditing("new")}>
+                Add your first term
+              </Button>
+            )
+          )}
+        </EmptyState>
       )}
       <ul className="community-records glossary-list">
         {glossary.data?.terms.map((term) => (
           <li className="card community-record" key={term.id}>
-            <div className="community-record-head">
+            <div className="glossary-term-name">
               <H2 ui>{term.term}</H2>
               <span className="muted">
                 {term.language ? languageName(term.language) : "All languages"}
               </span>
             </div>
-            <p>
-              <strong>{term.kind === "keep" ? "Never translate" : term.translation}</strong>
-              {term.caseSensitive && <span className="muted">· Case sensitive</span>}
-            </p>
-            {term.note && <p className="community-text">{term.note}</p>}
+            <div className="glossary-term-meaning">
+              <p className="glossary-term-label">
+                {term.kind === "keep" ? "Keep as written" : "Preferred translation"}
+              </p>
+              <p className="glossary-term-value" lang={term.language ?? undefined} dir="auto">
+                <strong>{term.kind === "keep" ? "Never translate" : term.translation}</strong>
+                {term.caseSensitive && <span className="muted"> · Case sensitive</span>}
+              </p>
+              {term.note && <p className="community-text">{term.note}</p>}
+            </div>
             {mayEdit(term) && (
               <div className="actions">
                 <Button size="small" onClick={() => setEditing(term)}>
