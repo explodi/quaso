@@ -99,19 +99,21 @@ needs, each labelled with the numbers it is used for: Polish has _one_ (1), _few
 input.
 
 As you type, the **quality checks** run: a missing or extra placeholder, a missing plural form, an
-empty translation or one longer than the maximum length are **errors**, and saving waits until they
-are fixed. A placeholder or reference chip above the input turns red, with a warning sign, while the
+empty translation, one longer than the maximum length, or whitespace at either edge or line-break
+counts that differ from the source are **errors**, and saving waits until they are fixed. A placeholder or reference chip above the input turns red, with a warning sign, while the
 translation lacks it. **Warnings** point at likely slips without holding the save:
 
 - identical to the English, or different numbers;
 - an HTML or Trans tag, such as `<b>` or `<1>`, missing or added;
-- a space or line break at the start or the end that the English doesn't have, or the other way
-  round. The English shows such whitespace as `·` (space) and `↵` (line break);
-- a different number of line breaks inside the text;
 - two spaces in a row;
 - a different question mark, exclamation mark, ellipsis or colon at the end (each script's own
   marks count, such as `？` or Greek `;`).
   When a string has a maximum length, a counter shows the length in characters as the app counts them.
+
+Single-line source strings keep single-line translation inputs: Enter does not insert a newline.
+Ctrl/⌘+Enter still saves. Whitespace is checked per plural form, with the source's matching category
+or `other` as the reference. The source shows edge whitespace as `·` (space) and `↵` (line break).
+Imports can retain failures with `--allow-qa-errors`; they remain flagged for review.
 
 For right-to-left languages, such as Arabic or Hebrew, the inputs are right to left, and so is the
 English when the project's source language is itself right to left.

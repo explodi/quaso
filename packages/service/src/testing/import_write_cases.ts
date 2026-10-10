@@ -67,6 +67,35 @@ function conflict(sql: Sql, update: () => Promise<void>): Sql {
 
 export const IMPORT_WRITE_CASES: { name: string; run(sql: Sql): Promise<void> }[] = [
   {
+    name: "whitespace errors refuse imports unless explicitly kept and flagged",
+    async run(sql) {
+      await seed(sql);
+      const refused = await importTranslationsAsync(
+        sql,
+        SYSTEM,
+        request({ title: "Hallo\n" }),
+        200,
+        "test",
+      );
+      checkEqual(refused.imported, 0);
+      checkEqual(refused.refused[0].checks[0].check, "whitespace");
+      const kept = await importTranslationsAsync(
+        sql,
+        SYSTEM,
+        request({ title: "Hallo\n" }, { allowQaErrors: true }),
+        200,
+        "test",
+      );
+      checkEqual(kept.imported, 1);
+      const [rows] = await sql.read([
+        {
+          sql: "SELECT t.value, t.qa_errors FROM translations t JOIN strings s ON s.id = t.string_id WHERE s.display_key = 'title' AND language = 'de'",
+        },
+      ]);
+      checkEqual(rows, [{ value: JSON.stringify("Hallo\n"), qa_errors: 1 }]);
+    },
+  },
+  {
     name: "imports multiple green translations and history with one revision and activity",
     async run(sql) {
       await seed(sql);

@@ -765,6 +765,14 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
                   }`}
                   onFocus={() => (lastFocused.current = form)}
                   onChange={(event) => setForm(form, event.target.value)}
+                  onKeyDown={(event) => {
+                    const composing = event.nativeEvent.isComposing;
+                    const saveShortcut = event.ctrlKey || event.metaKey;
+                    const singleLine = !/[\r\n]/.test(englishFor(detail.source, form));
+                    if (event.key === "Enter" && singleLine && !composing && !saveShortcut) {
+                      event.preventDefault();
+                    }
+                  }}
                 />
                 {detail.maxLength !== null && (
                   <p
