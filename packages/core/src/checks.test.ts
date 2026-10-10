@@ -5,6 +5,7 @@ import {
   type CheckInput,
   type CheckResult,
   CHECKS,
+  checkDuplicateTranslations,
   checkTranslation,
   errorsOf,
   hasErrors,
@@ -1237,6 +1238,28 @@ test("results: every check id is reachable, with the severity from CHECKS", () =
       glossary: [{ term: "game", translation: "Spiel", kind: "translate" }],
     }),
     plural("pl", COINS, { two: "{{count}}" }),
+    [
+      ...checkDuplicateTranslations([
+        {
+          id: 1,
+          fileId: 1,
+          language: "de",
+          kind: "text",
+          key: "barn",
+          source: "Barn",
+          translation: "Scheune",
+        },
+        {
+          id: 2,
+          fileId: 1,
+          language: "de",
+          kind: "text",
+          key: "loft",
+          source: "Loft",
+          translation: "Scheune",
+        },
+      ]).values(),
+    ].flat(),
     text("<b>Quit?</b>", "<i>Beenden</i>"),
     text("Quit?", " Beenden\n  jetzt"),
   ];
@@ -1373,4 +1396,32 @@ test("whitespace rejects tabs exchanged for spaces and spaces beside a line brea
   assert(hasErrors(text("One paragraph.\n\nAnother.", "Ein Absatz.\nNoch einer.")));
   assertFalse(hasErrors(text("Play\r\n", "Spielen\n")));
   assertFalse(hasErrors(text("New game", "Neues  Spiel")));
+});
+
+test("duplicate translations compare case and edge whitespace within one file and language", () => {
+  const common = { fileId: 1, language: "de", kind: "text" as const };
+  const results = checkDuplicateTranslations([
+    { ...common, id: 1, key: "barn", source: "Storage Barn", translation: "Scheune" },
+    { ...common, id: 2, key: "loft", source: "Hay Loft", translation: " SCHEUNE " },
+  ]);
+  assertEquals(results.get('[1,"de"]')?.[0].message, 'Same as loft, whose English is "Hay Loft".');
+  assertEquals(results.get('[2,"de"]')?.[0].check, "duplicate_translation");
+  assertEquals(
+    checkDuplicateTranslations([
+      { ...common, id: 1, key: "a", source: "Barn", translation: "Scheune" },
+      { ...common, id: 2, key: "b", source: "Barn", translation: "Scheune" },
+    ]).size,
+    0,
+  );
+  assertEquals(
+    checkDuplicateTranslations([
+      { ...common, id: 1, key: "a", source: "Yes", translation: "Ja" },
+      { ...common, id: 2, key: "b", source: "Sure", translation: "JA" },
+      { ...common, id: 3, key: "c", source: "Barn", translation: "Scheune" },
+      { ...common, id: 4, fileId: 2, key: "d", source: "Loft", translation: "Scheune" },
+      { ...common, id: 5, language: "fr", key: "e", source: "Loft", translation: "Scheune" },
+      { ...common, id: 6, kind: "reference", key: "f", source: "Loft", translation: "Scheune" },
+    ]).size,
+    0,
+  );
 });

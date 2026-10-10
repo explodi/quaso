@@ -31,7 +31,7 @@ import { settingsFromData } from "./settings.ts";
 import type { Sql, SqlValue, Statement } from "./ports.ts";
 import {
   checkValue,
-  TRANSLATION_COLUMNS,
+  TRANSLATION_READ_COLUMNS,
   translationInfo,
   type TranslationRow,
 } from "./translations.ts";
@@ -66,6 +66,7 @@ type SummaryRow = {
   t_revision: number | null;
   t_qa_errors: number | null;
   t_qa_warnings: number | null;
+  t_extra_checks: string | null;
   t_created_at: number | null;
   t_updated_at: number | null;
 };
@@ -77,7 +78,7 @@ const SUMMARY_COLUMNS = `s.id, s.file_id, f.path, s.display_key, s.kind, s.sourc
   t.value AS t_value, t.colour AS t_colour, t.source_hash AS t_source_hash,
   t.author_type AS t_author_type, t.author_id AS t_author_id,
   t.author_label AS t_author_label, t.approver_id AS t_approver_id,
-  t.revision AS t_revision, t.qa_errors AS t_qa_errors, t.qa_warnings AS t_qa_warnings,
+  t.revision AS t_revision, t.qa_errors AS t_qa_errors, t.qa_warnings AS t_qa_warnings, t.extra_checks AS t_extra_checks,
   t.created_at AS t_created_at, t.updated_at AS t_updated_at`;
 
 const SUMMARY_FROM = `strings s JOIN files f ON f.id = s.file_id
@@ -91,7 +92,7 @@ const STATES: Record<NonNullable<StringsQuery["state"]>, string> = {
   outdated: "t.source_hash <> s.source_hash",
   pending: `EXISTS (SELECT 1 FROM suggestions g
     WHERE g.string_id = s.id AND g.language = ? AND g.status = 'pending')`,
-  qa: "t.qa_errors > 0",
+  qa: "(t.qa_errors > 0 OR json_array_length(t.extra_checks) > 0)",
 };
 
 /**
@@ -320,6 +321,7 @@ function summaryOf(
               revision: row.t_revision!,
               qa_errors: row.t_qa_errors!,
               qa_warnings: row.t_qa_warnings!,
+              extra_checks: row.t_extra_checks ?? "[]",
               created_at: row.t_created_at!,
               updated_at: row.t_updated_at!,
             },
@@ -364,7 +366,7 @@ export function getString(ctx: Context, id: number, language: string): StringDet
   if (row === undefined) throw notFound(`String ${id}`);
   const facts = loadFacts(ctx);
   const translations = sql.query<TranslationRow>(
-    `SELECT ${TRANSLATION_COLUMNS} FROM translations WHERE string_id = ?`,
+    `SELECT ${TRANSLATION_READ_COLUMNS} FROM translations WHERE string_id = ?`,
     id,
   );
   const suggestions = sql.query<SuggestionRow>(
@@ -436,7 +438,7 @@ export async function getStringAsync(
       settings.syntax,
     );
     const translations: Statement = {
-      sql: `SELECT ${TRANSLATION_COLUMNS} FROM translations WHERE string_id = ?`,
+      sql: `SELECT ${TRANSLATION_READ_COLUMNS} FROM translations WHERE string_id = ?`,
       params: [id],
     };
     const suggestions: Statement = {
@@ -558,6 +560,7 @@ function stringDetail(
   const current = summary.translation;
   const source = summary.source;
   const checksOf = (value: TextValue): CheckResult[] => checkValue(facts, row, tag, value);
+  const extra = fromJson<CheckResult[]>(byLanguage.get(tag)?.extra_checks ?? "[]");
   return {
     ...summary,
     language: tag,
@@ -591,7 +594,7 @@ function stringDetail(
         };
       }),
     references: data.references,
-    checks: current === null ? [] : checksOf(current.value),
+    checks: current === null ? [] : [...checksOf(current.value), ...extra],
     glossary: matchingGlossary(
       facts.glossary ?? [],
       tag,

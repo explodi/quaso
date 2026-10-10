@@ -21,6 +21,8 @@ import {
 import {
   DEFAULT_SYNTAX,
   type InterpolationSyntax,
+  type EntryKind,
+  isTranslatable,
   PLURAL_CATEGORIES,
   type PluralCategory,
   type PluralForms,
@@ -64,6 +66,8 @@ export const CHECKS = {
   end_punctuation: "warning",
   /** A glossary translation or a term marked never translate is missing. */
   glossary: "warning",
+  /** Different source strings share the same translation within a file. */
+  duplicate_translation: "warning",
 } as const satisfies Record<string, Severity>;
 
 export type CheckId = keyof typeof CHECKS;
@@ -775,4 +779,70 @@ function otherOf<V>(forms: Map<PluralCategory, V>): V | undefined {
   let last: V | undefined;
   for (const value of forms.values()) last = value;
   return forms.get("other") ?? last;
+}
+
+export interface FileTranslation {
+  id: number;
+  fileId: number;
+  language: string;
+  key: string;
+  kind: EntryKind;
+  source: TextValue;
+  translation: TextValue;
+}
+
+/** One warning per colliding value/form, grouped in linear time for large files. */
+export function checkDuplicateTranslations(
+  entries: readonly FileTranslation[],
+): Map<string, CheckResult[]> {
+  type FormEntry = { entry: FileTranslation; source: string; form?: PluralCategory };
+  const groups = new Map<string, FormEntry[]>();
+  for (const entry of entries) {
+    if (!isTranslatable(entry.kind)) continue;
+    const textShape = entry.kind === "text" && typeof entry.translation === "string";
+    const pluralShape = entry.kind !== "text" && typeof entry.translation !== "string";
+    if (!textShape && !pluralShape) continue;
+    const forms =
+      typeof entry.translation === "string"
+        ? [[undefined, entry.translation] as const]
+        : Object.entries(entry.translation);
+    for (const [form, text] of forms) {
+      if (typeof text !== "string") continue;
+      if (form !== undefined && !(PLURAL_CATEGORIES as readonly string[]).includes(form)) continue;
+      const value = text.normalize("NFC").trim().toLowerCase();
+      if (graphemeLength(value) <= 2) continue;
+      const source =
+        typeof entry.source === "string"
+          ? entry.source
+          : (entry.source[form as PluralCategory] ?? entry.source.other ?? "");
+      const key = JSON.stringify([entry.fileId, entry.language, entry.kind, form, value]);
+      const group = groups.get(key) ?? [];
+      group.push({
+        entry,
+        source: source.normalize("NFC"),
+        form: form as PluralCategory | undefined,
+      });
+      groups.set(key, group);
+    }
+  }
+  const checks = new Map<string, CheckResult[]>();
+  for (const group of groups.values()) {
+    const first = group[0];
+    const different = group.find((row) => row.source !== first.source);
+    if (!different) continue;
+    for (const row of group) {
+      const peer = row.source === first.source ? different : first;
+      const key = JSON.stringify([row.entry.id, row.entry.language]);
+      const results = checks.get(key) ?? [];
+      results.push(
+        result(
+          "duplicate_translation",
+          `Same as ${peer.entry.key}, whose English is ${JSON.stringify(peer.source)}.`,
+          { form: row.form, value: peer.entry.key },
+        ),
+      );
+      checks.set(key, results);
+    }
+  }
+  return checks;
 }

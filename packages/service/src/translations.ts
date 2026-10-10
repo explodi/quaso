@@ -57,6 +57,7 @@ export type TranslationRow = {
   revision: number;
   qa_errors: number;
   qa_warnings: number;
+  extra_checks?: string;
   created_at: number;
   updated_at: number;
 };
@@ -82,7 +83,7 @@ export function loadTranslation(
   language: string,
 ): TranslationRow | undefined {
   return sql.query<TranslationRow>(
-    `SELECT ${TRANSLATION_COLUMNS} FROM translations WHERE string_id = ? AND language = ?`,
+    `SELECT ${TRANSLATION_READ_COLUMNS} FROM translations WHERE string_id = ? AND language = ?`,
     stringId,
     language,
   )[0];
@@ -500,6 +501,8 @@ export function planQa(rows: QaRow[], facts: CheckFacts): Statement[] {
   return statements;
 }
 
+export const TRANSLATION_READ_COLUMNS = `${TRANSLATION_COLUMNS}, extra_checks`;
+
 /** A translation row as `TranslationInfo`, given the string's current English hash. */
 export function translationInfo(
   row: TranslationRow,
@@ -511,7 +514,10 @@ export function translationInfo(
     colour: row.colour,
     outdated: row.source_hash !== stringHash,
     revision: row.revision,
-    qa: { errors: row.qa_errors, warnings: row.qa_warnings },
+    qa: {
+      errors: row.qa_errors,
+      warnings: row.qa_warnings + fromJson<CheckResult[]>(row.extra_checks ?? "[]").length,
+    },
     author: actors.info({ type: row.author_type, id: row.author_id, label: row.author_label }),
     approver: actors.user(row.approver_id),
     updatedAt: row.updated_at,

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { MIGRATION_1, INITIAL_STATEMENTS } from "./migrations/001_initial.ts";
+import { MIGRATION_2, CONTEXTUAL_CHECK_STATEMENTS } from "./migrations/002_contextual_checks.ts";
 import type { Statement } from "./ports.ts";
 
 /** Schema history begins at Beta 2; future releases append migrations. */
@@ -10,7 +11,7 @@ export interface Migration {
 }
 
 /** Every migration, in version order: one file each in `migrations/`. */
-export const MIGRATIONS: readonly Migration[] = [MIGRATION_1];
+export const MIGRATIONS: readonly Migration[] = [MIGRATION_1, MIGRATION_2];
 
 /** The database schema version after every migration. */
 export const DATABASE_VERSION: number = MIGRATIONS[MIGRATIONS.length - 1].version;
@@ -27,4 +28,5 @@ export const BATCH_MIGRATIONS: readonly BatchMigration[] = [
     name: MIGRATION_1.name,
     statements: INITIAL_STATEMENTS,
   },
+  { version: MIGRATION_2.version, name: MIGRATION_2.name, statements: CONTEXTUAL_CHECK_STATEMENTS },
 ];

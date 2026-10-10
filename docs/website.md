@@ -106,6 +106,9 @@ translation lacks it. **Warnings** point at likely slips without holding the sav
 - identical to the English, or different numbers;
 - an HTML or Trans tag, such as `<b>` or `<1>`, missing or added;
 - two spaces in a row;
+- a translation shared by another key in the same file whose source differs. Stored duplicate
+  warnings also appear in the QA filter, name the other key and show its source text. Identical
+  source strings, reference-only/literal entries and values of two characters or fewer are excluded;
 - a different question mark, exclamation mark, ellipsis or colon at the end (each script's own
   marks count, such as `？` or Greek `;`).
   When a string has a maximum length, a counter shows the length in characters as the app counts them.

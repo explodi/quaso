@@ -51,6 +51,7 @@ type TranslationStatRow = {
   colour: string;
   source_hash: string;
   qa_errors: number;
+  extra_checks?: string;
 };
 
 /** The strings and files progress is counted over, loaded once. */
@@ -103,7 +104,7 @@ interface LanguageData {
 
 function loadLanguageData(ctx: Context, counting: Counting, language: string): LanguageData {
   const rows = ctx.sql.query<TranslationStatRow>(
-    "SELECT string_id, colour, source_hash, qa_errors FROM translations WHERE language = ?",
+    "SELECT string_id, colour, source_hash, qa_errors, extra_checks FROM translations WHERE language = ?",
     language,
   );
   const suggestions = ctx.sql.query<{ string_id: number }>(
@@ -126,7 +127,7 @@ function languageDataFromRows(
     translations.set(row.string_id, {
       colour: row.colour,
       outdated: row.source_hash !== hash,
-      qa: row.qa_errors > 0,
+      qa: row.qa_errors > 0 || (row.extra_checks !== undefined && row.extra_checks !== "[]"),
     });
   }
   const pending = new Set<number>();
@@ -341,7 +342,7 @@ export async function readProgressSnapshot(
     { sql: ACTIVE_FILES },
     { sql: `SELECT id, file_id, words, source_hash FROM strings WHERE id IN (${active})` },
     {
-      sql: `SELECT string_id, language, colour, source_hash, qa_errors FROM translations WHERE string_id IN (${active})${scope}`,
+      sql: `SELECT string_id, language, colour, source_hash, qa_errors, extra_checks FROM translations WHERE string_id IN (${active})${scope}`,
       params,
     },
     {

@@ -24,6 +24,7 @@ import { adminMethods } from "./admin_service.ts";
 import { unfinishedRestore } from "./backup.ts";
 import type { Actor, ServiceApi } from "./api.ts";
 import { type Context, FALLBACK_MODEL } from "./context.ts";
+import { refreshContextualChecksSync } from "./contextual_checks.ts";
 import { getRevision, transaction } from "./db.ts";
 import { forbidden } from "./errors.ts";
 import { exportFiles } from "./export.ts";
@@ -176,7 +177,10 @@ export function createService(options: ServiceOptions): Service {
       return Promise.resolve(
         transaction(ctx.sql, () => {
           if (action !== null) requirePermission(ctx, actor, action);
-          return fn(validateInput(schema, input), actor);
+          const before = getRevision(ctx.sql);
+          const result = fn(validateInput(schema, input), actor);
+          if (getRevision(ctx.sql) !== before) refreshContextualChecksSync(ctx.sql);
+          return result;
         }),
       );
     } catch (error) {
@@ -192,6 +196,7 @@ export function createService(options: ServiceOptions): Service {
       });
       const next = nextWakeUp(ctx.sql);
       if (next !== null) await options.scheduler.schedule(next);
+      refreshContextualChecksSync(ctx.sql);
       await llm.start();
       ctx.logger.info("Service started", {
         schemaVersion: migrated.to,
@@ -209,10 +214,11 @@ export function createService(options: ServiceOptions): Service {
     // stored one, which then stays. Not during a restore, or one that didn't finish and may
     // start again: its data may be incomplete (jobs would translate strings whose
     // translations aren't in yet); finishRestore starts the jobs.
-    alarm: () =>
-      transaction(ctx.sql, () => unfinishedRestore(ctx)?.resumable)
-        ? Promise.resolve()
-        : llm.alarm(),
+    async alarm() {
+      if (transaction(ctx.sql, () => unfinishedRestore(ctx)?.resumable)) return;
+      await llm.alarm();
+      transaction(ctx.sql, () => refreshContextualChecksSync(ctx.sql));
+    },
 
     getProject: (actor, input) =>
       call(actor, "read", Empty, input, () => getProject(ctx, llm.available)),
@@ -241,6 +247,7 @@ export function createService(options: ServiceOptions): Service {
         transaction(ctx.sql, () => requirePermission(ctx, actor, "upload"));
         const request = validateInput(UploadRequest, input);
         const result = upload(ctx, actor, request, llm.available);
+        if (!result.dryRun) refreshContextualChecksSync(ctx.sql);
         await llm.afterUpload(result.job);
         if (!result.dryRun && result.uploadId !== null) {
           ctx.logger.info("Upload", {

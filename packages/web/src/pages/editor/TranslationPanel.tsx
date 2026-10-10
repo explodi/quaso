@@ -246,6 +246,7 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
   const value = useMemo(() => valueFrom(draft, forms, unmask), [draft, forms, unmask]);
   const checks = useMemo((): CheckResult[] => {
     if (!dirty && !current) return [];
+    if (!dirty) return detail.checks;
     try {
       return checkTranslation({
         kind: detail.kind,
@@ -269,6 +270,7 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
     tag,
     detail.maxLength,
     detail.glossary,
+    detail.checks,
     syntax,
     language.plural,
   ]);

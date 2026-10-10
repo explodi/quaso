@@ -95,7 +95,7 @@
     "start": {
       "schemaVersion": {
         "from": 0,
-        "to": 1
+        "to": 2
       },
       "created": true
     },
@@ -3074,7 +3074,7 @@
     },
     "health": {
       "ok": true,
-      "schemaVersion": 1,
+      "schemaVersion": 2,
       "revision": 8,
       "busy": false,
       "nextWakeUp": null
@@ -3197,7 +3197,7 @@
     "backup": {
       "format": "quaso-backup",
       "version": 1,
-      "schemaVersion": 1,
+      "schemaVersion": 2,
       "createdAt": 1790251200000,
       "revision": 8,
       "tables": {
@@ -5391,7 +5391,8 @@
             "qa_warnings": 1,
             "search_text": "quaso quest",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 2,
@@ -5408,7 +5409,8 @@
             "qa_warnings": 0,
             "search_text": "spielen",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 3,
@@ -5425,7 +5427,8 @@
             "qa_warnings": 0,
             "search_text": "zurück",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 4,
@@ -5442,7 +5445,8 @@
             "qa_warnings": 0,
             "search_text": "weiter",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 5,
@@ -5459,7 +5463,8 @@
             "qa_warnings": 0,
             "search_text": "spiel gespeichert.",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 6,
@@ -5476,7 +5481,8 @@
             "qa_warnings": 0,
             "search_text": "wird geladen ...",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 7,
@@ -5493,7 +5499,8 @@
             "qa_warnings": 0,
             "search_text": "willkommen zurück, {{name}}!",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 8,
@@ -5510,7 +5517,8 @@
             "qa_warnings": 0,
             "search_text": "{{count}} münze\n{{count}} münzen",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 9,
@@ -5527,7 +5535,8 @@
             "qa_warnings": 0,
             "search_text": "noch {{count}} leben\nnoch {{count}} leben",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 10,
@@ -5544,7 +5553,8 @@
             "qa_warnings": 0,
             "search_text": "deine tasche ist leer\n{{count}} gegenstand in deiner tasche\n{{count}} gegenstände in deiner tasche",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 11,
@@ -5561,7 +5571,8 @@
             "qa_warnings": 0,
             "search_text": "level {{current}} von {{total}}",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 12,
@@ -5578,7 +5589,8 @@
             "qa_warnings": 0,
             "search_text": "dein begleiter folgt dir.",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 13,
@@ -5595,7 +5607,8 @@
             "qa_warnings": 0,
             "search_text": "deine katze folgt dir.",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 14,
@@ -5612,7 +5625,8 @@
             "qa_warnings": 0,
             "search_text": "dein hund folgt dir.",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 15,
@@ -5629,7 +5643,8 @@
             "qa_warnings": 0,
             "search_text": "spring zweimal, um hohe vorsprünge zu erreichen.",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 16,
@@ -5646,7 +5661,8 @@
             "qa_warnings": 0,
             "search_text": "laternen zeigen verborgene wege.",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 17,
@@ -5663,7 +5679,8 @@
             "qa_warnings": 0,
             "search_text": "ruh dich an einem lagerfeuer aus, um das spiel zu speichern.",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 19,
@@ -5680,7 +5697,8 @@
             "qa_warnings": 0,
             "search_text": "hauptmenü",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 20,
@@ -5697,7 +5715,8 @@
             "qa_warnings": 0,
             "search_text": "neues spiel",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 21,
@@ -5714,7 +5733,8 @@
             "qa_warnings": 0,
             "search_text": "noch einmal: $t(common:play)",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 22,
@@ -5731,7 +5751,8 @@
             "qa_warnings": 0,
             "search_text": "optionen",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 23,
@@ -5748,7 +5769,8 @@
             "qa_warnings": 0,
             "search_text": "beenden",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 25,
@@ -5765,7 +5787,8 @@
             "qa_warnings": 0,
             "search_text": "musiklautstärke",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 26,
@@ -5782,7 +5805,8 @@
             "qa_warnings": 0,
             "search_text": "soundeffekte",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 27,
@@ -5799,7 +5823,8 @@
             "qa_warnings": 0,
             "search_text": "sprache",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 28,
@@ -5816,7 +5841,8 @@
             "qa_warnings": 0,
             "search_text": "untertitel anzeigen",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 29,
@@ -5833,7 +5859,8 @@
             "qa_warnings": 0,
             "search_text": "pause",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 30,
@@ -5850,7 +5877,8 @@
             "qa_warnings": 0,
             "search_text": "fortsetzen",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 31,
@@ -5867,7 +5895,8 @@
             "qa_warnings": 0,
             "search_text": "jetzt beenden? dein fortschritt seit dem letzten lagerfeuer geht verloren.",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 32,
@@ -5884,7 +5913,8 @@
             "qa_warnings": 0,
             "search_text": "spiel vorbei",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 33,
@@ -5901,7 +5931,8 @@
             "qa_warnings": 0,
             "search_text": "punkte: {{score}}",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 34,
@@ -5918,7 +5949,8 @@
             "qa_warnings": 0,
             "search_text": "neuer rekord, {{name}}!",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 35,
@@ -5935,7 +5967,8 @@
             "qa_warnings": 0,
             "search_text": "du bist {{count}}. geworden",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 36,
@@ -5952,7 +5985,8 @@
             "qa_warnings": 1,
             "search_text": "quaso quest",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 37,
@@ -5969,7 +6003,8 @@
             "qa_warnings": 0,
             "search_text": "ein gemütliches rätselabenteuer",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 38,
@@ -5986,7 +6021,8 @@
             "qa_warnings": 0,
             "search_text": "führe eine kleine laterne durch 20 leuchtende level. löse rätsel, sammle münzen und finde die verborgenen wege.",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 39,
@@ -6003,7 +6039,8 @@
             "qa_warnings": 0,
             "search_text": "20 handgemachte level",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 40,
@@ -6020,7 +6057,8 @@
             "qa_warnings": 0,
             "search_text": "entspannende musik",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 41,
@@ -6037,7 +6075,8 @@
             "qa_warnings": 0,
             "search_text": "offline spielbar",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 42,
@@ -6054,7 +6093,8 @@
             "qa_warnings": 0,
             "search_text": "version {{version}}: neue level und fehlerbehebungen.",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 1,
@@ -6071,7 +6111,8 @@
             "qa_warnings": 1,
             "search_text": "quaso quest",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 2,
@@ -6088,7 +6129,8 @@
             "qa_warnings": 0,
             "search_text": "graj",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 3,
@@ -6105,7 +6147,8 @@
             "qa_warnings": 0,
             "search_text": "wstecz",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 4,
@@ -6122,7 +6165,8 @@
             "qa_warnings": 0,
             "search_text": "kontynuuj",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 5,
@@ -6139,7 +6183,8 @@
             "qa_warnings": 0,
             "search_text": "gra zapisana.",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 6,
@@ -6156,7 +6201,8 @@
             "qa_warnings": 0,
             "search_text": "wczytywanie...",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 7,
@@ -6173,7 +6219,8 @@
             "qa_warnings": 0,
             "search_text": "witaj ponownie, {{name}}!",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 8,
@@ -6190,7 +6237,8 @@
             "qa_warnings": 0,
             "search_text": "{{count}} moneta\n{{count}} monety\n{{count}} monet\n{{count}} monety",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 9,
@@ -6207,7 +6255,8 @@
             "qa_warnings": 0,
             "search_text": "zostało {{count}} życie\nzostały {{count}} życia\nzostało {{count}} żyć\nzostało {{count}} życia",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 10,
@@ -6224,7 +6273,8 @@
             "qa_warnings": 0,
             "search_text": "plecak jest pusty\n{{count}} przedmiot w plecaku\n{{count}} przedmioty w plecaku\n{{count}} przedmiotów w plecaku\n{{count}} przedmiotu w plecaku",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 11,
@@ -6241,7 +6291,8 @@
             "qa_warnings": 0,
             "search_text": "poziom {{current}} z {{total}}",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 12,
@@ -6258,7 +6309,8 @@
             "qa_warnings": 0,
             "search_text": "twój towarzysz idzie za tobą.",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 13,
@@ -6275,7 +6327,8 @@
             "qa_warnings": 0,
             "search_text": "twój kot idzie za tobą.",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 14,
@@ -6292,7 +6345,8 @@
             "qa_warnings": 0,
             "search_text": "twój pies idzie za tobą.",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 15,
@@ -6309,7 +6363,8 @@
             "qa_warnings": 0,
             "search_text": "skocz dwa razy, aby dosięgnąć wysokich półek.",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 16,
@@ -6326,7 +6381,8 @@
             "qa_warnings": 0,
             "search_text": "latarnie odsłaniają ukryte ścieżki.",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 17,
@@ -6343,7 +6399,8 @@
             "qa_warnings": 0,
             "search_text": "odpocznij przy ognisku, aby zapisać grę.",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 19,
@@ -6360,7 +6417,8 @@
             "qa_warnings": 0,
             "search_text": "menu główne",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 20,
@@ -6377,7 +6435,8 @@
             "qa_warnings": 0,
             "search_text": "nowa gra",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 21,
@@ -6394,7 +6453,8 @@
             "qa_warnings": 0,
             "search_text": "$t(common:play) jeszcze raz",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 22,
@@ -6411,7 +6471,8 @@
             "qa_warnings": 0,
             "search_text": "opcje",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 23,
@@ -6428,7 +6489,8 @@
             "qa_warnings": 0,
             "search_text": "wyjdź",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 25,
@@ -6445,7 +6507,8 @@
             "qa_warnings": 0,
             "search_text": "głośność muzyki",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 26,
@@ -6462,7 +6525,8 @@
             "qa_warnings": 0,
             "search_text": "efekty dźwiękowe",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 27,
@@ -6479,7 +6543,8 @@
             "qa_warnings": 0,
             "search_text": "język",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 28,
@@ -6496,7 +6561,8 @@
             "qa_warnings": 0,
             "search_text": "pokaż napisy",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 29,
@@ -6513,7 +6579,8 @@
             "qa_warnings": 0,
             "search_text": "pauza",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 30,
@@ -6530,7 +6597,8 @@
             "qa_warnings": 0,
             "search_text": "wznów",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 31,
@@ -6547,7 +6615,8 @@
             "qa_warnings": 0,
             "search_text": "wyjść teraz? stracisz postępy od ostatniego ogniska.",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 32,
@@ -6564,7 +6633,8 @@
             "qa_warnings": 0,
             "search_text": "koniec gry",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 33,
@@ -6581,7 +6651,8 @@
             "qa_warnings": 0,
             "search_text": "wynik: {{score}}",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 34,
@@ -6598,7 +6669,8 @@
             "qa_warnings": 0,
             "search_text": "nowy rekord, {{name}}!",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 35,
@@ -6615,7 +6687,8 @@
             "qa_warnings": 0,
             "search_text": "zajmujesz {{count}}. miejsce",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 36,
@@ -6632,7 +6705,8 @@
             "qa_warnings": 1,
             "search_text": "quaso quest",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 37,
@@ -6649,7 +6723,8 @@
             "qa_warnings": 0,
             "search_text": "przytulna przygoda z łamigłówkami",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 38,
@@ -6666,7 +6741,8 @@
             "qa_warnings": 0,
             "search_text": "poprowadź małą latarenkę przez 20 świecących poziomów. rozwiązuj łamigłówki, zbieraj monety i odkrywaj ukryte ścieżki.",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 39,
@@ -6683,7 +6759,8 @@
             "qa_warnings": 0,
             "search_text": "20 ręcznie tworzonych poziomów",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 40,
@@ -6700,7 +6777,8 @@
             "qa_warnings": 0,
             "search_text": "relaksująca muzyka",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 41,
@@ -6717,7 +6795,8 @@
             "qa_warnings": 0,
             "search_text": "gra offline",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 42,
@@ -6734,7 +6813,8 @@
             "qa_warnings": 0,
             "search_text": "wersja {{version}}: nowe poziomy i poprawki.",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 2,
@@ -6751,7 +6831,8 @@
             "qa_warnings": 0,
             "search_text": "jouer",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 3,
@@ -6768,7 +6849,8 @@
             "qa_warnings": 0,
             "search_text": "retour",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 4,
@@ -6785,7 +6867,8 @@
             "qa_warnings": 0,
             "search_text": "continuer",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 7,
@@ -6802,7 +6885,8 @@
             "qa_warnings": 0,
             "search_text": "bon retour, {{name}} !",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 8,
@@ -6819,7 +6903,8 @@
             "qa_warnings": 0,
             "search_text": "{{count}} pièce\n{{count}} de pièces\n{{count}} pièces",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 10,
@@ -6836,7 +6921,8 @@
             "qa_warnings": 0,
             "search_text": "ton sac est vide\n{{count}} objet dans ton sac\n{{count}} d’objets dans ton sac\n{{count}} objets dans ton sac",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 11,
@@ -6853,7 +6939,8 @@
             "qa_warnings": 0,
             "search_text": "niveau {{current}} sur {{total}}",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 15,
@@ -6870,7 +6957,8 @@
             "qa_warnings": 0,
             "search_text": "saute deux fois pour atteindre les rebords élevés.",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 19,
@@ -6887,7 +6975,8 @@
             "qa_warnings": 0,
             "search_text": "menu principal",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 20,
@@ -6904,7 +6993,8 @@
             "qa_warnings": 0,
             "search_text": "nouvelle partie",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 21,
@@ -6921,7 +7011,8 @@
             "qa_warnings": 0,
             "search_text": "$t(common:play) encore",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 23,
@@ -6938,7 +7029,8 @@
             "qa_warnings": 0,
             "search_text": "quitter",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 32,
@@ -6955,7 +7047,8 @@
             "qa_warnings": 0,
             "search_text": "partie terminée",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           },
           {
             "string_id": 35,
@@ -6972,7 +7065,8 @@
             "qa_warnings": 0,
             "search_text": "tu as fini {{count}}er\ntu as fini {{count}}e",
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "extra_checks": "[]"
           }
         ],
         "strings": [
@@ -7867,7 +7961,7 @@
           },
           {
             "key": "schema_version",
-            "value": "1"
+            "value": "2"
           },
           {
             "key": "revision",
@@ -10104,7 +10198,7 @@
         },
         {
           "key": "schema_version",
-          "value": "1"
+          "value": "2"
         },
         {
           "key": "revision",
@@ -10942,7 +11036,8 @@
           "qa_warnings": 1,
           "search_text": "quaso quest",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 2,
@@ -10959,7 +11054,8 @@
           "qa_warnings": 0,
           "search_text": "spielen",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 3,
@@ -10976,7 +11072,8 @@
           "qa_warnings": 0,
           "search_text": "zurück",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 4,
@@ -10993,7 +11090,8 @@
           "qa_warnings": 0,
           "search_text": "weiter",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 5,
@@ -11010,7 +11108,8 @@
           "qa_warnings": 0,
           "search_text": "spiel gespeichert.",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 6,
@@ -11027,7 +11126,8 @@
           "qa_warnings": 0,
           "search_text": "wird geladen ...",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 7,
@@ -11044,7 +11144,8 @@
           "qa_warnings": 0,
           "search_text": "willkommen zurück, {{name}}!",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 8,
@@ -11061,7 +11162,8 @@
           "qa_warnings": 0,
           "search_text": "{{count}} münze\n{{count}} münzen",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 9,
@@ -11078,7 +11180,8 @@
           "qa_warnings": 0,
           "search_text": "noch {{count}} leben\nnoch {{count}} leben",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 10,
@@ -11095,7 +11198,8 @@
           "qa_warnings": 0,
           "search_text": "deine tasche ist leer\n{{count}} gegenstand in deiner tasche\n{{count}} gegenstände in deiner tasche",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 11,
@@ -11112,7 +11216,8 @@
           "qa_warnings": 0,
           "search_text": "level {{current}} von {{total}}",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 12,
@@ -11129,7 +11234,8 @@
           "qa_warnings": 0,
           "search_text": "dein begleiter folgt dir.",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 13,
@@ -11146,7 +11252,8 @@
           "qa_warnings": 0,
           "search_text": "deine katze folgt dir.",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 14,
@@ -11163,7 +11270,8 @@
           "qa_warnings": 0,
           "search_text": "dein hund folgt dir.",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 15,
@@ -11180,7 +11288,8 @@
           "qa_warnings": 0,
           "search_text": "spring zweimal, um hohe vorsprünge zu erreichen.",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 16,
@@ -11197,7 +11306,8 @@
           "qa_warnings": 0,
           "search_text": "laternen zeigen verborgene wege.",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 17,
@@ -11214,7 +11324,8 @@
           "qa_warnings": 0,
           "search_text": "ruh dich an einem lagerfeuer aus, um das spiel zu speichern.",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 19,
@@ -11231,7 +11342,8 @@
           "qa_warnings": 0,
           "search_text": "hauptmenü",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 20,
@@ -11248,7 +11360,8 @@
           "qa_warnings": 0,
           "search_text": "neues spiel",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 21,
@@ -11265,7 +11378,8 @@
           "qa_warnings": 0,
           "search_text": "noch einmal: $t(common:play)",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 22,
@@ -11282,7 +11396,8 @@
           "qa_warnings": 0,
           "search_text": "optionen",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 23,
@@ -11299,7 +11414,8 @@
           "qa_warnings": 0,
           "search_text": "beenden",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 25,
@@ -11316,7 +11432,8 @@
           "qa_warnings": 0,
           "search_text": "musiklautstärke",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 26,
@@ -11333,7 +11450,8 @@
           "qa_warnings": 0,
           "search_text": "soundeffekte",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 27,
@@ -11350,7 +11468,8 @@
           "qa_warnings": 0,
           "search_text": "sprache",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 28,
@@ -11367,7 +11486,8 @@
           "qa_warnings": 0,
           "search_text": "untertitel anzeigen",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 29,
@@ -11384,7 +11504,8 @@
           "qa_warnings": 0,
           "search_text": "pause",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 30,
@@ -11401,7 +11522,8 @@
           "qa_warnings": 0,
           "search_text": "fortsetzen",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 31,
@@ -11418,7 +11540,8 @@
           "qa_warnings": 0,
           "search_text": "jetzt beenden? dein fortschritt seit dem letzten lagerfeuer geht verloren.",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 32,
@@ -11435,7 +11558,8 @@
           "qa_warnings": 0,
           "search_text": "spiel vorbei",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 33,
@@ -11452,7 +11576,8 @@
           "qa_warnings": 0,
           "search_text": "punkte: {{score}}",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 34,
@@ -11469,7 +11594,8 @@
           "qa_warnings": 0,
           "search_text": "neuer rekord, {{name}}!",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 35,
@@ -11486,7 +11612,8 @@
           "qa_warnings": 0,
           "search_text": "du bist {{count}}. geworden",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 36,
@@ -11503,7 +11630,8 @@
           "qa_warnings": 1,
           "search_text": "quaso quest",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 37,
@@ -11520,7 +11648,8 @@
           "qa_warnings": 0,
           "search_text": "ein gemütliches rätselabenteuer",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 38,
@@ -11537,7 +11666,8 @@
           "qa_warnings": 0,
           "search_text": "führe eine kleine laterne durch 20 leuchtende level. löse rätsel, sammle münzen und finde die verborgenen wege.",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 39,
@@ -11554,7 +11684,8 @@
           "qa_warnings": 0,
           "search_text": "20 handgemachte level",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 40,
@@ -11571,7 +11702,8 @@
           "qa_warnings": 0,
           "search_text": "entspannende musik",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 41,
@@ -11588,7 +11720,8 @@
           "qa_warnings": 0,
           "search_text": "offline spielbar",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 42,
@@ -11605,7 +11738,8 @@
           "qa_warnings": 0,
           "search_text": "version {{version}}: neue level und fehlerbehebungen.",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 1,
@@ -11622,7 +11756,8 @@
           "qa_warnings": 1,
           "search_text": "quaso quest",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 2,
@@ -11639,7 +11774,8 @@
           "qa_warnings": 0,
           "search_text": "graj",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 3,
@@ -11656,7 +11792,8 @@
           "qa_warnings": 0,
           "search_text": "wstecz",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 4,
@@ -11673,7 +11810,8 @@
           "qa_warnings": 0,
           "search_text": "kontynuuj",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 5,
@@ -11690,7 +11828,8 @@
           "qa_warnings": 0,
           "search_text": "gra zapisana.",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 6,
@@ -11707,7 +11846,8 @@
           "qa_warnings": 0,
           "search_text": "wczytywanie...",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 7,
@@ -11724,7 +11864,8 @@
           "qa_warnings": 0,
           "search_text": "witaj ponownie, {{name}}!",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 8,
@@ -11741,7 +11882,8 @@
           "qa_warnings": 0,
           "search_text": "{{count}} moneta\n{{count}} monety\n{{count}} monet\n{{count}} monety",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 9,
@@ -11758,7 +11900,8 @@
           "qa_warnings": 0,
           "search_text": "zostało {{count}} życie\nzostały {{count}} życia\nzostało {{count}} żyć\nzostało {{count}} życia",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 10,
@@ -11775,7 +11918,8 @@
           "qa_warnings": 0,
           "search_text": "plecak jest pusty\n{{count}} przedmiot w plecaku\n{{count}} przedmioty w plecaku\n{{count}} przedmiotów w plecaku\n{{count}} przedmiotu w plecaku",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 11,
@@ -11792,7 +11936,8 @@
           "qa_warnings": 0,
           "search_text": "poziom {{current}} z {{total}}",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 12,
@@ -11809,7 +11954,8 @@
           "qa_warnings": 0,
           "search_text": "twój towarzysz idzie za tobą.",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 13,
@@ -11826,7 +11972,8 @@
           "qa_warnings": 0,
           "search_text": "twój kot idzie za tobą.",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 14,
@@ -11843,7 +11990,8 @@
           "qa_warnings": 0,
           "search_text": "twój pies idzie za tobą.",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 15,
@@ -11860,7 +12008,8 @@
           "qa_warnings": 0,
           "search_text": "skocz dwa razy, aby dosięgnąć wysokich półek.",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 16,
@@ -11877,7 +12026,8 @@
           "qa_warnings": 0,
           "search_text": "latarnie odsłaniają ukryte ścieżki.",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 17,
@@ -11894,7 +12044,8 @@
           "qa_warnings": 0,
           "search_text": "odpocznij przy ognisku, aby zapisać grę.",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 19,
@@ -11911,7 +12062,8 @@
           "qa_warnings": 0,
           "search_text": "menu główne",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 20,
@@ -11928,7 +12080,8 @@
           "qa_warnings": 0,
           "search_text": "nowa gra",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 21,
@@ -11945,7 +12098,8 @@
           "qa_warnings": 0,
           "search_text": "$t(common:play) jeszcze raz",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 22,
@@ -11962,7 +12116,8 @@
           "qa_warnings": 0,
           "search_text": "opcje",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 23,
@@ -11979,7 +12134,8 @@
           "qa_warnings": 0,
           "search_text": "wyjdź",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 25,
@@ -11996,7 +12152,8 @@
           "qa_warnings": 0,
           "search_text": "głośność muzyki",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 26,
@@ -12013,7 +12170,8 @@
           "qa_warnings": 0,
           "search_text": "efekty dźwiękowe",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 27,
@@ -12030,7 +12188,8 @@
           "qa_warnings": 0,
           "search_text": "język",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 28,
@@ -12047,7 +12206,8 @@
           "qa_warnings": 0,
           "search_text": "pokaż napisy",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 29,
@@ -12064,7 +12224,8 @@
           "qa_warnings": 0,
           "search_text": "pauza",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 30,
@@ -12081,7 +12242,8 @@
           "qa_warnings": 0,
           "search_text": "wznów",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 31,
@@ -12098,7 +12260,8 @@
           "qa_warnings": 0,
           "search_text": "wyjść teraz? stracisz postępy od ostatniego ogniska.",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 32,
@@ -12115,7 +12278,8 @@
           "qa_warnings": 0,
           "search_text": "koniec gry",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 33,
@@ -12132,7 +12296,8 @@
           "qa_warnings": 0,
           "search_text": "wynik: {{score}}",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 34,
@@ -12149,7 +12314,8 @@
           "qa_warnings": 0,
           "search_text": "nowy rekord, {{name}}!",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 35,
@@ -12166,7 +12332,8 @@
           "qa_warnings": 0,
           "search_text": "zajmujesz {{count}}. miejsce",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 36,
@@ -12183,7 +12350,8 @@
           "qa_warnings": 1,
           "search_text": "quaso quest",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 37,
@@ -12200,7 +12368,8 @@
           "qa_warnings": 0,
           "search_text": "przytulna przygoda z łamigłówkami",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 38,
@@ -12217,7 +12386,8 @@
           "qa_warnings": 0,
           "search_text": "poprowadź małą latarenkę przez 20 świecących poziomów. rozwiązuj łamigłówki, zbieraj monety i odkrywaj ukryte ścieżki.",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 39,
@@ -12234,7 +12404,8 @@
           "qa_warnings": 0,
           "search_text": "20 ręcznie tworzonych poziomów",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 40,
@@ -12251,7 +12422,8 @@
           "qa_warnings": 0,
           "search_text": "relaksująca muzyka",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 41,
@@ -12268,7 +12440,8 @@
           "qa_warnings": 0,
           "search_text": "gra offline",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 42,
@@ -12285,7 +12458,8 @@
           "qa_warnings": 0,
           "search_text": "wersja {{version}}: nowe poziomy i poprawki.",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 2,
@@ -12302,7 +12476,8 @@
           "qa_warnings": 0,
           "search_text": "jouer",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 3,
@@ -12319,7 +12494,8 @@
           "qa_warnings": 0,
           "search_text": "retour",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 4,
@@ -12336,7 +12512,8 @@
           "qa_warnings": 0,
           "search_text": "continuer",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 7,
@@ -12353,7 +12530,8 @@
           "qa_warnings": 0,
           "search_text": "bon retour, {{name}} !",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 8,
@@ -12370,7 +12548,8 @@
           "qa_warnings": 0,
           "search_text": "{{count}} pièce\n{{count}} de pièces\n{{count}} pièces",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 10,
@@ -12387,7 +12566,8 @@
           "qa_warnings": 0,
           "search_text": "ton sac est vide\n{{count}} objet dans ton sac\n{{count}} d’objets dans ton sac\n{{count}} objets dans ton sac",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 11,
@@ -12404,7 +12584,8 @@
           "qa_warnings": 0,
           "search_text": "niveau {{current}} sur {{total}}",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 15,
@@ -12421,7 +12602,8 @@
           "qa_warnings": 0,
           "search_text": "saute deux fois pour atteindre les rebords élevés.",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 19,
@@ -12438,7 +12620,8 @@
           "qa_warnings": 0,
           "search_text": "menu principal",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 20,
@@ -12455,7 +12638,8 @@
           "qa_warnings": 0,
           "search_text": "nouvelle partie",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 21,
@@ -12472,7 +12656,8 @@
           "qa_warnings": 0,
           "search_text": "$t(common:play) encore",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 23,
@@ -12489,7 +12674,8 @@
           "qa_warnings": 0,
           "search_text": "quitter",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 32,
@@ -12506,7 +12692,8 @@
           "qa_warnings": 0,
           "search_text": "partie terminée",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         },
         {
           "string_id": 35,
@@ -12523,7 +12710,8 @@
           "qa_warnings": 0,
           "search_text": "tu as fini {{count}}er\ntu as fini {{count}}e",
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "extra_checks": "[]"
         }
       ],
       "uploads": [
