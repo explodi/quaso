@@ -58,7 +58,7 @@ Glossary:
 The same strings in other languages, for reference ("proofread" ones are checked by people):
 %otherLanguages%
 
-Proofread %targetLanguage% translations of the same English elsewhere in the project: use them, unless the context calls for something else.
+Current %targetLanguage% translations of the same English elsewhere in the project ("proofread": false means not checked by a person): use them, unless the context calls for something else.
 %identicalStrings%
 
 The strings around them in the file, with their current %targetLanguage% translations, for context:
@@ -98,6 +98,7 @@ export function defaultSettings(model: string): ProjectSettings {
     email: { provider: "none", from: "", accountId: "" },
     llm: {
       autoTranslate: true,
+      translationMemory: false,
       updateOutdated: true,
       proposeForProofread: true,
       model,

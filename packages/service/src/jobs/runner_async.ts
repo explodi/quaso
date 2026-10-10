@@ -12,6 +12,7 @@ import type { TranslationProvider } from "../llm/provider.ts";
 import { silentLogger, type Clock, type Logger, type Sql, type Statement } from "../ports.ts";
 import { settingsFromData } from "../settings.ts";
 import { RevisionConflict, withRetries } from "../write.ts";
+import { memoryRead, memoryMatches } from "./memory.ts";
 import { translateBatch } from "./batch_runner.ts";
 import { generateFileContextAsync } from "./file_context.ts";
 import { promptContextAsync } from "./prompts.ts";
@@ -370,6 +371,30 @@ async function failedRun(env: RunEnv, original: JobRow, error: unknown): Promise
 }
 
 async function runSlice(env: RunEnv, plan: JobPlan): Promise<void> {
+  if (plan.settings.llm.translationMemory) {
+    const remaining: Batch[] = [];
+    for (const batch of plan.batches) {
+      const { facts } = await batchContext(env, plan, batch);
+      const [rows] = await env.sql.read([memoryRead(batch)]);
+      const matches = memoryMatches(batch, rows, facts);
+      const outcomes = await writeBatchAsync(
+        env.sql,
+        SYSTEM,
+        plan.job.id,
+        batch,
+        matches,
+        new Map(),
+        {
+          now: env.clock(),
+          model: env.model,
+          expectedJobCreatedAt: plan.job.created_at,
+        },
+      );
+      const items = batch.items.filter((item) => !outcomes?.has(item.stringId));
+      if (items.length > 0) remaining.push({ ...batch, items });
+    }
+    plan.batches = remaining;
+  }
   if (plan.settings.llm.context.fileContext) {
     for (const fileId of new Set(plan.batches.map((batch) => batch.fileId))) {
       if (!(await canRequest(env, plan.job.id, plan.job.created_at))) return;

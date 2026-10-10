@@ -44,6 +44,7 @@ export type JobRow = {
   total: number;
   done: number;
   translated: number;
+  reused?: number;
   proposed: number;
   failed: number;
   skipped: number;
@@ -62,7 +63,7 @@ export type JobRow = {
 export const JOB_COLUMNS = `id, status, priority, source, scope, actor_type, actor_id,
   actor_label, total, done, translated, proposed, failed, skipped, input_tokens,
   output_tokens, thinking_tokens, failures, error, attempts, created_at, started_at,
-  finished_at, updated_at`;
+  finished_at, updated_at, reused`;
 
 /** A job, or undefined. */
 export function loadJob(ctx: Context, id: number): JobRow | undefined {
@@ -176,6 +177,7 @@ export function jobTokensStatement(id: number, usage: Usage, now: number): State
 /** Progress to add to a job, after a batch. */
 export interface ProgressDelta {
   translated: number;
+  reused?: number;
   proposed: number;
   failed: number;
   skipped: number;
@@ -191,14 +193,15 @@ export function addProgress(ctx: Context, id: number, delta: ProgressDelta): voi
 }
 
 export function jobProgressStatement(job: JobRow, delta: ProgressDelta, now: number): Statement {
-  const done = delta.translated + delta.proposed + delta.failed + delta.skipped;
+  const done =
+    delta.translated + delta.proposed + delta.failed + delta.skipped + (delta.reused ?? 0);
   const failures = [...fromJson<JobFailure[]>(job.failures), ...delta.failures].slice(
     -MAX_FAILURES,
   );
   return {
     sql: `UPDATE jobs SET done = done + ?, translated = translated + ?, proposed = proposed + ?,
        failed = failed + ?, skipped = skipped + ?, failures = ?, total = MAX(total, done + ?),
-       updated_at = ?
+       updated_at = ?, reused = reused + ?
      WHERE id = ?`,
     params: [
       done,
@@ -209,6 +212,7 @@ export function jobProgressStatement(job: JobRow, delta: ProgressDelta, now: num
       toJson(failures),
       done,
       now,
+      delta.reused ?? 0,
       job.id,
     ],
   };
@@ -268,6 +272,7 @@ export function jobInfosFromRows(rows: JobRow[], actors: ActorDirectory): JobInf
       total: Math.max(row.total, row.done),
       done: row.done,
       translated: row.translated,
+      ...(row.reused ? { reused: row.reused } : {}),
       proposed: row.proposed,
       failed: row.failed,
       skipped: row.skipped,

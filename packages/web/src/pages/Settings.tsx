@@ -358,6 +358,11 @@ function Llm({ data }: { data: SettingsResult }) {
       <Fieldset className="settings-field-group">
         <legend>Automatic translation</legend>
         <Check
+          label="Reuse current translations of identical source strings before asking the LLM"
+          checked={llm.translationMemory ?? false}
+          change={(v) => update("translationMemory", v)}
+        />
+        <Check
           label="Automatically translate on upload"
           checked={llm.autoTranslate}
           change={(v) => update("autoTranslate", v)}

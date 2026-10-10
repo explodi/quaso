@@ -7,6 +7,11 @@ Release candidates are for deployment and migration testing. The team decides wh
 
 ### Added
 
+- Optional translation memory copies exact current source/kind/plural matches as green, records
+  their origin in history and reports reused job items without spending model tokens. Prompts
+  include green matches too, and consistency warnings find differing translations of identical
+  sources across files. Schema version 3 preserves job progress while adding reuse counts.
+
 - File-wide `duplicate_translation` QA warnings name different source strings that share a
   translation. Both affected keys appear in the QA filter; corrections clear both warnings.
   Schema version 2 stores contextual check results and clears them when translations change.

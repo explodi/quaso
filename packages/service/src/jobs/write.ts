@@ -29,8 +29,9 @@ export interface BatchSuccess {
   value: TextValue;
   requestId: number;
   model: string;
+  reusedFrom?: { id: number; file: string; key: string };
 }
-export type Outcome = "translated" | "proposed" | "failed" | "skipped";
+export type Outcome = "translated" | "proposed" | "failed" | "skipped" | "reused";
 type PendingProposal = { id: number; string_id: number; value: string | null };
 interface BatchState {
   job: JobRow | undefined;
@@ -229,8 +230,14 @@ function planBatch(
     const languageExists = state.facts.languages.has(item.language);
     const translatable = string !== undefined && isTranslatableKind(string.kind);
     if (sourceMatches && revisionMatches && languageExists && translatable) {
-      const author: Author = { type: "llm", id: null, label: success.model };
-      const detail = { model: success.model, requestId: success.requestId, jobId: job.id };
+      const author: Author = {
+        type: success.reusedFrom ? "system" : "llm",
+        id: null,
+        label: success.model,
+      };
+      const detail = success.reusedFrom
+        ? { ...success.reusedFrom, fromStringId: success.reusedFrom.id, jobId: job.id }
+        : { model: success.model, requestId: success.requestId, jobId: job.id };
       try {
         if (current?.colour === "blue") {
           // The setting governs upload jobs; a person who starts a job chose to include them.
@@ -259,7 +266,7 @@ function planBatch(
               value: success.value,
               colour: "green",
               actor: author,
-              event: "translation_llm",
+              event: success.reusedFrom ? "translation_reused" : "translation_llm",
               baseRevision: item.revision,
               llm: true,
               detail,
@@ -274,7 +281,12 @@ function planBatch(
             },
           );
           statements.push(...plan.statements);
-          outcome = plan.result.status === "skipped" ? "skipped" : "translated";
+          outcome =
+            plan.result.status === "skipped"
+              ? "skipped"
+              : success.reusedFrom
+                ? "reused"
+                : "translated";
           if (plan.statements.length > 0) raisesRevision = true;
         }
       } catch (error) {
@@ -288,7 +300,8 @@ function planBatch(
     }
     outcomes.set(item.stringId, outcome);
     newOutcomes.set(item.stringId, outcome);
-    delta[outcome]++;
+    if (outcome === "reused") delta.reused = (delta.reused ?? 0) + 1;
+    else delta[outcome]++;
     if (outcome !== "skipped")
       statements.push({
         sql: "DELETE FROM llm_failures WHERE string_id = ? AND language = ?",

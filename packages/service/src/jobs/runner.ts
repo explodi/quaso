@@ -39,6 +39,7 @@ import { budgetExhausted, nextMonthStart, recordRequest, type RequestRecord } fr
 import { type Batch, countWork, hasWork, nextBatches, type WorkScope, workScope } from "./work.ts";
 import { writeBatch } from "./write.ts";
 import { fileContextRequest } from "./file_context.ts";
+import { memoryRead, memoryMatches } from "./memory.ts";
 import { translateBatch } from "./batch_runner.ts";
 
 export { pauseActiveAsync, resumeJobsAsync } from "./store.ts";
@@ -252,6 +253,7 @@ export function planJobFinish(
     statements.push({ sql: "UPDATE jobs SET total = done WHERE id = ?", params: [job.id] });
   const counts = [
     `${job.translated} translated`,
+    job.reused ? `${job.reused} reused` : "",
     job.proposed > 0 ? `${job.proposed} proposed` : "",
     job.failed > 0 ? `${job.failed} failed` : "",
     job.skipped > 0 ? `${job.skipped} skipped` : "",
@@ -318,6 +320,23 @@ function stillRunning(ctx: Context, jobId: number): boolean {
 /** Runs a slice: the files' contexts first, then the batches, `concurrency` at a time. */
 async function runSlice(env: JobsEnv, plan: Plan): Promise<void> {
   const { ctx } = env;
+  if (plan.settings.llm.translationMemory) {
+    const remaining: Batch[] = [];
+    for (const batch of plan.batches) {
+      const matches = transaction(ctx.sql, () => {
+        const statement = memoryRead(batch);
+        return memoryMatches(
+          batch,
+          ctx.sql.query(statement.sql, ...(statement.params ?? [])),
+          loadFacts(ctx),
+        );
+      });
+      const outcomes = writeBatch(ctx, plan.job.id, batch, matches, new Map());
+      const items = batch.items.filter((item) => !outcomes?.has(item.stringId));
+      if (items.length > 0) remaining.push({ ...batch, items });
+    }
+    plan.batches = remaining;
+  }
   if (plan.settings.llm.context.fileContext) {
     const files = new Map(plan.batches.map((batch) => [batch.fileId, batch.path]));
     for (const [fileId, path] of files) {

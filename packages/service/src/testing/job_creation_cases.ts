@@ -547,8 +547,9 @@ export const JOB_CREATION_CASES: { name: string; run(sql: Sql): Promise<void> }[
       );
       check(context.glossary.includes("Hallo"));
       checkEqual(context.identicalStrings, [
-        { english: "Hello", translation: "fresh blue" },
-        { english: "Hello", translation: "Remote" },
+        { english: "Hello", translation: "fresh blue", proofread: true },
+        { english: "Hello", translation: "Remote", proofread: true },
+        { english: "Hello", translation: "fresh green", proofread: false },
       ]);
       settings.llm.context.fileContext = false;
       settings.llm.context.glossary = false;

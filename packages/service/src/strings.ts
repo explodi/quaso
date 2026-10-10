@@ -396,6 +396,9 @@ export function getString(ctx: Context, id: number, language: string): StringDet
       actors,
       failure: llmFailures(ctx, [id], tag).get(id) ?? null,
       references: referenceHints(ctx, fromJson<TextValue>(row.source), row.path, facts.syntax),
+      identicalSources: sql.query(identicalSourceStatement(id).sql, id, id, id) as NonNullable<
+        StringDetail["identicalSources"]
+      >,
     },
     tag,
   );
@@ -472,6 +475,7 @@ export async function getStringAsync(
       tokens,
       failures,
       referenced,
+      identicalSources,
     ] = await sql.read([
       revision,
       settingsRead,
@@ -496,6 +500,7 @@ export async function getStringAsync(
         ORDER BY s.kind = 'text' DESC`,
         params: [toJson(targets)],
       },
+      identicalSourceStatement(id),
     ]);
     if (currentRevision[0].revision !== preparedRevision[0].revision) continue;
     const row = summaries[0] as SummaryRow | undefined;
@@ -529,6 +534,7 @@ export async function getStringAsync(
         suggestions: suggested as SuggestionRow[],
         actors,
         failure: (failures[0]?.reason as string | undefined) ?? null,
+        identicalSources: identicalSources as NonNullable<StringDetail["identicalSources"]>,
         references: targets.map((target) => ({
           raw: target.raw,
           english: english.get(target.raw) ?? null,
@@ -549,6 +555,7 @@ function stringDetail(
     actors: ActorDirectory;
     failure: string | null;
     references: ReferenceHint[];
+    identicalSources?: NonNullable<StringDetail["identicalSources"]>;
   },
   tag: string,
 ): StringDetail {
@@ -563,6 +570,7 @@ function stringDetail(
   const extra = fromJson<CheckResult[]>(byLanguage.get(tag)?.extra_checks ?? "[]");
   return {
     ...summary,
+    ...(data.identicalSources?.length ? { identicalSources: data.identicalSources } : {}),
     language: tag,
     suggestions: suggestions.map((g) => ({
       id: g.id,
@@ -650,4 +658,13 @@ function referenceTargets(
     }
   }
   return [...hints.values()];
+}
+
+function identicalSourceStatement(id: number): Statement {
+  return {
+    sql: `SELECT s.id, f.path AS file, s.display_key AS key FROM strings s JOIN files f ON f.id = s.file_id
+      WHERE s.active = 1 AND f.active = 1 AND s.id <> ? AND s.source_hash = (SELECT source_hash FROM strings WHERE id = ?)
+      AND s.kind = (SELECT kind FROM strings WHERE id = ?) ORDER BY f.path, s.position LIMIT 50`,
+    params: [id, id, id],
+  };
 }

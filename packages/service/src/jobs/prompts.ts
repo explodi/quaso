@@ -2,7 +2,7 @@
 /**
  * A batch's prompt context (design §5.6, LLM-5): the project's and the language's
  * instructions, the file and its context, the neighbours with their current translations,
- * the same strings in other languages, proofread translations of identical English, and
+ * the same strings in other languages, current green and proofread translations of identical English, and
  * what each reference stands for. The reads finish before the provider request.
  */
 import { type ProjectSettings, referencesOf, type TextValue } from "@quaso/core";
@@ -108,10 +108,10 @@ function promptContextPlan(
     for (const hashes of chunks([...new Set(batch.items.map((item) => item.sourceHash))], 97)) {
       identical.push(
         select({
-          sql: `SELECT s.source, t.value FROM strings s JOIN translations t ON t.string_id = s.id AND t.language = ?
+          sql: `SELECT s.source, t.value, t.colour FROM strings s JOIN translations t ON t.string_id = s.id AND t.language = ?
           WHERE s.source_hash IN (${placeholders(hashes.length)}) AND s.active = 1 AND s.kind IN (${TRANSLATABLE_SQL})
-            AND t.colour = 'blue' AND t.source_hash = s.source_hash
-            AND s.id NOT IN (SELECT value FROM json_each(?)) ORDER BY s.id LIMIT ?`,
+            AND t.source_hash = s.source_hash
+            AND s.id NOT IN (SELECT value FROM json_each(?)) ORDER BY t.colour = 'blue' DESC, s.id LIMIT ?`,
           params: [batch.language, ...hashes, JSON.stringify(ids), MAX_IDENTICAL],
         }),
       );
@@ -182,6 +182,7 @@ function promptContextPlan(
           identicalStrings.push({
             english: fromJson<TextValue>(row.source),
             translation: fromJson<TextValue>(row.value),
+            proofread: row.colour === "blue",
           });
         }
       }

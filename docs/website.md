@@ -425,3 +425,11 @@ We aim for WCAG 2.2 AA. This checklist is the keyboard audit of Sprint 7; the br
 - [x] Text zoom to 200% and narrow screens keep everything usable: the panes stack, and the file
       tree moves behind a button.
 - [ ] A screen reader pass with NVDA and VoiceOver by a regular user, before release (Sprint 9).
+
+In Settings → LLM translation, **Reuse current translations of identical source strings** enables
+translation memory (off by default). New or changed sources matching another current translation
+in the same language and with the same kind and plural shape are copied as green. Proofread
+matches are preferred; their original stays proofread. History names the source key and job summaries
+count `reused` values separately. No translation or file-context request is made for a batch fully
+satisfied by memory. The editor links other keys with the same source; differing translations
+receive consistency warnings in the QA filter. Prompts include green matches marked as unproofread.

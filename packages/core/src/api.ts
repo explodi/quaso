@@ -326,6 +326,7 @@ export interface ReferenceHint {
 
 /** `GET /strings/{id}?language=de` */
 export interface StringDetail extends StringSummary {
+  identicalSources?: { id: number; file: string; key: string }[];
   language: string;
   /** Pending suggestions, and those reviewed in the last 30 days. */
   suggestions: SuggestionInfo[];
@@ -346,6 +347,7 @@ export const HISTORY_EVENTS = [
   "source_restored",
   "source_renamed",
   "translation_saved",
+  "translation_reused",
   "translation_llm",
   "translation_imported",
   "translation_approved",
@@ -644,6 +646,8 @@ export interface JobInfo {
     total: number;
     done: number;
     translated: number;
+    /** Exact matches copied without a model request. */
+    reused?: number;
     /** Proposals written for outdated blue translations. */
     proposed: number;
     failed: number;
@@ -1023,6 +1027,10 @@ export const PROMPT_PLACEHOLDERS = [
 ] as const;
 
 export const LlmSettings = s.object({
+  translationMemory: s
+    .boolean()
+    .optional()
+    .describe("Copy current translations of identical sources as green before asking the model"),
   autoTranslate: s.boolean().describe("Translate new and changed strings on upload (LLM-3)"),
   updateOutdated: s.boolean().describe("On upload, update outdated green translations too"),
   proposeForProofread: s
@@ -1039,7 +1047,9 @@ export const LlmSettings = s.object({
       .describe("Languages whose translations of the same strings go into the prompt"),
     identicalStrings: s
       .boolean()
-      .describe("Proofread translations of identical English strings elsewhere in the project"),
+      .describe(
+        "Current proofread and green translations of identical source strings elsewhere in the project",
+      ),
     fileContext: s.boolean().describe("The file's context, written or generated"),
     glossary: s.boolean(),
   }),
