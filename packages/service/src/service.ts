@@ -223,6 +223,7 @@ export function createService(options: ServiceOptions): Service {
 
   const service: Service = {
     createQualityJob: quality.create,
+    reviewTerminology: quality.reviewTerminology,
     getQualityJob: (actor, { id }) => getQualityJob(qualitySql, actor, id),
     listQualityJobs: (actor) => listQualityJobs(qualitySql, actor),
     async start() {

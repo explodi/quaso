@@ -7,6 +7,8 @@ import {
   type QualityJobInfo,
   type TextValue,
   type CheckResult,
+  type TerminologySuggestion,
+  type ReviewTerminologyRequest,
 } from "@quaso/core";
 import { SYSTEM, type Actor } from "./api.ts";
 import { fromJson } from "./db.ts";
@@ -25,6 +27,17 @@ import {
   type MeaningTarget,
 } from "./llm/meaning.ts";
 import { monthlyUsage, nextMonthStart, recordRequestAsync } from "./jobs/usage.ts";
+import { createGlossaryTermAsync, updateGlossaryTermAsync } from "./glossary.ts";
+import {
+  TERMINOLOGY_SCHEMA,
+  TERMINOLOGY_SYSTEM,
+  STYLE_SCHEMA,
+  STYLE_SYSTEM,
+  terminologySuggestions,
+  styleGuideDraft,
+  type CorpusEntry,
+  type CorpusGlossary,
+} from "./llm/terminology.ts";
 import { llmUnavailable } from "./jobs/jobs.ts";
 
 const REVISION: Statement = {
@@ -33,7 +46,7 @@ const REVISION: Statement = {
 type TargetRef = { id: number; language: string; suggestionId?: number };
 type JobRow = {
   id: number;
-  kind: "meaning";
+  kind: QualityJobInfo["kind"];
   scope: string;
   targets: string;
   status: QualityJobInfo["status"];
@@ -63,7 +76,7 @@ function info(row: JobRow): QualityJobInfo {
     error: row.error,
     createdAt: row.created_at,
     finishedAt: row.finished_at,
-  };
+  } as QualityJobInfo;
 }
 function allowed(row: JobRow, limit: string[] | null): boolean {
   return (
@@ -104,15 +117,22 @@ export async function getQualityJob(sql: Sql, caller: Actor, id: number): Promis
 
 function targetSelection(request: QualityJobRequest): Statement {
   const suggestions = request.suggestions !== undefined;
+  const terminology = request.kind === "terminology";
+  const style = request.kind === "style_guide";
+  const language = terminology ? "l.tag" : "t.language";
+  const join = terminology
+    ? "CROSS JOIN languages l LEFT JOIN translations t ON t.string_id = s.id AND t.language = l.tag"
+    : `JOIN ${suggestions ? "suggestions" : "translations"} t ON t.string_id = s.id`;
   return {
-    sql: `SELECT s.id, t.language${suggestions ? ", t.id AS suggestionId" : ""} FROM strings s JOIN files f ON f.id = s.file_id
-      JOIN ${suggestions ? "suggestions" : "translations"} t ON t.string_id = s.id
+    sql: `SELECT s.id, ${language} AS language${suggestions ? ", t.id AS suggestionId" : ""} FROM strings s JOIN files f ON f.id = s.file_id
+      ${join}
       WHERE s.active = 1 AND f.active = 1 AND s.kind IN ('text', 'plural', 'ordinal')
-      AND t.language IN (SELECT value FROM json_each(?))
+      AND ${language} IN (SELECT value FROM json_each(?))
       AND (? = 1 OR f.path IN (SELECT value FROM json_each(?)))
       AND (? = 1 OR s.id IN (SELECT value FROM json_each(?)))
       ${suggestions ? "AND t.status = 'pending' AND t.value IS NOT NULL AND t.id IN (SELECT value FROM json_each(?))" : ""}
-      ORDER BY t.language, f.path, s.position`,
+      ${style ? "AND t.colour = 'blue' AND t.source_hash = s.source_hash" : ""}
+      ORDER BY ${language}, f.path, s.position`,
     params: [
       JSON.stringify(request.languages),
       request.files === undefined ? 1 : 0,
@@ -170,8 +190,10 @@ export function createQualityJobs(
   }
   async function create(caller: Actor, input: QualityJobRequest): Promise<QualityJobInfo> {
     const actor = validateActor(caller);
-    (await readPermissions(sql, actor)).require("translate");
+    const permission = await readPermissions(sql, actor);
+    permission.require("translate");
     const request = validateInput(QualityJobRequest, input);
+    if (request.kind === "style_guide") permission.require("settings");
     request.languages = request.languages.map((tag) => canonicalLanguageTag(tag) ?? tag);
     if ((await options.configuration()).provider === null) throw llmUnavailable();
     const result = await withRetries(
@@ -198,6 +220,7 @@ export function createQualityJobs(
       },
       (state) => {
         state.access.require("translate");
+        if (request.kind === "style_guide") state.access.require("settings");
         const limit = state.access.languageLimit();
         const permitted = limit === null || request.languages.every((tag) => limit.includes(tag));
         if (!permitted) throw forbidden("Choose your assigned languages for the quality check.");
@@ -211,11 +234,13 @@ export function createQualityJobs(
         const now = options.clock();
         const row: JobRow = {
           id: state.id,
-          kind: "meaning",
+          kind: request.kind,
           scope: JSON.stringify(request),
           targets: JSON.stringify(state.targets),
-          model: policy?.model || current.llm.model,
-          counts_budget: policy?.countsAgainstBudget === false ? 0 : 1,
+          model:
+            request.kind === "meaning" ? policy?.model || current.llm.model : current.llm.model,
+          counts_budget:
+            request.kind === "meaning" && policy?.countsAgainstBudget === false ? 0 : 1,
           status: state.targets.length === 0 ? "done" : "queued",
           total: state.targets.length,
           done: 0,
@@ -298,6 +323,14 @@ export function createQualityJobs(
       return;
     }
     const provider = configuration.provider;
+    if (job.kind !== "meaning") {
+      await runCorpusJob(job, provider);
+      const [remaining] = await sql.read([
+        { sql: "SELECT 1 FROM quality_jobs WHERE status IN ('queued', 'running') LIMIT 1" },
+      ]);
+      if (remaining.length > 0) await options.schedule(options.clock());
+      return;
+    }
     const refs = fromJson<TargetRef[]>(job.targets).slice(job.done, job.done + 25);
     const targets = await readTargets(sql, refs);
     await update(job.id, [
@@ -435,8 +468,208 @@ export function createQualityJobs(
     if (remaining.length > 0) await options.schedule(options.clock());
   }
 
+  async function runCorpusJob(job: JobRow, provider: NonNullable<LlmConfiguration["provider"]>) {
+    const pending = fromJson<TargetRef[]>(job.targets).slice(job.done);
+    const language = pending[0]?.language;
+    if (!language) return;
+    const refs = pending.filter((ref) => ref.language === language);
+    const [rows, glossary] = await sql.read([
+      {
+        sql: `SELECT s.id, f.path AS file, s.display_key AS key, s.source, t.value, t.colour FROM strings s
+        JOIN files f ON f.id = s.file_id LEFT JOIN translations t ON t.string_id = s.id AND t.language = ?
+        WHERE s.active = 1 AND f.active = 1 AND s.id IN (SELECT json_extract(value, '$.id') FROM json_each(?)) ORDER BY f.path, s.position`,
+        params: [language, JSON.stringify(refs)],
+      },
+      {
+        sql: "SELECT id, term, language, translation, kind FROM glossary_terms WHERE language IS NULL OR language = ?",
+        params: [language],
+      },
+    ]);
+    const corpus: CorpusEntry[] = rows.map((row) => ({
+      id: Number(row.id),
+      language,
+      file: String(row.file),
+      key: String(row.key),
+      source: fromJson(row.source),
+      translation: row.value === null ? null : fromJson(row.value),
+      colour: row.colour as CorpusEntry["colour"],
+    }));
+    const style = job.kind === "style_guide";
+    const selected = style ? corpus.filter((entry) => entry.colour === "blue") : corpus;
+    const project = await settings();
+    const scope = fromJson<QualityJobRequest>(job.scope);
+    await update(job.id, [
+      {
+        sql: "UPDATE quality_jobs SET status = 'running', error = NULL WHERE id = ?",
+        params: [job.id],
+      },
+    ]);
+    try {
+      const started = options.clock();
+      const answer = await provider.translate({
+        model: job.model,
+        safety: project.llm.safety,
+        system: style ? STYLE_SYSTEM : TERMINOLOGY_SYSTEM,
+        responseSchema: style ? STYLE_SCHEMA : TERMINOLOGY_SCHEMA,
+        prompt: JSON.stringify({
+          sourceLanguage: project.sourceLanguage,
+          language,
+          project: project.name,
+          instructions: project.llm.projectInstructions,
+          glossary,
+          corpus: selected,
+          minimumFrequency: scope.minimumFrequency ?? 3,
+          minimumFiles: scope.minimumFiles ?? 2,
+        }),
+      });
+      await recordRequestAsync(
+        sql,
+        SYSTEM,
+        {
+          jobId: null,
+          language,
+          fileId: null,
+          provider: provider.name,
+          model: answer.model ?? job.model,
+          strings: selected.length,
+          usage: answer.usage,
+          durationMs: options.clock() - started,
+          outcome: "ok",
+          error: null,
+        },
+        options.clock(),
+      );
+      const additions = style
+        ? [styleGuideDraft(answer.answer, language, selected)]
+        : terminologySuggestions(answer.answer, selected, glossary as unknown as CorpusGlossary[], {
+            minimumFrequency: scope.minimumFrequency ?? 3,
+            minimumFiles: scope.minimumFiles ?? 2,
+          });
+      const flagged = style
+        ? 0
+        : (additions as TerminologySuggestion[]).filter((term) => term.inconsistent).length;
+      await withRetries(
+        sql,
+        async () => {
+          const [revision, jobs] = await sql.read([
+            REVISION,
+            { sql: "SELECT * FROM quality_jobs WHERE id = ?", params: [job.id] },
+          ]);
+          return { revision: Number(revision[0].revision), state: jobs[0] as JobRow };
+        },
+        (current) => {
+          const done = current.done + refs.length;
+          const finished = done >= current.total;
+          return {
+            statements: [
+              {
+                sql: "UPDATE quality_jobs SET done = ?, flagged = flagged + ?, result = ?, status = ?, finished_at = ? WHERE id = ?",
+                params: [
+                  done,
+                  flagged,
+                  JSON.stringify([...fromJson<unknown[]>(current.result), ...additions]),
+                  finished ? "done" : "queued",
+                  finished ? options.clock() : null,
+                  job.id,
+                ],
+              },
+            ],
+            result: null,
+          };
+        },
+      );
+    } catch (error) {
+      await update(job.id, [
+        {
+          sql: "UPDATE quality_jobs SET status = 'failed', error = ?, finished_at = ? WHERE id = ?",
+          params: [
+            error instanceof Error ? error.message : "Corpus analysis failed",
+            options.clock(),
+            job.id,
+          ],
+        },
+      ]);
+    }
+  }
+
+  async function reviewTerminology(
+    actor: Actor,
+    input: { id: number; index: number } & ReviewTerminologyRequest,
+  ): Promise<QualityJobInfo> {
+    const job = await getQualityJob(sql, actor, input.id);
+    if (job.kind !== "terminology") throw badRequest("Choose a terminology report.");
+    const proposal = job.result[input.index];
+    if (!proposal) throw notFound("Terminology suggestion");
+    const translation = input.translation?.trim() ?? proposal.preferred;
+    if (input.action === "accept" && !translation)
+      throw badRequest("Choose a preferred translation before accepting the term.");
+    if (input.action === "accept") {
+      const saved =
+        proposal.glossaryId === undefined
+          ? await createGlossaryTermAsync(
+              sql,
+              actor,
+              {
+                term: proposal.term,
+                language: proposal.language,
+                kind: proposal.kind,
+                ...(proposal.kind === "keep" ? {} : { translation }),
+                note: proposal.note,
+              },
+              options.clock(),
+              options.model,
+            )
+          : await updateGlossaryTermAsync(
+              sql,
+              actor,
+              proposal.glossaryId,
+              proposal.kind === "keep" ? {} : { translation },
+              options.clock(),
+              options.model,
+            );
+      proposal.glossaryId = saved.id;
+    }
+    await withRetries(
+      sql,
+      async () => {
+        const [revision, jobs, ...permissionRows] = await sql.read([
+          REVISION,
+          { sql: "SELECT * FROM quality_jobs WHERE id = ?", params: [job.id] },
+          ...permissionReadStatements(actor),
+        ]);
+        return {
+          revision: Number(revision[0].revision),
+          state: { row: jobs[0] as JobRow, access: permissionsFromRows(actor, permissionRows) },
+        };
+      },
+      ({ row, access }) => {
+        access.require("translate");
+        if (!allowed(row, access.languageLimit()))
+          throw forbidden("Choose your assigned languages.");
+        const proposals = fromJson<TerminologySuggestion[]>(row.result);
+        proposals[input.index] = {
+          ...proposals[input.index],
+          preferred: translation,
+          status: input.action === "accept" ? "accepted" : "dismissed",
+          ...(proposal.glossaryId ? { glossaryId: proposal.glossaryId } : {}),
+        };
+        return {
+          statements: [
+            {
+              sql: "UPDATE quality_jobs SET result = ? WHERE id = ?",
+              params: [JSON.stringify(proposals), job.id],
+            },
+          ],
+          result: null,
+        };
+      },
+    );
+    return getQualityJob(sql, actor, job.id);
+  }
+
   return {
     create,
+    reviewTerminology,
     get busy() {
       return running !== null;
     },

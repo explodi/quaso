@@ -92,6 +92,10 @@ export interface ServiceHealth {
  * The LLM jobs, usage and models are in `LlmMethods` (`jobs/llm_service.ts`).
  */
 export interface ServiceApi extends AccountsApi, LlmMethods, LaterApi, LaterApi {
+  reviewTerminology(
+    actor: Actor,
+    input: { id: number; index: number } & import("@quaso/core").ReviewTerminologyRequest,
+  ): Promise<import("@quaso/core").QualityJobInfo>;
   createQualityJob(
     actor: Actor,
     input: import("@quaso/core").QualityJobRequest,

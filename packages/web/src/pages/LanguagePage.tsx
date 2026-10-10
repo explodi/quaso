@@ -20,7 +20,7 @@ import {
 import type { LanguageFilesResult, LanguageProgress } from "@quaso/core";
 import { useMemo, useState } from "react";
 import { ButtonLink } from "../components/Button.tsx";
-import { MeaningCheckButton } from "../components/QualityChecks.tsx";
+import { QualityCheckButton } from "../components/QualityChecks.tsx";
 import { AutoTranslateButton } from "../components/AutoTranslate.tsx";
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import { FileTree } from "../components/FileTree.tsx";
@@ -92,7 +92,8 @@ export function LanguagePage() {
           {language && (
             <>
               <AutoTranslateButton language={language.tag} />
-              <MeaningCheckButton language={language.tag} />
+              <QualityCheckButton language={language.tag} />
+              <QualityCheckButton kind="style_guide" language={language.tag} />
             </>
           )}
           {language && (

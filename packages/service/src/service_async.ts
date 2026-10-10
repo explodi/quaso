@@ -90,6 +90,7 @@ export function createAsyncService(options: AsyncServiceOptions): Service {
     }),
     ...writes,
     createQualityJob: quality.create,
+    reviewTerminology: quality.reviewTerminology,
     async saveTranslation(actor, input) {
       const result = await writes.saveTranslation(actor, input);
       if (result.translation?.revision !== input.baseRevision)

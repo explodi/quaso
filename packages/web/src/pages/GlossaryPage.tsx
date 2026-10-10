@@ -14,6 +14,7 @@ import {
 /** Public terminology, with edits limited to the manager's languages. */
 import { type GlossaryTerm, languageName } from "@quaso/core";
 import { useState } from "react";
+import { QualityCheckButton, QualityJobs } from "../components/QualityChecks.tsx";
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import { ConfirmButton, SelectField, TextField } from "../components/Management.tsx";
 import { useToast } from "../components/Toast.tsx";
@@ -56,6 +57,7 @@ export function GlossaryPage() {
   return (
     <div className="page glossary-page">
       <div className="page-head workspace-heading">
+        <QualityCheckButton kind="terminology" language={query.language || undefined} />
         <div>
           <H1 ui>Glossary</H1>
           <p className="muted">The words your team agrees on, in every language.</p>
@@ -87,6 +89,7 @@ export function GlossaryPage() {
           ))}
         </SelectField>
       </div>
+      {session.can("translate") && <QualityJobs />}
       {error !== undefined && <ErrorMessage error={error} />}
       {glossary.error !== undefined && (
         <ErrorMessage error={glossary.error} onRetry={() => glossary.refresh()} />

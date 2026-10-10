@@ -44,6 +44,9 @@ export interface FakeToken {
  * real service keeps that to administrators).
  */
 export class FakeService implements ServiceApi {
+  reviewTerminology(): Promise<import("@quaso/core").QualityJobInfo> {
+    return Promise.reject(new Error("Not stubbed"));
+  }
   createQualityJob(): Promise<import("@quaso/core").QualityJobInfo> {
     return Promise.reject(new Error("Not stubbed"));
   }

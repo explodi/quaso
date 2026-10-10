@@ -7,6 +7,12 @@ Release candidates are for deployment and migration testing. The team decides wh
 
 ### Added
 
+- Glossary bootstrapping suggests recurring domain terms from the source corpus, counts current
+  language renderings and shows inconsistencies with source examples. Managers accept, edit or
+  dismiss suggestions and retranslate affected green strings with the agreed glossary.
+- Style-guide jobs draft per-language instructions from proofread translations for an
+  administrator to edit and save. Existing instructions and proofread text stay intact until review.
+
 - Model meaning checks compare source and translation and retain structured QA warnings.
   Checks run manually per string/file/language or automatically on configured save/approval
   events, with model, colour and budget controls. Reference-language notes can be collected

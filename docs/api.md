@@ -109,3 +109,10 @@ administrator and sends one test message with the saved settings. Success return
 `GET /api/v1/quality-jobs` and `GET /api/v1/quality-jobs/{id}` report progress and findings.
 These endpoints require translation permission and respect assigned languages. Warnings are
 nonblocking; no accepted text is replaced.
+
+Quality jobs also accept `kind: "terminology"` and `kind: "style_guide"`. Terminology jobs support
+`minimumFrequency` (default 3) and `minimumFiles` (default 2); reports retain counted renderings
+and corpus examples. `PATCH /api/v1/quality-jobs/{id}/suggestions/{index}` accepts or dismisses a
+term with `{ "action": "accept", "translation": "preferred rendering" }` or `{ "action": "dismiss" }`.
+Style-guide generation requires administrator permission and returns editable drafts; save approved
+instructions with the existing language-settings endpoint.
