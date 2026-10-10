@@ -48,6 +48,36 @@ const FILES = [
   file("menus/main.json", "pl", '{ "quit": "Quit" }\n'),
 ];
 
+test("download reports outdated keys in normal, dry-run and JSON output", async () => {
+  const old = { ...FILES[0], outdated: [{ key: "play", sourceRevision: 1035 }] };
+  await withProject(PROJECT, async (dir) => {
+    const fetch = server([old]);
+    const dry = await runCli(["download", "--dry-run"], { cwd: dir, env: ENV, fetch });
+    assertStringIncludes(dry.stdout, "outdated     de  common.json › play");
+    assertStringIncludes(dry.stderr, "older source");
+    assertEquals(await exists(dir, "src/locales/de/common.json"), false);
+    const json = await runCli(["download", "--json"], { cwd: dir, env: ENV, fetch });
+    assertEquals(JSON.parse(json.stdout).result.outdated, [
+      { file: "common.json", language: "de", key: "play", sourceRevision: 1035 },
+    ]);
+    const unchanged = await runCli(["download"], { cwd: dir, env: ENV, fetch });
+    assertStringIncludes(unchanged.stdout, "Source file changed in revision 1035");
+    assertStringIncludes(unchanged.stderr, "quaso translate");
+  });
+});
+
+test("download passes the independent outdated omission policy", async () => {
+  await withProject(
+    { ...PROJECT, "quaso.config.json": { ...CONFIG, outdated: "omit" } },
+    async (dir) => {
+      const fetch = server(FILES);
+      const result = await runCli(["download"], { cwd: dir, env: ENV, fetch });
+      assertEquals(result.code, 0, result.stderr);
+      assertEquals(new URL(fetch.requests[0].url).searchParams.get("outdated"), "omit");
+    },
+  );
+});
+
 test("download writes changed files only, creating folders", async () => {
   await withProject(
     { ...PROJECT, "src/locales/pl/common.json": '{ "play": "Graj" }\n' },

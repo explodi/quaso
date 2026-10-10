@@ -33,6 +33,8 @@ export interface RenderOptions {
    * nothing (`omit`), for apps whose i18n falls back to the source language by itself.
    */
   untranslated?: Untranslated;
+  /** Entries explicitly excluded, by entryKey; affected arrays are omitted whole. */
+  omitted?: ReadonlySet<string>;
 }
 
 /** See `RenderOptions.untranslated`. */
@@ -76,9 +78,11 @@ export function renderFile(
   const tree = new TreeBuilder();
   const categories = new CategoryCache(options);
   const omit = options.untranslated === "omit";
-  const incompleteArrays = omit ? arraysWithUntranslated(entries, translations) : new Set();
+  const omitted = options.omitted ?? new Set<string>();
+  const incompleteArrays = arraysWithUntranslated(entries, translations, omit, omitted);
   for (const entry of entries) {
-    if (omit && incompleteArrays.has(outermostArray(entry.keyPath))) continue;
+    if (incompleteArrays.has(outermostArray(entry.keyPath))) continue;
+    if (omitted.has(entryKey(entry.kind, entry.keyPath))) continue;
     switch (entry.kind) {
       case "text": {
         const translation = translations.get(entryKey(entry.kind, entry.keyPath));
@@ -123,6 +127,8 @@ function outermostArray(keyPath: KeyPath): string {
 function arraysWithUntranslated(
   entries: readonly SourceEntry[],
   translations: ReadonlyMap<string, TextValue>,
+  omitUntranslated: boolean,
+  omitted: ReadonlySet<string>,
 ): Set<string> {
   const incomplete = new Set<string>();
   for (const entry of entries) {
@@ -136,7 +142,8 @@ function arraysWithUntranslated(
     const translation = translations.get(entryKey(entry.kind, entry.keyPath));
     const translated =
       entry.kind === "text" ? typeof translation === "string" : isForms(translation);
-    if (!translated) incomplete.add(array);
+    if (omitted.has(entryKey(entry.kind, entry.keyPath)) || (omitUntranslated && !translated))
+      incomplete.add(array);
   }
   return incomplete;
 }

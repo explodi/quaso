@@ -131,7 +131,11 @@ type WorkRow = {
 };
 
 /** The SQL condition and parameters of the work in one language (after `?` for the language). */
-function condition(scope: WorkScope, language: string): { where: string; params: SqlValue[] } {
+function condition(
+  scope: WorkScope,
+  language: string,
+  onlyOutdated = false,
+): { where: string; params: SqlValue[] } {
   const where = ["s.active = 1", "f.active = 1", `s.kind IN (${TRANSLATABLE_SQL})`];
   const params: SqlValue[] = [];
   if (scope.fileIds !== null) {
@@ -148,6 +152,10 @@ function condition(scope: WorkScope, language: string): { where: string; params:
          WHERE j.job_id = ? AND j.string_id = s.id AND j.language = ?)`,
     );
     params.push(scope.jobId, language);
+  }
+  if (onlyOutdated) {
+    where.push("t.source_hash <> s.source_hash");
+    return { where: where.join(" AND "), params };
   }
   const needs = ["t.string_id IS NULL"];
   if (scope.retranslate) needs.push("t.colour = 'green'");
@@ -236,6 +244,24 @@ function workCount(scope: WorkScope, language: string): Statement {
   return { sql: `SELECT COUNT(*) AS n FROM ${FROM} WHERE ${where}`, params: [language, ...params] };
 }
 
+export function outdatedCountStatement(scope: WorkScope, language: string): Statement {
+  const { where, params } = condition(scope, language, true);
+  const greenIncluded = scope.updateGreen || scope.retranslate;
+  return {
+    sql: `SELECT COUNT(*) AS outdated, COALESCE(SUM(CASE WHEN
+      (t.colour = 'green' AND (? = 1 OR (? = 1 AND t.qa_errors > 0))) OR
+      (t.colour = 'blue' AND ? = 1) THEN 0 ELSE 1 END), 0) AS excluded
+      FROM ${FROM} WHERE ${where}`,
+    params: [
+      greenIncluded ? 1 : 0,
+      scope.qa ? 1 : 0,
+      scope.proposeBlue ? 1 : 0,
+      language,
+      ...params,
+    ],
+  };
+}
+
 /** Scope, counts and ordered batches belong to one revision; callers can guard writes with it. */
 export async function readJobWork(
   sql: Sql,
@@ -244,7 +270,14 @@ export async function readJobWork(
   stored: StoredScope,
   llm: Pick<LlmSettings, "updateOutdated" | "proposeForProofread" | "batchSize">,
   maxBatches = Number.MAX_SAFE_INTEGER,
-): Promise<{ revision: number; scope: WorkScope; total: number; batches: Batch[] }> {
+): Promise<{
+  revision: number;
+  scope: WorkScope;
+  total: number;
+  batches: Batch[];
+  outdated: number;
+  outdatedLeft: number;
+}> {
   if (!Number.isSafeInteger(llm.batchSize) || llm.batchSize < 1)
     throw new RangeError("Batch size must be a positive integer.");
   if (!Number.isSafeInteger(maxBatches) || maxBatches < 0)
@@ -276,20 +309,25 @@ export async function readJobWork(
       ...scope.languages.flatMap((language) => [
         workCount(scope, language),
         workSelection(scope, language, limit),
+        outdatedCountStatement(scope, language),
       ]),
     ]);
     // A language/file change between reads must not leave a partially resolved scope.
     if (Number(currentRevision[0].revision) !== revision) continue;
     let total = 0;
+    let outdated = 0;
+    let outdatedLeft = 0;
     const batches: Batch[] = [];
     for (const [index, language] of scope.languages.entries()) {
-      total += Number(rows[index * 2][0].n);
-      const items = workItemsFromRows(rows[index * 2 + 1] as WorkRow[], scope, language);
+      total += Number(rows[index * 3][0].n);
+      const items = workItemsFromRows(rows[index * 3 + 1] as WorkRow[], scope, language);
+      outdated += Number(rows[index * 3 + 2][0].outdated);
+      outdatedLeft += Number(rows[index * 3 + 2][0].excluded);
       const room = maxBatches - batches.length;
       for (const batch of batchesOf(items, llm.batchSize).slice(0, Math.max(0, room)))
         batches.push(batch);
     }
-    return { revision, scope, total, batches };
+    return { revision, scope, total, batches, outdated, outdatedLeft };
   }
   throw new ServiceError("unavailable", "The project is busy. Try again shortly.");
 }

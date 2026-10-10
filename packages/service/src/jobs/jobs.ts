@@ -62,7 +62,15 @@ import {
   type StoredScope,
 } from "./store.ts";
 import { budgetExhausted, monthlyUsage } from "./usage.ts";
-import { batchesOf, countWork, workIn, workScope, readJobWork, type Batch } from "./work.ts";
+import {
+  outdatedCountStatement,
+  batchesOf,
+  countWork,
+  workIn,
+  workScope,
+  readJobWork,
+  type Batch,
+} from "./work.ts";
 
 /** Jobs `GET /jobs` lists. */
 export const JOBS_LISTED = 50;
@@ -104,9 +112,11 @@ export function createJob(
   const settings = loadSettings(ctx);
   const scope = checkScope(ctx, request);
   limitScope(ctx, actor, scope);
+  const counts = outdatedCounts(ctx, workScope(ctx, 0, "website", scope, settings.llm));
   if (request.dryRun) {
     return { job: null, estimate: estimate(ctx, settings, scope) };
   }
+  if (counts.outdatedLeft > 0) scope.outdatedLeft = counts.outdatedLeft;
   if (budgetExhausted(ctx, options.monthlyTokenBudget)) throw budgetExceeded();
   const source: JobSource = actor.type === "token" ? "cli" : "website";
   const priority = scope.strings?.length === 1 ? PRIORITY.string : PRIORITY.bulk;
@@ -240,6 +250,21 @@ function describeScope(scope: StoredScope, total: number): string {
   return parts.join(" ");
 }
 
+function outdatedCounts(ctx: Context, scope: import("./work.ts").WorkScope) {
+  let outdated = 0;
+  let outdatedLeft = 0;
+  for (const language of scope.languages) {
+    const statement = outdatedCountStatement(scope, language);
+    const [row] = ctx.sql.query<{ outdated: number; excluded: number }>(
+      statement.sql,
+      ...(statement.params ?? []),
+    );
+    outdated += row.outdated;
+    outdatedLeft += row.excluded;
+  }
+  return { outdated, outdatedLeft };
+}
+
 /**
  * The estimate of a dry run: the strings and words to translate, the requests, and the
  * tokens (characters / 4 of each batch's rendered prompt, plus the expected output).
@@ -253,7 +278,13 @@ function estimate(ctx: Context, settings: ProjectSettings, scope: StoredScope): 
   const contexts = batches.map((batch) =>
     promptContext(ctx, settings, facts, batch, scope.instruction ?? ""),
   );
-  return estimateFromBatches(work.languages, batches, contexts, settings);
+  return estimateFromBatches(
+    work.languages,
+    batches,
+    contexts,
+    settings,
+    outdatedCounts(ctx, work),
+  );
 }
 
 function estimateFromBatches(
@@ -261,8 +292,11 @@ function estimateFromBatches(
   batches: Batch[],
   contexts: PromptContext[],
   settings: ProjectSettings,
+  counts: { outdated: number; outdatedLeft: number },
 ): JobEstimate {
   const result: JobEstimate = {
+    ...(counts.outdated > 0 ? { outdated: counts.outdated } : {}),
+    ...(counts.outdatedLeft > 0 ? { outdatedLeft: counts.outdatedLeft } : {}),
     strings: 0,
     words: 0,
     requests: batches.length,
@@ -401,7 +435,7 @@ export async function createJobAsync(
       if (Number(latest[0].revision) !== revision) continue;
       return {
         job: null,
-        estimate: estimateFromBatches(work.scope.languages, work.batches, contexts, settings),
+        estimate: estimateFromBatches(work.scope.languages, work.batches, contexts, settings, work),
       };
     }
     const author =
@@ -414,6 +448,7 @@ export async function createJobAsync(
             label:
               actor.type === "token" ? ((tokens[0]?.name as string | undefined) ?? null) : null,
           };
+    if (work.outdatedLeft > 0) scope.outdatedLeft = work.outdatedLeft;
     const id = Number(nextJob[0].id);
     const priority = scope.strings?.length === 1 ? PRIORITY.string : PRIORITY.bulk;
     const row: JobRow = {

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 /**
  * Download (design §5.5, FMT-2, FMT-3): every file rendered in every language, with its
- * SHA-256. Translations are what downloads read: outdated ones are written (STR-4);
+ * SHA-256. Translations are what downloads read: older-source values are reported and can be omitted;
  * pending changes and hidden strings never are.
  */
 import {
@@ -26,6 +26,25 @@ import { loadSettings, settingsFromData } from "./settings.ts";
 import type { Sql } from "./ports.ts";
 
 type FileRow = { id: number; path: string; format: string };
+type Translation = { value: TextValue; outdated: boolean; key: string; sourceRevision: number };
+type TranslationRow = {
+  string_id: number;
+  language: string;
+  value: string;
+  outdated: number;
+  display_key: string;
+  source_revision: number;
+};
+
+const TRANSLATION_COLUMNS = `t.string_id, t.language, t.value, t.source_hash <> s.source_hash AS outdated, s.display_key, f.source_revision`;
+function translationFromRow(row: TranslationRow): Translation {
+  return {
+    value: fromJson<TextValue>(row.value),
+    outdated: row.outdated === 1,
+    key: row.display_key,
+    sourceRevision: row.source_revision,
+  };
+}
 
 type StringRow = {
   id: number;
@@ -66,6 +85,7 @@ export function exportFiles(ctx: Context, query: ExportQuery): ExportResult {
     revision: getRevision(sql),
     sourceLanguage: settings.sourceLanguage,
     untranslated: query.untranslated,
+    outdated: query.outdated,
   });
 }
 
@@ -91,7 +111,7 @@ export async function exportFilesAsync(
       params: fileParams,
     },
     {
-      sql: `SELECT t.string_id, t.language, t.value FROM translations t JOIN strings s ON s.id = t.string_id
+      sql: `SELECT ${TRANSLATION_COLUMNS} FROM translations t JOIN strings s ON s.id = t.string_id JOIN files f ON f.id = s.file_id
       WHERE s.active = 1 AND s.kind IN (${TRANSLATABLE_SQL}) AND s.file_id IN (${selected})
       AND (? = 1 OR t.language IN (SELECT value FROM json_each(?)))`,
       params: [...fileParams, tags === undefined ? 1 : 0, toJson(tags ?? [])],
@@ -104,7 +124,7 @@ export async function exportFilesAsync(
     settings.sourceLanguage,
   );
   const files = pickFiles(fileRows as FileRow[], query.files);
-  const translations = new Map<string, Map<number, TextValue>>();
+  const translations = new Map<string, Map<number, Translation>>();
   for (const row of translated) {
     const tag = row.language as string;
     let values = translations.get(tag);
@@ -112,41 +132,57 @@ export async function exportFilesAsync(
       values = new Map();
       translations.set(tag, values);
     }
-    values.set(Number(row.string_id), fromJson<TextValue>(row.value));
+    values.set(Number(row.string_id), translationFromRow(row as TranslationRow));
   }
   return exportResult(entriesFromRows(files, strings as StringRow[]), languages, translations, {
     revision: Number(revision[0].revision),
     sourceLanguage: settings.sourceLanguage,
     untranslated: query.untranslated,
+    outdated: query.outdated,
   });
 }
 
 function exportResult(
   english: FileEntries[],
   languages: Language[],
-  translated: Map<string, Map<number, TextValue>>,
-  project: { revision: number; sourceLanguage: string; untranslated?: Untranslated },
+  translated: Map<string, Map<number, Translation>>,
+  project: {
+    revision: number;
+    sourceLanguage: string;
+    untranslated?: Untranslated;
+    outdated?: "write" | "omit";
+  },
 ): ExportResult {
   const out: ExportFile[] = [];
   for (const language of languages) {
-    const translations = translated.get(language.tag) ?? new Map<number, TextValue>();
+    const translations = translated.get(language.tag) ?? new Map<number, Translation>();
     for (const file of english) {
       const values = new Map<string, TextValue>();
+      const omitted = new Set<string>();
+      const outdated: NonNullable<ExportFile["outdated"]> = [];
       for (const [id, key] of file.keys) {
         const value = translations.get(id);
-        if (value !== undefined) values.set(key, value);
+        if (value === undefined) continue;
+        if (value.outdated && project.outdated === "omit") {
+          omitted.add(key);
+          continue;
+        }
+        values.set(key, value.value);
+        if (value.outdated) outdated.push({ key: value.key, sourceRevision: value.sourceRevision });
       }
       const content = renderFile(file.entries, values, {
         language: language.tag,
         format: file.format,
         pluralOverride: language.pluralOverride,
         untranslated: project.untranslated,
+        omitted,
       });
       out.push({
         path: file.file.path,
         language: language.tag,
         content,
         sha256: sha256Hex(content),
+        ...(outdated.length > 0 ? { outdated } : {}),
       });
     }
   }
@@ -229,15 +265,15 @@ function loadTranslations(
   ctx: Context,
   language: string,
   files: FileRow[],
-): Map<number, TextValue> {
-  const values = new Map<number, TextValue>();
+): Map<number, Translation> {
+  const values = new Map<number, Translation>();
   if (files.length === 0) return values;
-  const rows = ctx.sql.query<{ string_id: number; value: string }>(
-    `SELECT t.string_id, t.value FROM translations t JOIN strings s ON s.id = t.string_id
+  const rows = ctx.sql.query<TranslationRow>(
+    `SELECT ${TRANSLATION_COLUMNS} FROM translations t JOIN strings s ON s.id = t.string_id JOIN files f ON f.id = s.file_id
      WHERE t.language = ? AND s.active = 1 AND s.kind IN (${TRANSLATABLE_SQL})
        AND s.file_id IN (${idList(files.map((file) => file.id))})`,
     language,
   );
-  for (const row of rows) values.set(row.string_id, fromJson<TextValue>(row.value));
+  for (const row of rows) values.set(row.string_id, translationFromRow(row));
   return values;
 }

@@ -84,6 +84,12 @@ export const QuasoConfig = s.object({
       "Maximum lengths, such as for app store fields (FMT-4). They win over limits set on the website.",
     ),
   pluralExclusions: s.array(PluralExclusion).optional(),
+  outdated: s
+    .enum(["write", "omit"])
+    .optional()
+    .describe(
+      "Download older-source translations (default: write), or omit them so the app falls back to the source",
+    ),
   untranslated: s
     .enum(["source", "omit"])
     .optional()

@@ -48,6 +48,39 @@ async function errorCode(run: () => Promise<unknown>) {
 
 export const FILE_READ_CASES: { name: string; run(sql: Sql): Promise<void> }[] = [
   {
+    name: "current exports report older-source keys and omit them independently of untranslated strings",
+    async run(sql) {
+      const { api, secondAt } = await setup(sql);
+      const upload = await api.upload(SYSTEM, {
+        files: [
+          {
+            path: FILE,
+            repoPath: FILE,
+            content: '{"hello":"Welcome","new":"New","literal":7,"ref":"$t(new)"}',
+          },
+        ],
+      });
+      const written = await api.exportFiles(SYSTEM, { languages: ["de"] });
+      checkEqual(written.files[0].outdated, [{ key: "hello", sourceRevision: upload.revision }]);
+      checkEqual(JSON.parse(written.files[0].content).hello, "Hallo");
+      const omitted = await api.exportFiles(SYSTEM, { languages: ["de"], outdated: "omit" });
+      checkEqual(JSON.parse(omitted.files[0].content), { new: "New", literal: 7, ref: "$t(new)" });
+      checkEqual(omitted.files[0].outdated, undefined);
+      const both = await api.exportFiles(SYSTEM, {
+        languages: ["de"],
+        outdated: "omit",
+        untranslated: "omit",
+      });
+      checkEqual(JSON.parse(both.files[0].content), { literal: 7, ref: "$t(new)" });
+      checkEqual(
+        await errorCode(() =>
+          api.exportFiles(SYSTEM, { at: new Date(secondAt).toISOString(), outdated: "omit" }),
+        ),
+        "bad_request",
+      );
+    },
+  },
+  {
     name: "history lists newest first without exposing private store keys and returns immutable content",
     async run(sql) {
       const { api, firstAt, secondAt } = await setup(sql);
