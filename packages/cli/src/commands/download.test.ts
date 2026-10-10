@@ -504,3 +504,68 @@ test("download --prune only deletes what the source glob could have matched", as
     },
   );
 });
+
+test("download preserves hand edits, reports conflicts in dry-run/JSON, and requires an explicit overwrite", async () => {
+  await withProject(PROJECT, async (dir) => {
+    await runCli(["download"], { cwd: dir, env: ENV, fetch: server([FILES[0]]) });
+    const manual = '{ "play": "Los" }\n';
+    await fs.writeFile(join(dir, "src/locales/de/common.json"), manual);
+    const changed = server([file("common.json", "de", '{ "play": "Spiele" }\n')]);
+    const baseline = await read(dir, ".quaso/download-state");
+    const dry = await runCli(["download", "--dry-run"], { cwd: dir, env: ENV, fetch: changed });
+    assertEquals(dry.code, 0);
+    assertStringIncludes(dry.stdout, "local edit   de  common.json › play");
+    assertEquals(await read(dir, ".quaso/download-state"), baseline);
+    const refused = await runCli(["download", "--json"], { cwd: dir, env: ENV, fetch: changed });
+    assertEquals(refused.code, 6);
+    assertEquals(JSON.parse(refused.stdout).result.localEdits[0].key, "play");
+    assertEquals(await read(dir, "src/locales/de/common.json"), manual);
+    const overwritten = await runCli(["download", "--overwrite-local"], {
+      cwd: dir,
+      env: ENV,
+      fetch: changed,
+    });
+    assertEquals(overwritten.code, 0);
+    assertEquals(await read(dir, "src/locales/de/common.json"), '{ "play": "Spiele" }\n');
+  });
+});
+
+test("download accepts server updates and identical local fixes but preserves unknown first-download values", async () => {
+  await withProject(
+    { ...PROJECT, "src/locales/de/common.json": '{"play":"Human wording"}' },
+    async (dir) => {
+      const refused = await runCli(["download"], { cwd: dir, env: ENV, fetch: server([FILES[0]]) });
+      assertEquals(refused.code, 6);
+      assertStringIncludes(refused.stderr, "quaso import --as blue");
+      await runCli(["download", "--overwrite-local"], {
+        cwd: dir,
+        env: ENV,
+        fetch: server([FILES[0]]),
+      });
+      const update = file("common.json", "de", '{"play":"Spiele"}\n');
+      const updated = await runCli(["download"], { cwd: dir, env: ENV, fetch: server([update]) });
+      assertEquals(updated.code, 0);
+      await fs.writeFile(join(dir, "src/locales/de/common.json"), '{"play":"Los"}\n');
+      const identical = await runCli(["download"], {
+        cwd: dir,
+        env: ENV,
+        fetch: server([file("common.json", "de", '{"play":"Los"}\n')]),
+      });
+      assertEquals(identical.code, 0);
+    },
+  );
+});
+
+test("download refuses a baseline folder linked outside the project before writing files", async () => {
+  await withProject(PROJECT, async (dir) => {
+    const outside = await fs.mkdtemp(join(dir, "../quaso-state-outside-"));
+    try {
+      await fs.symlink(outside, join(dir, ".quaso"), "dir");
+      const refused = await runCli(["download"], { cwd: dir, env: ENV, fetch: server([FILES[0]]) });
+      assertEquals(refused.code, 2);
+      assertEquals(await exists(dir, "src/locales/de/common.json"), false);
+    } finally {
+      await fs.rm(outside, { recursive: true, force: true });
+    }
+  });
+});

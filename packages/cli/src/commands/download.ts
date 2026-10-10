@@ -6,6 +6,7 @@
  * language or anything outside the project folder, and checks every path before it writes
  * the first file. `--prune` deletes translation files whose source file is gone.
  */
+import { DownloadState } from "../download_state.ts";
 import { PublicationTime, validate, type ExportResult } from "@quaso/core";
 import { flag, option, values } from "../args.ts";
 import { canonical, languageFolder, type Project } from "../config.ts";
@@ -20,6 +21,7 @@ import {
 } from "../files.ts";
 import {
   readBytes,
+  readProjectText,
   RealPathGuard,
   removeFile,
   sameBytes,
@@ -42,6 +44,7 @@ export interface DownloadedFile {
 export interface DownloadResult {
   server: string;
   outdated: { file: string; key: string; language: string; sourceRevision: number }[];
+  localEdits: (DownloadedFile & { key: string })[];
   dryRun: boolean;
   revision: number;
   languages: string[];
@@ -66,6 +69,11 @@ export const download: Command = {
       "language or anything outside the folder of quaso.config.json.",
   ],
   options: [
+    {
+      name: "overwrite-local",
+      type: "boolean",
+      description: "Replace local edits after reviewing or importing them",
+    },
     {
       name: "at",
       type: "string",
@@ -99,7 +107,7 @@ export const download: Command = {
         "(only files the translation pattern could have written)",
     },
   ],
-  exitCodes: [0, 1, 2, 3, 4],
+  exitCodes: [0, 1, 2, 3, 4, 6],
   examples: [
     "quaso download",
     "quaso download --dry-run",
@@ -138,6 +146,7 @@ export const download: Command = {
       pruned: [],
       skipped: [],
       outdated: [],
+      localEdits: [],
     };
     if (languages.length === 0) {
       ctx.out.warn(`${project.configName} lists no languages, so there is nothing to download.`);
@@ -243,27 +252,48 @@ export const download: Command = {
     const prunable = prune ? await findPrunable(project, sources, languages, byPath) : [];
     for (const file of prunable) await guard.check(file.path, file.language);
 
+    const state = await DownloadState.load(project, sources, client.baseUrl);
+    const overwriteLocal = flag(ctx.args, "overwrite-local");
     for (const { target, bytes, sha256: expected } of planned) {
       const absolute = absolutePath(project, target.path);
       const local = await readBytes(absolute);
       if (local !== null && (await sha256(local)) === expected && sameBytes(local, bytes)) {
         result.unchanged.push(target);
+        if (!dryRun) state.remember(target.path, bytes);
         continue;
       }
-      if (!dryRun) await writeAtomic(absolute, bytes);
+      if (local !== null && !overwriteLocal) {
+        const source = sources.byServer.get(target.file)!;
+        const sourceText = await readProjectText(project, source.local);
+        const conflicts = state.conflicts(target.path, local, bytes, sourceText ?? "{}");
+        if (conflicts.length > 0) {
+          result.localEdits.push(...conflicts.map((key) => ({ ...target, key })));
+          continue;
+        }
+      }
+      if (!dryRun) {
+        const latest = await readBytes(absolute);
+        const changedMeanwhile =
+          local === null ? latest !== null : latest === null || !sameBytes(local, latest);
+        if (changedMeanwhile)
+          throw usageError(`${target.path} changed during download; run the command again.`);
+        await writeAtomic(absolute, bytes);
+        state.remember(target.path, bytes);
+      }
       result.written.push({ ...target, created: local === null });
     }
     for (const file of prunable) {
       if (!dryRun) await removeFile(absolutePath(project, file.path));
       result.pruned.push(file);
     }
+    if (!dryRun) await state.save();
     return downloadResult(result);
   },
 };
 
 function downloadResult(result: DownloadResult) {
   return {
-    exitCode: EXIT.ok,
+    exitCode: result.localEdits.length > 0 && !result.dryRun ? EXIT.refused : EXIT.ok,
     json: result,
     render: (out: Output) => renderDownload(out, result),
   };
@@ -365,7 +395,13 @@ function renderDownload(out: Output, result: DownloadResult): void {
     out.warn(
       `${count(result.outdated.length, "translation")} are of an older source: run quaso translate, or review them on the website.`,
     );
-  if (result.written.length === 0 && result.pruned.length === 0) {
+  for (const edit of result.localEdits)
+    out.print(`  ${yellow("local edit".padEnd(12))} ${edit.language}  ${edit.file} › ${edit.key}`);
+  if (result.localEdits.length > 0)
+    out.warn(
+      "Files with local edits were kept. Import them with quaso import --as blue, or pass --overwrite-local after reviewing the changes.",
+    );
+  if (result.written.length === 0 && result.pruned.length === 0 && result.localEdits.length === 0) {
     out.print(`Everything is up to date (${count(result.unchanged.length, "file")}).`);
     return;
   }
@@ -376,6 +412,10 @@ function renderDownload(out: Output, result: DownloadResult): void {
   if (result.pruned.length > 0) {
     parts.push(`${result.dryRun ? "would delete" : "deleted"} ${result.pruned.length}`);
   }
+  if (result.localEdits.length > 0)
+    parts.push(
+      `${new Set(result.localEdits.map((edit) => edit.path)).size} files kept for local edits`,
+    );
   if (result.skipped.length > 0) parts.push(`${result.skipped.length} skipped`);
   out.print(`${parts.join(", ")}.`);
 }

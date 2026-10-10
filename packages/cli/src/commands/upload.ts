@@ -4,12 +4,23 @@
  * server path, and reports what was added, changed and removed. The server parses them, so
  * a parser fix never needs a new CLI.
  */
-import type { JobInfo, Rename, UploadRequest, UploadResult } from "@quaso/core";
+import {
+  readSource,
+  readTranslation,
+  entryKey,
+  formatKeyPath,
+  isTranslatable,
+  type ImportResult,
+  type JobInfo,
+  type Rename,
+  type UploadRequest,
+  type UploadResult,
+} from "@quaso/core";
 import { flag, values } from "../args.ts";
-import type { Project } from "../config.ts";
+import { canonical, type Project } from "../config.ts";
 import { type Command, type Context, localizeError } from "../context.ts";
 import { CliError, EXIT, usageError } from "../errors.ts";
-import { resolveFileArgs, type Sources } from "../files.ts";
+import { resolveFileArgs, translationPath, type SourceFile, type Sources } from "../files.ts";
 import { readProjectText } from "../fs.ts";
 import { LONG_TIMEOUT_MS } from "../http.ts";
 import { jobJson, localFailures, renderJob, type WaitedJob, waitForJob } from "../jobs.ts";
@@ -33,6 +44,12 @@ export const upload: Command = {
       "when strings failed.",
   ],
   options: [
+    {
+      name: "import-translations",
+      type: "list",
+      value: "<lang[:blue|green]>",
+      description: "Import selected local translation files in this run (default: blue)",
+    },
     {
       name: "dry-run",
       type: "boolean",
@@ -110,6 +127,24 @@ export const upload: Command = {
       );
     }
 
+    const repository = await repositoryTranslations(project, selected, files);
+    const importLanguages = new Map<string, { as: "blue" | "green"; overwrite: boolean }>();
+    for (const tag of project.config.translationsInRepository ?? [])
+      importLanguages.set(canonical(tag), { as: "blue", overwrite: true });
+    for (const option of values(ctx.args, "import-translations")) {
+      const [tag, colour = "blue", extra] = option.split(":");
+      const language = canonical(tag);
+      const invalid =
+        !project.languages.includes(language) ||
+        (colour !== "blue" && colour !== "green") ||
+        extra !== undefined;
+      if (invalid)
+        throw usageError(
+          `--import-translations ${option}: use a configured language with :blue or :green.`,
+        );
+      if (!importLanguages.has(language))
+        importLanguages.set(language, { as: colour as "blue" | "green", overwrite: false });
+    }
     const { config } = project;
     const request: UploadRequest = {
       files,
@@ -136,6 +171,37 @@ export const upload: Command = {
     } catch (error) {
       throw uploadError(error, project, sources);
     }
+    const localTranslations = localTranslationReport(repository, result);
+    const imports: (
+      | ImportResult
+      | { language: string; as: string; dryRun: true; files: string[] }
+    )[] = [];
+    for (const [language, options] of importLanguages) {
+      const local = repository.filter((file) => file.language === language);
+      if (local.length === 0) continue;
+      if (dryRun) {
+        imports.push({
+          language,
+          as: options.as,
+          dryRun: true,
+          files: local.map((file) => file.path),
+        });
+        continue;
+      }
+      imports.push(
+        await client.post<ImportResult>(
+          "/imports",
+          {
+            language,
+            as: options.as,
+            overwrite: options.overwrite,
+            keepIdentical: options.overwrite,
+            files: local.map(({ path, content }) => ({ path, content })),
+          },
+          { timeoutMs: LONG_TIMEOUT_MS, retry: "idempotent" },
+        ),
+      );
+    }
     const wait = flag(ctx.args, "wait");
     const json = uploadJson(result, sources);
     let waited: WaitedJob | null = null;
@@ -150,14 +216,39 @@ export const upload: Command = {
       );
     }
     return {
-      exitCode: waited?.exitCode ?? EXIT.ok,
+      exitCode: imports.some((result) => "refused" in result && result.refused.length > 0)
+        ? EXIT.refused
+        : (waited?.exitCode ?? EXIT.ok),
       json: {
         server: client.baseUrl,
         ...json,
+        localTranslations,
+        imports,
         wait: wait ? (waited ? jobJson(waited) : { job: null, note: waitNote(result) }) : undefined,
       },
       render: (out) => {
         renderUpload(out, result, sources, wait);
+        for (const report of localTranslations) {
+          out.print(
+            `${count(report.strings, "new or changed string")} already ${report.strings === 1 ? "has" : "have"} ${report.language} in repository files.`,
+          );
+          if (!importLanguages.has(report.language)) out.print(`Import them: ${report.command}`);
+        }
+        for (const imported of imports) {
+          if ("imported" in imported) {
+            out.print(
+              `Imported ${imported.imported} ${imported.language} translations; ${imported.refused.length} refused.`,
+            );
+            for (const refusal of imported.refused)
+              for (const check of refusal.checks)
+                out.print(
+                  `  ${refusal.language} ${refusal.file} › ${refusal.key}: ${check.message}`,
+                );
+          } else
+            out.print(
+              `Would import ${imported.language} as ${imported.as} from ${imported.files.length} files.`,
+            );
+        }
         if (waited) {
           out.print();
           renderJob(out, waited);
@@ -445,4 +536,80 @@ function renderUpload(out: Output, result: UploadResult, sources: Sources, wait:
     out.print(`Translation job ${result.job.id} is queued for the added and changed strings.`);
   }
   if (wait && (result.job === null || result.dryRun)) out.print(waitNote(result));
+}
+
+type RepositoryFile = { language: string; path: string; content: string; keys: string[] };
+async function repositoryTranslations(
+  project: Project,
+  selected: SourceFile[],
+  sources: UploadRequest["files"],
+): Promise<RepositoryFile[]> {
+  const files: RepositoryFile[] = [];
+  for (const source of selected) {
+    const content = sources.find((file) => file.path === source.server)!.content;
+    for (const language of project.languages) {
+      const path = translationPath(project, source, language);
+      const translation = await readProjectText(project, path);
+      if (translation === null) continue;
+      let entries;
+      let read;
+      try {
+        entries = readSource(content, { file: source.local }).entries;
+        read = readTranslation(translation, entries, { language, file: path });
+      } catch (error) {
+        throw new CliError(
+          EXIT.invalidSource,
+          `Can't inspect ${path}: ${(error as Error).message}`,
+          {
+            code: "invalid_source",
+            details: [{ file: path, language, message: (error as Error).message }],
+          },
+        );
+      }
+      const keys = entries
+        .filter(
+          (entry) =>
+            isTranslatable(entry.kind) && read.values.has(entryKey(entry.kind, entry.keyPath)),
+        )
+        .map((entry) => formatKeyPath(entry.keyPath));
+      files.push({ language, path: source.server, content: translation, keys });
+    }
+  }
+  return files;
+}
+function localTranslationReport(files: RepositoryFile[], upload: UploadResult) {
+  const affected = new Set(
+    [...upload.added, ...upload.changed, ...upload.restored].map((ref) =>
+      JSON.stringify([ref.file, ref.key]),
+    ),
+  );
+  const reports = new Map<
+    string,
+    { language: string; strings: number; files: string[]; command: string }
+  >();
+  for (const file of files) {
+    const strings = file.keys.filter((key) =>
+      affected.has(JSON.stringify([file.path, key])),
+    ).length;
+    if (strings === 0) continue;
+    const report = reports.get(file.language) ?? {
+      language: file.language,
+      strings: 0,
+      files: [],
+      command: "",
+    };
+    report.strings += strings;
+    report.files.push(file.path);
+    report.command = commandLine([
+      "quaso",
+      "import",
+      "--as",
+      "blue",
+      "--language",
+      file.language,
+      ...report.files.flatMap((path) => ["--file", path]),
+    ]);
+    reports.set(file.language, report);
+  }
+  return [...reports.values()];
 }

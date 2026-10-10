@@ -70,6 +70,12 @@ export const QuasoConfig = s.object({
   languages: s
     .array(LanguageTag, { unique: true })
     .describe("The languages to download and translate. upload adds those the instance lacks."),
+  translationsInRepository: s
+    .array(LanguageTag, { unique: true })
+    .optional()
+    .describe(
+      "Languages written in the repository: upload imports their selected translation files as blue",
+    ),
   languageMapping: s
     .record(s.string({ minLength: 1 }))
     .optional()

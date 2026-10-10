@@ -40,6 +40,82 @@ const PROJECT = {
   "src/locales/en/menus/main.json": '{ "play": "Play" }\n',
 };
 
+test("upload notices new local translations and prints an import command without importing automatically", async () => {
+  await withProject(
+    { ...PROJECT, "src/locales/de/common.json": '{"title":"Abenteuer"}' },
+    async (dir) => {
+      const fetch = fakeFetch(() =>
+        jsonResponse(result({ added: [{ file: "common.json", key: "title" }] })),
+      );
+      const run = await runCli(["upload"], { cwd: dir, env: ENV, fetch });
+      assertEquals(run.code, 0, run.stderr);
+      assertStringIncludes(run.stdout, "1 new or changed string already has de");
+      assertStringIncludes(run.stdout, "quaso import --as blue --language de --file common.json");
+      assertEquals(fetch.requests.length, 1);
+    },
+  );
+});
+
+test("repository-owned translations import as blue on every upload with overwrite and preserve identical wording", async () => {
+  await withProject(
+    {
+      ...PROJECT,
+      "quaso.config.json": { ...PROJECT["quaso.config.json"], translationsInRepository: ["de"] },
+      "src/locales/de/common.json": '{"title":"Abenteuer"}',
+    },
+    async (dir) => {
+      const fetch = fakeFetch((request) =>
+        jsonResponse(
+          new URL(request.url).pathname.endsWith("/imports")
+            ? { language: "de", imported: 1, refused: [] }
+            : result(),
+        ),
+      );
+      const run = await runCli(["upload", "--json"], { cwd: dir, env: ENV, fetch });
+      assertEquals(run.code, 0, run.stderr);
+      assertEquals(await fetch.requests[1].json(), {
+        language: "de",
+        as: "blue",
+        overwrite: true,
+        keepIdentical: true,
+        files: [{ path: "common.json", content: '{"title":"Abenteuer"}' }],
+      });
+      assertEquals(JSON.parse(run.stdout).result.imports[0].imported, 1);
+    },
+  );
+});
+
+test("upload can import an explicitly selected language and dry runs only report that plan", async () => {
+  await withProject(
+    { ...PROJECT, "src/locales/de/common.json": '{"title":"Abenteuer"}' },
+    async (dir) => {
+      const fetch = fakeFetch((request) =>
+        jsonResponse(
+          new URL(request.url).pathname.endsWith("/imports")
+            ? { language: "de", imported: 1, refused: [] }
+            : result(),
+        ),
+      );
+      const run = await runCli(["upload", "--import-translations", "de:green"], {
+        cwd: dir,
+        env: ENV,
+        fetch,
+      });
+      assertEquals(run.code, 0, run.stderr);
+      assertEquals((await fetch.requests[1].json()).as, "green");
+      const dryFetch = fakeFetch(() => jsonResponse(result({ dryRun: true })));
+      const dry = await runCli(["upload", "--import-translations", "de", "--dry-run"], {
+        cwd: dir,
+        env: ENV,
+        fetch: dryFetch,
+      });
+      assertEquals(dry.code, 0, dry.stderr);
+      assertEquals(dryFetch.requests.length, 1);
+      assertStringIncludes(dry.stdout, "Would import de as blue");
+    },
+  );
+});
+
 test("parseRename: old=new, file:old=new, and JSON array key paths", () => {
   const file = (name: string) => (name === "src/locales/en/common.json" ? "common.json" : name);
   assertEquals(parseRename("menu.start=menu.play", file), { from: "menu.start", to: "menu.play" });

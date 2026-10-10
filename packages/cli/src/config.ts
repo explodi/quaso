@@ -168,6 +168,13 @@ export function parseConfig(
     }
     seen.set(tagCanonical, index);
   });
+  for (const [index, tag] of (config.translationsInRepository ?? []).entries()) {
+    if (!seen.has(canonical(tag)))
+      problem(
+        `translationsInRepository[${index}]`,
+        `${tag} must be a target language in languages`,
+      );
+  }
   for (const [tag, folder] of Object.entries(config.languageMapping ?? {})) {
     const key = formatPath(["languageMapping", tag]);
     if (canonicalLanguageTag(tag) === null) {
