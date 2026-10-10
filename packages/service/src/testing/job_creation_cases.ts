@@ -50,6 +50,33 @@ function raceCommit(sql: Sql, change: () => Promise<unknown>): Sql {
 }
 export const JOB_CREATION_CASES: { name: string; run(sql: Sql): Promise<void> }[] = [
   {
+    name: "estimates and queued job summaries name outdated translations excluded by scope",
+    async run(sql) {
+      await seed(sql);
+      const scope = { languages: ["de"], strings: [3, 5], outdated: false };
+      const dry = await createJobAsync(sql, TOKEN, { ...scope, dryRun: true }, OPTIONS);
+      check(dry.estimate !== null);
+      checkEqual(
+        [dry.estimate.outdated, dry.estimate.outdatedLeft, dry.estimate.strings],
+        [2, 2, 0],
+      );
+      const created = await createJobAsync(sql, TOKEN, scope, OPTIONS);
+      check(created.job !== null);
+      checkEqual(created.job.outdatedLeft, 2);
+      const included = await createJobAsync(
+        sql,
+        TOKEN,
+        { ...scope, outdated: true, dryRun: true },
+        OPTIONS,
+      );
+      check(included.estimate !== null);
+      checkEqual(
+        [included.estimate.outdated, included.estimate.outdatedLeft, included.estimate.strings],
+        [2, undefined, 2],
+      );
+    },
+  },
+  {
     name: "job, creator metadata and queued activity commit together at one revision",
     async run(sql) {
       await seed(sql);

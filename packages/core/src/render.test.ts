@@ -28,6 +28,18 @@ import {
   type PluralForms,
   type TextValue,
 } from "./types.ts";
+
+test("explicit omission removes whole plural groups and affected arrays without index changes", () => {
+  const source = readSource(
+    '{"array":["One","Two"],"coins_one":"{{count}} coin","coins_other":"{{count}} coins","new":"New","literal":7}',
+  );
+  const rendered = renderFile(source.entries, new Map(), {
+    language: "de",
+    format: DEFAULT_FORMAT,
+    omitted: new Set([entryKey("text", ["array", 1]), entryKey("plural", ["coins"])]),
+  });
+  assertEquals(JSON.parse(rendered), { new: "New", literal: 7 });
+});
 const arAppendix = await Deno.readTextFile(
   new URL("../testdata/i18next/ar/appendix.json", import.meta.url),
 );
