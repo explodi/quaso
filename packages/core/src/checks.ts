@@ -71,11 +71,22 @@ export const CHECKS = {
   duplicate_translation: "warning",
   /** Identical source strings have different translations in a language. */
   consistency: "warning",
+  /** Model-reported changes in meaning, omissions or grammar. */
+  meaning: "warning",
 } as const satisfies Record<string, Severity>;
 
 export type CheckId = keyof typeof CHECKS;
 
+export interface MeaningNote {
+  kind: "changed" | "omission" | "grammar";
+  source?: string;
+  translation?: string;
+  explanation: string;
+}
 export interface CheckResult {
+  meaning?: MeaningNote;
+  sourceHash?: string;
+  sourceDescription?: string;
   check: CheckId;
   severity: Severity;
   /** A sentence for people, such as `Placeholder {{total}} is missing.` */
@@ -880,4 +891,15 @@ export function checkTranslationConsistency(
     }
   }
   return checks;
+}
+
+export function meaningWarnings(notes: readonly MeaningNote[], sourceHash?: string, sourceDescription?: string): CheckResult[] {
+  return notes.map((note) => ({
+    check: "meaning",
+    severity: "warning",
+    message: note.explanation,
+    meaning: note,
+    ...(sourceHash ? { sourceHash } : {}),
+    ...(sourceDescription === undefined ? {} : { sourceDescription }),
+  }));
 }

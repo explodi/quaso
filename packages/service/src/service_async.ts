@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 /** The complete service composed from async batch operations on SQLite or D1. */
 import { refreshContextualChecks, withContextualChecks } from "./contextual_checks.ts";
+import { createQualityJobs } from "./quality_jobs.ts";
+import { SYSTEM } from "./api.ts";
+import { settingsFromData } from "./settings.ts";
 import { UploadRequest } from "@quaso/core";
 import { unfinishedRestoreAsync } from "./backup.ts";
 import { FALLBACK_MODEL } from "./context.ts";
@@ -43,10 +46,32 @@ export function createAsyncService(options: AsyncServiceOptions): Service {
     logger,
     model,
   });
+  const quality = createQualityJobs(sql, {
+    clock,
+    logger,
+    model,
+    configuration: llm.configuration,
+    schedule: llm.schedule,
+  });
+  const writes = asyncWriteMethods({
+    ...options,
+    sql,
+    clock,
+    logger,
+    models: llm.models,
+    llmConfiguration: llm.configuration,
+    afterCreateJob: llm.afterCreateJob,
+    afterLlmChange: async () => {
+      await llm.start();
+      await quality.start();
+    },
+    afterRestore: () => resume(),
+  });
   const resume = async () => {
     if ((await unfinishedRestoreAsync(sql))?.resumable) return;
     await llm.start();
     await publication?.start();
+    await quality.start();
   };
   return {
     ...asyncReadMethods({
@@ -57,19 +82,65 @@ export function createAsyncService(options: AsyncServiceOptions): Service {
       models: llm.models,
       testLlm: llm.test,
       llmConfiguration: llm.configuration,
-      busy: () => llm.busy || publication?.busy === true || options.background?.busy() === true,
+      busy: () =>
+        llm.busy ||
+        quality.busy ||
+        publication?.busy === true ||
+        options.background?.busy() === true,
     }),
-    ...asyncWriteMethods({
-      ...options,
-      sql,
-      clock,
-      logger,
-      models: llm.models,
-      llmConfiguration: llm.configuration,
-      afterCreateJob: llm.afterCreateJob,
-      afterLlmChange: llm.start,
-      afterRestore: resume,
-    }),
+    ...writes,
+    createQualityJob: quality.create,
+    async saveTranslation(actor, input) {
+      const result = await writes.saveTranslation(actor, input);
+      if (result.translation?.revision !== input.baseRevision)
+        await quality.afterTranslation("save", input.id, input.language);
+      return result;
+    },
+    async importTranslations(actor, input) {
+      const result = await writes.importTranslations(actor, input);
+      const [stored] = await sql.read([{ sql: "SELECT data FROM settings WHERE id = 1" }]);
+      const policy = settingsFromData((stored[0]?.data as string | undefined) ?? null, model).llm
+        .meaningCheck;
+      const eligible =
+        policy?.enabled && policy.onSave && (policy.colours === "all" || input.as === "blue");
+      if (result.imported > 0 && !input.dryRun && eligible) {
+        try {
+          await quality.create(SYSTEM, {
+            kind: "meaning",
+            languages: [input.language],
+            files: input.files.map((file) => file.path),
+          });
+        } catch {
+          logger.warn("Couldn't queue imported translations for a meaning check");
+        }
+      }
+      return result;
+    },
+    async approveTranslation(actor, input) {
+      const result = await writes.approveTranslation(actor, input);
+      if (result.translation?.revision !== input.baseRevision)
+        await quality.afterTranslation("approval", input.id, input.language);
+      return result;
+    },
+    async suggest(actor, input) {
+      const result = await writes.suggest(actor, input);
+      await quality.afterTranslation("save", input.id, input.language, result.id);
+      return result;
+    },
+    async reviewSuggestions(actor, input) {
+      const result = await writes.reviewSuggestions(actor, input);
+      if (result.approved.length > 0) {
+        const [rows] = await sql.read([
+          {
+            sql: "SELECT string_id, language FROM suggestions WHERE id IN (SELECT value FROM json_each(?))",
+            params: [JSON.stringify(result.approved)],
+          },
+        ]);
+        for (const row of rows)
+          await quality.afterTranslation("approval", Number(row.string_id), String(row.language));
+      }
+      return result;
+    },
     async start() {
       const migrated = await initializeDatabase(options.sql, options);
       await refreshContextualChecks(options.sql);
@@ -87,6 +158,7 @@ export function createAsyncService(options: AsyncServiceOptions): Service {
       if (publication === null || (await publication.llmDue())) work.push(llm.alarm());
       if (publication !== null) work.push(publication.alarm());
       await Promise.all(work);
+      await quality.alarm();
     },
     async upload(caller, input) {
       const actor = validateActor(caller);

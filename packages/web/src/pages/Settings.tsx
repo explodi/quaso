@@ -39,7 +39,13 @@ import {
   UpdateSettingsRequest,
   UpdateStringRequest,
 } from "@quaso/core";
-import { Access, ConfirmButton, LanguagePicker, OneTimeSecret } from "../components/Management.tsx";
+import {
+  Access,
+  ConfirmButton,
+  LanguagePicker,
+  OneTimeSecret,
+  SelectField,
+} from "../components/Management.tsx";
 import { apiUrl, errorMessage, request } from "../lib/api.ts";
 import { queryCache, useQuery } from "../lib/data.ts";
 import { fieldError, validated } from "../lib/forms.ts";
@@ -348,6 +354,16 @@ const PLACEHOLDER_HELP: Record<(typeof PROMPT_PLACEHOLDERS)[number], string> = {
 function Llm({ data }: { data: SettingsResult }) {
   const { location } = useRoute();
   const [llm, setLlm] = useState(data.settings.llm);
+  const meaning = llm.meaningCheck ?? {
+    enabled: false,
+    colours: "blue" as const,
+    onSave: true,
+    onApproval: true,
+    model: "",
+    countsAgainstBudget: true,
+  };
+  const updateMeaning = (patch: Partial<typeof meaning>) =>
+    setLlm({ ...llm, meaningCheck: { ...meaning, ...patch } });
   const update = <K extends keyof LlmSettings>(key: K, value: LlmSettings[K]) =>
     setLlm({ ...llm, [key]: value });
   return (
@@ -378,6 +394,50 @@ function Llm({ data }: { data: SettingsResult }) {
           change={(v) => update("proposeForProofread", v)}
         />
         <p className="field-hint">These apply to uploads only. Auto-translate asks each time.</p>
+      </Fieldset>
+      <Fieldset className="settings-field-group">
+        <legend>Meaning checks</legend>
+        <Check
+          label="Automatically compare translation meaning with the source"
+          checked={meaning.enabled}
+          change={(enabled) => updateMeaning({ enabled })}
+        />
+        <SelectField
+          label="Which translations"
+          value={meaning.colours}
+          onChange={(colours) => updateMeaning({ colours: colours as "blue" | "all" })}
+        >
+          <option value="blue">Proofread translations only</option>
+          <option value="all">Every colour</option>
+        </SelectField>
+        <Check
+          label="Check on save"
+          checked={meaning.onSave}
+          change={(onSave) => updateMeaning({ onSave })}
+        />
+        <Check
+          label="Check on approval"
+          checked={meaning.onApproval}
+          change={(onApproval) => updateMeaning({ onApproval })}
+        />
+        <Check
+          label="Count checks against the monthly token budget"
+          checked={meaning.countsAgainstBudget}
+          change={(countsAgainstBudget) => updateMeaning({ countsAgainstBudget })}
+        />
+        <Field
+          label="Meaning-check model (blank uses the project model)"
+          path="llm.meaningCheck.model"
+        >
+          <Input
+            value={meaning.model}
+            onChange={(event) => updateMeaning({ model: event.target.value })}
+            maxLength={200}
+          />
+        </Field>
+        <p className="field-hint">
+          Meaning differences are warnings. Run checks manually for a language, file or string.
+        </p>
       </Fieldset>
       <Fieldset className="settings-field-group">
         <legend>Model & budget</legend>

@@ -7,6 +7,7 @@ import {
   CHECKS,
   checkDuplicateTranslations,
   checkTranslationConsistency,
+  meaningWarnings,
   checkTranslation,
   errorsOf,
   hasErrors,
@@ -1283,6 +1284,7 @@ test("results: every check id is reachable, with the severity from CHECKS", () =
         },
       ]).values(),
     ].flat(),
+    meaningWarnings([{ kind: "omission", explanation: "The second sentence is missing." }]),
     text("<b>Quit?</b>", "<i>Beenden</i>"),
     text("Quit?", " Beenden\n  jetzt"),
   ];

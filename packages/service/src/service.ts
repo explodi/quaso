@@ -24,6 +24,8 @@ import { adminMethods } from "./admin_service.ts";
 import { unfinishedRestore } from "./backup.ts";
 import type { Actor, ServiceApi } from "./api.ts";
 import { type Context, FALLBACK_MODEL } from "./context.ts";
+import { createQualityJobs, getQualityJob, listQualityJobs } from "./quality_jobs.ts";
+import { RevisionConflict, readStatement } from "./write.ts";
 import { refreshContextualChecksSync } from "./contextual_checks.ts";
 import { getRevision, transaction } from "./db.ts";
 import { forbidden } from "./errors.ts";
@@ -55,7 +57,7 @@ import { getString, getStringsQueue, listStrings } from "./strings.ts";
 import { authenticateToken, createApiToken, listApiTokens, revokeApiToken } from "./tokens.ts";
 import { upload } from "./upload.ts";
 import { validateActor, validateInput } from "./validation.ts";
-import { nextWakeUp } from "./wakeups.ts";
+import { scheduleWakeUp, nextWakeUp } from "./wakeups.ts";
 import { createLlm } from "./jobs/llm_service.ts";
 import type { TranslationProvider } from "./llm/provider.ts";
 import { emailMethods } from "./email_configuration.ts";
@@ -150,6 +152,41 @@ export function createService(options: ServiceOptions): Service {
     concurrency: options.llmConcurrency,
     monthlyTokenBudget: options.monthlyTokenBudget,
   });
+  const qualitySql: Sql = {
+    async read(statements) {
+      return ctx.sql.transaction(() =>
+        statements.map((statement) =>
+          ctx.sql.query(readStatement(statement.sql), ...(statement.params ?? [])),
+        ),
+      );
+    },
+    async commit(revision, statements) {
+      return ctx.sql.transaction(() => {
+        if (getRevision(ctx.sql) !== revision) throw new RevisionConflict();
+        ctx.sql.run("UPDATE meta SET value = ? WHERE key = 'revision'", String(revision + 1));
+        for (const statement of statements) ctx.sql.run(statement.sql, ...(statement.params ?? []));
+        return revision + 1;
+      });
+    },
+    async migrate(statements) {
+      ctx.sql.transaction(() => {
+        for (const statement of statements) ctx.sql.run(statement.sql, ...(statement.params ?? []));
+      });
+    },
+  };
+  const quality = createQualityJobs(qualitySql, {
+    clock: ctx.clock,
+    logger: ctx.logger,
+    model: ctx.defaultModel,
+    configuration: async () => ({
+      provider: options.provider ?? null,
+      concurrency: 1,
+      monthlyTokenBudget: options.monthlyTokenBudget ?? null,
+    }),
+    async schedule(at) {
+      await scheduleWakeUp(ctx.sql, options.scheduler, at);
+    },
+  });
   const publishedSql = (actor: Actor, action: Action): Pick<Sql, "read"> => ({
     async read(statements) {
       return ctx.sql.transaction(() => {
@@ -189,6 +226,9 @@ export function createService(options: ServiceOptions): Service {
   }
 
   return {
+    createQualityJob: quality.create,
+    getQualityJob: (actor, { id }) => getQualityJob(qualitySql, actor, id),
+    listQualityJobs: (actor) => listQualityJobs(qualitySql, actor),
     async start() {
       const migrated = await migrate(ctx.sql, { beforeMigrate: options.beforeMigrate });
       transaction(ctx.sql, () => {
@@ -198,6 +238,7 @@ export function createService(options: ServiceOptions): Service {
       if (next !== null) await options.scheduler.schedule(next);
       refreshContextualChecksSync(ctx.sql);
       await llm.start();
+      await quality.start();
       ctx.logger.info("Service started", {
         schemaVersion: migrated.to,
         migratedFrom: migrated.from === migrated.to ? undefined : migrated.from,
@@ -217,6 +258,7 @@ export function createService(options: ServiceOptions): Service {
     async alarm() {
       if (transaction(ctx.sql, () => unfinishedRestore(ctx)?.resumable)) return;
       await llm.alarm();
+      await quality.alarm();
       transaction(ctx.sql, () => refreshContextualChecksSync(ctx.sql));
     },
 

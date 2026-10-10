@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { H1, H2, EmptyState, Loading } from "@quaso/design-system";
 import type { JobsResult } from "@quaso/core";
+import { MeaningCheckButton, QualityJobs } from "../components/QualityChecks.tsx";
 import { AutoTranslateButton } from "../components/AutoTranslate.tsx";
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import { activeJob, JobCard } from "../components/JobProgress.tsx";
@@ -26,8 +27,12 @@ function Jobs() {
             Follow your AI translations, from queued work to finished strings.
           </p>
         </div>
-        <AutoTranslateButton />
+        <div className="page-actions">
+          <AutoTranslateButton />
+          <MeaningCheckButton />
+        </div>
       </div>
+      <QualityJobs />
       {jobs.loading && <Loading label="Loading jobs…" />}
       {jobs.error !== undefined && (
         <ErrorMessage error={jobs.error} onRetry={() => jobs.refresh()} />

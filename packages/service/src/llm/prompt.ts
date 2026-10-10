@@ -51,6 +51,30 @@ export const RESPONSE_SCHEMA: JsonSchemaObject = {
         type: "object",
         properties: {
           id: { type: "string", description: "The string's id, as given" },
+          referenceNotes: {
+            type: "array",
+            description: "Optional meaning differences in a reference translation",
+            items: {
+              type: "object",
+              required: ["language", "notes"],
+              properties: {
+                language: { type: "string" },
+                notes: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    required: ["kind", "explanation"],
+                    properties: {
+                      kind: { type: "string", enum: ["changed", "omission", "grammar"] },
+                      source: { type: "string" },
+                      translation: { type: "string" },
+                      explanation: { type: "string" },
+                    },
+                  },
+                },
+              },
+            },
+          },
           ambiguous: {
             type: "string",
             description:

@@ -337,6 +337,7 @@ type SuggestionRow = {
   id: number;
   kind: SuggestionInfo["kind"];
   value: string | null;
+  extra_checks?: string;
   status: SuggestionInfo["status"];
   author_type: string;
   author_id: number | null;
@@ -371,7 +372,7 @@ export function getString(ctx: Context, id: number, language: string): StringDet
   );
   const suggestions = sql.query<SuggestionRow>(
     `SELECT id, kind, value, status, author_type, author_id, author_label, reviewer_id, comment,
-            created_at, reviewed_at, base_revision
+            created_at, reviewed_at, base_revision, extra_checks
      FROM suggestions WHERE string_id = ? AND language = ?
        AND (status = 'pending' OR reviewed_at >= ?)
      ORDER BY id DESC`,
@@ -396,6 +397,8 @@ export function getString(ctx: Context, id: number, language: string): StringDet
       actors,
       failure: llmFailures(ctx, [id], tag).get(id) ?? null,
       references: referenceHints(ctx, fromJson<TextValue>(row.source), row.path, facts.syntax),
+      meaningJobId:
+        Number(sql.query(pendingMeaningStatement(id, tag).sql, id, tag)[0]?.id) || undefined,
       sourceWarnings: sql.query(sourceWarningStatement(id).sql, id) as NonNullable<
         StringDetail["sourceWarnings"]
       >,
@@ -449,7 +452,7 @@ export async function getStringAsync(
     };
     const suggestions: Statement = {
       sql: `SELECT id, kind, value, status, author_type, author_id, author_label, reviewer_id, comment,
-        created_at, reviewed_at, base_revision FROM suggestions WHERE string_id = ? AND language = ?
+        created_at, reviewed_at, base_revision, extra_checks FROM suggestions WHERE string_id = ? AND language = ?
         AND (status = 'pending' OR reviewed_at >= ?) ORDER BY id DESC`,
       params: [id, tag, now - RECENT_REVIEWS],
     };
@@ -480,6 +483,7 @@ export async function getStringAsync(
       referenced,
       identicalSources,
       sourceWarnings,
+      meaningJobs,
     ] = await sql.read([
       revision,
       settingsRead,
@@ -506,6 +510,7 @@ export async function getStringAsync(
       },
       identicalSourceStatement(id),
       sourceWarningStatement(id),
+      pendingMeaningStatement(id, tag),
     ]);
     if (currentRevision[0].revision !== preparedRevision[0].revision) continue;
     const row = summaries[0] as SummaryRow | undefined;
@@ -541,6 +546,7 @@ export async function getStringAsync(
         failure: (failures[0]?.reason as string | undefined) ?? null,
         identicalSources: identicalSources as NonNullable<StringDetail["identicalSources"]>,
         sourceWarnings: sourceWarnings as NonNullable<StringDetail["sourceWarnings"]>,
+        meaningJobId: Number(meaningJobs[0]?.id) || undefined,
         references: targets.map((target) => ({
           raw: target.raw,
           english: english.get(target.raw) ?? null,
@@ -563,6 +569,7 @@ function stringDetail(
     references: ReferenceHint[];
     identicalSources?: NonNullable<StringDetail["identicalSources"]>;
     sourceWarnings?: NonNullable<StringDetail["sourceWarnings"]>;
+    meaningJobId?: number;
   },
   tag: string,
 ): StringDetail {
@@ -577,6 +584,7 @@ function stringDetail(
   const extra = fromJson<CheckResult[]>(byLanguage.get(tag)?.extra_checks ?? "[]");
   return {
     ...summary,
+    ...(data.meaningJobId ? { meaningJobId: data.meaningJobId } : {}),
     ...(data.identicalSources?.length ? { identicalSources: data.identicalSources } : {}),
     ...(data.sourceWarnings?.length ? { sourceWarnings: data.sourceWarnings } : {}),
     language: tag,
@@ -597,7 +605,13 @@ function stringDetail(
       baseRevision: g.base_revision,
       source,
       current,
-      checks: g.value === null ? [] : checksOf(fromJson<TextValue>(g.value)),
+      checks:
+        g.value === null
+          ? []
+          : [
+              ...checksOf(fromJson<TextValue>(g.value)),
+              ...fromJson<CheckResult[]>(g.extra_checks ?? "[]"),
+            ],
     })),
     otherLanguages: [...facts.languages.values()]
       .filter((other) => other.tag !== tag)
@@ -682,5 +696,14 @@ function sourceWarningStatement(id: number): Statement {
     sql: `SELECT w.kind, w.message FROM source_warnings w JOIN strings s ON s.id = w.string_id
     WHERE s.id = ? AND w.source_hash = s.source_hash AND trim(s.description) = ''`,
     params: [id],
+  };
+}
+
+function pendingMeaningStatement(id: number, language: string): Statement {
+  return {
+    sql: `SELECT q.id FROM quality_jobs q, json_each(q.targets) t WHERE q.kind = 'meaning' AND q.status IN ('queued', 'running', 'paused')
+    AND json_extract(t.value, '$.id') = ? AND json_extract(t.value, '$.language') = ? AND json_extract(t.value, '$.suggestionId') IS NULL
+    ORDER BY q.id DESC LIMIT 1`,
+    params: [id, language],
   };
 }

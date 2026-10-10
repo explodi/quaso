@@ -11,7 +11,7 @@ import { fromJson, getRevision } from "./db.ts";
 import type { Sql, SqlRow, Statement, SyncSql } from "./ports.ts";
 
 const SNAPSHOT = `SELECT t.string_id, t.language, t.value, t.revision, t.extra_checks,
-  s.file_id, f.path, s.display_key, s.kind, s.source, s.source_hash FROM translations t
+  s.file_id, f.path, s.display_key, s.kind, s.source, s.source_hash, s.description FROM translations t
   JOIN strings s ON s.id = t.string_id JOIN files f ON f.id = s.file_id
   WHERE s.active = 1 AND f.active = 1 AND s.kind IN ('text', 'plural', 'ordinal')`;
 
@@ -31,9 +31,14 @@ function updates(rows: SqlRow[], revision: number): Statement[] {
   const statements: Statement[] = [];
   for (const row of rows) {
     const key = JSON.stringify([Number(row.string_id), row.language]);
-    const other = fromJson<CheckResult[]>(row.extra_checks).filter(
-      (check) => check.check !== "duplicate_translation" && check.check !== "consistency",
-    );
+    const other = fromJson<CheckResult[]>(row.extra_checks).filter((check) => {
+      const fileCheck = check.check === "duplicate_translation" || check.check === "consistency";
+      const staleMeaning =
+        check.check === "meaning" &&
+        (check.sourceHash !== row.source_hash ||
+          (check.sourceDescription ?? "") !== row.description);
+      return !fileCheck && !staleMeaning;
+    });
     const checks = JSON.stringify([
       ...other,
       ...(duplicates.get(key) ?? []),

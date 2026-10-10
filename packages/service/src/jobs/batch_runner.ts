@@ -68,7 +68,11 @@ export async function translateBatch(input: {
     const rendered = renderPrompt(settings.llm.promptTemplate, group, context);
     const request: ProviderRequest = {
       model: input.model,
-      system: rendered.system,
+      system:
+        rendered.system +
+        (settings.llm.meaningCheck?.enabled
+          ? "\nWhen a reference shown in otherLanguages disagrees with the source meaning, include referenceNotes naming its language and structured changed/omission/grammar notes with an explanation. Preserve the source meaning in your own translation."
+          : ""),
       prompt: rendered.prompt,
       responseSchema: responseSchemaFor(rendered.batch.strings),
       safety: settings.llm.safety,
@@ -125,11 +129,20 @@ export async function translateBatch(input: {
       error: outcome === "ok" ? null : `${checked.failed.size} of ${group.length} strings failed`,
     });
     for (const [id, passed] of checked.passed) {
+      const referenceNotes = settings.llm.meaningCheck?.enabled
+        ? passed.referenceNotes?.flatMap((note) => {
+            const reference = context.otherLanguages.find(
+              (row) => row.id === id && row.language === note.language,
+            );
+            return reference ? [{ ...note, value: reference.value }] : [];
+          })
+        : undefined;
       successes.set(id, {
         value: passed.value,
         requestId,
         model,
         ...(passed.ambiguous ? { ambiguous: passed.ambiguous } : {}),
+        ...(referenceNotes?.length ? { referenceNotes } : {}),
       });
     }
     if (checked.failed.size === 0) return;

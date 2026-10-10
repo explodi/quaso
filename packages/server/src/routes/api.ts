@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import { QualityJobRequest } from "@quaso/core";
 /**
  * The HTTP API's routes under `/api/v1` (design §5.11), as one table: the router serves it
  * and the OpenAPI document is generated from it. Each route checks its input against the
@@ -96,6 +97,35 @@ export const ActivityQuery = s.object({
 });
 
 export const API_ROUTES: ApiRoute[] = [
+  route({
+    method: "POST",
+    path: "/quality-jobs",
+    operationId: "createQualityJob",
+    summary: "Run a meaning check",
+    tag: "Jobs",
+    access: "upload",
+    body: QualityJobRequest,
+    handle: ({ service, actor, body }) => service.createQualityJob(actor, body),
+  }),
+  route({
+    method: "GET",
+    path: "/quality-jobs",
+    operationId: "listQualityJobs",
+    summary: "Quality check jobs",
+    tag: "Jobs",
+    access: "upload",
+    handle: ({ service, actor }) => service.listQualityJobs(actor, {}),
+  }),
+  route({
+    method: "GET",
+    path: "/quality-jobs/:id",
+    operationId: "getQualityJob",
+    summary: "One quality check job",
+    tag: "Jobs",
+    access: "upload",
+    params: IdParams,
+    handle: ({ service, actor, params }) => service.getQualityJob(actor, params),
+  }),
   ...LATER_ROUTES,
   route({
     method: "GET",

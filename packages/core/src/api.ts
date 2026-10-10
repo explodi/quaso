@@ -334,6 +334,7 @@ export interface ReferenceHint {
 
 /** `GET /strings/{id}?language=de` */
 export interface StringDetail extends StringSummary {
+  meaningJobId?: number;
   sourceWarnings?: { kind: "ambiguous"; message: string }[];
   identicalSources?: { id: number; file: string; key: string }[];
   language: string;
@@ -650,7 +651,7 @@ export interface JobNote {
   file: string;
   key: string;
   language: string;
-  kind: "ambiguous";
+  kind: "ambiguous" | "meaning";
   message: string;
 }
 export interface JobInfo {
@@ -1051,7 +1052,47 @@ export const PROMPT_PLACEHOLDERS = [
   "%customInstruction%",
 ] as const;
 
+export const MeaningCheckSettings = s.object({
+  enabled: s.boolean(),
+  colours: s.enum(["blue", "all"]),
+  onSave: s.boolean(),
+  onApproval: s.boolean(),
+  model: s.string({ maxLength: 200 }),
+  countsAgainstBudget: s.boolean(),
+});
+export type MeaningCheckSettings = Infer<typeof MeaningCheckSettings>;
+export const QualityJobRequest = s.object({
+  kind: s.enum(["meaning"]),
+  languages: s.array(LanguageTag, { minItems: 1, unique: true }),
+  files: s.array(FilePath).optional(),
+  strings: s.array(Id, { maxItems: 500 }).optional(),
+  suggestions: s.array(Id, { maxItems: 500 }).optional(),
+});
+export type QualityJobRequest = Infer<typeof QualityJobRequest>;
+export interface MeaningFinding {
+  id: number;
+  language: string;
+  file: string;
+  key: string;
+  suggestionId?: number;
+  checks: CheckResult[];
+}
+export interface QualityJobInfo {
+  id: number;
+  kind: "meaning";
+  scope: QualityJobRequest;
+  status: JobStatus;
+  model: string;
+  total: number;
+  done: number;
+  flagged: number;
+  result: MeaningFinding[];
+  error: string | null;
+  createdAt: number;
+  finishedAt: number | null;
+}
 export const LlmSettings = s.object({
+  meaningCheck: MeaningCheckSettings.optional(),
   translationMemory: s
     .boolean()
     .optional()

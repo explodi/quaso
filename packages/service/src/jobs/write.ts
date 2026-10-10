@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: MIT
 /** Guarded batch results preserve edits made while the provider was running (LLM-4, STR-4). */
-import { canonicalValue, type JobFailure, type TextValue } from "@quaso/core";
+import {
+  meaningWarnings,
+  type MeaningNote,
+  canonicalValue,
+  type JobFailure,
+  type TextValue,
+} from "@quaso/core";
 import { ActorDirectory, type Author } from "../actors.ts";
 import { SYSTEM, type Actor } from "../api.ts";
 import type { Context } from "../context.ts";
@@ -29,6 +35,7 @@ export interface BatchSuccess {
   value: TextValue;
   requestId: number;
   ambiguous?: string;
+  referenceNotes?: { language: string; notes: MeaningNote[]; value: TextValue }[];
   model: string;
   reusedFrom?: { id: number; file: string; key: string };
 }
@@ -297,6 +304,44 @@ function planBatch(
           continue;
         }
         if (error.code !== "not_found" && error.code !== "bad_request") throw error;
+      }
+    }
+    if (sourceMatches && success.referenceNotes?.length) {
+      raisesRevision = true;
+      for (const reference of success.referenceNotes) {
+        const checks = JSON.stringify(
+          meaningWarnings(reference.notes, item.sourceHash, item.description),
+        );
+        statements.push({
+          sql: `UPDATE translations SET extra_checks = (
+          SELECT json_group_array(json(value)) FROM (SELECT value FROM json_each(extra_checks) WHERE json_extract(value, '$.check') <> 'meaning'
+            UNION ALL SELECT value FROM json_each(?))) WHERE string_id = ? AND language = ? AND value = ?
+            AND EXISTS (SELECT 1 FROM strings WHERE id = ? AND source_hash = ? AND description = ?)`,
+          params: [
+            checks,
+            item.stringId,
+            reference.language,
+            canonicalValue(reference.value),
+            item.stringId,
+            item.sourceHash,
+            item.description,
+          ],
+        });
+        for (const note of reference.notes)
+          statements.push({
+            sql: "UPDATE jobs SET notes = json_insert(notes, '$[#]', json(?)) WHERE id = ? AND json_array_length(notes) < 200",
+            params: [
+              JSON.stringify({
+                stringId: item.stringId,
+                file: item.path,
+                key: item.key,
+                language: reference.language,
+                kind: "meaning",
+                message: note.explanation,
+              }),
+              job.id,
+            ],
+          });
       }
     }
     if (success.ambiguous && outcome !== "skipped") {

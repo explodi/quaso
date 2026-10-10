@@ -7,12 +7,17 @@
  */
 import {
   type CheckResult,
+  type MeaningNote,
+  LanguageTag,
+  validate,
+  s,
   errorsOf,
   graphemeLength,
   type PluralForms,
   type TextValue,
   unmaskReferences,
 } from "@quaso/core";
+import { MeaningNoteSchema } from "./meaning.ts";
 import type { MaskedString, PromptString } from "./prompt.ts";
 import { promptId } from "./prompt.ts";
 
@@ -21,6 +26,7 @@ export interface Passed {
   value: TextValue;
   checks: CheckResult[];
   ambiguous?: string;
+  referenceNotes?: { language: string; notes: MeaningNote[] }[];
 }
 
 /** A string whose answer failed. */
@@ -85,6 +91,13 @@ export function checkAnswer(
         typeof item.ambiguous === "string" && item.ambiguous.trim() !== ""
           ? item.ambiguous.trim().slice(0, 2000)
           : undefined;
+      const referenceNotes = validate(
+        s.array(
+          s.object({ language: LanguageTag, notes: s.array(MeaningNoteSchema, { maxItems: 20 }) }),
+          { maxItems: 20 },
+        ),
+        item.referenceNotes,
+      );
       result.passed.set(string.id, { value, checks, ...(ambiguous ? { ambiguous } : {}) });
     }
   }

@@ -81,11 +81,12 @@ type SuggestionRow = {
   comment: string | null;
   created_at: number;
   reviewed_at: number | null;
+  extra_checks?: string;
 };
 
 const SUGGESTION_COLUMNS = `g.id, g.string_id, g.language, g.kind, g.value, g.source_hash,
   g.base_revision, g.status, g.author_type, g.author_id, g.author_label, g.reviewer_id,
-  g.comment, g.created_at, g.reviewed_at`;
+  g.comment, g.created_at, g.reviewed_at, g.extra_checks`;
 
 /** A suggestion with its string and the current translation (columns `t_…`). */
 type ListedRow = SuggestionRow & {
@@ -171,7 +172,10 @@ function describeSuggestion(
   const checked = value ?? (current ? fromJson<TextValue>(current.value) : null);
   let checks: CheckResult[] = [];
   if (checked !== null && isTranslatableKind(string.kind) && facts.languages.has(row.language)) {
-    checks = checkValue(facts, string, row.language, checked);
+    checks = [
+      ...checkValue(facts, string, row.language, checked),
+      ...fromJson<CheckResult[]>(row.extra_checks ?? "[]"),
+    ];
   }
   return {
     id: row.id,
