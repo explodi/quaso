@@ -44,6 +44,15 @@ export interface FakeToken {
  * real service keeps that to administrators).
  */
 export class FakeService implements ServiceApi {
+  createQualityJob(): Promise<import("@quaso/core").QualityJobInfo> {
+    return Promise.reject(new Error("Not stubbed"));
+  }
+  getQualityJob(): Promise<import("@quaso/core").QualityJobInfo> {
+    return Promise.reject(new Error("Not stubbed"));
+  }
+  listQualityJobs(): Promise<{ jobs: import("@quaso/core").QualityJobInfo[] }> {
+    return Promise.resolve({ jobs: [] });
+  }
   async getFileVersions(
     actor: Actor,
     input: { file: string; language: string },

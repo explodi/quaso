@@ -100,6 +100,14 @@ export function defaultSettings(model: string): ProjectSettings {
     llm: {
       autoTranslate: true,
       translationMemory: false,
+      meaningCheck: {
+        enabled: false,
+        colours: "blue",
+        onSave: true,
+        onApproval: true,
+        model: "",
+        countsAgainstBudget: true,
+      },
       updateOutdated: true,
       proposeForProofread: true,
       model,

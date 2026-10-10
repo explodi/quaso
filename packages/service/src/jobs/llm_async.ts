@@ -51,6 +51,7 @@ export function createAsyncLlm(
   return {
     test: (checkedSql: Sql) => runtime.testAsync(checkedSql),
     configuration,
+    schedule: wakeUps.schedule,
     get busy() {
       return running !== null;
     },

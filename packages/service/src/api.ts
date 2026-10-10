@@ -92,6 +92,15 @@ export interface ServiceHealth {
  * The LLM jobs, usage and models are in `LlmMethods` (`jobs/llm_service.ts`).
  */
 export interface ServiceApi extends AccountsApi, LlmMethods, LaterApi, LaterApi {
+  createQualityJob(
+    actor: Actor,
+    input: import("@quaso/core").QualityJobRequest,
+  ): Promise<import("@quaso/core").QualityJobInfo>;
+  getQualityJob(actor: Actor, input: { id: number }): Promise<import("@quaso/core").QualityJobInfo>;
+  listQualityJobs(
+    actor: Actor,
+    input: Record<string, never>,
+  ): Promise<{ jobs: import("@quaso/core").QualityJobInfo[] }>;
   // --- Public reads (WEB-1): anyone may call them.
   getProject(actor: Actor, input: Record<string, never>): Promise<ProjectInfo>;
   listFiles(actor: Actor, input: { language?: string }): Promise<FilesResult>;
@@ -202,6 +211,8 @@ export type ServiceMethod = keyof ServiceApi;
 
 /** Read methods and repeatable authentication updates, shared by service contract checks. */
 export const READ_METHODS = [
+  "getQualityJob",
+  "listQualityJobs",
   "getProject",
   "listFiles",
   "listStrings",

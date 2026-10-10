@@ -67,9 +67,12 @@ import {
 import { listApiTokensAsync } from "./tokens.ts";
 import { getAccountAsync, getSessionAsync } from "./users.ts";
 import { validateActor, validateInput } from "./validation.ts";
+import { getQualityJob, listQualityJobs } from "./quality_jobs.ts";
 import { emailMethods } from "./email_configuration.ts";
 
 export const ASYNC_READ_METHODS = [
+  "getQualityJob",
+  "listQualityJobs",
   "getProject",
   "listFiles",
   "listStrings",
@@ -204,6 +207,12 @@ export function asyncReadMethods(options: ReadOptions): AsyncReadMethods {
   const settingsModels = new SettingsModels(models);
 
   return {
+    getQualityJob: (actor, input) =>
+      call(actor, "translate", IdInput, input, (sql, { id }, caller) =>
+        getQualityJob(sql, caller, id),
+      ),
+    listQualityJobs: (actor, input) =>
+      call(actor, "translate", Empty, input, (sql, _input, caller) => listQualityJobs(sql, caller)),
     emailStatus: emailMethods(options.sql, {
       model,
       logger: options.logger ?? silentLogger,

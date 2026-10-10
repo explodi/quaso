@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import { MeaningCheckButton, QualityJobProgress } from "../../components/QualityChecks.tsx";
 import {
   Label,
   H2,
@@ -645,6 +646,15 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
           next={location.pathname + location.search}
         />
       )}
+      {detail.meaningJobId && session.can("translate", tag) && (
+        <QualityJobProgress id={detail.meaningJobId} onDone={() => props.onChanged([detail.id])} />
+      )}
+      <MeaningCheckButton
+        language={tag}
+        file={detail.file}
+        strings={[detail.id]}
+        onChecked={() => props.onChanged([detail.id])}
+      />
       {jobId !== null && (
         <JobProgress
           id={jobId}

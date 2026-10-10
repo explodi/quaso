@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import { MeaningCheckButton } from "../../components/QualityChecks.tsx";
 /**
  * The translation panel's tabs (S7.7): the history (who changed what, when, before and after,
  * with colour changes; STR-5), the suggestions (approve or reject for managers, withdraw for
@@ -275,7 +276,6 @@ function Suggestions({
           const mine =
             me !== undefined && suggestion.author.type === "user" && suggestion.author.id === me;
           const pending = suggestion.status === "pending";
-          const errors = suggestion.checks.filter((c) => c.severity === "error");
           return (
             <li key={suggestion.id} className={`suggestion suggestion-${suggestion.status}`}>
               <p className="suggestion-head">
@@ -294,10 +294,17 @@ function Suggestions({
               ) : (
                 <p className="muted">The current translation looks good to them.</p>
               )}
-              {errors.length > 0 && (
+              {pending && (
+                <MeaningCheckButton
+                  language={detail.language}
+                  suggestions={[suggestion.id]}
+                  onChecked={() => onChanged([detail.id])}
+                />
+              )}
+              {suggestion.checks.length > 0 && (
                 <ul className="checks">
-                  {errors.map((check, index) => (
-                    <li key={index} className="check check-error">
+                  {suggestion.checks.map((check, index) => (
+                    <li key={index} className={`check check-${check.severity}`}>
                       <WarningIcon /> {check.message}
                     </li>
                   ))}

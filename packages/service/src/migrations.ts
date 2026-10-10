@@ -3,6 +3,7 @@ import { MIGRATION_1, INITIAL_STATEMENTS } from "./migrations/001_initial.ts";
 import { MIGRATION_2, CONTEXTUAL_CHECK_STATEMENTS } from "./migrations/002_contextual_checks.ts";
 import { MIGRATION_3, MEMORY_STATEMENTS } from "./migrations/003_translation_memory.ts";
 import { MIGRATION_4, SOURCE_WARNING_STATEMENTS } from "./migrations/004_source_warnings.ts";
+import { MIGRATION_5, QUALITY_JOB_STATEMENTS } from "./migrations/005_quality_jobs.ts";
 import type { Statement } from "./ports.ts";
 
 /** Schema history begins at Beta 2; future releases append migrations. */
@@ -18,6 +19,7 @@ export const MIGRATIONS: readonly Migration[] = [
   MIGRATION_2,
   MIGRATION_3,
   MIGRATION_4,
+  MIGRATION_5,
 ];
 
 /** The database schema version after every migration. */
@@ -38,4 +40,5 @@ export const BATCH_MIGRATIONS: readonly BatchMigration[] = [
   { version: MIGRATION_2.version, name: MIGRATION_2.name, statements: CONTEXTUAL_CHECK_STATEMENTS },
   { version: MIGRATION_3.version, name: MIGRATION_3.name, statements: MEMORY_STATEMENTS },
   { version: MIGRATION_4.version, name: MIGRATION_4.name, statements: SOURCE_WARNING_STATEMENTS },
+  { version: MIGRATION_5.version, name: MIGRATION_5.name, statements: QUALITY_JOB_STATEMENTS },
 ];

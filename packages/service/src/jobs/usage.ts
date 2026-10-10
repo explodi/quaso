@@ -23,6 +23,7 @@ export const MAX_MONTHS = 120;
 
 export interface RequestRecord {
   jobId: number | null;
+  countsBudget?: boolean;
   language: string | null;
   fileId: number | null;
   provider: string;
@@ -47,8 +48,8 @@ export function recordRequest(ctx: Context, record: RequestRecord): number {
 function requestStatement(id: number | null, record: RequestRecord, now: number): Statement {
   return {
     sql: `INSERT INTO llm_requests (id, job_id, language, file_id, provider, model, strings,
-       input_tokens, output_tokens, thinking_tokens, duration_ms, outcome, error, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       input_tokens, output_tokens, thinking_tokens, duration_ms, outcome, error, created_at, counts_budget)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     params: [
       id,
       record.jobId,
@@ -64,6 +65,7 @@ function requestStatement(id: number | null, record: RequestRecord, now: number)
       record.outcome,
       record.error,
       now,
+      record.countsBudget === false ? 0 : 1,
     ],
   };
 }
@@ -177,7 +179,7 @@ export async function getUsageAsync(
 export function monthlyUsage(now: number): Statement {
   return {
     sql: `SELECT SUM(input_tokens + output_tokens + thinking_tokens) AS n FROM llm_requests
-      WHERE created_at >= ?`,
+      WHERE created_at >= ? AND counts_budget = 1`,
     params: [monthStart(now)],
   };
 }

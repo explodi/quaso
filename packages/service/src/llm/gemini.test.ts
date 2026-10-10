@@ -121,6 +121,7 @@ test("gemini: the request body has the system instruction, the schema and safety
     "id",
     "text",
     "forms",
+    "referenceNotes",
     "ambiguous",
   ]);
   assertEquals(

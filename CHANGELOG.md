@@ -7,6 +7,12 @@ Release candidates are for deployment and migration testing. The team decides wh
 
 ### Added
 
+- Model meaning checks compare source and translation and retain structured QA warnings.
+  Checks run manually per string/file/language or automatically on configured save/approval
+  events, with model, colour and budget controls. Reference-language notes can be collected
+  during translation without an extra request. Schema version 5 adds durable quality jobs,
+  suggestion checks and explicit budget accounting while preserving accepted translations.
+
 - Repository descriptions: upload reads adjacent `.descriptions.json` sidecars or configured
   description-suffix keys and attaches context without changing source files. Translation jobs
   retain model ambiguity notes, show source warnings and list keys needing a description. Schema

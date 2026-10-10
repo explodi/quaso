@@ -103,3 +103,9 @@ its 32-character account ID. Set the write-only `email_api_key` separately.
 `POST /api/v1/settings/email/test` with `{to: "you@example.com"}` requires an
 administrator and sends one test message with the saved settings. Success returns
 `{ok: true, keyUpdatedAt}`; failures omit credentials and provider diagnostics.
+
+`POST /api/v1/quality-jobs` starts a meaning check with `{ "kind": "meaning", "languages": ["es"],
+"files": ["common.json"] }`; optional `strings` or `suggestions` IDs narrow the scope.
+`GET /api/v1/quality-jobs` and `GET /api/v1/quality-jobs/{id}` report progress and findings.
+These endpoints require translation permission and respect assigned languages. Warnings are
+nonblocking; no accepted text is replaced.

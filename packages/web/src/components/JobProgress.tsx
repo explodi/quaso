@@ -69,7 +69,7 @@ export function JobCard({ job }: { job: JobInfo }) {
       </p>
       {job.notes && job.notes.length > 0 && (
         <Details>
-          <Summary>{job.notes.length} source ambiguity notes</Summary>
+          <Summary>{job.notes.length} model quality notes</Summary>
           <ul>
             {job.notes.map((note, index) => (
               <li key={index}>
