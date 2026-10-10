@@ -4,7 +4,7 @@ import { ServiceError } from "../errors.ts";
 import { DATABASE_VERSION } from "../migrations.ts";
 import type { Sql } from "../ports.ts";
 import { ASYNC_READ_METHODS, asyncReadMethods } from "../read_methods.ts";
-import { SAFE_METHODS } from "../transport.ts";
+import { READ_METHODS } from "../api.ts";
 import { check, checkEqual } from "./assert.ts";
 import { seedStringReads } from "./strings_cases.ts";
 
@@ -34,7 +34,7 @@ export const READ_METHOD_CASES: { name: string; run(sql: Sql): Promise<void> }[]
       const repeatableWrites = new Set(["authenticateToken", "resolveSession"]);
       checkEqual(
         [...ASYNC_READ_METHODS].sort(),
-        SAFE_METHODS.filter((method) => !repeatableWrites.has(method)).sort(),
+        READ_METHODS.filter((method) => !repeatableWrites.has(method)).sort(),
       );
       checkEqual(Object.keys(asyncReadMethods({ sql })).sort(), [...ASYNC_READ_METHODS].sort());
     },

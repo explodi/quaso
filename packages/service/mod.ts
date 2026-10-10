@@ -12,7 +12,6 @@ export * from "./src/api.ts";
 export * from "./src/errors.ts";
 export * from "./src/service.ts";
 export * from "./src/service_async.ts";
-export * from "./src/transport.ts";
 export { DATABASE_VERSION, MIGRATIONS } from "./src/migrations.ts";
 export { TimerScheduler } from "./src/adapters/timer_scheduler.ts";
 export { DEFAULT_PROMPT_TEMPLATE, defaultSettings } from "./src/settings.ts";

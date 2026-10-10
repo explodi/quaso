@@ -27,9 +27,6 @@ bar. Before letting the container sleep it asks the server's `/healthz` whether 
 depend on that, so preserve both when changing scheduling. The Gemini key is entered in Settings and
 kept in D1, like every other setting; the container's disk is ephemeral and holds no project data.
 
-`src/data_object.ts` and `src/nightly_backup.ts` belong to the earlier design, where a `QuasoData`
-Durable Object held the database; `wrangler.jsonc` no longer binds it.
-
 ## Run locally
 
 From the repository root, with Docker running:

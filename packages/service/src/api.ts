@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 /**
- * The service's interface (design §3, §5.11). One interface describes the direct call with
- * local storage and the internal HTTP API with Cloudflare storage: every method takes the
- * actor and one JSON input, and returns a promise of JSON.
+ * The service interface for local SQLite and Cloudflare D1. Every method takes the
+ * authenticated actor and one input, and returns a promise of its result.
  *
  * The server authenticates people and API keys, then passes the actor along. The service
  * still decides what the actor may do, next to the data (design §4).
@@ -200,3 +199,46 @@ export interface ServiceApi extends AccountsApi, LlmMethods, LaterApi, LaterApi 
 
 /** The names of the service's methods, for the internal HTTP API's allowlist. */
 export type ServiceMethod = keyof ServiceApi;
+
+/** Read methods and repeatable authentication updates, shared by service contract checks. */
+export const READ_METHODS = [
+  "getProject",
+  "listFiles",
+  "listStrings",
+  "getStringsQueue",
+  "getString",
+  "getHistory",
+  "getActivity",
+  "getStatus",
+  "exportFiles",
+  "getFileVersions",
+  "getFileVersion",
+  "getPublishedFile",
+  "listApiTokens",
+  "getHealth",
+  "authenticateToken",
+  "getSettings",
+  "testLlm",
+  "emailStatus",
+  "listSecrets",
+  "backupInfo",
+  "backupTables",
+  "checkRestoreToken",
+  "getAdminInfo",
+  "getSession",
+  "resolveSession",
+  "validateSetupToken",
+  "getAccount",
+  "listVolunteerRequests",
+  "listMembers",
+  "listInvites",
+  "checkInvite",
+  "listSuggestions",
+  "getJob",
+  "listJobs",
+  "getUsage",
+  "listModels",
+  "listGlossary",
+  "listComments",
+  "listLanguageRequests",
+] as const satisfies readonly (keyof ServiceApi)[];

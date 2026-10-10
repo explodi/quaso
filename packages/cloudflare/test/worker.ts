@@ -10,7 +10,6 @@ import { CONTAINER_PORT, type StartupStatus } from "../src/container.ts";
 // Everything the real Worker exports, so that the runtime refuses the same mistakes.
 export * from "../src/worker.ts";
 export { default } from "../src/worker.ts";
-export { QuasoData } from "../src/data_object.ts";
 
 /** A bare Durable Object: tests use its storage through `runInDurableObject`. */
 export class TestObject extends DurableObject {
