@@ -1,20 +1,11 @@
 // SPDX-License-Identifier: MIT
-/**
- * One scenario, run on both `SyncSql` adapters: `node:sqlite` in Deno writes its results to
- * `test/fixtures/demo.json` (`deno task cf:fixtures`), and the tests in workerd run it on
- * Durable Object SQLite and compare. The demo project is uploaded and its translations
- * imported; then every read, the export (byte for byte), and every table's rows must be
- * the same. The clock is fixed, so nothing differs between runs.
- *
- * It imports the service by relative path, so that Deno (outside the workspace's import
- * names) and Vite load the same files.
- */
+/** One fixed scenario compares the same async service on local SQLite and deployed D1. */
 import type { ImportRequest, UploadRequest } from "../../core/mod.ts";
 import {
   ANONYMOUS,
   backupJsonStream,
-  createService,
-  type SyncSql,
+  createAsyncService,
+  type Sql,
   SYSTEM,
 } from "../../service/mod.ts";
 
@@ -30,8 +21,8 @@ export interface ScenarioInput {
 export type ScenarioOutput = Record<string, unknown>;
 
 /** Runs the scenario on an empty database. */
-export async function runScenario(sql: SyncSql, input: ScenarioInput): Promise<ScenarioOutput> {
-  const service = createService({
+export async function runScenario(sql: Sql, input: ScenarioInput): Promise<ScenarioOutput> {
+  const service = createAsyncService({
     sql,
     scheduler: { schedule() {}, cancel() {} },
     secretKey: "scenario-secret-key-".repeat(4),
@@ -48,11 +39,17 @@ export async function runScenario(sql: SyncSql, input: ScenarioInput): Promise<S
     imports.push(await service.importTranslations(SYSTEM, request));
   }
   // Exercise every community table in the portable backup, including composite vote keys.
-  const [person] = sql.query<{ id: number }>(
-    "INSERT INTO users (email, display_name, role, created_at) VALUES ('volunteer@example.test', 'Volunteer', 'contributor', ?) RETURNING id",
-    SCENARIO_TIME,
-  );
-  const actor = { type: "user" as const, userId: person.id };
+  await sql.migrate([
+    {
+      sql: "INSERT INTO users (email, display_name, role, created_at) VALUES ('volunteer@example.test', 'Volunteer', 'contributor', ?)",
+      params: [SCENARIO_TIME],
+    },
+  ]);
+  const [people] = await sql.read([
+    { sql: "SELECT id FROM users WHERE email = 'volunteer@example.test'" },
+  ]);
+  const person = people[0];
+  const actor = { type: "user" as const, userId: Number(person.id) };
   const first = (await service.listStrings(ANONYMOUS, { language: "de", limit: 1 })).strings[0];
   await service.createGlossaryTerm(SYSTEM, { term: "Wayfarer", kind: "keep" });
   await service.addComment(actor, {
@@ -89,20 +86,23 @@ export async function runScenario(sql: SyncSql, input: ScenarioInput): Promise<S
     health: await service.getHealth(SYSTEM, {}),
     export: await service.exportFiles(SYSTEM, {}),
     backup,
-    tables: dumpTables(sql),
+    tables: await dumpTables(sql),
   });
 }
 
 /** Every table's rows, in order, by table name. */
-export function dumpTables(sql: SyncSql): Record<string, unknown[]> {
-  const tables = sql.query<{ name: string }>(
-    `SELECT name FROM sqlite_master WHERE type = 'table'
+export async function dumpTables(sql: Sql): Promise<Record<string, unknown[]>> {
+  const [tables] = await sql.read([
+    {
+      sql: `SELECT name FROM sqlite_master WHERE type = 'table'
        AND name NOT LIKE 'sqlite\\_%' ESCAPE '\\' AND name NOT LIKE '\\_cf\\_%' ESCAPE '\\'
      ORDER BY name`,
-  );
+    },
+  ]);
   const out: Record<string, unknown[]> = {};
   for (const { name } of tables) {
-    out[name] = sql.query(`SELECT * FROM "${name}" ORDER BY rowid`);
+    const [rows] = await sql.read([{ sql: `SELECT * FROM "${name}" ORDER BY rowid` }]);
+    out[String(name)] = rows;
   }
   return out;
 }

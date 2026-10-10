@@ -2,7 +2,7 @@
 /**
  * The `SyncSql` port on `node:sqlite` (local storage, design §3). Not portable: the server
  * imports it from `@quaso/service/node-sqlite`, and the service's tests use it with an
- * in-memory database. The Durable Object has its own adapter in `packages/cloudflare`.
+ * in-memory database. Cloudflare storage uses the D1 batch adapter.
  */
 import { DatabaseSync, type SQLInputValue, type StatementSync } from "node:sqlite";
 import type { SyncSql, SqlRow, SqlValue } from "../ports.ts";

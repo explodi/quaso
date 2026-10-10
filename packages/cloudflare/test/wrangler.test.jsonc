@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 //
-// The configuration for the tests in workerd (`deno task cf:test`): the Worker and the data
-// object as in wrangler.jsonc, without the container (which needs Docker and an account).
+// The Worker with D1 and R2, without a real container (which needs Docker and an account).
 // QUASO_CONTAINER is bound to a fake server instead (worker.ts here), and TEST_OBJECT is a
 // bare Durable Object for the adapters' tests. The secrets are test values. It lives in
 // test/ so that a developer's .dev.vars (next to wrangler.jsonc) never reaches the tests.
@@ -19,14 +18,11 @@
   "assets": { "directory": "website", "binding": "ASSETS", "run_worker_first": true },
   "durable_objects": {
     "bindings": [
-      { "name": "QUASO_DATA", "class_name": "QuasoData" },
       { "name": "QUASO_CONTAINER", "class_name": "FakeContainer" },
       { "name": "TEST_OBJECT", "class_name": "TestObject" },
     ],
   },
-  "migrations": [
-    { "tag": "v1", "new_sqlite_classes": ["QuasoData", "FakeContainer", "TestObject"] },
-  ],
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["FakeContainer", "TestObject"] }],
   // The nightly backups' bucket, in Miniflare.
   "r2_buckets": [{ "binding": "BACKUPS", "bucket_name": "quaso-test-backups" }],
   "d1_databases": [
@@ -42,7 +38,6 @@
     "CONTAINER_SLEEP_AFTER": "10m",
     "BACKUP_RETENTION_DAYS": "30",
     "SECRET_KEY": "test-secret-key-test-secret-key-test-secret-key",
-    "SERVICE_TOKEN": "test-service-token",
     "GEMINI_API_KEY": "",
   },
 }

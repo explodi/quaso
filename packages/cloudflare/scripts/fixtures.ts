@@ -9,7 +9,7 @@ import * as fs from "node:fs/promises";
  * Line endings don't matter: the demo's files are read with LF, and the check ignores how
  * the fixture's lines end on disk (a Windows checkout has CRLF).
  */
-import { openNodeSqlite } from "../../service/src/adapters/node_sqlite.ts";
+import { openAsyncSqlite } from "../../service/src/adapters/node_async_sqlite.ts";
 import { DEMO_IMPORTS, demoDir, readProjectFiles } from "../../server/src/dev_seed.ts";
 import { runScenario, type ScenarioInput } from "../test/scenario.ts";
 import { fixtureUpToDate, withLf } from "./fixture_text.ts";
@@ -36,7 +36,7 @@ export async function demoInput(dir = demoDir()): Promise<ScenarioInput> {
 
 if (import.meta.main) {
   const input = await demoInput();
-  const database = openNodeSqlite(":memory:");
+  const database = openAsyncSqlite(":memory:");
   let output;
   try {
     output = await runScenario(database.sql, input);
