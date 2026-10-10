@@ -14,7 +14,7 @@ import type { Sql, Statement } from "../ports.ts";
 import type { Usage } from "../llm/provider.ts";
 
 /** A job's scope as stored: `JobScope`, with an upload job's string IDs in `strings`. */
-export type StoredScope = JobScope;
+export type StoredScope = JobScope & { outdatedLeft?: number };
 
 export type JobSource = "website" | "cli" | "upload";
 
@@ -259,6 +259,7 @@ export function jobInfosFromRows(rows: JobRow[], actors: ActorDirectory): JobInf
     status: row.status,
     priority: PRIORITY_NAMES[row.priority] ?? "bulk",
     scope: scopeOf(row),
+    ...(scopeOf(row).outdatedLeft ? { outdatedLeft: scopeOf(row).outdatedLeft } : {}),
     createdBy: actors.info({ type: row.actor_type, id: row.actor_id, label: row.actor_label }),
     createdAt: row.created_at,
     startedAt: row.started_at,

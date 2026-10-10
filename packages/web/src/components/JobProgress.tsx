@@ -59,6 +59,9 @@ export function JobCard({ job }: { job: JobInfo }) {
         {job.progress.translated} translated · {job.progress.proposed} proposed ·{" "}
         {job.progress.failed} failed · {job.progress.skipped} skipped
       </p>
+      {job.outdatedLeft !== undefined && job.outdatedLeft > 0 && (
+        <p>{job.outdatedLeft} outdated translations left as they were.</p>
+      )}
       <p className="muted">
         Tokens: {job.tokens.input} input · {job.tokens.output} output · {job.tokens.thinking}{" "}
         thinking

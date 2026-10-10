@@ -41,6 +41,7 @@ export interface DownloadedFile {
 
 export interface DownloadResult {
   server: string;
+  outdated: { file: string; key: string; language: string; sourceRevision: number }[];
   dryRun: boolean;
   revision: number;
   languages: string[];
@@ -136,6 +137,7 @@ export const download: Command = {
       unchanged: [],
       pruned: [],
       skipped: [],
+      outdated: [],
     };
     if (languages.length === 0) {
       ctx.out.warn(`${project.configName} lists no languages, so there is nothing to download.`);
@@ -155,6 +157,7 @@ export const download: Command = {
           files: askFiles ? wanted : undefined,
           at,
           untranslated: project.config.untranslated,
+          outdated: project.config.outdated,
         },
         timeoutMs: LONG_TIMEOUT_MS,
       });
@@ -232,6 +235,8 @@ export const download: Command = {
       }
       byPath.set(path.toLowerCase(), target);
       planned.push({ target, bytes, sha256: file.sha256 });
+      for (const entry of file.outdated ?? [])
+        result.outdated.push({ ...entry, file: file.path, language });
     }
     const guard = new RealPathGuard(project, sources);
     for (const { target } of planned) await guard.check(target.path, target.language);
@@ -351,6 +356,15 @@ function renderDownload(out: Output, result: DownloadResult): void {
       `  ${dim("skipped".padEnd(12))} ${skipped.file} (${skipped.language}): ${skipped.reason}`,
     );
   }
+  for (const entry of result.outdated) {
+    out.print(
+      `  ${yellow("outdated".padEnd(12))} ${entry.language}  ${entry.file} › ${entry.key}  Source file changed in revision ${entry.sourceRevision}`,
+    );
+  }
+  if (result.outdated.length > 0)
+    out.warn(
+      `${count(result.outdated.length, "translation")} are of an older source: run quaso translate, or review them on the website.`,
+    );
   if (result.written.length === 0 && result.pruned.length === 0) {
     out.print(`Everything is up to date (${count(result.unchanged.length, "file")}).`);
     return;

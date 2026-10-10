@@ -116,9 +116,9 @@ export async function getPublishedFile(
  * the source text in untranslated entries.
  */
 export function checkPublishedQuery(query: ExportQuery): void {
-  if (query.at !== undefined && query.untranslated === "omit") {
+  if (query.at !== undefined && (query.untranslated === "omit" || query.outdated === "omit")) {
     throw badRequest(
-      "Published versions (at) always contain the source text; leave out untranslated=omit.",
+      "Published versions (at) preserve the recorded bytes; leave out untranslated=omit and outdated=omit.",
     );
   }
 }

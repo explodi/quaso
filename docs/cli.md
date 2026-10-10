@@ -108,6 +108,7 @@ never writes outside it. `quaso init` writes a starter file.
 | `files[].exclude`     | Globs of source files to leave out, relative to the project folder. Optional.                                                                                                                                                                                    |
 | `limits`              | Maximum lengths, such as for app store fields, in user-perceived characters. `file` is the file's path as the instance knows it (below the folder where the glob starts). They win over limits set on the website. Optional.                                     |
 | `pluralExclusions`    | Groups of keys that only look like plurals (`menu.power_one`, `menu.power_other`), named without the category. Optional.                                                                                                                                         |
+| `outdated`            | What `download` writes for translations of an older source: `"write"` (default), or `"omit"` so the app falls back to its source language.                                                                                                                       |
 | `untranslated`        | What `download` writes for a string that isn't translated: `"source"` (the default), its source text, so every file has every key; or `"omit"`, nothing, for apps whose i18n falls back to the source language by itself (i18next's `fallbackLng`). Optional.    |
 
 **Globs** use `/` on every system: `*` matches within a folder, `**` matches any number of folders,
@@ -219,6 +220,12 @@ translation lacks, and an array with an untranslated element (the app then falls
 source language's array). `--at` can't be combined with `omit`: published versions are stored with
 the source text. Files whose
 content hasn't changed are left alone: a second download writes nothing.
+
+Downloads list every older-source translation included, with its language, file, key and the
+source file's latest upload revision, in normal output, dry runs and JSON. Run `quaso translate`
+or review those keys on the website. Set `"outdated": "omit"` to leave their entries out while
+preserving current translations, literals and references; affected arrays are omitted whole.
+Historical `--at` downloads preserve the original bytes and refuse either omission option.
 
 | Option              | Meaning                                                                                                                                                                                               |
 | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

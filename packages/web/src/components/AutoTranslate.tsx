@@ -158,7 +158,7 @@ export function AutoTranslateDialog({
               onChange={(e) => setOutdated(e.target.checked)}
               aria-describedby="auto-translate-outdated-hint"
             />
-            Update outdated translations
+            Update outdated translations ({count?.outdated ?? 0})
           </Label>
           <p id="auto-translate-outdated-hint" className="field-hint">
             {outdatedExplanation(project.data?.sourceLanguageName ?? "source text", 2)} Green ones
@@ -224,6 +224,9 @@ export function AutoTranslateDialog({
                     </span>
                   )}
                 </span>
+                {count.outdatedLeft !== undefined && count.outdatedLeft > 0 && (
+                  <span>{count.outdatedLeft} outdated translations will be left as they are.</span>
+                )}
                 <span className="estimate-languages">
                   {count.languages.map((entry) => (
                     <span key={entry.language}>

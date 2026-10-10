@@ -500,6 +500,7 @@ export interface FileVersionResult {
 }
 
 export const ExportQuery = s.object({
+  outdated: s.enum(["write", "omit"]).optional(),
   languages: s.array(LanguageTag).optional(),
   files: s.array(FilePath).optional(),
   at: PublicationTime.optional(),
@@ -515,6 +516,8 @@ export interface ExportFile {
   path: string;
   language: string;
   content: string;
+  /** Older-source translations included in these bytes. Revision names the source file upload. */
+  outdated?: { key: string; sourceRevision: number }[];
   /** SHA-256 of the content's UTF-8 bytes, in hex. */
   sha256: string;
 }
@@ -625,6 +628,8 @@ export interface JobFailure extends KeyRef {
 }
 
 export interface JobInfo {
+  /** Older-source translations excluded when this job was created. */
+  outdatedLeft?: number;
   id: number;
   status: JobStatus;
   /** Single strings from the editor come first, then upload jobs, then bulk jobs. */
@@ -652,6 +657,9 @@ export interface JobInfo {
 }
 
 export interface JobEstimate {
+  /** Older-source translations in this scope, and those excluded from the run. */
+  outdated?: number;
+  outdatedLeft?: number;
   strings: number;
   words: number;
   requests: number;
