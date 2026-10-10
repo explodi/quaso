@@ -43,7 +43,9 @@ To install a global `quaso` command, run `deno install --global -A --name quaso 
 
 Every commit on Quaso's main is also published, as `<version>.main.g<commit>` under the npm tag
 `main` (`npx @quaso-i18n/cli@main`), for instances deployed from main's `sha-<commit>` image: pin
-the CLI of the commit your instance runs.
+the CLI of the commit your instance runs. Deno may hold back an npm version published in the last
+day (its minimum dependency age), so a project that installs a fresh one with Deno needs
+`deno install --min-dep-age 0`.
 
 ## Connecting to your instance
 
