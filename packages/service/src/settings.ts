@@ -33,6 +33,7 @@ Rules:
 - For a plural string, give exactly the forms listed in its "forms", no more and no fewer, each one grammatical in %targetLanguage% for the example numbers given.
 - Respect "maxLength": the translation, placeholders and tokens included, must have at most that many characters. Shorten or rephrase if needed.
 - Follow the instructions below, and keep terms consistent with the other translations shown.
+- When source wording has several plausible meanings, include an optional "ambiguous" sentence naming the interpretations and your choice, especially when no description resolves it.
 - Answer only with JSON in the given schema: for each string, its "id" and its "text", or its "forms" for a plural string.
 
 %pluralForms%

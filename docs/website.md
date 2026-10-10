@@ -433,3 +433,8 @@ matches are preferred; their original stays proofread. History names the source 
 count `reused` values separately. No translation or file-context request is made for a batch fully
 satisfied by memory. The editor links other keys with the same source; differing translations
 receive consistency warnings in the QA filter. Prompts include green matches marked as unproofread.
+
+Translation jobs may return a one-sentence ambiguity note explaining alternate readings of a source
+and which was chosen. Job results collect these notes, the editor warns on the source, and Sources
+shows **Needs a description** for current ambiguous sources with no description. Add context via a
+repository sidecar, a configured description suffix, or the editor to resolve the list entry.

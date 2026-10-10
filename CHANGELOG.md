@@ -7,6 +7,11 @@ Release candidates are for deployment and migration testing. The team decides wh
 
 ### Added
 
+- Repository descriptions: upload reads adjacent `.descriptions.json` sidecars or configured
+  description-suffix keys and attaches context without changing source files. Translation jobs
+  retain model ambiguity notes, show source warnings and list keys needing a description. Schema
+  version 4 adds source warnings and job notes; existing translation data remains intact.
+
 - Optional translation memory copies exact current source/kind/plural matches as green, records
   their origin in history and reports reused job items without spending model tokens. Prompts
   include green matches too, and consistency warnings find differing translations of identical

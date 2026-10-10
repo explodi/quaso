@@ -110,7 +110,16 @@ export const upload: Command = {
         if (content === null) {
           throw usageError(`${source.local} disappeared while the upload was being prepared.`);
         }
-        files.push({ path: source.server, repoPath: source.local, content });
+        const descriptions = await readProjectText(
+          project,
+          source.local.replace(/\.json$/, ".descriptions.json"),
+        );
+        files.push({
+          path: source.server,
+          repoPath: source.local,
+          content,
+          ...(descriptions === null ? {} : { descriptions }),
+        });
       } catch (error) {
         if (error instanceof CliError && error.exitCode === EXIT.invalidSource) invalid.push(error);
         else throw error;
@@ -156,6 +165,7 @@ export const upload: Command = {
     if (renames.length > 0) request.renames = renames;
     if (config.limits) request.limits = config.limits;
     if (config.pluralExclusions) request.pluralExclusions = config.pluralExclusions;
+    if (config.descriptionSuffix) request.descriptionSuffix = config.descriptionSuffix;
 
     ctx.out.info(
       `${dryRun ? "Comparing" : "Uploading"} ${count(files.length, "file")} ${

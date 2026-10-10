@@ -221,6 +221,15 @@ including unchanged source uploads, replacing the instance's values and retainin
 wording. Review QA refusals printed by the command; exit code 6 means some values were refused.
 Dry runs report the import plan without importing.
 
+Per-string descriptions can live beside the source in `common.descriptions.json`, with matching
+nested key paths and text values. Upload sends them as metadata, excludes sidecars from source
+strings, and reports descriptions whose keys have no source. Both files stay unchanged. For plural
+strings, use the group's base key. Alternatively set `"descriptionSuffix": "@description"` and
+write `"bridge@description": "The bridge spans the canal"` beside `"bridge"` in the source file;
+annotation keys are excluded from translations and downloaded game files. Descriptions may contain
+up to 4,000 characters. Missing entries preserve descriptions written on the website; empty text
+clears them. The editor and model prompts receive the saved descriptions.
+
 ### `quaso download`
 
 Writes every language's files where the config's `translation` pattern says. Strings that aren't

@@ -51,6 +51,11 @@ export const RESPONSE_SCHEMA: JsonSchemaObject = {
         type: "object",
         properties: {
           id: { type: "string", description: "The string's id, as given" },
+          ambiguous: {
+            type: "string",
+            description:
+              "Optional: one sentence explaining an ambiguous source and the interpretation chosen",
+          },
           text: { type: "string", description: "The translation of a text string" },
           forms: {
             type: "object",
@@ -61,7 +66,7 @@ export const RESPONSE_SCHEMA: JsonSchemaObject = {
           },
         },
         required: ["id"],
-        propertyOrdering: ["id", "text", "forms"],
+        propertyOrdering: ["id", "text", "forms", "ambiguous"],
       },
     },
   },

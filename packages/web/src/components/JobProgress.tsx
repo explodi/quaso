@@ -67,6 +67,21 @@ export function JobCard({ job }: { job: JobInfo }) {
         Tokens: {job.tokens.input} input · {job.tokens.output} output · {job.tokens.thinking}{" "}
         thinking
       </p>
+      {job.notes && job.notes.length > 0 && (
+        <Details>
+          <Summary>{job.notes.length} source ambiguity notes</Summary>
+          <ul>
+            {job.notes.map((note, index) => (
+              <li key={index}>
+                <Link to={editorHref(note.language, { id: note.stringId, file: note.file })}>
+                  {note.file} › {note.key}
+                </Link>
+                : {note.message}
+              </li>
+            ))}
+          </ul>
+        </Details>
+      )}
       {job.error && <p className="field-error">{job.error}</p>}
       {job.failures.length > 0 && (
         <Details id={`job-${job.id}-failures`} open={location.hash === `#job-${job.id}-failures`}>

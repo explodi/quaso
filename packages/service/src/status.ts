@@ -9,6 +9,7 @@ import type {
   FileProgress,
   FilesResult,
   SourceFilesResult,
+  SourceAmbiguity,
   LanguageProgress,
   Progress,
   StatusResult,
@@ -16,7 +17,7 @@ import type {
 } from "@quaso/core";
 import { canonicalLanguageTag } from "@quaso/core";
 import type { Context } from "./context.ts";
-import { getRevision } from "./db.ts";
+import { getRevision, fromJson } from "./db.ts";
 import { TRANSLATABLE_SQL } from "./entries.ts";
 import {
   type Language,
@@ -290,14 +291,16 @@ export function getStatus(ctx: Context, language?: string): StatusResult {
 
 /** `GET /files?language=`: the active files, with their progress in one language. */
 export function listFiles(ctx: Context, language?: string): FilesResult {
-  if (language === undefined) return sourceFiles(loadCounting(ctx));
+  if (language === undefined)
+    return sourceFiles(loadCounting(ctx), ambiguityRows(ctx.sql.query(AMBIGUITIES)));
   const found = requireLanguage(ctx, language);
   const { files } = languageProgress(ctx, found);
   return { language: found.tag, files };
 }
 
-function sourceFiles(counting: Counting): SourceFilesResult {
+function sourceFiles(counting: Counting, ambiguities: SourceAmbiguity[] = []): SourceFilesResult {
   return {
+    ...(ambiguities.length > 0 ? { ambiguities } : {}),
     files: counting.files.map((file) => {
       const strings = counting.byFile.get(file.id) ?? [];
       return {
@@ -399,10 +402,31 @@ export async function listFilesAsync(
   language?: string,
 ): Promise<FilesResult> {
   if (language === undefined) {
-    const rows = await sql.read([{ sql: ACTIVE_FILES }, { sql: ACTIVE_STRINGS }]);
-    return sourceFiles(countingFromRows(rows[0] as Counting["files"], rows[1] as CountingRow[]));
+    const rows = await sql.read([
+      { sql: ACTIVE_FILES },
+      { sql: ACTIVE_STRINGS },
+      { sql: AMBIGUITIES },
+    ]);
+    return sourceFiles(
+      countingFromRows(rows[0] as Counting["files"], rows[1] as CountingRow[]),
+      ambiguityRows(rows[2]),
+    );
   }
   const snapshot = await readProgressSnapshot(sql, model, language);
   const found = snapshot.languages[0];
   return { language: found.tag, files: found.files };
+}
+
+const AMBIGUITIES = `SELECT s.id, f.path AS file, s.display_key AS key, s.source, w.message FROM source_warnings w
+  JOIN strings s ON s.id = w.string_id JOIN files f ON f.id = s.file_id
+  WHERE s.active = 1 AND f.active = 1 AND w.source_hash = s.source_hash AND trim(s.description) = ''
+  ORDER BY f.path, s.position LIMIT 200`;
+function ambiguityRows(rows: import("./ports.ts").SqlRow[]): SourceAmbiguity[] {
+  return rows.map((row) => ({
+    id: Number(row.id),
+    file: String(row.file),
+    key: String(row.key),
+    source: fromJson(row.source),
+    message: String(row.message),
+  }));
 }

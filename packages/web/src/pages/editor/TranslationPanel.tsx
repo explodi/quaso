@@ -629,6 +629,14 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
         )}
       </section>
 
+      {detail.sourceWarnings?.map((warning, index) => (
+        <Notice key={index} kind="warning" title="Ambiguous source">
+          <p>{warning.message}</p>
+          <p>
+            Add a description explaining the intended meaning before translating other languages.
+          </p>
+        </Notice>
+      ))}
       {!writable && (
         <ReadOnly
           detail={detail}

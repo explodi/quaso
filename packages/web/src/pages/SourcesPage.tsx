@@ -88,6 +88,25 @@ export function SourcesPage() {
           </div>
         </dl>
       )}
+      {language && sources.data?.ambiguities && sources.data.ambiguities.length > 0 && (
+        <section className="record-card">
+          <H2>Needs a description</H2>
+          <p>
+            The model found ambiguous source wording. Add context in the repository descriptions or
+            the editor.
+          </p>
+          <ul>
+            {sources.data.ambiguities.map((note) => (
+              <li key={note.id}>
+                <ButtonLink to={editorHref(language, { id: note.id, file: note.file })}>
+                  {note.file} › {note.key}
+                </ButtonLink>
+                : {note.message}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {project.data && !language && (
         <div className="notice notice-info source-language-notice">
           <p>Add a target language to open files in the editor.</p>

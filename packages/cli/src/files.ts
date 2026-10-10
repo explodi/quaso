@@ -52,6 +52,7 @@ export async function collectSources(project: Project): Promise<Sources> {
       warnings.push(`files[${index}].source (${mapping.source}) matches no files.`);
     }
     for (const local of matches) {
+      if (local.endsWith(".descriptions.json")) continue;
       const server = base === "" ? local : local.slice(base.length + 1);
       const key = `files[${index}].source`;
       if (!server.endsWith(".json")) {
