@@ -100,8 +100,8 @@ export function PersonalApiKeys() {
             value={scope}
             onChange={(e) => setScope(e.target.value === "read" ? "read" : "upload")}
           >
-            <option value="upload">Upload: everything your role allows</option>
-            <option value="read">Read: browse and download only</option>
+            <option value="upload">Upload</option>
+            <option value="read">Read</option>
           </Select>
         </Label>
         <Button type="submit" variant="primary" busy={creating}>
