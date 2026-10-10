@@ -5,7 +5,7 @@
  */
 import { DurableObject } from "cloudflare:workers";
 import { Container } from "@cloudflare/containers";
-import { CONTAINER_PORT } from "../src/container.ts";
+import { CONTAINER_PORT, type StartupStatus } from "../src/container.ts";
 
 // Everything the real Worker exports, so that the runtime refuses the same mistakes.
 export * from "../src/worker.ts";
@@ -22,7 +22,7 @@ export class TestObject extends DurableObject {
  * Stands in for the server in the container. Each answer carries how many requests the
  * fake has served (`n`), so the tests can tell a cached answer from a fresh one, and the
  * request it saw. Like the server behind the Worker (TRUST_PROXY), it answers with the
- * request's `X-Request-Id`, or a new one. The path chooses the answer:
+ * request's `X-Request-Id`, or a new one. The path, after `/api/test`, chooses the answer:
  * - `/private` answers `private, no-store`, as the server does for signed-in requests;
  * - `/cookie` sets a cookie on an otherwise public answer;
  * - `/missing` is a 404;
@@ -48,9 +48,18 @@ export class FakeContainer extends DurableObject {
   async restoreControl() {
     return this.ctx.storage.get("restoreControl");
   }
+  /** Ready, unless a test set another status with `setStartupStatus`. */
+  async startupStatus(): Promise<StartupStatus> {
+    return (await this.ctx.storage.get<StartupStatus>("startupStatus")) ?? { state: "ready" };
+  }
+  async setStartupStatus(status: StartupStatus) {
+    await this.ctx.storage.put("startupStatus", status);
+  }
 
   override async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
+    // The tests' paths are under /api/test/, which the Worker sends to the server.
+    url.pathname = url.pathname.replace(/^\/api\/test(?=\/)/, "");
     if (url.pathname === "/down") throw new Error("The container didn't start");
     if (url.pathname === "/port") return await portFor(request);
     const library = LIBRARY_ANSWERS[url.pathname];

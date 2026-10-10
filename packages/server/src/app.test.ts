@@ -337,23 +337,12 @@ test("app: creating an API key answers 201, with the secret", async () => {
   assertEquals(service.calls.at(-1)?.input, { name: "CI", scope: "upload" });
 });
 
-test("app: /config.json, the config schema and robots.txt", async () => {
+test("app: the config schema and the OpenAPI document", async () => {
   const { app } = testApp(new FakeService(), { PUBLIC_URL: "https://translate.example.com" });
-  const config = await call(app, "/config.json");
-  assertEquals(await config.json(), { apiBase: "/api/v1" });
-  assertEquals(
-    config.headers.get("Cache-Control"),
-    "public, max-age=300, stale-while-revalidate=600",
-  );
-
   const schema = await (await call(app, "/schema/config-v1.json")).json();
   assertEquals(schema.$id, "https://translate.example.com/schema/config-v1.json");
   assertEquals(schema.$schema, "https://json-schema.org/draft/2020-12/schema");
   assertEquals(schema.required, ["sourceLanguage", "languages", "files"]);
-
-  const robots = await call(app, "/robots.txt");
-  assertEquals(await robots.text(), "User-agent: *\nDisallow: /api/\n");
-  assertEquals(robots.headers.get("Content-Type"), "text/plain; charset=utf-8");
 
   const openApi = await call(app, "/api/v1/openapi.json");
   assertEquals((await openApi.json()).servers, [{ url: "https://translate.example.com/api/v1" }]);

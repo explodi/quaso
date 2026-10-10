@@ -15,6 +15,7 @@ Test a deployment and a restore on staging before sending production traffic to 
         ▼
 ┌─────────────────────────────────┐
 │ Worker                          │
+│  the website: its own files     │
 │  anonymous reads: its cache     │        ┌──────────────────────────────┐
 │  /files/…: straight from ───────┼───────►│ D1: the database             │
 │    D1 and R2                    │        │ R2: files and nightly backups│
@@ -27,8 +28,9 @@ Test a deployment and a restore on staging before sending production traffic to 
 └─────────────────────────────────┘
 ```
 
-- **The Worker** is the front door. It answers anonymous reads (the website's files, public API
-  reads) from Cloudflare's cache when it can, and serves published translation files (`/files/…`)
+- **The Worker** is the front door. It serves the website itself, from the files deployed with it,
+  so the website is on screen at once even while the container sleeps. It answers anonymous API
+  reads from Cloudflare's cache when it can, and serves published translation files (`/files/…`)
   straight from D1 and R2, so games, bots and visitors rarely wake the container. It forwards
   everything else to the server in the container.
 - **The container** runs the same image as Docker Compose, the one published on Docker Hub. It runs
@@ -36,8 +38,9 @@ Test a deployment and a restore on staging before sending production traffic to 
   stops, so it keeps nothing there: it reaches the database and the files through two private
   bindings that only the container can use, never the internet. It goes to sleep after 10 minutes
   without requests (`sleepAfter`), and wakes up on the next request the cache can't answer, which
-  takes a few seconds. It also wakes up by itself for scheduled work, such as LLM jobs and the
-  nightly backup.
+  can take a minute. Opening the website wakes it too: the website shows "Waking up Quaso…" with
+  a progress bar until the server answers, and the CLI waits and says so before its first
+  request. It also wakes up by itself for scheduled work, such as LLM jobs and the nightly backup.
 - **D1** is the database (Cloudflare's hosted SQLite): accounts, projects, strings, translations,
   history and settings. Cloudflare keeps 30 days of [Time Travel](#backups-and-recovery) for it.
 - **R2** holds the bytes of uploaded and published files, and the nightly backups.
@@ -307,6 +310,7 @@ local D1 and R2 (Docker must be running; the first run builds the image from `de
 
 - **One container** (`max_instances: 1`). One game's traffic is far below what it handles.
 - **Request bodies:** an upload of 50 MB of JSON is the most the server takes.
-- **The cache** keeps anonymous reads for their `Cache-Control` time (30 seconds for the API, a few
-  minutes for the website's page, a year for its hashed files), and serves them stale for a while as
-  it refreshes them. Signed-in requests and API keys always reach the server.
+- **The cache** keeps anonymous API reads for their `Cache-Control` time (30 seconds), and serves
+  them stale for a while as it refreshes them. Signed-in requests and API keys always reach the
+  server. The website's hashed files are kept by browsers for a year; its page is checked for a
+  new version on every visit.

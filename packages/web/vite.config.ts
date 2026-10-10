@@ -34,7 +34,6 @@ export default defineConfig({
     proxy: {
       "/api": server,
       "/auth": server,
-      "/config.json": server,
       "/healthz": server,
       "/schema": server,
     },

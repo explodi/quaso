@@ -146,6 +146,8 @@ export function deploymentConfig(
   } = template;
   const selected = object(object(env, "template.env")[environment], `template.env.${environment}`);
   const aliases = object(template.alias, "template.alias");
+  const assets = object(template.assets, "template.assets");
+  const build = object(template.build, "template.build");
   const vars = object(selected.vars, "template.vars");
   const containers = selected.containers as Record<string, unknown>[];
   return {
@@ -155,6 +157,8 @@ export function deploymentConfig(
     alias: Object.fromEntries(
       Object.entries(aliases).map(([name, path]) => [name, resolve(PACKAGE_DIR, String(path))]),
     ),
+    assets: { ...assets, directory: resolve(PACKAGE_DIR, String(assets.directory)) },
+    build: { ...build, cwd: resolve(PACKAGE_DIR, String(build.cwd)) },
     env: {
       [environment]: {
         ...selected,

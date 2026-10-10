@@ -6,7 +6,11 @@ website code do not need these tools.
 
 ## The request path
 
-The Worker receives the public request. Anonymous cacheable reads can end there, and published
+The Worker receives the public request. Every read outside the server's paths (`/api`, `/auth`,
+`/files`, `/healthz`, `/schema`) is the website, served from the Worker's static assets (the Vite
+build, `src/website.ts`) with the server's security headers. `/wake` says whether the server is
+ready, and starts it if it isn't: the website and the CLI ask it to show a start's progress
+instead of waiting in silence. Anonymous cacheable reads can end at the Worker, and published
 files (`/files/…`) are served straight from D1 metadata and R2 bytes without starting the container.
 Other requests go to the Quaso container, which runs the same server image as Docker Compose. The
 server owns the service logic: accounts, permission checks, translations, LLM jobs and the nightly
@@ -16,7 +20,9 @@ registers: `d1.quaso.internal` (`src/d1_handler.ts`, SQL batches against the `DB
 404 to those paths.
 
 `QuasoContainer` (`src/container.ts`) is the container controller, a Durable Object that holds no
-project data. Before letting the container sleep it asks the server's `/healthz` whether it is
+project data. It starts the server once for everyone who waits (`/wake` and requests alike), with
+limits long enough for a cold start, and remembers how long the last start took for the progress
+bar. Before letting the container sleep it asks the server's `/healthz` whether it is
 `busy` and when its `nextWakeUp` is, and schedules a wake-up for it: LLM jobs and the nightly export
 depend on that, so preserve both when changing scheduling. The Gemini key is entered in Settings and
 kept in D1, like every other setting; the container's disk is ephemeral and holds no project data.

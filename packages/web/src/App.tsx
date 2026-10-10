@@ -5,24 +5,31 @@ import { ErrorBoundary } from "./components/ErrorBoundary.tsx";
 import { Layout } from "./components/Layout.tsx";
 import { Loading } from "@quaso/design-system";
 import { ToastProvider } from "./components/Toast.tsx";
+import { WakingUp } from "./components/WakingUp.tsx";
 import { matchRoutes } from "./lib/match.ts";
 import { ParamsProvider, RouterProvider, useRoute } from "./lib/router.tsx";
 import { SessionProvider, useSession } from "./lib/session.tsx";
+import { useServerState } from "./lib/wake.ts";
 import { NotFound } from "./pages/NotFound.tsx";
 import { ROUTES } from "./routes.tsx";
 
 function Page() {
   const { pathname, navigate } = useRoute();
   const session = useSession();
+  const server = useServerState();
   const needsSetup = session.accounts && session.info.setupRequired;
   const redirecting = needsSetup && pathname !== "/setup";
   useEffect(() => {
     if (redirecting) navigate("/setup", { replace: true });
   }, [redirecting, navigate]);
-  if (session.loading || redirecting) return <Loading label="Loading instance…" />;
+  if (session.loading || redirecting) {
+    if (server.state !== "awake") return <WakingUp server={server} />;
+    return <Loading label="Loading instance…" />;
+  }
   const match = matchRoutes(ROUTES, pathname);
   return (
     <Layout fill={match?.route.fill}>
+      <WakingUp server={server} compact />
       <ErrorBoundary resetKey={pathname}>
         {match ? (
           <ParamsProvider

@@ -38,6 +38,8 @@ export interface ContextOptions {
   out: Output;
   fetch?: Fetch;
   sleep?: (ms: number) => Promise<void>;
+  /** Default: true. See `ClientOptions.waitWhileAsleep`. */
+  waitWhileAsleep?: boolean;
 }
 
 export class Context {
@@ -48,6 +50,7 @@ export class Context {
   readonly out: Output;
   readonly #fetch?: Fetch;
   readonly #sleep?: (ms: number) => Promise<void>;
+  readonly #waitWhileAsleep: boolean;
   #project?: Promise<Project>;
   #sources?: Promise<Sources>;
 
@@ -58,6 +61,7 @@ export class Context {
     this.out = options.out;
     this.#fetch = options.fetch;
     this.#sleep = options.sleep;
+    this.#waitWhileAsleep = options.waitWhileAsleep ?? true;
   }
 
   /** The project: `--config`, or the nearest `quaso.config.json`. */
@@ -92,6 +96,7 @@ export class Context {
       fetch: this.#fetch,
       sleep: this.#sleep,
       log: (message) => this.out.info(message),
+      waitWhileAsleep: this.#waitWhileAsleep,
     });
   }
 }

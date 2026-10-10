@@ -5,7 +5,8 @@
  * nothing: its disk is wiped when the instance stops, so it uses private D1/R2 bindings.
  * It goes to sleep after `CONTAINER_SLEEP_AFTER`
  * without requests (default 10 minutes), and the next request the cache can't answer wakes
- * it, which takes a few seconds.
+ * it, which can take a minute: the website, served by the Worker, shows how far along it is
+ * (`startupStatus`).
  *
  * The Worker passes the server the settings it needs as environment variables. The Gemini
  * key is passed to the server, which runs the LLM jobs.
@@ -30,6 +31,22 @@ export const CONTAINER_PORT = 8000;
 
 /** The default sleep timeout. */
 export const DEFAULT_SLEEP_AFTER = "10m";
+
+/**
+ * How long a start may take: Cloudflare can take most of a minute to place a sleeping
+ * container, then the server migrates its database before it listens. The library's
+ * defaults (8 and 20 seconds) fail requests that would have succeeded.
+ */
+export const START_LIMITS = { instanceGetTimeoutMS: 90_000, portReadyTimeoutMS: 120_000 };
+
+/** The progress bar's expected start time, until a start has been measured. */
+export const TYPICAL_START_MS = 60_000;
+
+/** What `/wake` answers. */
+export type StartupStatus =
+  | { state: "ready" }
+  | { state: "starting"; elapsedMs: number; expectedMs: number }
+  | { state: "paused" };
 
 /**
  * Optional settings passed through to the server as they are, when set on the Worker (as
@@ -86,6 +103,8 @@ export function sleepAfter(env: Pick<Env, "CONTAINER_SLEEP_AFTER">): string {
 
 export class QuasoContainer extends Container<Env> {
   private requests = new Set<Promise<Response>>();
+  /** The start in progress, shared by every request that waits for it. */
+  private startup: { done: Promise<void>; startedAt: number } | null = null;
   constructor(ctx: ConstructorParameters<typeof Container>[0], env: Env) {
     super(ctx, env, {
       defaultPort: CONTAINER_PORT,
@@ -96,12 +115,51 @@ export class QuasoContainer extends Container<Env> {
   private async restorePaused() {
     return (await this.ctx.storage.get<boolean>("restorePaused")) === true;
   }
+  private async serverReady() {
+    const state = await this.getState();
+    return this.ctx.container?.running === true && state.status === "healthy";
+  }
+  /** Starts the server once, however many requests wait, and remembers how long it took. */
+  private startServer(): Promise<void> {
+    if (this.startup) return this.startup.done;
+    const startedAt = Date.now();
+    const done = this.startAndWaitForPorts({
+      ports: CONTAINER_PORT,
+      cancellationOptions: START_LIMITS,
+    })
+      .then(() => this.ctx.storage.put("lastStartMs", Date.now() - startedAt))
+      .finally(() => {
+        this.startup = null;
+      });
+    this.startup = { done, startedAt };
+    return done;
+  }
+  /** Whether the server is ready; if it isn't, starts it without waiting. */
+  async startupStatus(): Promise<StartupStatus> {
+    if (await this.restorePaused()) return { state: "paused" };
+    if (await this.serverReady()) return { state: "ready" };
+    this.startServer().catch((error) =>
+      createLogger("controller").error("The container didn't start", { error }),
+    );
+    const startedAt = this.startup?.startedAt ?? Date.now();
+    const expectedMs = (await this.ctx.storage.get<number>("lastStartMs")) ?? TYPICAL_START_MS;
+    return { state: "starting", elapsedMs: Date.now() - startedAt, expectedMs };
+  }
   override async containerFetch(
     ...args: Parameters<Container<Env>["containerFetch"]>
   ): Promise<Response> {
     const work = (async () => {
       if (await this.restorePaused())
         return new Response("The instance is paused for restoration.", { status: 503 });
+      if (!(await this.serverReady())) {
+        try {
+          await this.startServer();
+        } catch (error) {
+          return new Response(`Failed to start container: ${(error as Error).message}`, {
+            status: 500,
+          });
+        }
+      }
       return await super.containerFetch(...args);
     })();
     this.requests.add(work);

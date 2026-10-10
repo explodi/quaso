@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: MIT
-/** The public Worker caches reads and forwards requests; storage handlers are private outbound bindings. */
+/**
+ * The public Worker serves the website itself, and caches reads and forwards requests to the
+ * server in the container; storage handlers are private outbound bindings.
+ */
 import { type Logger } from "@quaso/service";
 import { serveWithCache } from "./cache.ts";
+import { serveWebsite } from "./website.ts";
 import { CONTAINER_NAME, locationHint, QuasoContainer } from "./container.ts";
 import { createLogger } from "./log.ts";
 import { servePublishedFile } from "./files.ts";
@@ -10,6 +14,8 @@ export { ContainerProxy } from "@cloudflare/containers";
 
 const REQUEST_ID = /^[\w.:-]{1,128}$/;
 const CONTAINER_HEADERS = /^cf-container-/i;
+/** The paths the server answers; every other read is the website. */
+const SERVER_PATHS = /^\/(api|auth|files|healthz|schema)(\/|$)/;
 
 export default {
   async fetch(request, env, ctx): Promise<Response> {
@@ -26,7 +32,7 @@ export default {
       const provided = request.headers.get("Authorization")?.replace(/^Bearer /, "") ?? "";
       if (request.method !== "POST" || typeof key !== "string" || !sameKey(key, provided))
         return error(403, "forbidden", "Restore control requires the temporary operator key.");
-      const controller = env.QUASO_CONTAINER.get(env.QUASO_CONTAINER.idFromName(CONTAINER_NAME));
+      const controller = containerStub(env);
       const body = (await request.json()) as { force?: unknown };
       if (control[1] === "pause") await controller.pauseForRestore(key, body.force === true);
       else {
@@ -34,6 +40,9 @@ export default {
       }
       return Response.json({ ok: true }, { headers: { "Cache-Control": "private, no-store" } });
     }
+    const read = request.method === "GET" || request.method === "HEAD";
+    if (read && url.pathname === "/wake") return await wakeStatus(env, paused);
+    if (read && !SERVER_PATHS.test(url.pathname)) return await serveWebsite(request, env);
     if (paused)
       return error(503, "unavailable", "The instance is paused for restoration.", {
         "Retry-After": "60",
@@ -54,6 +63,26 @@ export default {
     });
   },
 } satisfies ExportedHandler<Env>;
+
+/**
+ * Whether the server is ready, for the website's and the CLI's waking-up screens. Asking
+ * starts a sleeping server, so that it boots while the website is already on screen.
+ */
+async function wakeStatus(env: Env, paused: boolean): Promise<Response> {
+  const headers = { "Cache-Control": "private, no-store" };
+  if (paused) return Response.json({ state: "paused" }, { headers });
+  const status = await containerStub(env).startupStatus();
+  return Response.json(status, { headers });
+}
+
+function containerStub(env: Env) {
+  const namespace = env.QUASO_CONTAINER;
+  const hint = locationHint(env.LOCATION_HINT);
+  return namespace.get(
+    namespace.idFromName(CONTAINER_NAME),
+    hint ? { locationHint: hint } : undefined,
+  );
+}
 
 function sameKey(expected: string, actual: string): boolean {
   if (expected.length !== 64 || actual.length !== 64) return false;
@@ -95,12 +124,7 @@ async function toContainer(
   else headers.delete("X-Request-Id");
   headers.delete("Accept-Encoding");
 
-  const namespace = env.QUASO_CONTAINER;
-  const hint = locationHint(env.LOCATION_HINT);
-  const container = namespace.get(
-    namespace.idFromName(CONTAINER_NAME),
-    hint ? { locationHint: hint } : undefined,
-  );
+  const container = containerStub(env);
   const unavailable = () =>
     error(503, "unavailable", "Quaso is starting up or unavailable. Try again in a moment.", {
       "Retry-After": "10",

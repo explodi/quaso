@@ -69,6 +69,7 @@ export async function runCli(
   const code = await run(args, {
     env: {},
     sleep: () => Promise.resolve(),
+    waitWhileAsleep: false,
     ...options,
     stdout: { write: (text: string) => (stdout += text) },
     stderr: { write: (text: string) => (stderr += text) },

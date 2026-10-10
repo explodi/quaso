@@ -15,6 +15,8 @@
     "@quaso/core": "../../core/mod.ts",
     "@quaso/service": "../../service/mod.ts",
   },
+  // A stand-in for the website's build.
+  "assets": { "directory": "website", "binding": "ASSETS", "run_worker_first": true },
   "durable_objects": {
     "bindings": [
       { "name": "QUASO_DATA", "class_name": "QuasoData" },
