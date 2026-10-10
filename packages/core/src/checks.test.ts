@@ -386,7 +386,7 @@ test("placeholders: those i18next doesn't fill in don't count as the English one
   for (const translation of ["Du hast {{\ncount\n}} Münzen", "Du hast {{count\r\n}} Münzen"]) {
     assertEquals(summary(text("You have {{count}} coins", translation)), [
       "placeholder_missing",
-      "line_breaks_differ",
+      "whitespace",
     ]);
   }
 });
@@ -749,11 +749,7 @@ test("identical: a warning when the English has letters", () => {
   assertEquals(summary(text("東京", "東京", { language: "ja" })), ["identical"]);
   assertEquals(summary(text("{{name}}: OK", "{{name}}: OK")), ["identical"]);
   assertEquals(text("Options", "Optionen"), []);
-  assertEquals(
-    summary(text("Options", "Options ")),
-    ["edge_whitespace"],
-    "spaces make a difference",
-  );
+  assertEquals(summary(text("Options", "Options ")), ["whitespace"], "spaces make a difference");
   assertEquals(text("A\r\nB", "A\nB"), [], "so do line endings");
 });
 
@@ -1054,7 +1050,7 @@ test("empty: a form may stay empty where the English one is empty", () => {
   const english = { zero: "", one: "{{count}} left", other: "{{count}} left" };
   const german = { zero: "", one: "{{count}} übrig", other: "{{count}} übrig" };
   assertEquals(plural("de", english, german), []);
-  assertEquals(plural("de", english, { ...german, zero: " " }), []);
+  assertEquals(summary(plural("de", english, { ...german, zero: " " })), ["whitespace:zero"]);
   assertEquals(plural("de", english, { ...german, zero: "Nichts mehr übrig" }), []);
   assertEquals(summary(plural("de", english, { one: german.one, other: german.other })), [
     "plural_form_missing:zero",
@@ -1062,9 +1058,11 @@ test("empty: a form may stay empty where the English one is empty", () => {
   assertEquals(summary(plural("de", english, { ...german, one: "" })), ["empty:one"]);
   // Categories English lacks compare with English other.
   const blankOther = { one: "One left", other: "" };
-  assertEquals(plural("pl", blankOther, { one: "Jeden", few: "", many: " ", other: "" }), []);
+  assertEquals(summary(plural("pl", blankOther, { one: "Jeden", few: "", many: " ", other: "" })), [
+    "whitespace:many",
+  ]);
   // A blank English text allows a blank translation.
-  assertEquals(text(" ", ""), []);
+  assertEquals(summary(text(" ", "")), ["whitespace"]);
   assertEquals(summary(text("Play", "")), ["empty"]);
 });
 
@@ -1114,11 +1112,11 @@ test("tags_differ: attributes, letter case and order don't matter", () => {
   assertEquals(text("1 < 2 and 3 > 2", "1 < 2 und 3 > 2"), [], "comparisons aren't tags");
 });
 
-test("edge_whitespace: a line break or space at either end that the English doesn't have", () => {
+test("whitespace: a line break or space at either end that the English doesn't have", () => {
   assertEquals(text("Play", "Spielen\n"), [
     {
-      check: "edge_whitespace",
-      severity: "warning",
+      check: "whitespace",
+      severity: "error",
       message: "The translation ends with a line break; the English doesn't.",
     },
   ]);
@@ -1133,31 +1131,31 @@ test("edge_whitespace: a line break or space at either end that the English does
   ]);
   assertEquals(
     summary(plural("en-GB", COINS, { one: "One coin ", other: "{{count}} gold coins" })),
-    ["edge_whitespace:one"],
+    ["whitespace:one"],
   );
 });
 
-test("edge_whitespace: the same whitespace, in any line ending, is fine", () => {
+test("whitespace: the same whitespace, in any line ending, is fine", () => {
   assertEquals(text("Play\r\n", "Spielen\n"), []);
   assertEquals(text("  Play ", "  Spielen "), []);
 });
 
-test("line_breaks_differ: compares the line breaks inside the text", () => {
+test("whitespace: compares the line breaks inside the text", () => {
   assertEquals(text("Game over.\nTry again?", "Spiel vorbei. Nochmal?"), [
     {
-      check: "line_breaks_differ",
-      severity: "warning",
+      check: "whitespace",
+      severity: "error",
       message: "The English has 1 line break inside; the translation has 0.",
     },
   ]);
   assertEquals(text("Game over.\r\nTry again?", "Spiel vorbei.\nNochmal?"), []);
 });
 
-test("double_space: two spaces in a row that the English doesn't have", () => {
+test("double_space: two spaces in a row inside the text", () => {
   assertEquals(text("New game", "Neues  Spiel"), [
     { check: "double_space", severity: "warning", message: "Two spaces in a row." },
   ]);
-  assertEquals(text("Score:  {{n}}", "Punkte:  {{n}}"), []);
+  assertEquals(summary(text("Score:  {{n}}", "Punkte:  {{n}}")), ["double_space"]);
 });
 
 test("end_punctuation: a different question mark, exclamation mark, ellipsis or colon", () => {
@@ -1367,4 +1365,12 @@ test("optional placeholders: the listed languages may leave them out, the others
     ),
     [["placeholder_missing", "{profession}"]],
   );
+});
+
+test("whitespace rejects tabs exchanged for spaces and spaces beside a line break", () => {
+  assert(hasErrors(text("\tPlay", " Spielen")));
+  assert(hasErrors(text("Play\n", "Spielen \n")));
+  assert(hasErrors(text("One paragraph.\n\nAnother.", "Ein Absatz.\nNoch einer.")));
+  assertFalse(hasErrors(text("Play\r\n", "Spielen\n")));
+  assertFalse(hasErrors(text("New game", "Neues  Spiel")));
 });

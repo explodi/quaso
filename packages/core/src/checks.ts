@@ -56,11 +56,9 @@ export const CHECKS = {
   numbers_differ: "warning",
   /** An HTML or i18next Trans tag, such as `<b>` or `<1>`, is missing or extra. */
   tags_differ: "warning",
-  /** Spaces or line breaks at the start or the end differ from the English. */
-  edge_whitespace: "warning",
-  /** The number of line breaks inside the text differs from the English. */
-  line_breaks_differ: "warning",
-  /** Two spaces in a row, which the English doesn't have. */
+  /** Leading/trailing whitespace or the number of line breaks differs from the source. */
+  whitespace: "error",
+  /** Two spaces in a row inside the text. */
   double_space: "warning",
   /** Ends with a different question mark, exclamation mark, ellipsis or colon. */
   end_punctuation: "warning",
@@ -127,7 +125,7 @@ export interface CheckInput {
  *   `plural_form_unexpected`: nothing else is checked in them.
  * - A text or form may stay empty, or only whitespace, when its English (the same
  *   category, or `other`) is too, as in i18next's `key_zero: ""` idiom: it is accepted
- *   without further checks.
+ *   when its whitespace matches the source (line endings normalized).
  * - `max_length` counts grapheme clusters of the stored text, placeholders and references
  *   included.
  * - `identical`: a text, or a form, equal to the English (the same category, or `other`),
@@ -136,11 +134,9 @@ export interface CheckInput {
  * - `numbers_differ`: the multisets of digit sequences outside placeholders and references
  *   differ from the English (the same category, or `other`, for plurals). Digits of every
  *   script count by their value, and leading zeros are ignored: `٤٢` and `042` are `42`.
- * - The typing slips, compared with the English of the same form (or `other`):
- *   `tags_differ` (tags as multisets, by name, without attributes), `edge_whitespace`
- *   (spaces and line breaks before the first and after the last visible character),
- *   `line_breaks_differ` (inside the text), `double_space`, and `end_punctuation` (the
- *   question mark, exclamation mark, ellipsis or colon that ends it, in any script).
+ * - Whitespace errors compare edges and line-break counts with the same source form
+ *   (or `other`). CRLF and LF are equivalent. Typing warnings compare tags as multisets,
+ *   double spaces, and final question marks, exclamation marks, ellipses and colons.
  *
  * Messages show placeholders in the project's syntax; `value` holds the `placeholderKey`,
  * the reference's raw text or the number as written. For plural strings, an invalid
@@ -280,7 +276,15 @@ interface Comparison {
 function checkValue(results: CheckResult[], value: string, comparison: Comparison): void {
   const { form } = comparison;
   if (value.trim() === "") {
-    if (comparison.counterpart.text.trim() === "") return;
+    if (comparison.counterpart.text.trim() === "") {
+      const sourceWhitespace = comparison.counterpart.text.replace(LINE_BREAK, "\n");
+      if (value.replace(LINE_BREAK, "\n") !== sourceWhitespace) {
+        results.push(
+          result("whitespace", sentence("Whitespace differs from the source", form), { form }),
+        );
+      }
+      return;
+    }
     const message = form ? `The ${form} form is empty.` : "The translation is empty.";
     results.push(result("empty", message, { form }));
     return;
@@ -457,7 +461,7 @@ function firstUnmatched(items: readonly string[], others: readonly string[]): st
 }
 
 /**
- * Warns about the whitespace slips the eye misses: a line break or space at either end
+ * Rejects whitespace slips that change layout: a line break or space at either end
  * that the English doesn't have (or the other way round), a different number of line
  * breaks inside, and two spaces in a row.
  */
@@ -465,19 +469,21 @@ function checkWhitespace(results: CheckResult[], value: string, comparison: Comp
   const english = comparison.counterpart.text;
   const { form } = comparison;
   for (const edge of ["start", "end"] as const) {
-    const found = describeWhitespace(edgeWhitespace(value, edge));
-    const expected = describeWhitespace(edgeWhitespace(english, edge));
-    if (found === expected) continue;
+    const foundWhitespace = edgeWhitespace(value, edge).replace(LINE_BREAK, "\n");
+    const expectedWhitespace = edgeWhitespace(english, edge).replace(LINE_BREAK, "\n");
+    if (foundWhitespace === expectedWhitespace) continue;
+    const found = describeWhitespace(foundWhitespace);
+    const expected = describeWhitespace(expectedWhitespace);
     const message = mismatchMessage(edge === "start" ? "starts" : "ends", found, expected);
-    results.push(result("edge_whitespace", sentence(message, form), { form }));
+    results.push(result("whitespace", sentence(message, form), { form }));
   }
   const foundBreaks = lineBreaks(value.trim());
   const englishBreaks = lineBreaks(english.trim());
   if (foundBreaks !== englishBreaks) {
     const message = `The English has ${countOf(englishBreaks, "line break")} inside; the translation has ${foundBreaks}`;
-    results.push(result("line_breaks_differ", sentence(message, form), { form }));
+    results.push(result("whitespace", sentence(message, form), { form }));
   }
-  const doubleSpace = DOUBLE_SPACE.test(value.trim()) && !DOUBLE_SPACE.test(english.trim());
+  const doubleSpace = DOUBLE_SPACE.test(value.trim());
   if (doubleSpace) {
     results.push(result("double_space", sentence("Two spaces in a row", form), { form }));
   }
