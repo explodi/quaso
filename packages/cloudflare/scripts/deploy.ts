@@ -12,6 +12,7 @@ import {
   type Instance,
   readDeploymentTemplate,
   readInstanceConfig,
+  parseInstanceConfig,
 } from "./instance_config.ts";
 
 export function deployOptions(args: readonly string[]) {
@@ -19,6 +20,7 @@ export function deployOptions(args: readonly string[]) {
   if (problem !== null) throw new Error(problem);
   const environment = deployEnvironment(args) as Environment;
   let configPath = DEFAULT_INSTANCE_CONFIG;
+  let image: string | undefined;
   let namedEnvironment = false;
   const wrangler: string[] = [];
   for (let index = 0; index < args.length; index++) {
@@ -35,6 +37,11 @@ export function deployOptions(args: readonly string[]) {
       configPath = resolve(path);
       continue;
     }
+    if (arg === "--image") {
+      image = args[++index];
+      if (!image || image.startsWith("-")) throw new Error("--image needs a published image.");
+      continue;
+    }
     if (arg === "--dry-run" || arg === "--minify") {
       wrangler.push(arg);
       continue;
@@ -47,7 +54,7 @@ export function deployOptions(args: readonly string[]) {
     }
     throw new Error(`Unknown deployment option ${arg}. See deno task cf:deploy --help.`);
   }
-  return { environment, configPath, wrangler };
+  return { environment, configPath, image, wrangler };
 }
 
 /** Cleanup covers Wrangler failures as well as successful deployments. */
@@ -57,7 +64,14 @@ export async function deploy(
 ): Promise<number> {
   const options = deployOptions(args);
   const config = await readInstanceConfig(options.configPath);
-  const instance = configuredInstance(config, options.environment);
+  const saved = configuredInstance(config, options.environment);
+  const instance = configuredInstance(
+    parseInstanceConfig({
+      version: 1,
+      environments: { [options.environment]: { ...saved, image: options.image ?? saved.image } },
+    }),
+    options.environment,
+  );
   return await withDeploymentConfig(instance, options.environment, async (path) => {
     return await run([
       "deploy",
@@ -101,6 +115,7 @@ const HELP = `Usage: deno task cf:deploy --env staging|production [options]
 
 Reads quaso.cloudflare.jsonc at the repository root.
   --instance-config <file>     Use another operator configuration file.
+  --image <published image>   Override the saved image for this deployment.
   --dry-run                   Bundle without deploying.
   --minify                    Minify the Worker bundle.
   --outdir <directory>         Save Wrangler's bundle output.

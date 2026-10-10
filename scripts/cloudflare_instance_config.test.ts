@@ -161,4 +161,29 @@ describe("Cloudflare instance configuration", () => {
       await fs.rm(directory, { recursive: true, force: true });
     }
   });
+
+  test("deploys a selected commit image without changing the saved instance", async () => {
+    const directory = await fs.mkdtemp(join(tmpdir(), "quaso-staging-test-"));
+    const path = join(directory, "instance.jsonc");
+    try {
+      await fs.writeFile(path, JSON.stringify(settings));
+      await deploy(
+        ["--env", "staging", "--instance-config", path, "--image", "example/quaso:sha-123abcd"],
+        async (args) => {
+          const generated = JSON.parse(await fs.readFile(args[2], "utf8"));
+          expect(generated.env.staging.containers[0].image).toBe(
+            "docker.io/example/quaso:sha-123abcd",
+          );
+          return 0;
+        },
+      );
+      expect(await readInstanceConfig(path)).toEqual(settings);
+      await expect(
+        deploy(["--env", "staging", "--instance-config", path, "--image", "./Dockerfile"]),
+      ).rejects.toThrow("image");
+      expect(() => deployOptions(["--env", "staging", "--image"])).toThrow("published image");
+    } finally {
+      await fs.rm(directory, { recursive: true, force: true });
+    }
+  });
 });
