@@ -19,7 +19,8 @@ import { join } from "node:path";
 const ROOT = fromFileUrl(new URL("..", import.meta.url));
 const DATA_DIR = join(ROOT, ".quaso");
 const SERVER = "packages/server/main.ts";
-const PORT = 8000;
+/** The server's port; `QUASO_SERVER_PORT` moves it when something else already has 8000. */
+const PORT = Number(process.env["QUASO_SERVER_PORT"] ?? 8000);
 const WEBSITE = `http://localhost:${process.env["QUASO_WEB_PORT"] ?? 5173}`;
 const SERVER_URL = `http://127.0.0.1:${PORT}`;
 

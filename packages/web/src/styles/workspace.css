@@ -301,8 +301,9 @@
 .account-page > .workspace-heading {
   grid-column: 1 / -1;
 }
-.account-details {
-  grid-row: span 2;
+.account-keys,
+.account-danger {
+  grid-column: 1 / -1;
 }
 .account-field-group > legend {
   padding-inline: var(--space-2);
@@ -311,6 +312,10 @@
 }
 .account-signins > .record-card {
   background: var(--surface-alt);
+}
+.account-keys > p,
+.account-keys > .form {
+  max-width: 48rem;
 }
 .account-danger {
   border-color: var(--danger);
@@ -392,9 +397,6 @@
   }
   .account-page {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .account-details {
-    grid-row: auto;
   }
 }
 @media (max-width: 52rem) {

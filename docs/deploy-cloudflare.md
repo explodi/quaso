@@ -82,6 +82,8 @@ For automation, Wrangler reads an API token from `CLOUDFLARE_API_TOKEN` (and the
 - Account: Workers Scripts Edit, Containers Edit, D1 Edit, Workers R2 Storage Edit, Account
   Settings Read.
 - Zone, for the domain Quaso runs on: Workers Routes Edit, DNS Edit, Zone Read.
+- Optional, to read logs when something goes wrong ([Troubleshooting](#troubleshooting)): Workers
+  Tail Read and Workers Observability Read.
 
 ## 2. Create the instance
 
@@ -175,6 +177,25 @@ deno task cf:deploy --env production
 `cf:deploy` refuses to run without `--env`, and `cf:setup` refuses to change an instance that
 already exists: it only creates.
 
+### How long to stay awake
+
+A sleeping container takes about a minute to start: Cloudflare places it, then the server checks
+its database. The website is on screen at once meanwhile and shows "Waking up Quaso…" with a
+progress bar, and the CLI waits and says so, but the first request still takes that minute.
+
+The container is billed while it is awake, idle or not. On the `basic` instance (1/4 vCPU, 1 GiB
+of memory, 4 GB of disk), awake time costs about US$0.01 an hour beyond what Workers Paid includes
+(25 GiB-hours of memory a month), and CPU only while it works. At October 2026 prices:
+
+| `sleepAfter`  | Cold starts                                     | Cost beyond Workers Paid      |
+| ------------- | ----------------------------------------------- | ----------------------------- |
+| `10m`         | after every pause of 10 minutes                 | usually nothing               |
+| `1h`          | about once per working session                  | under US$1 a month            |
+| a day or more | rarely; scheduled work still wakes it by itself | about US$7 a month, always on |
+
+Check [Cloudflare's container pricing](https://developers.cloudflare.com/containers/pricing/)
+for current prices.
+
 ## Updates
 
 Pick the new release on [Docker Hub](https://hub.docker.com/r/explodi/quaso), and take a backup
@@ -186,7 +207,11 @@ deno task cf:deploy --env production
 ```
 
 Wrangler activates the new Worker first and then rolls out the new image, so for a while the new
-Worker serves the old server. The server migrates the database the first time the new release
+Worker serves the old server. The container's controller (the `QuasoContainer` Durable Object) can
+keep running the previous release until the container next stops, so a feature that needs both the
+new Worker and the new controller, such as the waking-up progress, may only work after the next
+cold start; the website keeps working meanwhile. An LLM job started during the rollout can run on
+the old server. The server migrates the database the first time the new release
 starts, and migrations only go forwards. To roll
 back, recover the data as well as the code; the
 [operations guide](operations.md#upgrades-and-rollbacks) describes how.
@@ -274,6 +299,29 @@ stopped and available until that comparison passes.
 A backup from an older release is migrated after the import; one from a newer release is refused
 (upgrade first).
 
+## Deploying from your own infrastructure code
+
+The Cloudflare Terraform provider can describe the D1 database, the R2 bucket, the zone's settings
+(such as Always Use HTTPS) and generated secrets, but not a Worker with a container. Keep those in
+your infrastructure code, and deploy the Worker with `cf:deploy` from a checkout of the Quaso
+release you pin, giving it your own instance file and secrets instead of `cf:setup`'s:
+
+```sh
+deno task cf:deploy --env production --instance-config instance.jsonc --secrets-file secrets.json
+```
+
+- `instance.jsonc` has the shape of `quaso.cloudflare.jsonc` (`version: 1` and an `environments`
+  entry), with the database ID and bucket name your infrastructure created.
+- `secrets.json` holds at least `SECRET_KEY`, and `SETUP_KEY` until the administrator exists. Write
+  it with mode 600 and delete it afterwards.
+- Pin the server and the CLI together. A release has an image tag and a CLI version of the same
+  number; a commit on main has the image `sha-<first 7>` and the CLI `<version>.main.g<first 7>`.
+  Check that the image is on Docker Hub before deploying.
+- Wait for `https://<hostname>/healthz` to report `"storage":"cloudflare"` before running the CLI.
+
+`cf:deploy` builds the website with Vite before it uploads the Worker, so the checkout needs
+`deno install` first.
+
 ## Staging
 
 `--env staging` is a second, separate instance: its own Worker (`quaso-staging`), database, bucket,
@@ -305,6 +353,26 @@ local D1 and R2 (Docker must be running; the first run builds the image from `de
 `packages/cloudflare/.dev.vars` and fill in `SECRET_KEY`. Then open <http://localhost:8787>.
 
 `deno task cf:test` runs the package's tests in `workerd`, without Docker or an account.
+
+## Troubleshooting
+
+- **`error code: 1101` or a bare 500 from the Worker:** the Worker threw. Watch its exceptions
+  while you repeat the request:
+  ```sh
+  cd packages/cloudflare
+  deno run -A npm:wrangler tail quaso-production --format json
+  ```
+- **The server's own logs** (its JSON lines, including startup and migrations): the Cloudflare
+  dashboard, Workers & Pages, the Worker, Logs. With an API token, they need Workers Observability
+  Read.
+- **"Quaso is starting up or unavailable" (503) for more than two minutes:** the container didn't
+  start. Its state is on the dashboard's Containers page; the server's logs say why,
+  such as a missing secret.
+- **A new hostname doesn't resolve on your machine** although the deploy finished: a lookup made
+  before the Custom Domain existed stays cached as "no such name" for the zone's negative TTL, 30
+  minutes on Cloudflare. Try it from another network, or wait.
+- **The first deploy waits a long time for `/healthz`:** Cloudflare issues the Custom Domain's
+  certificate and pulls the image on the first start. Later deploys are quicker.
 
 ## Limits to know
 

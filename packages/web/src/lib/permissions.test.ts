@@ -13,6 +13,8 @@ import { type Action, ACTIONS, can } from "./permissions.ts";
  */
 const TABLE: Record<Action, (Role | "anyone")[]> = {
   read: ["anyone", "none", "contributor", "manager", "administrator"],
+  download: ["administrator"],
+  upload: ["administrator"],
   volunteer: ["none"],
   suggest: ["contributor", "manager", "administrator"],
   edit: ["manager", "administrator"],

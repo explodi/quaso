@@ -4,6 +4,7 @@ import { H1, H2, H3, Button, AnchorButton, Dialog, Field, Fieldset } from "@quas
 import { useState } from "react";
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import { Access, ConfirmButton } from "../components/Management.tsx";
+import { PersonalApiKeys } from "../components/PersonalApiKeys.tsx";
 import { useToast } from "../components/Toast.tsx";
 import { browserAuthUrl } from "../lib/api.ts";
 import { useMutation } from "../lib/data.ts";
@@ -52,7 +53,7 @@ function Account() {
       <div className="page-head workspace-heading">
         <div>
           <H1 ui>Account</H1>
-          <p className="muted">Your profile, security and connected sign-in methods.</p>
+          <p className="muted">Your profile, security, sign-in methods and CLI access.</p>
         </div>
       </div>
       <section className="management-section account-details">
@@ -156,6 +157,7 @@ function Account() {
           );
         })}
       </section>
+      <PersonalApiKeys />
       <section className="management-section account-danger">
         <H2 ui>Delete account</H2>
         <p>Your contributed translations remain part of the project.</p>

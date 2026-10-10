@@ -156,15 +156,17 @@ export const REQUEST_TOKEN_CASES: { name: string; run(sql: Sql): Promise<void> }
     },
   },
   {
-    name: "only administrators and system callers can list keys",
+    name: "administrators and system callers list every key, people their own",
     async run(sql) {
       await seed(sql);
+      const ids = async (actor: Actor) =>
+        (await listApiTokensAsync(sql, actor)).tokens.map((token) => token.id);
+      checkEqual(await ids(SYSTEM), [8, 7]);
+      checkEqual(await ids(USER), [8]);
+      checkEqual(await ids({ type: "user", userId: 3 }), []);
       await rejected(() => listApiTokensAsync(sql, ANONYMOUS), "unauthorized");
-      await rejected(() => listApiTokensAsync(sql, USER), "forbidden");
-      await rejected(() => listApiTokensAsync(sql, { type: "user", userId: 3 }), "forbidden");
       await rejected(() => listApiTokensAsync(sql, { type: "user", userId: 4 }), "forbidden");
       await rejected(() => listApiTokensAsync(sql, { type: "token", tokenId: 7 }), "forbidden");
-      checkEqual((await listApiTokensAsync(sql, SYSTEM)).tokens.length, 2);
     },
   },
   {
@@ -185,7 +187,11 @@ export const REQUEST_TOKEN_CASES: { name: string; run(sql: Sql): Promise<void> }
       };
       const result = await listApiTokensAsync(changing, ADMIN);
       checkEqual([reads, result.tokens[1].createdBy?.name], [1, "Ada"]);
-      await rejected(() => listApiTokensAsync(sql, ADMIN), "forbidden");
+      const afterDemotion = await listApiTokensAsync(sql, ADMIN);
+      checkEqual(
+        afterDemotion.tokens.map((token) => token.id),
+        [7],
+      );
     },
   },
   {

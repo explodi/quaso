@@ -268,7 +268,7 @@ export function asyncReadMethods(options: ReadOptions): AsyncReadMethods {
       ),
     getPublishedFile: (actor, input) => readPublishedFile(options.sql, options.store, actor, input),
     listApiTokens: (actor, input) =>
-      call(actor, "tokens", Empty, input, (sql, _input, caller) => listApiTokensAsync(sql, caller)),
+      call(actor, null, Empty, input, (sql, _input, caller) => listApiTokensAsync(sql, caller)),
     getHealth: (actor, input) =>
       call(actor, null, Empty, input, async (sql) => {
         const [rows] = await sql.read([

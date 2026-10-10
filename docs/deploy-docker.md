@@ -68,8 +68,10 @@ Once the instance is running, follow [From your repository to every language](wo
 to connect your game and run the translation workflow, or [Migrate from Crowdin](migrate-from-crowdin.md)
 to bring existing translations and their proofread state.
 
-An administrator creates a named key in **Settings → API keys**. Use `read` for downloads and
-status; use `upload` for uploads, imports and LLM runs. The secret is shown once.
+An administrator creates a named key in **Settings → API keys**, and everyone signed in can create
+their own on their account page. Use `read` for downloads and status; use `upload` for uploads,
+imports and LLM runs. The secret is shown once. A key does no more than the person who created it
+may do now, so create CI keys with an administrator account.
 
 For recovery without the website, stop the local server before creating a key:
 

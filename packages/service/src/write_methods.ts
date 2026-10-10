@@ -748,13 +748,13 @@ export function asyncWriteMethods(options: {
         deleteCommentAsync(options.sql, actor, id, clock()),
       ),
     createApiToken: (caller, input) =>
-      call(caller, "tokens", CreateApiTokenRequest, input, async (request, actor) => {
+      call(caller, "account", CreateApiTokenRequest, input, async (request, actor) => {
         const created = await createApiTokenAsync(options.sql, actor, request, clock());
         logger.info("API key created", { id: created.id, scope: created.scope });
         return created;
       }),
     revokeApiToken: (caller, input) =>
-      call(caller, "tokens", s.object({ id: Id }), input, async ({ id }, actor) => {
+      call(caller, "account", s.object({ id: Id }), input, async ({ id }, actor) => {
         await revokeApiTokenAsync(options.sql, actor, id, clock());
         logger.info("API key revoked", { id });
         return { ok: true as const };

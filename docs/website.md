@@ -238,8 +238,10 @@ Administrators choose a section in **Settings**:
 - **LLM translation**: automatic translation, outdated handling, model, prompt, context languages,
   batch size, neighboring strings, retries and safety. Resetting the prompt changes the draft; save
   to apply it. Unknown prompt placeholders are rejected. Provider credentials stay on the server.
-- **API keys**: create named `read` or `upload` keys, copy the secret once, and revoke unused keys.
-  Read keys download and inspect status. Upload keys also upload, import and start translation jobs.
+- **API keys**: everyone's keys, with who created each. Create named `read` or `upload` keys, copy
+  the secret once, and revoke unused keys. Read keys download and inspect status. Upload keys also
+  upload, import and start translation jobs, as far as their creator's role allows. Everyone
+  signed in also creates and revokes their own keys on their account page.
 - **Backups**: download SQLite or JSON and inspect the last backup. Store exports privately: they
   hold account data. See [operations](operations.md) for restore drills.
 

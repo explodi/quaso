@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 import { test } from "node:test";
 import { assertEquals, assertThrows } from "@std/assert";
-import { ANONYMOUS, SYSTEM } from "./api.ts";
+import type { TokenScope } from "@quaso/core";
+import { type Actor, ANONYMOUS, SYSTEM } from "./api.ts";
 import { ServiceError } from "./errors.ts";
 import { type Action, ACTIONS, can, languageLimit, requirePermission } from "./permissions.ts";
 import { addUser, createToken, startTestService } from "./test_helpers.ts";
@@ -91,6 +92,52 @@ test("language limits apply to suggesting, editing and reviewing (ROLE-3)", asyn
   assertEquals(can(instance.ctx, manager, "edit"), true, "no language given");
 });
 
+/** A key created by `person`, with `scope`. */
+async function keyOf(
+  instance: Awaited<ReturnType<typeof startTestService>>,
+  person: Actor,
+  scope: TokenScope,
+) {
+  const created = await instance.service.createApiToken(person, { name: "Laptop", scope });
+  return { type: "token", tokenId: created.id } as const;
+}
+
+test("a manager's upload key translates and sees usage, but can't upload or download", async () => {
+  using instance = await startTestService();
+  const manager = addUser(instance.sql, "manager");
+  const key = await keyOf(instance, manager, "upload");
+  assertEquals(
+    allowed((action) => can(instance.ctx, key, action)),
+    ["read", "translate", "usage"],
+  );
+});
+
+test("an administrator's upload key does everything its scope allows", async () => {
+  using instance = await startTestService();
+  const admin = addUser(instance.sql, "administrator");
+  const key = await keyOf(instance, admin, "upload");
+  assertEquals(
+    allowed((action) => can(instance.ctx, key, action)),
+    ["read", "download", "upload", "translate", "usage"],
+  );
+});
+
+test("a key loses what its creator loses: a demotion, then the account's deletion", async () => {
+  using instance = await startTestService();
+  const admin = addUser(instance.sql, "administrator");
+  const key = await keyOf(instance, admin, "upload");
+  instance.sql.run("UPDATE users SET role = 'contributor'");
+  assertEquals(
+    allowed((action) => can(instance.ctx, key, action)),
+    ["read"],
+  );
+  instance.sql.run("UPDATE users SET deleted_at = 1");
+  assertEquals(
+    allowed((action) => can(instance.ctx, key, action)),
+    [],
+  );
+});
+
 test("languageLimit: a person's languages, canonical; null when nothing limits them", async () => {
   using instance = await startTestService();
   const { ctx, sql } = instance;
@@ -99,6 +146,8 @@ test("languageLimit: a person's languages, canonical; null when nothing limits t
   assertEquals(languageLimit(ctx, addUser(sql, "manager", null)), null);
   assertEquals(languageLimit(ctx, addUser(sql, "administrator", ["de"])), null);
   assertEquals(languageLimit(ctx, (await createToken(instance.service, "upload")).actor), null);
+  const limited = addUser(sql, "manager", ["de"]);
+  assertEquals(languageLimit(ctx, await keyOf(instance, limited, "upload")), ["de"]);
   assertEquals(languageLimit(ctx, SYSTEM), null);
 });
 
