@@ -76,8 +76,8 @@ export async function runScenario(cli: Runner, log: (step: string) => void = () 
     assertStringIncludes(failing.stdout, "ja: ");
     await quaso(["status", "--fail-on", "untranslated", "--language", "de"], 0);
 
-    log("download writes every language");
-    const download = jsonOf(await quaso(["download", "--json"], 0));
+    log("download explicitly replaces the fixture translation files in every language");
+    const download = jsonOf(await quaso(["download", "--overwrite-local", "--json"], 0));
     assertEquals(download.result.skipped, []);
     for (const language of DEMO_LANGUAGES) {
       for (const file of DEMO_FILES) {
@@ -215,7 +215,7 @@ async function llmScenario(cli: Runner, parent: string, log: (step: string) => v
     );
     assertEquals(translated.result.job.progress.translated, DEMO_LANGUAGES.length);
     assertEquals(translated.result.failures, []);
-    await quaso(["download"], 0);
+    await quaso(["download", "--overwrite-local"], 0);
     const polish = JSON.parse(
       await fs.readFile(join(project, "src", "locales", "pl", "common.json"), "utf8"),
     );

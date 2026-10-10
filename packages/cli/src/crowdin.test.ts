@@ -54,9 +54,22 @@ test("Crowdin init and download retain nested exported paths and infer languages
         env: { QUASO_HOSTNAME: "http://quaso.test", QUASO_API_KEY: "qso_test" },
         fetch,
       });
-      assertEquals(downloaded.code, 0, downloaded.stderr);
+      assertEquals(downloaded.code, 6, downloaded.stderr);
       assertEquals(
-        JSON.parse(downloaded.stdout).result.written[0].path,
+        await readFile(join(dir, "src/locales/pt/menu/play.json"), "utf8"),
+        '{"play":"Old"}',
+      );
+      const replaced = await runCli(
+        ["download", "--language", "pt-PT", "--overwrite-local", "--json"],
+        {
+          cwd: dir,
+          env: { QUASO_HOSTNAME: "http://quaso.test", QUASO_API_KEY: "qso_test" },
+          fetch,
+        },
+      );
+      assertEquals(replaced.code, 0, replaced.stderr);
+      assertEquals(
+        JSON.parse(replaced.stdout).result.written[0].path,
         "src/locales/pt/menu/play.json",
       );
       assertEquals(await readFile(join(dir, "src/locales/pt/menu/play.json"), "utf8"), content);

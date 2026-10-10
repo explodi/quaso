@@ -95,21 +95,22 @@ never writes outside it. `quaso init` writes a starter file.
 }
 ```
 
-| Field                 | Meaning                                                                                                                                                                                                                                                          |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `$schema`             | The JSON Schema of the file, which your instance publishes at `/schema/config-v1.json`, for completion and checks in editors. Optional.                                                                                                                          |
-| `hostname`            | The instance, when `QUASO_HOSTNAME` isn't set. Optional.                                                                                                                                                                                                         |
-| `sourceLanguage`      | The language of your source files, as a BCP 47 tag such as `en`.                                                                                                                                                                                                 |
-| `languages`           | The languages to translate into: what `download` writes and `status --fail-on` counts. `upload` adds any of them that the instance lacks. Languages that the instance has and the config doesn't list, such as one volunteers are just starting, are left alone. |
-| `languageMapping`     | The name a language has in your game, when it differs from its tag: `{ "zh-Hans": "zh-CN" }` writes Simplified Chinese to `src/locales/zh-CN/`. Optional.                                                                                                        |
-| `files`               | Where the files are: one or more entries, each with `source`, `translation` and an optional `exclude`.                                                                                                                                                           |
-| `files[].source`      | A glob of the source files, such as `src/locales/en/**/*.json`.                                                                                                                                                                                                  |
-| `files[].translation` | Where translations go, with `{lang}` (the language as your game names it, after `languageMapping`) and `{path}` (the source file's path below the folder where the glob starts).                                                                                 |
-| `files[].exclude`     | Globs of source files to leave out, relative to the project folder. Optional.                                                                                                                                                                                    |
-| `limits`              | Maximum lengths, such as for app store fields, in user-perceived characters. `file` is the file's path as the instance knows it (below the folder where the glob starts). They win over limits set on the website. Optional.                                     |
-| `pluralExclusions`    | Groups of keys that only look like plurals (`menu.power_one`, `menu.power_other`), named without the category. Optional.                                                                                                                                         |
-| `outdated`            | What `download` writes for translations of an older source: `"write"` (default), or `"omit"` so the app falls back to its source language.                                                                                                                       |
-| `untranslated`        | What `download` writes for a string that isn't translated: `"source"` (the default), its source text, so every file has every key; or `"omit"`, nothing, for apps whose i18n falls back to the source language by itself (i18next's `fallbackLng`). Optional.    |
+| Field                      | Meaning                                                                                                                                                                                                                                                          |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `$schema`                  | The JSON Schema of the file, which your instance publishes at `/schema/config-v1.json`, for completion and checks in editors. Optional.                                                                                                                          |
+| `hostname`                 | The instance, when `QUASO_HOSTNAME` isn't set. Optional.                                                                                                                                                                                                         |
+| `sourceLanguage`           | The language of your source files, as a BCP 47 tag such as `en`.                                                                                                                                                                                                 |
+| `languages`                | The languages to translate into: what `download` writes and `status --fail-on` counts. `upload` adds any of them that the instance lacks. Languages that the instance has and the config doesn't list, such as one volunteers are just starting, are left alone. |
+| `translationsInRepository` | Languages authored in the repository. Upload imports their selected local files as blue, replacing the instance's values. Must name target languages.                                                                                                            |
+| `languageMapping`          | The name a language has in your game, when it differs from its tag: `{ "zh-Hans": "zh-CN" }` writes Simplified Chinese to `src/locales/zh-CN/`. Optional.                                                                                                        |
+| `files`                    | Where the files are: one or more entries, each with `source`, `translation` and an optional `exclude`.                                                                                                                                                           |
+| `files[].source`           | A glob of the source files, such as `src/locales/en/**/*.json`.                                                                                                                                                                                                  |
+| `files[].translation`      | Where translations go, with `{lang}` (the language as your game names it, after `languageMapping`) and `{path}` (the source file's path below the folder where the glob starts).                                                                                 |
+| `files[].exclude`          | Globs of source files to leave out, relative to the project folder. Optional.                                                                                                                                                                                    |
+| `limits`                   | Maximum lengths, such as for app store fields, in user-perceived characters. `file` is the file's path as the instance knows it (below the folder where the glob starts). They win over limits set on the website. Optional.                                     |
+| `pluralExclusions`         | Groups of keys that only look like plurals (`menu.power_one`, `menu.power_other`), named without the category. Optional.                                                                                                                                         |
+| `outdated`                 | What `download` writes for translations of an older source: `"write"` (default), or `"omit"` so the app falls back to its source language.                                                                                                                       |
+| `untranslated`             | What `download` writes for a string that isn't translated: `"source"` (the default), its source text, so every file has every key; or `"omit"`, nothing, for apps whose i18n falls back to the source language by itself (i18next's `fallbackLng`). Optional.    |
 
 **Globs** use `/` on every system: `*` matches within a folder, `**` matches any number of folders,
 `?` one character, `{a,b}` either alternative, and `[abc]`, `[a-z]` or `[!abc]` one character of a
@@ -211,6 +212,15 @@ upload queues a translation job for the added and changed strings, and says so. 
 outdated translations that aren't proofread, and proposes updates for proofread ones. With `--wait`,
 the command waits for that job.
 
+Local translations for new or changed keys appear in upload output with a ready-to-run
+`quaso import --as blue --language <tag> --file <file>` command. Use
+`quaso upload --import-translations es:blue` (or `es:green`) to import selected local files in the
+same run. Explicit imports preserve existing blue translations. For a language authored in Git,
+set `"translationsInRepository": ["es"]`; uploads import its selected files as blue every time,
+including unchanged source uploads, replacing the instance's values and retaining identical-source
+wording. Review QA refusals printed by the command; exit code 6 means some values were refused.
+Dry runs report the import plan without importing.
+
 ### `quaso download`
 
 Writes every language's files where the config's `translation` pattern says. Strings that aren't
@@ -243,6 +253,14 @@ naming a translation file of another language than `--language` is an error.
 The instance publishes after five seconds without download-changing writes, capped at one minute.
 Only versions still in history are available; a missing version object returns `410 expired`.
 Local path checks and the config's language and file selection still apply.
+
+Downloads keep the last written values in `.quaso/download-state`, scoped to the instance and
+local file. When a download would change a hand-edited value, it lists `local edit`, keeps the
+whole file and returns exit code 6. Other files can still download. `--dry-run` lists conflicts
+without changing files or the baseline. Import local fixes with `quaso import --as blue`, or use
+`--overwrite-local` after reviewing them. On the first download, existing values that match
+neither the incoming values nor source fallbacks are treated as local edits. Keep `.quaso/`
+ignored by Git; it contains local state, not project source.
 
 ### `quaso translate`
 
