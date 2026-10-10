@@ -66,6 +66,8 @@ test("openapi: every route, with path parameters in braces", () => {
     "/languages/{tag}",
     "/models",
     "/project",
+    "/quality-jobs",
+    "/quality-jobs/{id}",
     "/renames",
     "/restore",
     "/settings",

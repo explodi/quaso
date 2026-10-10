@@ -90,7 +90,7 @@ export const RESPONSE_SCHEMA: JsonSchemaObject = {
           },
         },
         required: ["id"],
-        propertyOrdering: ["id", "text", "forms", "ambiguous"],
+        propertyOrdering: ["id", "text", "forms", "referenceNotes", "ambiguous"],
       },
     },
   },
