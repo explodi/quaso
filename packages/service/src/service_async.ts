@@ -154,10 +154,45 @@ export function createAsyncService(options: AsyncServiceOptions): Service {
     },
     async alarm() {
       if ((await unfinishedRestoreAsync(options.sql))?.resumable) return;
+      const [before] = await sql.read([
+        { sql: "SELECT CAST(value AS INTEGER) AS revision FROM meta WHERE key = 'revision'" },
+      ]);
       const work: Promise<void>[] = [];
       if (publication === null || (await publication.llmDue())) work.push(llm.alarm());
       if (publication !== null) work.push(publication.alarm());
       await Promise.all(work);
+      const [stored] = await sql.read([{ sql: "SELECT data FROM settings WHERE id = 1" }]);
+      const policy = settingsFromData((stored[0]?.data as string | undefined) ?? null, model).llm
+        .meaningCheck;
+      if (policy?.enabled && policy.onSave && policy.colours === "all") {
+        const [written] = await sql.read([
+          {
+            sql: "SELECT string_id, language FROM translations WHERE revision > ? AND (author_type = 'llm' OR author_label = 'Translation memory')",
+            params: [Number(before[0].revision)],
+          },
+        ]);
+        const languages = new Map<string, number[]>();
+        for (const row of written) {
+          const tag = String(row.language);
+          const ids = languages.get(tag) ?? [];
+          ids.push(Number(row.string_id));
+          languages.set(tag, ids);
+        }
+        for (const [language, ids] of languages)
+          for (let offset = 0; offset < ids.length; offset += 500) {
+            try {
+              await quality.create(SYSTEM, {
+                kind: "meaning",
+                languages: [language],
+                strings: ids.slice(offset, offset + 500),
+              });
+            } catch {
+              logger.warn("Couldn't queue generated translations for a meaning check", {
+                language,
+              });
+            }
+          }
+      }
       await quality.alarm();
     },
     async upload(caller, input) {

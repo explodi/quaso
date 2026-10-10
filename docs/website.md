@@ -438,3 +438,17 @@ Translation jobs may return a one-sentence ambiguity note explaining alternate r
 and which was chosen. Job results collect these notes, the editor warns on the source, and Sources
 shows **Needs a description** for current ambiguous sources with no description. Add context via a
 repository sidecar, a configured description suffix, or the editor to resolve the list entry.
+
+**Check meaning** runs a model comparison for a string, file or language and follows the job.
+Jobs lists progress and structured explanations; accepted text, colour and translation revision
+stay intact. Meaning warnings appear under fields and in the QA filter. Pending suggestions can
+be checked before approval. Settings → LLM translation controls automatic checks on saves and
+approvals, blue-only or every colour, the model, and monthly-budget accounting. Automatic checks
+are off by default; manual checks are available whenever translation is configured. Usage records
+every request, including checks excluded from the monthly budget. Source/value/context changes
+invalidate old warnings, and concurrent edits prevent stale model results from being applied.
+
+When meaning checks are enabled, translation jobs also accept notes about shown reference
+translations. These become warnings on the reference language and job notes, with no extra
+comparison request. Only a reference actually shown to the model and still matching its value
+can receive that warning.

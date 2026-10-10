@@ -178,11 +178,7 @@ export function createService(options: ServiceOptions): Service {
     clock: ctx.clock,
     logger: ctx.logger,
     model: ctx.defaultModel,
-    configuration: async () => ({
-      provider: options.provider ?? null,
-      concurrency: 1,
-      monthlyTokenBudget: options.monthlyTokenBudget ?? null,
-    }),
+    configuration: async () => llm.configuration(),
     async schedule(at) {
       await scheduleWakeUp(ctx.sql, options.scheduler, at);
     },
@@ -225,7 +221,7 @@ export function createService(options: ServiceOptions): Service {
     }
   }
 
-  return {
+  const service: Service = {
     createQualityJob: quality.create,
     getQualityJob: (actor, { id }) => getQualityJob(qualitySql, actor, id),
     listQualityJobs: (actor) => listQualityJobs(qualitySql, actor),
@@ -402,5 +398,20 @@ export function createService(options: ServiceOptions): Service {
       },
       { model: ctx.defaultModel, logger: ctx.logger, fetch: options.emailFetch },
     ),
+  };
+  return {
+    ...service,
+    async saveTranslation(actor, input) {
+      const result = await service.saveTranslation(actor, input);
+      if (result.translation?.revision !== input.baseRevision)
+        await quality.afterTranslation("save", input.id, input.language);
+      return result;
+    },
+    async approveTranslation(actor, input) {
+      const result = await service.approveTranslation(actor, input);
+      if (result.translation?.revision !== input.baseRevision)
+        await quality.afterTranslation("approval", input.id, input.language);
+      return result;
+    },
   };
 }

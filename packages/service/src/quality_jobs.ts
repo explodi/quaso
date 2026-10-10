@@ -466,18 +466,18 @@ export function createQualityJobs(
       language: string,
       suggestionId?: number,
     ) {
-      const policy = (await settings()).llm.meaningCheck;
-      const enabled = policy?.enabled && (event === "save" ? policy.onSave : policy.onApproval);
-      if (!enabled) return;
-      const [rows] = await sql.read([
-        {
-          sql: "SELECT colour FROM translations WHERE string_id = ? AND language = ?",
-          params: [id, language],
-        },
-      ]);
-      const blueOnly = policy.colours === "blue";
-      if (blueOnly && (suggestionId !== undefined || rows[0]?.colour !== "blue")) return;
       try {
+        const policy = (await settings()).llm.meaningCheck;
+        const enabled = policy?.enabled && (event === "save" ? policy.onSave : policy.onApproval);
+        if (!enabled) return;
+        const [rows] = await sql.read([
+          {
+            sql: "SELECT colour FROM translations WHERE string_id = ? AND language = ?",
+            params: [id, language],
+          },
+        ]);
+        const blueOnly = policy.colours === "blue";
+        if (blueOnly && (suggestionId !== undefined || rows[0]?.colour !== "blue")) return;
         await create(SYSTEM, {
           kind: "meaning",
           languages: [language],

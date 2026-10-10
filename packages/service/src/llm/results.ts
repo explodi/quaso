@@ -98,7 +98,12 @@ export function checkAnswer(
         ),
         item.referenceNotes,
       );
-      result.passed.set(string.id, { value, checks, ...(ambiguous ? { ambiguous } : {}) });
+      result.passed.set(string.id, {
+        value,
+        checks,
+        ...(ambiguous ? { ambiguous } : {}),
+        ...(referenceNotes.ok ? { referenceNotes: referenceNotes.value } : {}),
+      });
     }
   }
   return result;

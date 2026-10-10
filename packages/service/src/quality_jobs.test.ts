@@ -145,3 +145,129 @@ test("automatic blue save checks run after save; budget-exempt checks remain in 
     opened.close();
   }
 });
+
+test("a human correction while a meaning request runs cannot acquire an outdated warning", async () => {
+  const opened = openAsyncSqlite(":memory:");
+  const model = provider();
+  let entered!: () => void;
+  let release!: () => void;
+  const ready = new Promise<void>((resolve) => {
+    entered = resolve;
+  });
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const delayed = {
+    ...model.value,
+    async translate(request: Parameters<TranslationProvider["translate"]>[0]) {
+      entered();
+      await held;
+      return model.value.translate(request);
+    },
+  };
+  try {
+    const service = createAsyncService({
+      sql: opened.sql,
+      provider: delayed,
+      scheduler: { schedule() {}, cancel() {} },
+      secretKey: "test",
+    });
+    await service.start();
+    await service.updateSettings(SYSTEM, { llm: { autoTranslate: false } });
+    await service.upload(SYSTEM, {
+      languages: ["es"],
+      files: [{ path: "a.json", repoPath: "a.json", content: '{"tracks":"Two tracks"}' }],
+    });
+    await service.importTranslations(SYSTEM, {
+      language: "es",
+      as: "blue",
+      files: [{ path: "a.json", content: '{"tracks":"Dos estaciones"}' }],
+    });
+    const string = (await service.listStrings(SYSTEM, { language: "es" })).strings[0];
+    await service.createQualityJob(SYSTEM, { kind: "meaning", languages: ["es"] });
+    const alarm = service.alarm();
+    await ready;
+    await service.saveTranslation(SYSTEM, {
+      id: string.id,
+      language: "es",
+      value: "Dos vías",
+      baseRevision: string.translation!.revision,
+    });
+    release();
+    await alarm;
+    const detail = await service.getString(SYSTEM, { id: string.id, language: "es" });
+    assertEquals(detail.translation?.value, "Dos vías");
+    assertEquals(detail.checks, []);
+  } finally {
+    release();
+    opened.close();
+  }
+});
+
+test("translation answers can flag the shown reference language without another provider request", async () => {
+  const opened = openAsyncSqlite(":memory:");
+  const fake = createFakeTranslator();
+  let requests = 0;
+  const model = {
+    ...fake,
+    async translate(request: Parameters<TranslationProvider["translate"]>[0]) {
+      requests++;
+      const result = await fake.translate(request);
+      const answer = result.answer as { translations: { referenceNotes?: unknown }[] };
+      answer.translations[0].referenceNotes = [
+        {
+          language: "es",
+          notes: [
+            { kind: "changed", explanation: "The Spanish reference changes tracks to stations." },
+          ],
+        },
+      ];
+      return result;
+    },
+  };
+  try {
+    const service = createAsyncService({
+      sql: opened.sql,
+      provider: model,
+      scheduler: { schedule() {}, cancel() {} },
+      secretKey: "test",
+    });
+    await service.start();
+    await service.updateSettings(SYSTEM, {
+      llm: {
+        autoTranslate: false,
+        context: { fileContext: false, otherLanguages: ["es"] },
+        meaningCheck: {
+          enabled: true,
+          colours: "blue",
+          onSave: false,
+          onApproval: false,
+          model: "",
+          countsAgainstBudget: true,
+        },
+      },
+    });
+    await service.upload(SYSTEM, {
+      languages: ["es", "de"],
+      files: [{ path: "a.json", repoPath: "a.json", content: '{"tracks":"Two tracks"}' }],
+    });
+    await service.importTranslations(SYSTEM, {
+      language: "es",
+      as: "blue",
+      files: [{ path: "a.json", content: '{"tracks":"Dos estaciones"}' }],
+    });
+    const id = (await service.listStrings(SYSTEM, { language: "es" })).strings[0].id;
+    const created = await service.createJob(SYSTEM, { languages: ["de"] });
+    await service.alarm();
+    const reference = await service.getString(SYSTEM, { id, language: "es" });
+    assertEquals(reference.checks[0].check, "meaning");
+    assertEquals(reference.translation?.value, "Dos estaciones");
+    assertEquals(
+      (await service.getJob(SYSTEM, { id: created.job!.id })).notes?.[0].kind,
+      "meaning",
+    );
+    assertEquals(requests, 1);
+  } finally {
+    opened.close();
+  }
+});

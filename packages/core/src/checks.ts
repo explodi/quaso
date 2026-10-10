@@ -893,7 +893,11 @@ export function checkTranslationConsistency(
   return checks;
 }
 
-export function meaningWarnings(notes: readonly MeaningNote[], sourceHash?: string, sourceDescription?: string): CheckResult[] {
+export function meaningWarnings(
+  notes: readonly MeaningNote[],
+  sourceHash?: string,
+  sourceDescription?: string,
+): CheckResult[] {
   return notes.map((note) => ({
     check: "meaning",
     severity: "warning",
