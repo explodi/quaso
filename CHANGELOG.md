@@ -40,8 +40,23 @@ Release candidates are for deployment and migration testing. The team decides wh
 - `quaso import --allow-qa-errors` (`allowQaErrors` in `POST /imports`) imports values that fail
   the quality checks with their QA errors, listed as `flagged`, instead of refusing them, so a
   migration keeps every existing translation.
+- An outdated string shows a banner in the editor: the English changed after it was translated,
+  players still get the old translation, how the English changed (as a word diff), and what to do
+  about it. Wherever outdated counts appear, they say the same.
+- Quality warnings for slips that are easy to miss: a missing or added tag (`<b>`, `<1>`), a space
+  or line break at either end that the English doesn't have (or the other way round), a different
+  number of line breaks, two spaces in a row, and a different `?`, `!`, `…` or `:` at the end. The
+  editor shows the English's spaces and line breaks at either end as `·` and `↵`, and a placeholder
+  chip turns red while the translation lacks it.
+- A translation estimate (dry run) says how many strings get each treatment: `work.translate`,
+  `work.retranslate`, `work.update` (outdated green, rewritten) and `work.propose` (outdated blue,
+  a proposal). The Auto-translate dialog and `quaso translate --dry-run` show it.
 
 ### Changed
+
+- Auto-translate and `quaso translate` give outdated proofread translations a proposal whenever
+  their scope includes outdated work, whatever the upload setting "Propose updates for outdated
+  proofread translations" says. The two outdated settings apply to uploads only.
 
 - An API key never does more than the person who created it may do now: a demotion narrows it,
   and deleting the account disables it. Keys created on the server (`quaso token create`) act by

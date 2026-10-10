@@ -40,6 +40,19 @@ export function stateSentence(summary: Pick<StringSummary, "translation" | "pend
   return parts.join(", ");
 }
 
+/**
+ * What "outdated" means, and what players get meanwhile: said the same way wherever an
+ * outdated translation appears, since the word alone doesn't tell.
+ */
+export function outdatedExplanation(sourceLanguageName: string, count = 1): string {
+  const these = count === 1 ? "this was" : "these were";
+  const translation = count === 1 ? "translation" : "translations";
+  return (
+    `The ${sourceLanguageName} changed after ${these} translated. Players still get the old ` +
+    `${translation} until someone updates or approves ${count === 1 ? "it" : "them"}.`
+  );
+}
+
 export const FILTER_LABELS: Record<StateFilter, string> = {
   untranslated: "Untranslated",
   green: "Translated (green)",

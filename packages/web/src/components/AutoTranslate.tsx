@@ -15,6 +15,7 @@ import { FileTree } from "./FileTree.tsx";
 import { buildTree, type TreeNode } from "../lib/tree.ts";
 import { Link } from "../lib/router.tsx";
 import { count as formatCount } from "../lib/format.ts";
+import { outdatedExplanation } from "../lib/states.ts";
 
 export function AutoTranslateButton({ language, file }: { language?: string; file?: string }) {
   const session = useSession();
@@ -106,8 +107,8 @@ export function AutoTranslateDialog({
         }}
       >
         <p>
-          The LLM writes green translations. Changes to outdated proofread translations are
-          proposals for review.
+          The LLM writes green translations, which players get at once. It never changes a proofread
+          (blue) translation: it proposes an update for review instead.
         </p>
         {project.data && !project.data.llmAvailable && (
           <p className="notice notice-warning">
@@ -150,10 +151,21 @@ export function AutoTranslateDialog({
           <option value="untranslated">Untranslated only</option>
           <option value="green">Also re-translate green translations</option>
         </SelectField>
-        <Label className="check-label">
-          <Checkbox checked={outdated} onChange={(e) => setOutdated(e.target.checked)} />
-          Include outdated translations
-        </Label>
+        <div>
+          <Label className="check-label">
+            <Checkbox
+              checked={outdated}
+              onChange={(e) => setOutdated(e.target.checked)}
+              aria-describedby="auto-translate-outdated-hint"
+            />
+            Update outdated translations
+          </Label>
+          <p id="auto-translate-outdated-hint" className="field-hint">
+            {outdatedExplanation(project.data?.sourceLanguageName ?? "source text", 2)} Green ones
+            are rewritten for the new {project.data?.sourceLanguageName ?? "source text"}; proofread
+            ones get a proposal, and stay as they are until a manager accepts it.
+          </p>
+        </div>
         <TextField
           label="Custom instruction (optional)"
           value={instruction}
@@ -189,6 +201,29 @@ export function AutoTranslateDialog({
                 <br />
                 Estimated tokens: {count.estimatedTokens.input} input +{" "}
                 {count.estimatedTokens.output} output
+                <span className="estimate-work">
+                  {count.work.translate > 0 && (
+                    <span>
+                      {formatCount(count.work.translate, "untranslated string")}: translated
+                    </span>
+                  )}
+                  {count.work.retranslate > 0 && (
+                    <span>
+                      {formatCount(count.work.retranslate, "green translation")}: translated again
+                    </span>
+                  )}
+                  {count.work.update > 0 && (
+                    <span>
+                      {formatCount(count.work.update, "outdated green translation")}: rewritten
+                    </span>
+                  )}
+                  {count.work.propose > 0 && (
+                    <span>
+                      {formatCount(count.work.propose, "outdated proofread translation")}: a
+                      proposal each, for review; the translations stay as they are
+                    </span>
+                  )}
+                </span>
                 <span className="estimate-languages">
                   {count.languages.map((entry) => (
                     <span key={entry.language}>

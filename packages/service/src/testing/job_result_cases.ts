@@ -381,12 +381,13 @@ export const JOB_RESULT_CASES: { name: string; run(sql: Sql): Promise<void> }[] 
     },
   },
   {
-    name: "removed languages and disabled proofread proposals skip successful results",
+    name: "removed languages, and disabled proofread proposals in an upload job, skip successful results",
     async run(sql) {
       await seed(sql);
       const selected = await batch(sql);
       await sql.commit(2, [
         { sql: 'INSERT INTO settings VALUES (1, \'{"llm":{"proposeForProofread":false}}\')' },
+        { sql: "UPDATE jobs SET source = 'upload' WHERE id = 1" },
       ]);
       checkEqual(
         [

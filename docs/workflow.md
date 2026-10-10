@@ -103,7 +103,7 @@ Settings requires an administrator.
 ## 5. Auto-translate the rest
 
 From Dashboard, choose **Auto-translate**. Its defaults are all languages, all files,
-**Untranslated only**, and **Include outdated translations**. From a language page it
+**Untranslated only**, and **Update outdated translations**. From a language page it
 selects that language; from the editor it also selects the current file or folder.
 
 The references line should name Spanish. Review the per-language estimate and the words

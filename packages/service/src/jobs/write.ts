@@ -233,7 +233,9 @@ function planBatch(
       const detail = { model: success.model, requestId: success.requestId, jobId: job.id };
       try {
         if (current?.colour === "blue") {
-          if (current.source_hash !== string.source_hash && state.proposeForProofread) {
+          // The setting governs upload jobs; a person who starts a job chose to include them.
+          const proposalsAllowed = job.source !== "upload" || state.proposeForProofread;
+          if (current.source_hash !== string.source_hash && proposalsAllowed) {
             statements.push(
               ...planProposal(
                 nextSuggestion++,

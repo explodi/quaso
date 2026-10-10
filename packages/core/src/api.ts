@@ -658,6 +658,17 @@ export interface JobEstimate {
   languages: { language: string; strings: number; words: number }[];
   /** Work per server file identity, summed across the selected languages. */
   files: { file: string; strings: number; words: number }[];
+  /** The strings × languages by what the job does with each one. */
+  work: {
+    /** Untranslated: a new green translation. */
+    translate: number;
+    /** Green, translated again. */
+    retranslate: number;
+    /** Outdated green: rewritten for the new English. */
+    update: number;
+    /** Outdated blue: a proposal for review; the proofread translation stays. */
+    propose: number;
+  };
   estimatedTokens: { input: number; output: number };
 }
 

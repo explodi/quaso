@@ -611,6 +611,45 @@
   color: var(--fg-muted);
 }
 
+/* Whitespace at either end of a text, which a translation should usually keep. */
+.edge-whitespace {
+  color: var(--warning);
+  font-family: var(--mono);
+  font-weight: 600;
+}
+
+/* A placeholder or reference chip whose token the translation doesn't have yet. */
+.chip.chip-missing {
+  border-color: var(--danger);
+  border-style: dashed;
+}
+.chip.chip-missing svg {
+  color: var(--danger);
+  width: 0.9em;
+  height: 0.9em;
+}
+
+.outdated-change {
+  margin-top: var(--space-2);
+}
+.outdated-change-label {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.outdated-change-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.outdated-change ins {
+  color: var(--success);
+  background: var(--success-bg);
+  text-decoration: underline;
+}
+.outdated-change del {
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+
 .source {
   font-size: var(--text-lg);
   line-height: 1.65;

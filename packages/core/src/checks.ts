@@ -54,6 +54,16 @@ export const CHECKS = {
   identical: "warning",
   /** The numbers differ from the English. */
   numbers_differ: "warning",
+  /** An HTML or i18next Trans tag, such as `<b>` or `<1>`, is missing or extra. */
+  tags_differ: "warning",
+  /** Spaces or line breaks at the start or the end differ from the English. */
+  edge_whitespace: "warning",
+  /** The number of line breaks inside the text differs from the English. */
+  line_breaks_differ: "warning",
+  /** Two spaces in a row, which the English doesn't have. */
+  double_space: "warning",
+  /** Ends with a different question mark, exclamation mark, ellipsis or colon. */
+  end_punctuation: "warning",
   /** A glossary translation or a term marked never translate is missing. */
   glossary: "warning",
 } as const satisfies Record<string, Severity>;
@@ -126,6 +136,11 @@ export interface CheckInput {
  * - `numbers_differ`: the multisets of digit sequences outside placeholders and references
  *   differ from the English (the same category, or `other`, for plurals). Digits of every
  *   script count by their value, and leading zeros are ignored: `٤٢` and `042` are `42`.
+ * - The typing slips, compared with the English of the same form (or `other`):
+ *   `tags_differ` (tags as multisets, by name, without attributes), `edge_whitespace`
+ *   (spaces and line breaks before the first and after the last visible character),
+ *   `line_breaks_differ` (inside the text), `double_space`, and `end_punctuation` (the
+ *   question mark, exclamation mark, ellipsis or colon that ends it, in any script).
  *
  * Messages show placeholders in the project's syntax; `value` holds the `placeholderKey`,
  * the reference's raw text or the number as written. For plural strings, an invalid
@@ -276,6 +291,9 @@ function checkValue(results: CheckResult[], value: string, comparison: Compariso
   checkLength(results, value, comparison);
   checkIdentical(results, translation, comparison);
   checkNumbers(results, translation, comparison);
+  checkTags(results, value, comparison);
+  checkWhitespace(results, value, comparison);
+  checkEndPunctuation(results, value, comparison);
   for (const entry of comparison.glossary ?? []) {
     if (glossaryMatches(comparison.counterpart.text, entry.term, entry.caseSensitive).length === 0)
       continue;
@@ -398,6 +416,137 @@ function unmatchedNumber(
     available.set(value, left - 1);
   }
   return undefined;
+}
+
+/** Warns about the first tag that is missing, or else the first that is extra. */
+function checkTags(results: CheckResult[], value: string, comparison: Comparison) {
+  const english = tagsOf(comparison.counterpart.text);
+  const translation = tagsOf(value);
+  const { form } = comparison;
+  const missing = firstUnmatched(english, translation);
+  if (missing !== undefined) {
+    const message = sentence(`Tag ${missing} is missing`, form);
+    results.push(result("tags_differ", message, { form, value: missing }));
+    return;
+  }
+  const extra = firstUnmatched(translation, english);
+  if (extra === undefined) return;
+  const message = sentence(`Tag ${extra} isn't in the English, or is repeated`, form);
+  results.push(result("tags_differ", message, { form, value: extra }));
+}
+
+/** The tags of a text, without attributes: `<a href="…">` is `<a>`, `<br />` is `<br/>`. */
+function tagsOf(text: string): string[] {
+  return Array.from(text.matchAll(TAG), ([, closing, name, selfClosing]) => {
+    return `<${closing}${name.toLowerCase()}${selfClosing}>`;
+  });
+}
+
+const TAG = /<(\/?)([A-Za-z][\w.:-]*|[0-9]+)(?:\s[^<>]*?)?\s*(\/?)>/g;
+
+/** The first item of `items` that `others` doesn't match, repeats counted. */
+function firstUnmatched(items: readonly string[], others: readonly string[]): string | undefined {
+  const available = new Map<string, number>();
+  for (const item of others) available.set(item, (available.get(item) ?? 0) + 1);
+  for (const item of items) {
+    const left = available.get(item) ?? 0;
+    if (left === 0) return item;
+    available.set(item, left - 1);
+  }
+  return undefined;
+}
+
+/**
+ * Warns about the whitespace slips the eye misses: a line break or space at either end
+ * that the English doesn't have (or the other way round), a different number of line
+ * breaks inside, and two spaces in a row.
+ */
+function checkWhitespace(results: CheckResult[], value: string, comparison: Comparison) {
+  const english = comparison.counterpart.text;
+  const { form } = comparison;
+  for (const edge of ["start", "end"] as const) {
+    const found = describeWhitespace(edgeWhitespace(value, edge));
+    const expected = describeWhitespace(edgeWhitespace(english, edge));
+    if (found === expected) continue;
+    const message = mismatchMessage(edge === "start" ? "starts" : "ends", found, expected);
+    results.push(result("edge_whitespace", sentence(message, form), { form }));
+  }
+  const foundBreaks = lineBreaks(value.trim());
+  const englishBreaks = lineBreaks(english.trim());
+  if (foundBreaks !== englishBreaks) {
+    const message = `The English has ${countOf(englishBreaks, "line break")} inside; the translation has ${foundBreaks}`;
+    results.push(result("line_breaks_differ", sentence(message, form), { form }));
+  }
+  const doubleSpace = DOUBLE_SPACE.test(value.trim()) && !DOUBLE_SPACE.test(english.trim());
+  if (doubleSpace) {
+    results.push(result("double_space", sentence("Two spaces in a row", form), { form }));
+  }
+}
+
+/** The whitespace before the first visible character, or after the last one. */
+function edgeWhitespace(text: string, edge: "start" | "end"): string {
+  if (text.trim() === "") return "";
+  const match = edge === "start" ? LEADING_WHITESPACE.exec(text) : TRAILING_WHITESPACE.exec(text);
+  return match?.[0] ?? "";
+}
+
+/**
+ * Whitespace in words: "a line break", "2 line breaks", "a space", "3 spaces", or "" for
+ * none. Line breaks win over spaces: they are what changes the layout.
+ */
+export function describeWhitespace(whitespace: string): string {
+  const breaks = lineBreaks(whitespace);
+  if (breaks > 0) return breaks === 1 ? "a line break" : `${breaks} line breaks`;
+  const spaces = Array.from(whitespace).length;
+  if (spaces === 0) return "";
+  return spaces === 1 ? "a space" : `${spaces} spaces`;
+}
+
+/** Line breaks, counting `\r\n` as one. */
+function lineBreaks(text: string): number {
+  return text.match(LINE_BREAK)?.length ?? 0;
+}
+
+function countOf(count: number, noun: string): string {
+  return count === 1 ? `1 ${noun}` : `${count} ${noun}s`;
+}
+
+const LEADING_WHITESPACE = /^\s+/;
+const TRAILING_WHITESPACE = /\s+$/;
+const LINE_BREAK = /\r\n|\r|\n/g;
+const DOUBLE_SPACE = / {2}/;
+
+/** Warns when the English and the translation end with different punctuation. */
+function checkEndPunctuation(results: CheckResult[], value: string, comparison: Comparison) {
+  const found = endPunctuation(value);
+  const expected = endPunctuation(comparison.counterpart.text);
+  if (found === expected) return;
+  const { form } = comparison;
+  const message = mismatchMessage("ends", found, expected);
+  results.push(result("end_punctuation", sentence(message, form), { form }));
+}
+
+/** The punctuation that ends a text, in words, or "" for none of those compared. */
+function endPunctuation(text: string): string {
+  const end = text.trimEnd();
+  if (end.endsWith("...") || end.endsWith("…") || end.endsWith("⋯")) return "an ellipsis";
+  const last = end.slice(-1);
+  if (QUESTION_MARKS.includes(last)) return "a question mark";
+  if (EXCLAMATION_MARKS.includes(last)) return "an exclamation mark";
+  if (COLONS.includes(last)) return "a colon";
+  return "";
+}
+
+// Greek writes its question mark as a semicolon (U+037E, often typed as `;`).
+const QUESTION_MARKS = ["?", "？", "؟", "\u037E", ";"];
+const EXCLAMATION_MARKS = ["!", "！"];
+const COLONS = [":", "："];
+
+/** "The translation ends with a line break; the English doesn't", from both descriptions. */
+function mismatchMessage(verb: "starts" | "ends", found: string, english: string): string {
+  if (found === "") return `The English ${verb} with ${english}; the translation doesn't`;
+  if (english === "") return `The translation ${verb} with ${found}; the English doesn't`;
+  return `The translation ${verb} with ${found}; the English with ${english}`;
 }
 
 /** `Text (few form).` for a form, `Text.` otherwise. */
