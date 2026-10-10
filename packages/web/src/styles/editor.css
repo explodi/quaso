@@ -889,3 +889,72 @@
 
 /* Reviewed suggestions are told apart by their status pill, not faded: fading the muted
    text would take it below 4.5:1. */
+
+/* In the translation tools, at the far end from the buttons. */
+.llm-switch {
+  margin-inline-start: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.llm-offer {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Empty, the live region takes no room (as `.checks:empty`). */
+.llm-offer:empty {
+  margin-block-start: calc(-1 * var(--space-1));
+}
+
+.llm-offer-note {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+
+.llm-offer-button {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-1);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-small);
+  background: var(--surface-alt);
+  color: var(--fg);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.llm-offer-button:hover {
+  border-style: solid;
+  border-color: var(--state-green);
+  background: var(--hover);
+}
+
+.llm-offer-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+
+.llm-offer-key {
+  margin-inline-start: auto;
+  font-family: var(--mono);
+  font-size: var(--text-xs);
+}
+
+.llm-offer-text {
+  font-size: var(--text-md);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}

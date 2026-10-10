@@ -107,3 +107,15 @@ test("Alt+Shift arrows navigate unfinished entries without intercepting AltGr", 
     [["Alt", "Shift", "↓"]],
   );
 });
+
+test("Ctrl+Shift+Enter puts the LLM suggestion in the input", () => {
+  assertEquals(shortcutFor(key({ key: "Enter", ctrlKey: true, shiftKey: true }), true, false), {
+    type: "takeLlmSuggestion",
+  });
+});
+
+test("⌘+Shift+Enter puts the LLM suggestion in the input on a Mac", () => {
+  assertEquals(shortcutFor(key({ key: "Enter", metaKey: true, shiftKey: true }), true, true), {
+    type: "takeLlmSuggestion",
+  });
+});

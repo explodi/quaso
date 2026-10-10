@@ -278,6 +278,10 @@ export function EditorPage() {
           if (!panel.current || inOtherInput) return;
           handled = panel.current.copySource();
           break;
+        case "takeLlmSuggestion":
+          if (!panel.current || inOtherInput) return;
+          handled = panel.current.takeLlmSuggestion();
+          break;
         case "insert":
           if (!panel.current || inOtherInput) return;
           handled = panel.current.insertChip(action.index);

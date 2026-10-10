@@ -64,7 +64,7 @@ export function promptContext(
 }
 
 export async function promptContextAsync(
-  sql: Sql,
+  sql: Pick<Sql, "read">,
   settings: ProjectSettings,
   facts: Facts,
   batch: Batch,

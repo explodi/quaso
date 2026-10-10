@@ -53,7 +53,7 @@ import {
   deleteGlossaryTermAsync,
 } from "./glossary.ts";
 import { addCommentAsync, resolveCommentAsync, deleteCommentAsync } from "./comments.ts";
-import type { Actor, ServiceApi } from "./api.ts";
+import { SYSTEM, type Actor, type ServiceApi } from "./api.ts";
 import { type Action, readPermissions } from "./permissions.ts";
 import { type Clock, type Logger, silentLogger, type Sql } from "./ports.ts";
 import { authenticateTokenAsync, createApiTokenAsync, revokeApiTokenAsync } from "./tokens.ts";
@@ -65,6 +65,8 @@ import {
   updateSettingsAsync,
 } from "./settings_writes.ts";
 import { cancelJobAsync, createJobAsync } from "./jobs/jobs.ts";
+import { suggestWithLlm } from "./jobs/llm_suggestion.ts";
+import { recordRequestAsync } from "./jobs/usage.ts";
 import { ModelList, SettingsModels } from "./jobs/models.ts";
 import { withdrawSuggestionAsync, suggestAsync, reviewSuggestionsAsync } from "./suggestions.ts";
 import type { TranslationProvider } from "./llm/provider.ts";
@@ -161,6 +163,7 @@ export type AsyncWriteMethods = Pick<
   | "recordBackup"
   | "cancelJob"
   | "createJob"
+  | "suggestWithLlm"
 >;
 
 export function asyncWriteMethods(options: {
@@ -265,6 +268,24 @@ export function asyncWriteMethods(options: {
       if (result.job?.status === "queued") await options.afterCreateJob?.(result.job);
       return result;
     },
+    suggestWithLlm: (caller, input) =>
+      call(
+        caller,
+        "edit",
+        s.object({ id: Id, language: LanguageTag }),
+        input,
+        async (request, actor) => {
+          const config = await configuration();
+          return suggestWithLlm(options.sql, actor, request, {
+            provider: config.provider,
+            model,
+            monthlyTokenBudget: config.monthlyTokenBudget,
+            clock,
+            logger,
+            record: (entry) => recordRequestAsync(options.sql, SYSTEM, entry, clock()),
+          });
+        },
+      ),
     cancelJob: (caller, input) =>
       call(caller, null, s.object({ id: Id }), input, ({ id }, actor) =>
         cancelJobAsync(options.sql, actor, id, clock(), logger),

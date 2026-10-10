@@ -669,6 +669,12 @@ export type CreateJobResult =
       estimate: JobEstimate;
     };
 
+/** `POST /strings/{id}/translations/{lang}/llm-suggestion`: the LLM's translation, not saved. */
+export interface LlmSuggestion {
+  value: TextValue;
+  model: string;
+}
+
 /** `GET /jobs` */
 export const JobsQuery = s.object({
   active: s.boolean().optional().describe("Return all queued or running jobs"),

@@ -17,6 +17,8 @@ import {
   UserIcon,
   WarningIcon,
   Loading,
+  SpinnerIcon,
+  Switch,
   TextArea,
 } from "@quaso/design-system";
 
@@ -76,6 +78,12 @@ import {
 } from "../../lib/masking.ts";
 import { href, useRoute } from "../../lib/router.tsx";
 import { useSession } from "../../lib/session.tsx";
+import { isMac } from "../../lib/shortcuts.ts";
+import {
+  type LlmSuggestionState,
+  useLlmSuggestion,
+  useLlmSuggestionsPreference,
+} from "./useLlmSuggestion.ts";
 
 /** What the editor page asks of the panel, for the keyboard shortcuts. */
 export interface PanelHandle {
@@ -85,6 +93,8 @@ export interface PanelHandle {
   copySource(): boolean;
   /** Whether there was such a chip to insert. */
   insertChip(index: number): boolean;
+  /** Puts the LLM's suggestion in the focused input; whether there was one to put. */
+  takeLlmSuggestion(): boolean;
   focusInput(): void;
 }
 
@@ -268,6 +278,16 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
   const writable = canEdit || canSuggest;
   const colour = current?.colour ?? "red";
 
+  const [suggestionsOn, setSuggestionsOn] = useLlmSuggestionsPreference();
+  const canAskLlm = canEdit && project.llmAvailable;
+  // Only strings to do: a current translation is already there to start from.
+  const toDo = !current || current.outdated;
+  const llm = useLlmSuggestion(detail.id, tag, canAskLlm && suggestionsOn && toDo);
+  const llmDraft = useMemo(
+    () => (llm.status === "ready" ? draftFrom(llm.suggestion.value, forms, mask) : null),
+    [llm, forms, mask],
+  );
+
   useEffect(() => {
     if (props.autoFocus) {
       const target = writable
@@ -306,6 +326,14 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
       );
     }
     return true;
+  };
+
+  /** Replaces a form's input with the LLM's text, keeping undo for what was typed. */
+  const takeLlmSuggestion = (form: FormKey): boolean => {
+    const text = llmDraft?.[form];
+    if (text === undefined || !writable) return false;
+    lastFocused.current = form;
+    return insert(text, true);
   };
 
   const copySource = (): boolean => {
@@ -481,6 +509,7 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
       const chip = masking.chips[index];
       return chip !== undefined && writable && insert(chip.insert);
     },
+    takeLlmSuggestion: () => takeLlmSuggestion(lastFocused.current ?? forms[0]),
     focusInput: () => inputs.current.get(lastFocused.current ?? forms[0])?.focus(),
   }));
 
@@ -610,6 +639,15 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
                 Translate with the LLM
               </Button>
             )}
+            {canAskLlm && (
+              <Label className="llm-switch">
+                <Switch
+                  checked={suggestionsOn}
+                  onChange={(event) => setSuggestionsOn(event.target.checked)}
+                />{" "}
+                LLM suggestions
+              </Label>
+            )}
           </div>
           {masking.chips.length > 0 && (
             <div
@@ -706,6 +744,18 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
                     {length > detail.maxLength && <WarningIcon />}
                     {length} / {detail.maxLength} <span className="sr-only">characters</span>
                   </p>
+                )}
+                {canAskLlm && suggestionsOn && (
+                  <LlmOffer
+                    state={llm}
+                    text={llmDraft?.[form]}
+                    typed={text}
+                    // Waiting and failures are said once, under the first input.
+                    first={form === forms[0]}
+                    language={tag}
+                    direction={direction}
+                    onTake={() => takeLlmSuggestion(form)}
+                  />
                 )}
                 <CheckList id={`${inputId}-checks`} checks={formChecks} />
               </div>
@@ -949,6 +999,63 @@ function ConflictNotice({
           }
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * The LLM's translation of one form, under its input: a click (or Ctrl+Shift+Enter) puts it
+ * in the input. Hidden while the input already says the same.
+ */
+function LlmOffer({
+  state,
+  text,
+  typed,
+  first,
+  language,
+  direction,
+  onTake,
+}: {
+  state: LlmSuggestionState;
+  text: string | undefined;
+  typed: string;
+  first: boolean;
+  language: string;
+  direction: "ltr" | "rtl";
+  onTake(): void;
+}) {
+  const shortcut = isMac() ? "⌘⇧↩" : "Ctrl+Shift+Enter";
+  const offered = state.status === "ready" && text !== undefined && text !== typed;
+  return (
+    // Always in the page, so that the suggestion's arrival is announced.
+    <div className="llm-offer" aria-live="polite">
+      {state.status === "loading" && first && (
+        <p className="llm-offer-note">
+          <SpinnerIcon /> The LLM is translating this string…
+        </p>
+      )}
+      {state.status === "failed" && first && (
+        <p className="llm-offer-note">
+          <InfoIcon /> No LLM suggestion: {state.message}
+        </p>
+      )}
+      {offered && (
+        <Button
+          variant="plain"
+          className="llm-offer-button"
+          title={`Use the LLM's translation (${shortcut})`}
+          // Focus stays in the input, which the click fills.
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={onTake}
+        >
+          <span className="llm-offer-label">
+            <SparklesIcon /> LLM suggestion <span className="llm-offer-key">{shortcut}</span>
+          </span>
+          <span className="llm-offer-text" lang={language} dir={direction}>
+            {text}
+          </span>
+        </Button>
+      )}
     </div>
   );
 }

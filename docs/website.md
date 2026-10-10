@@ -119,6 +119,20 @@ a range) to **Approve** the green ones, or to **Translate with the LLM**, in one
 has no LLM provider, the website says that LLM translation is off. Translations from the LLM arrive
 while you work: the editor checks for changes every few seconds after you start a run.
 
+### LLM suggestions
+
+Managers who translate by hand can turn on **LLM suggestions**, the switch at the end of the translation
+tools, above the input (the browser remembers it). Each untranslated or outdated string you open is then also sent
+to the LLM, in the background, with the same instructions, context and quality checks as an LLM job.
+You type as usual; when the LLM's translation arrives, usually within seconds, it appears under the
+input. If it says what you were going to write, click it (or press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+
+<kbd>Enter</kbd>) and it replaces your text, then save. <kbd>Ctrl</kbd>+<kbd>Z</kbd> brings your text
+back. Strings with plural forms get a suggestion under each form's input.
+
+Nothing is saved until you save: the suggestion is only offered. Its tokens count in the LLM usage
+and against the monthly token budget, like a job's; going back to a string shows the same
+suggestion without asking again. The switch is there when the server has an LLM provider.
+
 The editor opens in **To do first** order: untranslated strings, outdated translations, then
 completed translations. Within each group, strings follow their file and position. Choose **File
 order** to browse in source order; the address keeps your choice. Filters apply to either order.
@@ -292,6 +306,7 @@ placeholders (below).
 | <kbd>Alt</kbd>+<kbd>↓</kbd> / <kbd>Alt</kbd>+<kbd>↑</kbd>                                        | The next / the previous string                                                                           |
 | <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>↓</kbd> / <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>↑</kbd>      | The next / the previous string still to do                                                               |
 | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd>                                                    | Copy the English into the input (it replaces the text; undo with <kbd>Ctrl</kbd>+<kbd>Z</kbd>)           |
+| <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd>                                                | Put the LLM suggestion into the input (it replaces the text; undo with <kbd>Ctrl</kbd>+<kbd>Z</kbd>)     |
 | <kbd>Alt</kbd>+<kbd>1</kbd>…<kbd>9</kbd>; on a Mac, <kbd>Control</kbd>+<kbd>1</kbd>…<kbd>9</kbd> | Insert the first to ninth placeholder or reference (the number is on its chip). See below.               |
 | <kbd>↑</kbd> <kbd>↓</kbd> <kbd>Home</kbd> <kbd>End</kbd> <kbd>Page Up</kbd> <kbd>Page Down</kbd> | Move in the string list                                                                                  |
 | <kbd>Enter</kbd>                                                                                 | Open the focused string (in the list)                                                                    |

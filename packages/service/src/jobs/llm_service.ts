@@ -11,6 +11,8 @@ import {
   type JobInfo,
   JobsQuery,
   type JobsResult,
+  LanguageTag,
+  type LlmSuggestion,
   s,
   type Schema,
   UsageQuery,
@@ -20,13 +22,15 @@ import {
 import type { Actor } from "../api.ts";
 import type { Context } from "../context.ts";
 import { deleteMeta, getMeta, setMeta, transaction } from "../db.ts";
+import type { Sql } from "../ports.ts";
 import type { TranslationProvider } from "../llm/provider.ts";
 import type { Action } from "../permissions.ts";
 import type { Scheduler } from "../ports.ts";
 import { NEXT_ALARM, scheduleWakeUp } from "../wakeups.ts";
 import { cancelJob, createJob, getJob, listJobs } from "./jobs.ts";
 import { type JobsEnv, resumeJobs, runJobs } from "./runner.ts";
-import { getUsage } from "./usage.ts";
+import { suggestWithLlm } from "./llm_suggestion.ts";
+import { getUsage, recordRequest } from "./usage.ts";
 import { StoredLlm, type LlmConfiguration } from "../llm/configuration.ts";
 
 export interface LlmOptions {
@@ -54,6 +58,8 @@ export interface LlmMethods {
   getUsage(actor: Actor, input: UsageQuery): Promise<UsageResult>;
   /** Managers, administrators and `upload` keys: the provider's models, or none. */
   listModels(actor: Actor, input: Record<string, never>): Promise<{ models: string[] }>;
+  /** People who may edit the language: the LLM's translation of one string, not saved. */
+  suggestWithLlm(actor: Actor, input: { id: number; language: string }): Promise<LlmSuggestion>;
 }
 
 /** The names of the LLM methods, for the internal API's allowlists. */
@@ -64,6 +70,7 @@ export const LLM_METHODS = [
   "cancelJob",
   "getUsage",
   "listModels",
+  "suggestWithLlm",
 ] as const satisfies readonly (keyof LlmMethods)[];
 
 /** The LLM methods that only read, and may be tried again. */
@@ -85,6 +92,7 @@ export type Call = <I, O>(
 
 const Empty = s.object({});
 const IdInput = s.object({ id: Id });
+const StringInput = s.object({ id: Id, language: LanguageTag });
 
 export interface Llm {
   test(): Promise<LlmTestResult>;
@@ -208,6 +216,32 @@ export function createLlm(ctx: Context, options: LlmOptions): Llm {
         await call(actor, "translate", Empty, input, () => null);
         runtime.read(ctx);
         return { models: await runtime.models() };
+      },
+      async suggestWithLlm(actor, input) {
+        // The provider request can't wait inside a transaction: only the input is checked here.
+        const checked = await call(actor, null, StringInput, input, (request, caller) => ({
+          request,
+          caller,
+        }));
+        const config = runtime.read(ctx);
+        const read: Pick<Sql, "read"> = {
+          read: (statements) =>
+            Promise.resolve(
+              transaction(ctx.sql, () =>
+                statements.map((statement) =>
+                  ctx.sql.query(statement.sql, ...(statement.params ?? [])),
+                ),
+              ),
+            ),
+        };
+        return suggestWithLlm(read, checked.caller, checked.request, {
+          provider: config.provider,
+          model: ctx.defaultModel,
+          monthlyTokenBudget: config.monthlyTokenBudget,
+          clock: ctx.clock,
+          logger: ctx.logger,
+          record: (entry) => transaction(ctx.sql, () => recordRequest(ctx, entry)),
+        });
       },
     }),
   };
