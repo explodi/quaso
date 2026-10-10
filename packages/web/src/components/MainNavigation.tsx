@@ -1,16 +1,25 @@
 // SPDX-License-Identifier: MIT
-import { NavLink, useRoute } from "../lib/router.tsx";
+import { Link, NavLink, useRoute } from "../lib/router.tsx";
 import { Dropdown } from "@quaso/design-system";
+import type { ReactNode } from "react";
 
 export interface NavigationItem {
   to: string;
   label: string;
   exact?: boolean;
-  group?: "Workspace" | "Management";
+  group?: "Workspace" | "Management" | "Contribute" | "Manage";
+  icon?: ReactNode;
 }
 
-/** Frequent destinations stay visible; every destination remains available in the disclosure. */
-export function MainNavigation({ items }: { items: NavigationItem[] }) {
+export function MainNavigation({
+  items,
+  workspace = false,
+  compact = false,
+}: {
+  items: NavigationItem[];
+  workspace?: boolean;
+  compact?: boolean;
+}) {
   const { location } = useRoute();
   const current = items.find((item) => {
     if (item.exact) return location.pathname === item.to;
@@ -18,6 +27,55 @@ export function MainNavigation({ items }: { items: NavigationItem[] }) {
   });
   const primary = items.filter((item) => !item.group);
   const secondary = items.filter((item) => item.group);
+
+  if (workspace) {
+    const groups = [undefined, "Contribute", "Manage"] as const;
+    const isLanguage = location.pathname.startsWith("/languages/");
+    const isEditor = location.pathname.startsWith("/translate/");
+    const activePath = isLanguage || isEditor ? "/" : location.pathname;
+    const links = groups.map((group) => {
+      const entries = items.filter((item) => item.group === group);
+      if (entries.length === 0) return null;
+      return (
+        <div className="workspace-nav-group" key={group ?? "project"}>
+          <p className="workspace-nav-label">{group ?? "Project"}</p>
+          <ul>
+            {entries.map((item) => {
+              const active = item.exact
+                ? activePath === item.to
+                : activePath === item.to || activePath.startsWith(`${item.to}/`);
+              return (
+                <li key={item.to}>
+                  <Link
+                    to={item.to}
+                    className="nav-link menu-item"
+                    aria-current={active ? "page" : undefined}
+                  >
+                    {item.icon}
+                    {item.label}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      );
+    });
+    return (
+      <nav className={`nav nav-workspace${compact ? " nav-compact" : ""}`} aria-label="Main">
+        <div className="workspace-navigation">{links}</div>
+        <Dropdown
+          variant="plain"
+          name="Pages"
+          className="nav-overflow workspace-menu"
+          triggerClassName="nav-link"
+          label={<span>Menu</span>}
+        >
+          {links}
+        </Dropdown>
+      </nav>
+    );
+  }
 
   return (
     <nav className="nav" aria-label="Main">

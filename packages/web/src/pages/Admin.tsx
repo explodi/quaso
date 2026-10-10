@@ -4,6 +4,7 @@ import type { AdminInfo } from "@quaso/core";
 import { Access } from "../components/Management.tsx";
 import { errorMessage, request } from "../lib/api.ts";
 import { useQuery } from "../lib/data.ts";
+import { useDocumentTitle } from "../lib/hooks.ts";
 
 const date = (value: number | null) =>
   value === null ? "Never" : new Date(value).toLocaleString();
@@ -37,8 +38,8 @@ export function AdminDetails({ backupsOnly = false }: { backupsOnly?: boolean })
   return (
     <>
       <section className="management-section">
-        <H2>Instance</H2>
-        <dl>
+        <H2 ui>Instance</H2>
+        <dl className="admin-facts">
           <dt>Version</dt>
           <dd>{info.version}</dd>
           <dt>Storage</dt>
@@ -58,7 +59,7 @@ export function AdminDetails({ backupsOnly = false }: { backupsOnly?: boolean })
         </dl>
       </section>
       <section className="management-section">
-        <H2>Jobs and translator</H2>
+        <H2 ui>Jobs and translator</H2>
         <p>
           {info.jobs.queued} queued · {info.jobs.running} running · {info.jobs.paused} paused
         </p>
@@ -71,8 +72,8 @@ export function AdminDetails({ backupsOnly = false }: { backupsOnly?: boolean })
             Last translator error ({date(info.llm.lastError.at)}): {info.llm.lastError.message}
           </p>
         )}
-        <H3>Usage this month</H3>
-        <dl>
+        <H3 ui>Usage this month</H3>
+        <dl className="admin-usage">
           {Object.entries(info.usageThisMonth).map(([key, value]) => (
             <div key={key}>
               <dt>{key.replace(/([A-Z])/g, " $1")}</dt>
@@ -82,11 +83,11 @@ export function AdminDetails({ backupsOnly = false }: { backupsOnly?: boolean })
         </dl>
       </section>
       <section className="management-section">
-        <H2>Backups</H2>
+        <H2 ui>Backups</H2>
         {backup}
       </section>
       <section className="management-section">
-        <H2>Recent errors</H2>
+        <H2 ui>Recent errors</H2>
         {info.recentErrors.length === 0 ? (
           <p>No recent errors.</p>
         ) : (
@@ -104,11 +105,21 @@ export function AdminDetails({ backupsOnly = false }: { backupsOnly?: boolean })
   );
 }
 export function AdminPage() {
+  useDocumentTitle("Administration");
   return (
     <Access action="settings">
-      <div className="page management-page">
-        <H1>Administration</H1>
-        <AdminDetails />
+      <div className="page management-page admin-page">
+        <div className="page-head workspace-heading">
+          <div>
+            <H1 ui>Administration</H1>
+            <p className="muted">
+              Check the health, storage and recent errors of this Quaso instance.
+            </p>
+          </div>
+        </div>
+        <div className="admin-grid">
+          <AdminDetails />
+        </div>
       </div>
     </Access>
   );

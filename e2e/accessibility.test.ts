@@ -59,6 +59,7 @@ browserTest(
   },
   async ({ server, browser }) => {
     const { page } = await openTab(browser, server, "/", async (page) => {
+      await page.setViewport({ width: 768, height: 900 });
       // What Safari does on a click: what had focus loses it, and the target doesn't get it.
       await page.evaluateOnNewDocument(() => {
         document.addEventListener(
@@ -104,20 +105,21 @@ browserTest(
     const headerFits = () =>
       page.evaluate(() => {
         const header = document.querySelector<HTMLElement>(".header")!;
-        const navigation = header.querySelector<HTMLElement>(".nav")!;
         return (
           header.scrollWidth <= header.clientWidth &&
-          navigation.scrollWidth <= navigation.clientWidth &&
-          header.getBoundingClientRect().right <= innerWidth
+          header.getBoundingClientRect().right <= innerWidth &&
+          document.documentElement.scrollWidth <= innerWidth
         );
       });
     assert(await headerFits());
-    await page.focus(".nav-overflow button");
-    await press(page, "Enter");
-    assertEquals(await focused(page), "A:Source issues");
-    await press(page, "Escape");
-    assert(await page.$eval(".nav-overflow button", (button) => button === document.activeElement));
-    assertEquals(await page.$(".nav .menu"), null);
+    assert(
+      await page.evaluate(() =>
+        [...document.querySelectorAll<HTMLAnchorElement>('.nav a[href="/team"]')].some(
+          (link) => link.getBoundingClientRect().width > 0,
+        ),
+      ),
+      "Team is directly reachable in the desktop navigation",
+    );
     await page.click(".theme-menu button");
     await page.click('.theme-menu input[value="dark"]');
     assertEquals(await page.evaluate(() => document.documentElement.dataset.theme), "dark");
@@ -128,23 +130,27 @@ browserTest(
 
     await page.setViewport({ width: 360, height: 800 });
     assert(await headerFits());
-    await page.click(".nav-overflow button");
+    await page.focus(".nav-overflow button");
+    await press(page, "Enter");
+    assertEquals(await focused(page), "A:Overview");
     assertEquals(
-      await page.$$eval(".nav .menu a", (links) => links.map((link) => link.textContent?.trim())),
+      await page.$$eval(".nav .menu a", (links) =>
+        links.map((link) => link.getAttribute("href")).sort(),
+      ),
       [
-        "Dashboard",
-        "Sources",
-        "Activity",
-        "Glossary",
-        "Source issues",
-        "Review queue",
-        "My contributions",
-        "Jobs",
-        "Usage",
-        "Team",
-        "Settings",
-        "Admin",
-      ],
+        "/",
+        "/activity",
+        "/admin",
+        "/contributions",
+        "/glossary",
+        "/issues",
+        "/jobs",
+        "/review",
+        "/settings",
+        "/sources",
+        "/team",
+        "/usage",
+      ].sort(),
     );
     assert(
       await page.$eval(".nav .menu", (menu) => {
@@ -152,6 +158,10 @@ browserTest(
         return box.left >= 0 && box.right <= innerWidth;
       }),
     );
+    await press(page, "Escape");
+    assert(await page.$eval(".nav-overflow button", (button) => button === document.activeElement));
+    assertEquals(await page.$(".nav .menu"), null);
+    await page.click(".nav-overflow button");
     await page.click('.nav .menu a[href="/glossary"]');
     await waitFor(page, () => location.pathname === "/glossary");
     assertEquals(await page.$(".nav .menu"), null);
@@ -257,7 +267,7 @@ browserTest(
     await waitFor(page, () => document.activeElement?.id === "translation-text");
 
     // Delete, confirmed in the dialog: the button that opened it is gone once it closes.
-    await focusButton(page, "Delete", ".panel-actions");
+    await focusButton(page, "Delete");
     await press(page, "Enter");
     await waitFor(page, () => document.querySelector("dialog[open]") !== null);
     assertEquals(await focused(page), "BUTTON:Keep it");

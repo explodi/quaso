@@ -100,8 +100,10 @@ browserTest(
       () => document.querySelector(".queue-navigation [role=status]")?.textContent === "Done",
     );
 
+    await page.click(".strings-filters > summary");
     await page.select(".strings-order select", "file");
     await waitFor(page, () => new URLSearchParams(location.search).get("order") === "file");
+    await page.click("#files-toggle");
     await page.click(".pane-files [data-path='queue.json'] .tree-name");
     await waitFor(page, () => new URLSearchParams(location.search).get("file") === "queue.json");
     assertEquals(

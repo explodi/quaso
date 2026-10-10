@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { H1, Button, Loading } from "@quaso/design-system";
+import { H1, Button, Loading, EmptyState, CheckIcon } from "@quaso/design-system";
 /** Managers' unresolved problems in the English, linked back to the editor. */
 
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
@@ -32,10 +32,10 @@ function Issues() {
     project.data?.languages[0]?.tag;
   return (
     <div className="page issues-page">
-      <div className="page-head">
+      <div className="page-head workspace-heading">
         <div>
-          <H1>Problems in the English</H1>
-          <p className="muted">Unresolved source issues reported by the community.</p>
+          <H1 ui>Problems in the English</H1>
+          <p className="muted">Fix the source once, so every language can move forward.</p>
         </div>
       </div>
       {issues.error !== undefined && (
@@ -48,18 +48,24 @@ function Issues() {
         </p>
       )}
       {issues.data?.total === 0 && (
-        <p className="card pad">No unresolved problems in the English.</p>
+        <EmptyState icon={<CheckIcon size={24} />} title="The source is clear">
+          <p>
+            No unresolved problems in the English. Issues reported from the editor will appear here.
+          </p>
+        </EmptyState>
       )}
-      <ul className="community-records card">
-        {issues.data?.comments.map((comment) => (
-          <Comment
-            key={comment.id}
-            comment={comment}
-            link={language ? editorHref(language, { id: comment.stringId }) : undefined}
-            onChanged={() => queryCache.invalidate(["comments"])}
-          />
-        ))}
-      </ul>
+      {!!issues.data?.comments.length && (
+        <ul className="community-records card">
+          {issues.data?.comments.map((comment) => (
+            <Comment
+              key={comment.id}
+              comment={comment}
+              link={language ? editorHref(language, { id: comment.stringId }) : undefined}
+              onChanged={() => queryCache.invalidate(["comments"])}
+            />
+          ))}
+        </ul>
+      )}
       {(query.cursor || issues.data?.nextCursor) && (
         <div className="actions">
           <Button disabled={!query.cursor} onClick={() => setQuery({ cursor: undefined })}>

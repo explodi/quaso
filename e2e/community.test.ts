@@ -108,7 +108,7 @@ browserTest(
   { prepare },
   async ({ server, browser }) => {
     const tab = await openTab(browser, server, "/glossary");
-    assertStringIncludes(await text(tab.page, "main"), "No glossary terms yet");
+    assertStringIncludes(await text(tab.page, "main"), "Start with the words that matter");
     assertEquals(
       await tab.page.evaluate(() =>
         [...document.querySelectorAll("main button")].some((b) => b.textContent === "Add term"),
@@ -132,7 +132,7 @@ browserTest(
     );
     await fill(tab.page, "Search glossary", "missing");
     await waitFor(tab.page, () =>
-      document.querySelector("main")?.textContent?.includes("No terms match"),
+      document.querySelector("main")?.textContent?.includes("No matching terms"),
     );
     const id = (await getStrings(server, "de")).strings.find((s) => s.key === "play")!.id;
     await tab.page.goto(`${server.url}/translate/de?id=${id}`, { waitUntil: "networkidle0" });

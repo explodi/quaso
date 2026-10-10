@@ -7,13 +7,19 @@ import {
   UserIcon,
   Wordmark,
   Dropdown,
+  MonitorIcon,
+  FileIcon,
+  InfoIcon,
+  ActivityIcon,
+  WarningIcon,
+  CheckSquareIcon,
+  ChatIcon,
+  SparklesIcon,
+  FolderIcon,
+  HourglassIcon,
 } from "@quaso/design-system";
 import { ButtonLink } from "./Button.tsx";
 
-/**
- * The page frame: a skip link, the header (the project, the navigation, the theme switch
- * and the sign-in state), the main landmark and the footer.
- */
 import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
 import { errorMessage } from "../lib/api.ts";
 import { useProject } from "../lib/hooks.ts";
@@ -31,20 +37,43 @@ export interface NavItem extends NavigationItem {
   requires?: Action;
 }
 
-/** Unrestricted pages stay visible; role-specific work is grouped in the navigation menu. */
 export const NAV_ITEMS: NavItem[] = [
-  { to: "/", label: "Dashboard", exact: true },
-  { to: "/sources", label: "Sources" },
-  { to: "/activity", label: "Activity" },
-  { to: "/glossary", label: "Glossary" },
-  { to: "/issues", label: "Source issues", requires: "issues", group: "Workspace" },
-  { to: "/review", label: "Review queue", requires: "review", group: "Workspace" },
-  { to: "/contributions", label: "My contributions", requires: "suggest", group: "Workspace" },
-  { to: "/jobs", label: "Jobs", requires: "translate", group: "Management" },
-  { to: "/usage", label: "Usage", requires: "usage", group: "Management" },
-  { to: "/team", label: "Team", requires: "team", group: "Management" },
-  { to: "/settings", label: "Settings", requires: "settings", group: "Management" },
-  { to: "/admin", label: "Admin", requires: "settings", group: "Management" },
+  { to: "/", label: "Overview", exact: true, icon: <MonitorIcon /> },
+  { to: "/sources", label: "Sources", icon: <FileIcon /> },
+  { to: "/glossary", label: "Glossary", icon: <InfoIcon /> },
+  {
+    to: "/review",
+    label: "Review queue",
+    requires: "review",
+    group: "Contribute",
+    icon: <CheckSquareIcon />,
+  },
+  {
+    to: "/contributions",
+    label: "My contributions",
+    requires: "suggest",
+    group: "Contribute",
+    icon: <ChatIcon />,
+  },
+  {
+    to: "/issues",
+    label: "Source issues",
+    requires: "issues",
+    group: "Contribute",
+    icon: <WarningIcon />,
+  },
+  { to: "/activity", label: "Activity", group: "Contribute", icon: <ActivityIcon /> },
+  { to: "/jobs", label: "Jobs", requires: "translate", group: "Manage", icon: <HourglassIcon /> },
+  { to: "/usage", label: "Usage", requires: "usage", group: "Manage", icon: <SparklesIcon /> },
+  { to: "/team", label: "Team", requires: "team", group: "Manage", icon: <UserIcon /> },
+  {
+    to: "/settings",
+    label: "Settings",
+    requires: "settings",
+    group: "Manage",
+    icon: <FolderIcon />,
+  },
+  { to: "/admin", label: "Instance", requires: "settings", group: "Manage", icon: <MonitorIcon /> },
 ];
 
 function UserMenu() {
@@ -155,8 +184,18 @@ export function Layout({ children, fill }: { children: ReactNode; fill?: boolean
   const name = project.data?.name ?? "Quaso";
   const logo = project.data?.logoUrl;
   const nav = NAV_ITEMS.filter((item) => !item.requires || session.can(item.requires));
+  const { pathname } = useRoute();
+  const auth = [
+    "/signin",
+    "/signup",
+    "/forgot-password",
+    "/reset-password",
+    "/verify-email",
+    "/setup",
+  ].some((path) => pathname === path || pathname.startsWith(`${path}/`));
+  const compact = fill || auth;
   return (
-    <div className={fill ? "app app-fill" : "app"}>
+    <div className={`app app-workspace${fill ? " app-fill" : ""}${compact ? " app-focus" : ""}`}>
       <A className="skip-link" href="#main">
         Skip to content
       </A>
@@ -169,7 +208,7 @@ export function Layout({ children, fill }: { children: ReactNode; fill?: boolean
           )}
           {name === "Quaso" ? <Wordmark /> : <span className="brand-name">{name}</span>}
         </Link>
-        <MainNavigation items={nav} />
+        <MainNavigation items={nav} workspace compact={compact} />
         <div className="header-end">
           <ThemeSwitch variant="menu" />
           <Account />

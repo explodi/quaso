@@ -20,6 +20,7 @@ import "./styles/components.css";
 import "./styles/pages.css";
 import "./styles/editor.css";
 import "./styles/community.css";
+import "./styles/workspace.css";
 
 initTheme();
 revalidateOnFocus();

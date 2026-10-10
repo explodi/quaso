@@ -176,6 +176,39 @@ async function prepareContributor(service: Service) {
   await service.updateMember(SYSTEM, { id: user.id, role: "contributor", languages: ["fr"] });
 }
 
+browserTest(
+  "settings sections stay shareable across desktop navigation and the mobile chooser",
+  { prepare },
+  async ({ server, browser }) => {
+    const { page, problems } = await openTab(browser, server, "/signin", (page) =>
+      page.setViewport({ width: 1440, height: 1000 }),
+    );
+    await signIn(page, server, OWNER);
+    await page.goto(`${server.url}/settings`, { waitUntil: "networkidle0" });
+    await page.click('.settings-navigation a[href*="section=languages"]');
+    await waitFor(page, () => new URLSearchParams(location.search).get("section") === "languages");
+    assert(await page.$('.settings-navigation a[aria-current="page"][href*="section=languages"]'));
+    await page.click('.settings-navigation a[href*="section=general"]');
+    await waitFor(page, () => new URLSearchParams(location.search).get("section") === "general");
+    await page.evaluate(() => history.back());
+    await waitFor(page, () => new URLSearchParams(location.search).get("section") === "languages");
+    await page.reload({ waitUntil: "networkidle0" });
+    assert(await page.$('.settings-navigation a[aria-current="page"][href*="section=languages"]'));
+    await page.setViewport({ width: 360, height: 800 });
+    await page.select(".settings-mobile-section select", "general");
+    await waitFor(page, () => new URLSearchParams(location.search).get("section") === "general");
+    await fill(page, "Project name", "Renamed project");
+    await click(page, "Save");
+    await waitFor(
+      page,
+      () => document.querySelector('.settings-save [role="status"]')?.textContent === "Saved.",
+    );
+    assertEquals((await server.service.getSettings(SYSTEM, {})).settings.name, "Renamed project");
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    assertEquals(problems, []);
+  },
+);
+
 async function sources(server: TestServer, value = "Play") {
   await server.api("/sources", {
     method: "POST",
@@ -285,6 +318,7 @@ browserTest(
     await signIn(tab.page, server, OWNER);
     await tab.page.goto(`${server.url}/review`, { waitUntil: "networkidle0" });
     assertStringIncludes(await text(tab.page, ".review-diff"), "Jouer");
+    await tab.page.click(".review-comment summary");
     await fill(tab.page, "Review comment (optional)", "Merci !");
     await click(tab.page, "Approve");
     await waitFor(tab.page, () =>

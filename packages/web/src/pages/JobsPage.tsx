@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { H1, EmptyState, Loading } from "@quaso/design-system";
+import { H1, H2, EmptyState, Loading } from "@quaso/design-system";
 import type { JobsResult } from "@quaso/core";
 import { AutoTranslateButton } from "../components/AutoTranslate.tsx";
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
@@ -15,10 +15,17 @@ function Jobs() {
   const jobs = useQuery(["jobs"], listJobs, {
     refreshInterval: !cached || cached.jobs.some(activeJob) ? 2000 : undefined,
   });
+  const current = jobs.data?.jobs.filter((job) => activeJob(job) || job.status === "paused") ?? [];
+  const recent = jobs.data?.jobs.filter((job) => !activeJob(job) && job.status !== "paused") ?? [];
   return (
-    <div className="page management-page">
-      <div className="page-head">
-        <H1>Jobs</H1>
+    <div className="page management-page jobs-page">
+      <div className="page-head workspace-heading">
+        <div>
+          <H1 ui>Jobs</H1>
+          <p className="muted">
+            Follow your AI translations, from queued work to finished strings.
+          </p>
+        </div>
         <AutoTranslateButton />
       </div>
       {jobs.loading && <Loading label="Loading jobs…" />}
@@ -30,11 +37,33 @@ function Jobs() {
           <p>Start an auto-translate job to see its progress here.</p>
         </EmptyState>
       )}
-      <div className="record-list">
-        {jobs.data?.jobs.map((job) => (
-          <JobCard job={job} key={job.id} />
-        ))}
-      </div>
+      {current.length > 0 && (
+        <section className="workspace-job-section" aria-labelledby="current-jobs-heading">
+          <div className="record-head">
+            <H2 ui id="current-jobs-heading">
+              Current jobs
+            </H2>
+            <span className="status">{current.length}</span>
+          </div>
+          <div className="record-list">
+            {current.map((job) => (
+              <JobCard job={job} key={job.id} />
+            ))}
+          </div>
+        </section>
+      )}
+      {recent.length > 0 && (
+        <section className="workspace-job-section" aria-labelledby="recent-jobs-heading">
+          <H2 ui id="recent-jobs-heading">
+            Recent jobs
+          </H2>
+          <div className="record-list">
+            {recent.map((job) => (
+              <JobCard job={job} key={job.id} />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

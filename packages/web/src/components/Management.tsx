@@ -18,23 +18,32 @@ import { useSession } from "../lib/session.tsx";
 import { useProject } from "../lib/hooks.ts";
 import { useToast } from "./Toast.tsx";
 import { ButtonLink } from "./Button.tsx";
+import { href, useRoute } from "../lib/router.tsx";
 
 export function Access({ action, children }: { action?: Action; children: ReactNode }) {
   const session = useSession();
+  const { location } = useRoute();
   if (session.loading) return <Loading label="Checking your session…" />;
   if (!session.user) {
     return (
-      <div className="page narrow">
-        <H1>Sign in to continue</H1>
-        <ButtonLink to="/signin">Sign in</ButtonLink>
+      <div className="page narrow management-page access-page">
+        <H1 ui>Sign in to continue</H1>
+        <p className="muted">Sign in to your account to open this part of the project.</p>
+        <ButtonLink
+          variant="primary"
+          to={href("/signin", { next: location.pathname + location.search + location.hash })}
+        >
+          Sign in
+        </ButtonLink>
       </div>
     );
   }
   if (action && !session.can(action)) {
     return (
-      <div className="page narrow">
-        <H1>This page needs a different role</H1>
+      <div className="page narrow management-page access-page">
+        <H1 ui>This page needs a different role</H1>
         <p>Ask a project administrator for access.</p>
+        <ButtonLink to="/">Return to overview</ButtonLink>
       </div>
     );
   }

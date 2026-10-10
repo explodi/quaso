@@ -122,12 +122,12 @@ browserTest(
     for (const next of HOSTILE) {
       const tab = await openTab(browser, server, `/signin?next=${next}`);
       const { page } = tab;
-      await waitFor(page, () => document.querySelector("main a")?.textContent === "Continue");
+      await waitFor(page, () => document.querySelector(".auth-card a")?.textContent === "Continue");
       const target = await page.evaluate(
-        () => document.querySelector<HTMLAnchorElement>("main a")!.href,
+        () => document.querySelector<HTMLAnchorElement>(".auth-card a")!.href,
       );
       assertEquals(target, `${server.url}/`, next);
-      await page.evaluate(() => document.querySelector<HTMLAnchorElement>("main a")!.click());
+      await page.evaluate(() => document.querySelector<HTMLAnchorElement>(".auth-card a")!.click());
       await waitFor(
         page,
         () => location.pathname === "/" && document.querySelector("main h1") !== null,

@@ -197,6 +197,114 @@ html {
   justify-content: space-between;
 }
 
+.page-head > div:first-child {
+  min-width: 0;
+}
+
+.page-intro {
+  margin-top: var(--space-2);
+  color: var(--fg-muted);
+  max-width: 44rem;
+  line-height: 1.6;
+}
+
+.page-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.workspace-navigation {
+  display: none;
+}
+
+.nav-workspace .workspace-menu {
+  display: block;
+}
+
+.workspace-nav-group + .workspace-nav-group {
+  margin-top: var(--space-4);
+}
+
+.workspace-nav-label {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-xs);
+  font-weight: 650;
+  color: var(--fg-muted);
+}
+
+.nav-workspace .nav-link {
+  gap: var(--space-3);
+}
+
+.workspace-menu .menu {
+  max-height: calc(100dvh - var(--header-block-size) - var(--space-4));
+  overflow-y: auto;
+  min-width: 15rem;
+}
+
+.app-workspace .page {
+  padding: var(--space-6) var(--space-5) var(--space-7);
+  gap: var(--space-5);
+}
+
+.app-workspace .footer {
+  font-size: var(--text-xs);
+  padding-block: var(--space-4);
+  text-align: start;
+}
+
+.app-workspace .footer-links {
+  justify-content: flex-start;
+}
+
+@media (min-width: 70rem) {
+  .app-workspace:not(.app-focus) {
+    --workspace-sidebar-width: 13.5rem;
+  }
+
+  .app-workspace:not(.app-focus) > .main,
+  .app-workspace:not(.app-focus) > .footer,
+  .app-workspace:not(.app-focus) > .banner {
+    width: calc(100% - var(--workspace-sidebar-width));
+    margin-inline-start: var(--workspace-sidebar-width);
+  }
+
+  .nav-workspace:not(.nav-compact) .workspace-menu {
+    display: none;
+  }
+
+  .nav-workspace:not(.nav-compact) .workspace-navigation {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    inset-inline-start: 0;
+    top: var(--header-block-size, var(--header-height));
+    bottom: 0;
+    width: var(--workspace-sidebar-width);
+    overflow-y: auto;
+    padding: var(--space-4) var(--space-3);
+    background: var(--surface);
+    border-inline-end: 1px solid var(--border);
+    text-align: start;
+  }
+
+  .workspace-navigation .nav-link {
+    width: 100%;
+    font-size: var(--text-sm);
+    white-space: normal;
+  }
+
+  .workspace-navigation .nav-link .icon {
+    flex: none;
+  }
+
+  .app-workspace .page {
+    padding-inline: var(--space-7);
+  }
+}
+
 .heading-tag {
   margin-inline-start: var(--space-2);
   padding: 0.1em 0.45em;
@@ -216,6 +324,13 @@ html {
 }
 
 @media (max-width: 40rem) {
+  .app-focus .header {
+    min-height: calc(var(--control-height) + var(--space-2));
+    padding-block: var(--space-1);
+  }
+  .app-workspace .page {
+    padding: var(--space-5) var(--space-3) var(--space-6);
+  }
   .header {
     flex-wrap: wrap;
     padding: var(--space-2) var(--space-3);

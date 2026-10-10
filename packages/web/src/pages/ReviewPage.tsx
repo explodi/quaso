@@ -9,19 +9,22 @@ import {
   EmptyState,
   Field,
   Loading,
+  Details,
+  Summary,
 } from "@quaso/design-system";
 
 /** Pending proposals and the contributor's own history, using the same review contract. */
 import type { ReviewResult, SuggestionInfo, TextValue } from "@quaso/core";
 import { useState } from "react";
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
+import { ButtonLink } from "../components/Button.tsx";
 import { Access, ConfirmButton, SelectField, TextField } from "../components/Management.tsx";
 import { useToast } from "../components/Toast.tsx";
 import { listFiles, withdrawSuggestion } from "../lib/api.ts";
 import { useMutation, useQuery } from "../lib/data.ts";
 import { wordDiff } from "../lib/diff.ts";
 import { fieldError } from "../lib/forms.ts";
-import { formatDateTime } from "../lib/format.ts";
+import { count, formatDateTime } from "../lib/format.ts";
 import { useDebounced, useDocumentTitle, useProject } from "../lib/hooks.ts";
 import { listSuggestions, review } from "../lib/management-api.ts";
 import { Link } from "../lib/router.tsx";
@@ -50,20 +53,20 @@ function Proposal({
   const proposal = suggestion.value === null ? current : valueText(suggestion.value);
   return (
     <div className="review-diff">
-      <div>
-        <H3>{sourceLanguageName ?? "Source text"}</H3>
+      <div className="review-source">
+        <H3 ui>{sourceLanguageName ?? "Source text"}</H3>
         <p className="value-text" lang={sourceLanguage} dir="auto">
           {valueText(suggestion.source)}
         </p>
       </div>
       <div>
-        <H3>Current translation</H3>
+        <H3 ui>Current translation</H3>
         <p className="value-text" lang={suggestion.language} dir="auto">
           {current || "Untranslated"}
         </p>
       </div>
-      <div>
-        <H3>Proposal</H3>
+      <div className="review-proposal">
+        <H3 ui>Proposal</H3>
         <p className="value-text" lang={suggestion.language} dir="auto">
           {wordDiff(current, proposal).map((part, index) =>
             part.kind === "added" ? (
@@ -158,12 +161,19 @@ function SuggestionsPage({ mine }: { mine: boolean }) {
   const run = (action: "approve" | "reject", ids: number[]) =>
     mutation.run({ ids, action, comment: comment || undefined });
   return (
-    <div className="page management-page">
-      <div className="page-head">
-        <H1 id="review-heading" tabIndex={-1}>
-          {mine ? "My contributions" : "Review queue"}
-        </H1>
-        <span className="muted">{query.data?.total ?? 0} suggestions</span>
+    <div className={`page management-page review-page${mine ? " contributions-page" : ""}`}>
+      <div className="page-head workspace-heading">
+        <div>
+          <H1 ui id="review-heading" tabIndex={-1}>
+            {mine ? "My contributions" : "Review queue"}
+          </H1>
+          <p className="muted">
+            {mine
+              ? "Follow your suggestions from proposal to approval."
+              : "Compare suggestions with the source and decide what should ship."}
+          </p>
+        </div>
+        {query.data && <span className="status">{count(query.data.total, "suggestion")}</span>}
       </div>
       <div className="management-filters">
         <SelectField
@@ -219,15 +229,11 @@ function SuggestionsPage({ mine }: { mine: boolean }) {
           ))}
         </SelectField>
       </div>
-      {!mine && (
-        <section className="management-section">
-          <TextField
-            label="Review comment (optional)"
-            value={comment}
-            onChange={setComment}
-            maxLength={4000}
-            error={fieldError(mutation.error, "comment")}
-          />
+      {!mine && pending.length > 0 && (
+        <section
+          className={`management-section review-toolbar${chosen.length ? " review-toolbar-selected" : ""}`}
+          aria-label="Review tools"
+        >
           <div className="actions">
             <Label className="check-label">
               <Checkbox
@@ -237,22 +243,36 @@ function SuggestionsPage({ mine }: { mine: boolean }) {
               />
               Select all on this page
             </Label>
-            <Button
-              variant="primary"
-              disabled={!chosen.length}
-              busy={mutation.pending}
-              onClick={() => run("approve", chosen).catch(() => {})}
-            >
-              Approve selected ({chosen.length})
-            </Button>
-            <ConfirmButton
-              disabled={!chosen.length || mutation.pending}
-              title="Reject selected suggestions?"
-              description="The suggestions will be marked rejected. The current translations stay as they are."
-              onConfirm={() => run("reject", chosen)}
-            >
-              Reject selected
-            </ConfirmButton>
+            {chosen.length > 0 && (
+              <Button
+                variant="primary"
+                disabled={!chosen.length}
+                busy={mutation.pending}
+                onClick={() => run("approve", chosen).catch(() => {})}
+              >
+                Approve selected ({chosen.length})
+              </Button>
+            )}
+            {chosen.length > 0 && (
+              <ConfirmButton
+                disabled={!chosen.length || mutation.pending}
+                title="Reject selected suggestions?"
+                description="The suggestions will be marked rejected. The current translations stay as they are."
+                onConfirm={() => run("reject", chosen)}
+              >
+                Reject selected
+              </ConfirmButton>
+            )}
+            <Details className="review-comment">
+              <Summary>{comment ? "Edit review comment" : "Add a review comment"}</Summary>
+              <TextField
+                label="Review comment (optional)"
+                value={comment}
+                onChange={setComment}
+                maxLength={4000}
+                error={fieldError(mutation.error, "comment")}
+              />
+            </Details>
           </div>
         </section>
       )}
@@ -269,6 +289,7 @@ function SuggestionsPage({ mine }: { mine: boolean }) {
               ? "Suggestions you send from the editor appear here."
               : "There is nothing waiting for this review filter."}
           </p>
+          <ButtonLink to="/">Explore languages</ButtonLink>
         </EmptyState>
       )}
       {failures.length > 0 && (
@@ -287,7 +308,10 @@ function SuggestionsPage({ mine }: { mine: boolean }) {
       )}
       <ul className="record-list">
         {items.map((suggestion) => (
-          <li className="record-card" key={suggestion.id}>
+          <li
+            className={`record-card review-card${chosen.includes(suggestion.id) ? " review-card-selected" : ""}`}
+            key={suggestion.id}
+          >
             <div className="record-head">
               {!mine &&
                 suggestion.status === "pending" &&
@@ -306,7 +330,7 @@ function SuggestionsPage({ mine }: { mine: boolean }) {
                     />
                   </Label>
                 )}
-              <H2>
+              <H2 ui>
                 <Link to={editorHref(suggestion.language, { id: suggestion.stringId })}>
                   {suggestion.key}
                 </Link>

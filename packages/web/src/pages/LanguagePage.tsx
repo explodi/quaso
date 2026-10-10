@@ -9,12 +9,14 @@ import {
   ArrowLeftIcon,
   SearchIcon,
   Loading,
+  EmptySquareIcon,
+  HalfSquareIcon,
+  CheckSquareIcon,
+  ClockIcon,
+  HourglassIcon,
+  WarningIcon,
 } from "@quaso/design-system";
 
-/**
- * A language (design §5.9, S7.4): its progress, the file tree with progress per file, a
- * filter, "Hide completed", and "Translate all", which opens the editor.
- */
 import type { LanguageFilesResult, LanguageProgress } from "@quaso/core";
 import { useMemo, useState } from "react";
 import { ButtonLink } from "../components/Button.tsx";
@@ -77,16 +79,21 @@ export function LanguagePage() {
         </Link>
       </p>
       <div className="page-head">
-        <H1>
-          {name}
-          {language && <span className="heading-tag">{language.tag}</span>}
-        </H1>
-        {language && <AutoTranslateButton language={language.tag} />}
-        {language && (
-          <ButtonLink variant="primary" to={editorHref(language.tag)}>
-            Translate all
-          </ButtonLink>
-        )}
+        <div>
+          <H1 ui>
+            {name}
+            {language && <span className="heading-tag">{language.tag}</span>}
+          </H1>
+          <p className="page-intro">Choose what needs your attention, or explore by file.</p>
+        </div>
+        <div className="page-actions">
+          {language && <AutoTranslateButton language={language.tag} />}
+          {language && (
+            <ButtonLink variant="primary" to={editorHref(language.tag)}>
+              Translate all
+            </ButtonLink>
+          )}
+        </div>
       </div>
       {project.error !== undefined && !project.data && (
         <ErrorMessage error={project.error} onRetry={() => project.refresh()} />
@@ -94,7 +101,12 @@ export function LanguagePage() {
       {language && <LanguageSummary language={language} />}
       <section className="card" aria-labelledby="files-heading">
         <div className="card-head">
-          <H2 id="files-heading">Files</H2>
+          <div>
+            <H2 ui id="files-heading">
+              Explore files
+            </H2>
+            <p className="muted">Find the right part of the project.</p>
+          </div>
           <div className="toolbar">
             <div className="search">
               <SearchIcon className="search-icon" />
@@ -182,36 +194,50 @@ function LanguageSummary({ language }: { language: LanguageProgress }) {
       </p>
       <ul className="summary-counts">
         <li>
-          <Link to={editorHref(language.tag, { state: "untranslated" })}>
-            {count(language.untranslated, "untranslated string")}
+          <Link className="language-task" to={editorHref(language.tag, { state: "untranslated" })}>
+            <EmptySquareIcon />
+            <strong>{formatNumber(language.untranslated)}</strong>
+            <span>Untranslated</span>
           </Link>
         </li>
         <li>
-          <Link to={editorHref(language.tag, { state: "green" })}>
-            {language.green} translated, not proofread
+          <Link className="language-task" to={editorHref(language.tag, { state: "green" })}>
+            <HalfSquareIcon />
+            <strong>{formatNumber(language.green)}</strong>
+            <span>Needs proofreading</span>
           </Link>
         </li>
         <li>
-          <Link to={editorHref(language.tag, { state: "blue" })}>{language.blue} proofread</Link>
+          <Link className="language-task" to={editorHref(language.tag, { state: "blue" })}>
+            <CheckSquareIcon />
+            <strong>{formatNumber(language.blue)}</strong>
+            <span>Proofread</span>
+          </Link>
         </li>
         {language.outdated > 0 && (
           <li>
-            <Link to={editorHref(language.tag, { state: "outdated" })}>
-              {language.outdated} outdated
+            <Link className="language-task" to={editorHref(language.tag, { state: "outdated" })}>
+              <ClockIcon />
+              <strong>{formatNumber(language.outdated)}</strong>
+              <span>Outdated</span>
             </Link>
           </li>
         )}
         {language.pending > 0 && (
           <li>
-            <Link to={editorHref(language.tag, { state: "pending" })}>
-              {language.pending} pending
+            <Link className="language-task" to={editorHref(language.tag, { state: "pending" })}>
+              <HourglassIcon />
+              <strong>{formatNumber(language.pending)}</strong>
+              <span>Suggestions pending</span>
             </Link>
           </li>
         )}
         {language.qa > 0 && (
           <li>
-            <Link to={editorHref(language.tag, { state: "qa" })}>
-              {count(language.qa, "QA problem")}
+            <Link className="language-task" to={editorHref(language.tag, { state: "qa" })}>
+              <WarningIcon />
+              <strong>{formatNumber(language.qa)}</strong>
+              <span>Quality issues</span>
             </Link>
           </li>
         )}

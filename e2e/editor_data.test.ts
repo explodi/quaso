@@ -46,10 +46,13 @@ function waitForPanel(page: Page, key: string) {
   );
 }
 
-/** How many strings the list has loaded (its rows are 60 px high). */
+/** The virtual list's full height includes loaded rows outside the viewport. */
 function loadedRows(page: Page): Promise<number> {
   return page.evaluate(() =>
-    Math.round(document.querySelector<HTMLElement>(".vlist-inner")!.offsetHeight / 60),
+    Math.round(
+      document.querySelector<HTMLElement>(".vlist-inner")!.offsetHeight /
+        document.querySelector<HTMLElement>(".vlist-row")!.offsetHeight,
+    ),
   );
 }
 
@@ -84,20 +87,24 @@ browserTest(
     // Scroll until every string is loaded, 200 at a time.
     await page.evaluate(async () => {
       const list = document.querySelector<HTMLElement>(".string-list")!;
+      const rowHeight = document.querySelector<HTMLElement>(".vlist-row")!.offsetHeight;
       for (let i = 0; i < 200; i++) {
         list.scrollTop = list.scrollHeight;
         await new Promise((done) => setTimeout(done, 50));
-        if (list.scrollHeight >= 1_200 * 60) break;
+        if (list.scrollHeight >= 1_200 * rowHeight) break;
       }
     });
     await waitFor(
       page,
-      () => document.querySelector<HTMLElement>(".vlist-inner")!.offsetHeight === 1_200 * 60,
+      () =>
+        document.querySelector<HTMLElement>(".vlist-inner")!.offsetHeight ===
+        1_200 * document.querySelector<HTMLElement>(".vlist-row")!.offsetHeight,
     );
     // Open k1005.
     await page.evaluate(() => {
       const list = document.querySelector<HTMLElement>(".string-list")!;
-      list.scrollTop = 1_005 * 60 - 120;
+      const rowHeight = document.querySelector<HTMLElement>(".vlist-row")!.offsetHeight;
+      list.scrollTop = 1_005 * rowHeight - 120;
     });
     await waitFor(page, () => document.querySelector('[data-index="1005"] .row-link') !== null);
     await page.evaluate(() =>
@@ -415,7 +422,7 @@ browserTest(
         scope,
       );
 
-    await button("Delete", ".panel-actions");
+    await button("Delete", ".panel-maintenance");
     await waitFor(page, () => document.querySelector("dialog[open]") !== null);
     await button("Delete", "dialog[open]");
     await waitFor(
@@ -505,8 +512,9 @@ browserTest(
     );
     assert(directions.length >= 5, JSON.stringify(directions));
     for (const direction of directions) assertEquals(direction, "he:rtl");
-    assertEquals(await text(page, "#source-heading"), "Hebrew");
-    assertStringIncludes(await text(page, ".panel-actions"), "Copy the Hebrew");
+    assertEquals(await text(page, "#source-heading"), "Source");
+    assertStringIncludes(await text(page, ".panel-source .panel-section-head"), "Hebrew");
+    assertStringIncludes(await text(page, ".panel-assist"), "Copy the Hebrew");
     // The English translation inputs stay left to right.
     assertEquals(
       await page.evaluate(
