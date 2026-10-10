@@ -407,3 +407,23 @@ test("upload: validation errors about limits point to the config", async () => {
     );
   });
 });
+
+test("upload sends a guarded descriptions sidecar as metadata and leaves both repository files intact", async () => {
+  const sidecar = '{"title":"The game name","unknown":"Report this"}';
+  await withProject(
+    { ...PROJECT, "src/locales/en/common.descriptions.json": sidecar },
+    async (dir) => {
+      const fetch = fakeFetch(() => jsonResponse(result()));
+      const run = await runCli(["upload"], { cwd: dir, env: ENV, fetch });
+      assertEquals(run.code, 0, run.stderr);
+      const sent = (await fetch.requests[0].json()) as UploadRequest;
+      assertEquals(sent.files.length, 2);
+      assertEquals(sent.files[0].descriptions, sidecar);
+      assertEquals(sent.files[0].content, PROJECT["src/locales/en/common.json"]);
+      assertEquals(
+        await fs.readFile(join(dir, "src/locales/en/common.descriptions.json"), "utf8"),
+        sidecar,
+      );
+    },
+  );
+});

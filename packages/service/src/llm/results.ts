@@ -20,6 +20,7 @@ import { promptId } from "./prompt.ts";
 export interface Passed {
   value: TextValue;
   checks: CheckResult[];
+  ambiguous?: string;
 }
 
 /** A string whose answer failed. */
@@ -80,7 +81,11 @@ export function checkAnswer(
         reasons: errors.map((error) => reasonOf(error, shaped.value, mask.references)),
       });
     } else {
-      result.passed.set(string.id, { value, checks });
+      const ambiguous =
+        typeof item.ambiguous === "string" && item.ambiguous.trim() !== ""
+          ? item.ambiguous.trim().slice(0, 2000)
+          : undefined;
+      result.passed.set(string.id, { value, checks, ...(ambiguous ? { ambiguous } : {}) });
     }
   }
   return result;

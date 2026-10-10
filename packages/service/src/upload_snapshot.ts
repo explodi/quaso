@@ -17,6 +17,7 @@ export type UploadFileRow = {
 export type UploadSourceRow = ExistingSourceString & {
   file_id: number;
   path: string;
+  description?: string;
   file_active: number;
   key_path: string;
   words: number;
@@ -84,7 +85,7 @@ export function uploadReadStatements(request: UploadRequest): Statement[] {
     { sql: "SELECT id, path, repo_path, format, active FROM files ORDER BY id" },
     scoped(`SELECT s.id, s.file_id, f.path, f.active AS file_active, s.key, s.key_path,
       s.display_key, s.kind, s.source, s.source_hash, s.words, s.position, s.active,
-      s.max_length, s.max_length_locked FROM strings s JOIN files f ON f.id = s.file_id
+      s.max_length, s.max_length_locked, s.description FROM strings s JOIN files f ON f.id = s.file_id
       WHERE s.id IN (${selected}) ORDER BY s.id`),
     scoped(
       `SELECT * FROM translations WHERE string_id IN (${selected}) ORDER BY string_id, language`,

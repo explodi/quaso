@@ -66,6 +66,10 @@ export const QuasoConfig = s.object({
     .string({ minLength: 1 })
     .optional()
     .describe("The Quaso instance, such as translate.yourgame.com. QUASO_HOSTNAME wins over it."),
+  descriptionSuffix: s
+    .string({ minLength: 1, maxLength: 100 })
+    .optional()
+    .describe("Keys ending with this suffix describe their source key and are not translated"),
   sourceLanguage: LanguageTag.describe("The language of the source files"),
   languages: s
     .array(LanguageTag, { unique: true })

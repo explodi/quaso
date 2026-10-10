@@ -2,6 +2,9 @@
 import {
   type ErrorDetail,
   formatKeyPath,
+  parseJson,
+  toPlain,
+  type KeyPath,
   JsonSyntaxError,
   MAX_LENGTH_LIMIT,
   type ProjectSettings,
@@ -19,6 +22,7 @@ export interface ParsedFile {
   repoPath: string;
   format: string;
   entries: EntryColumns[];
+  descriptions?: { key: string; description: string }[];
 }
 
 /** Reads every file, reporting every file's syntax error together. */
@@ -56,11 +60,57 @@ export function readUploadFiles(request: UploadRequest, settings: ProjectSetting
         syntax: settings.syntax,
         pluralExclusions: exclusions.get(file.path),
       });
+      const descriptions: NonNullable<ParsedFile["descriptions"]> = [];
+      if (file.descriptions !== undefined) {
+        const value = toPlain(
+          parseJson(file.descriptions, { file: `${file.path} descriptions` }).root,
+        );
+        const visit = (node: unknown, path: KeyPath) => {
+          if (typeof node === "string") {
+            if (node.length > 4000)
+              throw badRequest(
+                `Description for ${file.path} › ${formatKeyPath(path)} exceeds 4000 characters.`,
+              );
+            descriptions.push({ key: JSON.stringify(path), description: node });
+            return;
+          }
+          if (node === null || typeof node !== "object")
+            throw badRequest(`Description for ${file.path} › ${formatKeyPath(path)} must be text.`);
+          for (const [key, child] of Object.entries(node))
+            visit(child, [...path, Array.isArray(node) ? Number(key) : key]);
+        };
+        visit(value, []);
+      }
+      const entries = source.entries.filter((entry) => {
+        const last = entry.keyPath.at(-1);
+        const annotation =
+          request.descriptionSuffix &&
+          typeof last === "string" &&
+          last.endsWith(request.descriptionSuffix);
+        if (!annotation) return true;
+        const description =
+          entry.kind === "text" || entry.kind === "reference"
+            ? entry.value
+            : entry.kind === "literal"
+              ? JSON.parse(entry.raw)
+              : null;
+        if (typeof description !== "string" || description.length > 4000)
+          throw badRequest(
+            `Description ${file.path} › ${formatKeyPath(entry.keyPath)} must be text of at most 4000 characters.`,
+          );
+        const path = [
+          ...entry.keyPath.slice(0, -1),
+          last.slice(0, -request.descriptionSuffix!.length),
+        ];
+        descriptions.push({ key: JSON.stringify(path), description });
+        return false;
+      });
       parsed.push({
         path: file.path,
         repoPath: file.repoPath,
         format: toJson(source.format),
-        entries: source.entries.map((entry) => entryColumns(entry, options)),
+        entries: entries.map((entry) => entryColumns(entry, options)),
+        ...(descriptions.length > 0 ? { descriptions } : {}),
       });
     } catch (error) {
       if (!(error instanceof JsonSyntaxError || error instanceof SourceError)) throw error;

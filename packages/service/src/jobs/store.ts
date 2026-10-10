@@ -3,7 +3,7 @@
  * The `jobs` table (design §5.6): rows, their `JobInfo`, and the small writes every part of
  * the job runner shares (progress, tokens, finishing, the activity feed).
  */
-import type { JobFailure, JobInfo, JobScope, JobStatus } from "@quaso/core";
+import type { JobFailure, JobInfo, JobScope, JobStatus, JobNote } from "@quaso/core";
 import { ActorDirectory, type Author } from "../actors.ts";
 import type { Context } from "../context.ts";
 import { fromJson, toJson } from "../db.ts";
@@ -45,6 +45,7 @@ export type JobRow = {
   done: number;
   translated: number;
   reused?: number;
+  notes?: string;
   proposed: number;
   failed: number;
   skipped: number;
@@ -63,7 +64,7 @@ export type JobRow = {
 export const JOB_COLUMNS = `id, status, priority, source, scope, actor_type, actor_id,
   actor_label, total, done, translated, proposed, failed, skipped, input_tokens,
   output_tokens, thinking_tokens, failures, error, attempts, created_at, started_at,
-  finished_at, updated_at, reused`;
+  finished_at, updated_at, reused, notes`;
 
 /** A job, or undefined. */
 export function loadJob(ctx: Context, id: number): JobRow | undefined {
@@ -279,6 +280,7 @@ export function jobInfosFromRows(rows: JobRow[], actors: ActorDirectory): JobInf
     },
     tokens: { input: row.input_tokens, output: row.output_tokens, thinking: row.thinking_tokens },
     failures: fromJson<JobFailure[]>(row.failures),
+    ...(row.notes && row.notes !== "[]" ? { notes: fromJson<JobNote[]>(row.notes) } : {}),
     error: row.error,
   }));
 }

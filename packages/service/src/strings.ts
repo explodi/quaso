@@ -396,6 +396,9 @@ export function getString(ctx: Context, id: number, language: string): StringDet
       actors,
       failure: llmFailures(ctx, [id], tag).get(id) ?? null,
       references: referenceHints(ctx, fromJson<TextValue>(row.source), row.path, facts.syntax),
+      sourceWarnings: sql.query(sourceWarningStatement(id).sql, id) as NonNullable<
+        StringDetail["sourceWarnings"]
+      >,
       identicalSources: sql.query(identicalSourceStatement(id).sql, id, id, id) as NonNullable<
         StringDetail["identicalSources"]
       >,
@@ -476,6 +479,7 @@ export async function getStringAsync(
       failures,
       referenced,
       identicalSources,
+      sourceWarnings,
     ] = await sql.read([
       revision,
       settingsRead,
@@ -501,6 +505,7 @@ export async function getStringAsync(
         params: [toJson(targets)],
       },
       identicalSourceStatement(id),
+      sourceWarningStatement(id),
     ]);
     if (currentRevision[0].revision !== preparedRevision[0].revision) continue;
     const row = summaries[0] as SummaryRow | undefined;
@@ -535,6 +540,7 @@ export async function getStringAsync(
         actors,
         failure: (failures[0]?.reason as string | undefined) ?? null,
         identicalSources: identicalSources as NonNullable<StringDetail["identicalSources"]>,
+        sourceWarnings: sourceWarnings as NonNullable<StringDetail["sourceWarnings"]>,
         references: targets.map((target) => ({
           raw: target.raw,
           english: english.get(target.raw) ?? null,
@@ -556,6 +562,7 @@ function stringDetail(
     failure: string | null;
     references: ReferenceHint[];
     identicalSources?: NonNullable<StringDetail["identicalSources"]>;
+    sourceWarnings?: NonNullable<StringDetail["sourceWarnings"]>;
   },
   tag: string,
 ): StringDetail {
@@ -571,6 +578,7 @@ function stringDetail(
   return {
     ...summary,
     ...(data.identicalSources?.length ? { identicalSources: data.identicalSources } : {}),
+    ...(data.sourceWarnings?.length ? { sourceWarnings: data.sourceWarnings } : {}),
     language: tag,
     suggestions: suggestions.map((g) => ({
       id: g.id,
@@ -666,5 +674,13 @@ function identicalSourceStatement(id: number): Statement {
       WHERE s.active = 1 AND f.active = 1 AND s.id <> ? AND s.source_hash = (SELECT source_hash FROM strings WHERE id = ?)
       AND s.kind = (SELECT kind FROM strings WHERE id = ?) ORDER BY f.path, s.position LIMIT 50`,
     params: [id, id, id],
+  };
+}
+
+function sourceWarningStatement(id: number): Statement {
+  return {
+    sql: `SELECT w.kind, w.message FROM source_warnings w JOIN strings s ON s.id = w.string_id
+    WHERE s.id = ? AND w.source_hash = s.source_hash AND trim(s.description) = ''`,
+    params: [id],
   };
 }

@@ -10,6 +10,7 @@ import type { Author } from "./actors.ts";
 import { forEachChunk, fromJsonOrNull, placeholders, toJson } from "./db.ts";
 import { isTranslatableKind } from "./entries.ts";
 import { badRequest } from "./errors.ts";
+import { KeyIndex, parseKeySelector } from "./keys.ts";
 import type { CheckFacts } from "./facts.ts";
 import type { Statement } from "./ports.ts";
 import { planRenameMove, resolveRenameRows } from "./rename.ts";
@@ -309,6 +310,25 @@ export function planUpload(
   const limitTargets = sourceRows.filter(
     (row) => activeFileIds.has(row.file_id) && row.active === 1 && isTranslatableKind(row.kind),
   );
+  for (const file of parsed) {
+    const index = new KeyIndex(limitTargets.filter((row) => row.path === file.path));
+    for (const item of file.descriptions ?? []) {
+      const targets = index.find(parseKeySelector(item.key));
+      if (targets.length !== 1) {
+        result.warnings.push(
+          `${file.path} description ${item.key}: ${targets.length === 0 ? "no source string" : "ambiguous source key"}.`,
+        );
+        continue;
+      }
+      const row = targets[0];
+      if ((row.description ?? "") === item.description) continue;
+      row.description = item.description;
+      statements.push({
+        sql: "UPDATE strings SET description = ?, updated_at = ? WHERE id = ?",
+        params: [item.description, at, row.id],
+      });
+    }
+  }
   const locked = sourceRows
     .filter((row) => uploadedIds.has(row.file_id) && row.max_length_locked === 1)
     .map((row) => row.id);

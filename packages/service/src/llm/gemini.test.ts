@@ -117,7 +117,12 @@ test("gemini: the request body has the system instruction, the schema and safety
   assertEquals(schema.properties.translations.items.type, "OBJECT");
   assertEquals(schema.properties.translations.items.properties.id.type, "STRING");
   assertEquals(schema.properties.translations.items.properties.forms.properties.few.type, "STRING");
-  assertEquals(schema.properties.translations.items.propertyOrdering, ["id", "text", "forms"]);
+  assertEquals(schema.properties.translations.items.propertyOrdering, [
+    "id",
+    "text",
+    "forms",
+    "ambiguous",
+  ]);
   assertEquals(
     body.safetySettings,
     HARM_CATEGORIES.map((category) => ({

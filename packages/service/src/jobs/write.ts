@@ -28,6 +28,7 @@ import type { Batch, WorkItem } from "./work.ts";
 export interface BatchSuccess {
   value: TextValue;
   requestId: number;
+  ambiguous?: string;
   model: string;
   reusedFrom?: { id: number; file: string; key: string };
 }
@@ -297,6 +298,26 @@ function planBatch(
         }
         if (error.code !== "not_found" && error.code !== "bad_request") throw error;
       }
+    }
+    if (success.ambiguous && outcome !== "skipped") {
+      raisesRevision = true;
+      const note = {
+        stringId: item.stringId,
+        file: item.path,
+        key: item.key,
+        language: item.language,
+        kind: "ambiguous",
+        message: success.ambiguous,
+      };
+      statements.push({
+        sql: "UPDATE jobs SET notes = json_insert(notes, '$[#]', json(?)) WHERE id = ? AND json_array_length(notes) < 200",
+        params: [JSON.stringify(note), job.id],
+      });
+      statements.push({
+        sql: `INSERT INTO source_warnings (string_id, kind, source_hash, message, created_at) VALUES (?, 'ambiguous', ?, ?, ?)
+        ON CONFLICT (string_id, kind) DO UPDATE SET source_hash = excluded.source_hash, message = excluded.message, created_at = excluded.created_at`,
+        params: [item.stringId, item.sourceHash, success.ambiguous, now],
+      });
     }
     outcomes.set(item.stringId, outcome);
     newOutcomes.set(item.stringId, outcome);

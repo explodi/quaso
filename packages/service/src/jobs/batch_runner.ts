@@ -125,7 +125,12 @@ export async function translateBatch(input: {
       error: outcome === "ok" ? null : `${checked.failed.size} of ${group.length} strings failed`,
     });
     for (const [id, passed] of checked.passed) {
-      successes.set(id, { value: passed.value, requestId, model });
+      successes.set(id, {
+        value: passed.value,
+        requestId,
+        model,
+        ...(passed.ambiguous ? { ambiguous: passed.ambiguous } : {}),
+      });
     }
     if (checked.failed.size === 0) return;
     if (round < retries) {

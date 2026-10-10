@@ -235,7 +235,15 @@ export interface SourceFileInfo {
   revision: number;
 }
 
+export interface SourceAmbiguity {
+  id: number;
+  file: string;
+  key: string;
+  source: TextValue;
+  message: string;
+}
 export interface SourceFilesResult {
+  ambiguities?: SourceAmbiguity[];
   language?: never;
   files: SourceFileInfo[];
 }
@@ -326,6 +334,7 @@ export interface ReferenceHint {
 
 /** `GET /strings/{id}?language=de` */
 export interface StringDetail extends StringSummary {
+  sourceWarnings?: { kind: "ambiguous"; message: string }[];
   identicalSources?: { id: number; file: string; key: string }[];
   language: string;
   /** Pending suggestions, and those reviewed in the last 30 days. */
@@ -418,7 +427,14 @@ export const RepoPath = s
 
 /** `POST /sources` */
 export const UploadRequest = s.object({
-  files: s.array(s.object({ ...FileContent.shape, repoPath: RepoPath })),
+  files: s.array(
+    s.object({
+      ...FileContent.shape,
+      repoPath: RepoPath,
+      descriptions: s.string({ maxLength: 10_000_000 }).optional(),
+    }),
+  ),
+  descriptionSuffix: s.string({ minLength: 1, maxLength: 100 }).optional(),
   partial: s
     .boolean()
     .optional()
@@ -629,7 +645,16 @@ export interface JobFailure extends KeyRef {
   reason: string;
 }
 
+export interface JobNote {
+  stringId: number;
+  file: string;
+  key: string;
+  language: string;
+  kind: "ambiguous";
+  message: string;
+}
 export interface JobInfo {
+  notes?: JobNote[];
   /** Older-source translations excluded when this job was created. */
   outdatedLeft?: number;
   id: number;
