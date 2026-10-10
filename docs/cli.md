@@ -59,8 +59,11 @@ export QUASO_HOSTNAME=translate.yourgame.com
 export QUASO_API_KEY=qso_…
 ```
 
-Administrators create API keys on the instance. The key only ever comes from the environment: the
-CLI refuses a config file that contains one. A team that prefers to commit the hostname can put
+Create your API key on the instance, on your account page (**Account → API keys**). A key does
+what you may do and no more: with a manager's role an upload key translates, and only an
+administrator's uploads and downloads. It follows your role, and stops working if your account is
+deleted. The key only ever comes from the environment: the CLI refuses a config file that contains
+one. A team that prefers to commit the hostname can put
 `"hostname"` in the config file instead; `QUASO_HOSTNAME` wins over it.
 
 The CLI never follows redirects, so your key only goes where `QUASO_HOSTNAME` points. If the

@@ -290,16 +290,17 @@ export function createService(options: ServiceOptions): Service {
         if (actor.type !== "system") throw forbidden();
         return authenticateToken(ctx, secret);
       }),
-    listApiTokens: (actor, input) => call(actor, "tokens", Empty, input, () => listApiTokens(ctx)),
+    listApiTokens: (caller, input) =>
+      call(caller, "account", Empty, input, (_input, actor) => listApiTokens(ctx, actor)),
     createApiToken: (caller, input) =>
-      call(caller, "tokens", CreateApiTokenRequest, input, (request, actor) => {
+      call(caller, "account", CreateApiTokenRequest, input, (request, actor) => {
         const created = createApiToken(ctx, actor, request);
         ctx.logger.info("API key created", { id: created.id, scope: created.scope });
         return created;
       }),
-    revokeApiToken: (actor, input) =>
-      call(actor, "tokens", IdInput, input, ({ id }) => {
-        revokeApiToken(ctx, id);
+    revokeApiToken: (caller, input) =>
+      call(caller, "account", IdInput, input, ({ id }, actor) => {
+        revokeApiToken(ctx, actor, id);
         ctx.logger.info("API key revoked", { id });
         return { ok: true as const };
       }),

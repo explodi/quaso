@@ -8,6 +8,10 @@ import { canonicalLanguageTag, type Role, type UserInfo } from "@quaso/core";
 export const ACTIONS = [
   /** Browse languages, strings, translations, history and activity. */
   "read",
+  /** Export files (the CLI's download). */
+  "download",
+  /** Upload the English and import translations (the CLI's upload). */
+  "upload",
   /** Ask to become a volunteer. */
   "volunteer",
   /** Send pending changes: translations, corrections and "looks good". */

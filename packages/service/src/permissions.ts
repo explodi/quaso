@@ -20,7 +20,7 @@ export const ACTIONS = [
   "upload",
   /** Run LLM jobs. */
   "translate",
-  /** Manage API keys. */
+  /** Manage everyone's API keys; people manage their own with `account`. */
   "tokens",
   "settings",
   "team",
@@ -33,7 +33,10 @@ export const ACTIONS = [
   "suggest",
   /** Ask to become a volunteer. */
   "volunteer",
-  /** Manage one's own account: name, email address, password, sign-in methods, deletion. */
+  /**
+   * Manage one's own account: name, email address, password, sign-in methods, deletion, and
+   * one's own API keys.
+   */
   "account",
   /** See LLM usage. */
   "usage",
@@ -82,16 +85,26 @@ const LIMITED: ReadonlySet<Action> = new Set(["suggest", "edit", "review", "glos
 
 /**
  * Whether `actor` may do `action`, in `language` when it concerns one. The system may do
- * everything; anonymous visitors (and deleted people) may only read; API keys by scope, and
- * never once revoked; people by role, limited to their languages for suggesting, editing and
- * reviewing.
+ * everything; anonymous visitors (and deleted people) may only read; API keys by scope, never
+ * once revoked, and never beyond what the person who created them may do now; people by
+ * role, limited to their languages for suggesting, editing and reviewing.
  */
 export function can(ctx: Context, actor: Actor, action: Action, language?: string): boolean {
   return syncPermissions(ctx, actor).can(action, language);
 }
 
 type PermissionUser = { role: Role; languages: string | null; volunteer_status: string | null };
-type PermissionToken = { scope: TokenScope; revoked_at: number | null };
+/**
+ * A key and the person who created it: `created_by` is null for keys the system created
+ * (`quaso token create`), which act by scope alone; `role` is null when that person is gone.
+ */
+type PermissionToken = {
+  scope: TokenScope;
+  revoked_at: number | null;
+  created_by: number | null;
+  role: Role | null;
+  languages: string | null;
+};
 
 /** Permission decisions use the identity rows captured by the operation's snapshot. */
 export class Permissions {
@@ -110,7 +123,10 @@ export class Permissions {
       case "token": {
         const token = this.state.token;
         if (token === undefined || token.revoked_at !== null) return false;
-        return SCOPES[token.scope]?.includes(action) ?? false;
+        const scopeAllows = SCOPES[token.scope]?.includes(action) ?? false;
+        if (token.created_by === null) return scopeAllows;
+        const creatorAllows = token.role !== null && (ROLES[token.role]?.includes(action) ?? false);
+        return scopeAllows && creatorAllows;
       }
       case "user": {
         const user = this.state.user;
@@ -133,10 +149,12 @@ export class Permissions {
   }
 
   languageLimit(): string[] | null {
-    if (this.actor.type !== "user") return null;
-    const user = this.state.user;
-    if (user === undefined || user.role === "administrator") return null;
-    const allowed = fromJsonOrNull<string[]>(user.languages);
+    // A key works in the languages of the person who created it.
+    const person = this.actor.type === "user" ? this.state.user : this.state.token;
+    if (person === undefined || person.role === null || person.role === "administrator") {
+      return null;
+    }
+    const allowed = fromJsonOrNull<string[]>(person.languages);
     return allowed?.map((entry) => canonicalLanguageTag(entry) ?? entry) ?? null;
   }
 
@@ -157,7 +175,12 @@ export function permissionReadStatements(actor: Actor): Statement[] {
     ];
   if (actor.type === "token")
     return [
-      { sql: "SELECT scope, revoked_at FROM api_tokens WHERE id = ?", params: [actor.tokenId] },
+      {
+        sql: `SELECT t.scope, t.revoked_at, t.created_by, u.role, u.languages
+              FROM api_tokens t LEFT JOIN users u ON u.id = t.created_by AND u.deleted_at IS NULL
+              WHERE t.id = ?`,
+        params: [actor.tokenId],
+      },
     ];
   return [];
 }
@@ -174,7 +197,7 @@ export async function readPermissions(sql: Sql, actor: Actor): Promise<Permissio
   return permissionsFromRows(actor, rows);
 }
 
-function syncPermissions(ctx: Context, actor: Actor): Permissions {
+export function syncPermissions(ctx: Context, actor: Actor): Permissions {
   const rows = permissionReadStatements(actor).map((statement) =>
     ctx.sql.query(statement.sql, ...(statement.params ?? [])),
   );
@@ -182,8 +205,9 @@ function syncPermissions(ctx: Context, actor: Actor): Permissions {
 }
 
 /**
- * The languages a person is limited to (ROLE-3), canonical; null when nothing limits them:
- * administrators, people without a list, API keys and the system. For work that spans
+ * The languages a person, or the person who created a key, is limited to (ROLE-3), canonical;
+ * null when nothing limits them: administrators, people without a list, the system's keys and
+ * the system. For work that spans
  * languages, such as LLM jobs, which `can` doesn't limit (a job names many at once).
  */
 export function languageLimit(ctx: Context, actor: Actor): string[] | null {

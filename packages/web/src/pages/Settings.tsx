@@ -738,7 +738,9 @@ function ApiKeys() {
       >
         <p>
           Use read keys for downloads. Upload keys also change source files and run translation
-          jobs. Keep keys in your CI secret store.
+          jobs. Keep keys in your CI secret store. A key does no more than the person who created it
+          may do, so create CI keys with an administrator account. Everyone can create their own
+          keys on their account page; this list has everyone's.
         </p>
         <Field label="Key name" path="name">
           <Input value={name} onChange={(e) => setName(e.target.value)} required />
@@ -761,6 +763,7 @@ function ApiKeys() {
           <H3>{key.name}</H3>
           <p>
             <code>{key.prefix}</code> · {key.scope} · Created{" "}
+            {key.createdBy ? `by ${key.createdBy.name} ` : ""}
             {new Date(key.createdAt).toLocaleString()} · Last used{" "}
             {key.lastUsedAt ? new Date(key.lastUsedAt).toLocaleString() : "never"}
           </p>

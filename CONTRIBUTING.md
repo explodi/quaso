@@ -23,7 +23,8 @@ translation. It prints a development API key for the CLI:
 deno task cli status
 ```
 
-`deno task dev:reset` wipes `.quaso/` and seeds again.
+`deno task dev:reset` wipes `.quaso/` and seeds again. When ports 5173 or 8000 are taken, move the
+website and the server: `QUASO_WEB_PORT=5390 QUASO_SERVER_PORT=8123 deno task dev`.
 
 The development seed and root CLI use a stable, partly translated
 [fixture](packages/server/src/testing/fixtures/translation-project/README.md). For a playable game
