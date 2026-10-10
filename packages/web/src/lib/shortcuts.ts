@@ -11,6 +11,7 @@ export type ShortcutAction =
   | { type: "nextToDo" }
   | { type: "previousToDo" }
   | { type: "copySource" }
+  | { type: "takeLlmSuggestion" }
   | { type: "insert"; index: number }
   | { type: "help" };
 
@@ -27,6 +28,7 @@ export interface KeyInput {
  * The action for a key press, or null.
  *
  * - Ctrl+Enter (⌘+Enter on a Mac): save or suggest, then go to the next string to do.
+ * - Ctrl+Shift+Enter (⌘+Shift+Enter): put the LLM's suggestion in the input.
  * - Alt+↓ and Alt+↑: the next and the previous string.
  * - Ctrl+Shift+C (⌘+Shift+C): copy the source text into the input.
  * - Alt+1…9, or Ctrl+1…9 (Control+1…9 on a Mac): insert the nth placeholder or reference.
@@ -45,6 +47,9 @@ export function shortcutFor(
 ): ShortcutAction | null {
   const mod = event.ctrlKey || event.metaKey;
   if (mod && !event.altKey && !event.shiftKey && event.key === "Enter") return { type: "save" };
+  if (mod && !event.altKey && event.shiftKey && event.key === "Enter") {
+    return { type: "takeLlmSuggestion" };
+  }
   if (event.altKey && !mod && event.shiftKey) {
     if (event.key === "ArrowDown") return { type: "nextToDo" };
     if (event.key === "ArrowUp") return { type: "previousToDo" };
@@ -105,6 +110,7 @@ export function shortcutList(mac: boolean): ShortcutHelp[] {
     { keys: [[alt, "Shift", "↓"]], description: "Next string to do" },
     { keys: [[alt, "Shift", "↑"]], description: "Previous string to do" },
     { keys: [[mod, "Shift", "C"]], description: "Copy the source text into the input" },
+    { keys: [[mod, "Shift", "Enter"]], description: "Put the LLM suggestion into the input" },
     {
       // Browsers keep Ctrl+digits for tabs on Windows and Linux, and ⌥+digits type
       // characters on a Mac: each platform gets the combination that works there.

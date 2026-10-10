@@ -42,6 +42,13 @@ language returns `404`.
 `GET /api/v1/project` includes `referenceLanguages`, the configured language tags used as LLM
 references. This public metadata lets managers see the references without access to Settings.
 
+`POST /api/v1/strings/{id}/translations/{lang}/llm-suggestion` with no body returns the LLM's
+translation of one string, `{value, model}`, without saving anything: the editor offers it while
+someone types their own. It requires permission to edit the language (a manager of it, or an
+administrator). The request uses a job's prompt and quality checks and counts in the usage and the
+monthly budget. No provider returns `503`, a used-up budget `429`, and an answer that still fails
+the checks after the configured retries `503`.
+
 `POST /api/v1/jobs` with `dryRun: true` returns `job: null` and an `estimate`, without creating
 a job. It requires translation permission and accepts the same scope as a real job.
 

@@ -24,6 +24,7 @@ import type {
   SourceFilesResult,
   HistoryResult,
   InviteCheck,
+  LlmSuggestion,
   ProjectInfo,
   ResetPasswordRequest,
   ReviewRequest,
@@ -388,6 +389,15 @@ export function checkInvite(token: string): Promise<InviteCheck> {
 
 function translationPath(id: number, language: string): string {
   return `/strings/${id}/translations/${encodeURIComponent(language)}`;
+}
+
+/** The LLM's translation of one string, for the editor to offer; nothing is saved. */
+export function suggestWithLlm(
+  id: number,
+  language: string,
+  signal?: AbortSignal,
+): Promise<LlmSuggestion> {
+  return request(`${translationPath(id, language)}/llm-suggestion`, { method: "POST", signal });
 }
 
 /** A manager's save: blue. */

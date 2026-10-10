@@ -301,6 +301,7 @@ export class FakeService implements ServiceApi {
   listJobs = notFaked("listJobs");
   getStringsQueue = notFaked("getStringsQueue");
   cancelJob = notFaked("cancelJob");
+  suggestWithLlm = notFaked("suggestWithLlm");
   getUsage = notFaked("getUsage");
   listModels = notFaked("listModels");
 
