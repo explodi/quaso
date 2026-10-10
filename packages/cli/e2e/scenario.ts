@@ -215,7 +215,7 @@ async function llmScenario(cli: Runner, parent: string, log: (step: string) => v
     );
     assertEquals(translated.result.job.progress.translated, DEMO_LANGUAGES.length);
     assertEquals(translated.result.failures, []);
-    await quaso(["download"], 0);
+    await quaso(["download", "--overwrite-local"], 0);
     const polish = JSON.parse(
       await fs.readFile(join(project, "src", "locales", "pl", "common.json"), "utf8"),
     );
