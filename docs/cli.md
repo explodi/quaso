@@ -240,8 +240,9 @@ Local path checks and the config's language and file selection still apply.
 ### `quaso translate`
 
 Asks the instance's LLM to translate the untranslated strings of the config's languages (or
-`--language`), in every file (or `--file`), and waits for it. Outdated translations are updated too;
-proofread (blue) translations never change: an outdated one gets a proposal that a manager reviews.
+`--language`), in every file (or `--file`), and waits for it. Outdated translations (made for an
+English that has changed since) are updated too; proofread (blue) translations never change: an
+outdated one gets a proposal that a manager reviews. This doesn't depend on the upload settings.
 Every result goes through the quality checks, like a person's translation, and a string whose result
 keeps failing them stays untranslated.
 
@@ -280,6 +281,7 @@ Dry run: nothing was translated.
   pl  56 strings  192 words
 
 84 strings (288 words) in 4 requests: about 18,400 input and 2,900 output tokens.
+Of these: 78 untranslated, 4 outdated green to update, 2 outdated proofread to get a proposal for review.
 ```
 
 The estimate counts characters / 4 of each request's prompt and the expected answer; thinking models

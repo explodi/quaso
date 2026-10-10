@@ -118,7 +118,7 @@ test("{{count}}: only categories that cover exactly one number may leave it out"
   assertEquals(summary(plural("fr", COINS, french)), ["placeholder_missing:one"]);
   assertEquals(summary(plural("ja", COINS, { other: "コイン" })), ["placeholder_missing:other"]);
   // English one covers only 1 (1.5 is other).
-  assertEquals(plural("en-GB", COINS, { one: "One coin", other: "{{count}} coins!" }), []);
+  assertEquals(plural("en-GB", COINS, { one: "One coin", other: "{{count}} gold coins" }), []);
   // Arabic zero, one and two cover one number each; few, many and other don't.
   const arabic = {
     zero: "لا عملات",
@@ -355,7 +355,7 @@ test("placeholders: compared by placeholderKey", () => {
 test("placeholders: text that only looks like a placeholder is text", () => {
   assertEquals(text("{{ }} and {{, x}} and {{open", "und"), []);
   assertEquals(text("Braces {{ like this", "Klammern"), []);
-  assertEquals(text("Broken {{\nname}}", "Kaputt"), []);
+  assertEquals(text("Broken {{\nname}}", "Kaputt {{\nName}}"), []);
 });
 
 test("placeholders: those i18next doesn't fill in don't count as the English ones", () => {
@@ -384,7 +384,10 @@ test("placeholders: those i18next doesn't fill in don't count as the English one
   ]);
   // Regression: a placeholder can't span lines.
   for (const translation of ["Du hast {{\ncount\n}} Münzen", "Du hast {{count\r\n}} Münzen"]) {
-    assertEquals(summary(text("You have {{count}} coins", translation)), ["placeholder_missing"]);
+    assertEquals(summary(text("You have {{count}} coins", translation)), [
+      "placeholder_missing",
+      "line_breaks_differ",
+    ]);
   }
 });
 
@@ -675,20 +678,20 @@ test("max_length: grapheme clusters, placeholders and references included", () =
 });
 
 test("max_length: emoji, flags, combining marks and CRLF count as one", () => {
-  const cases: [string, number][] = [
-    ["👍👍👍", 3], // surrogate pairs
-    ["👨\u200d👩\u200d👧\u200d👦", 1], // a ZWJ sequence of 11 code units
-    ["🇵🇱🇩🇪", 2], // flags
-    ["👋🏽", 1], // a skin tone modifier
-    ["e\u0301te\u0301", 3], // combining acute accents
-    ["Ha\u0308\u0323", 2], // two combining marks on one letter
-    ["One\r\nTwo", 7], // CRLF
-    ["One\nTwo", 7],
+  const cases: [string, string, number][] = [
+    ["Hello", "👍👍👍", 3], // surrogate pairs
+    ["Hello", "👨\u200d👩\u200d👧\u200d👦", 1], // a ZWJ sequence of 11 code units
+    ["Hello", "🇵🇱🇩🇪", 2], // flags
+    ["Hello", "👋🏽", 1], // a skin tone modifier
+    ["Hello", "e\u0301te\u0301", 3], // combining acute accents
+    ["Hello", "Ha\u0308\u0323", 2], // two combining marks on one letter
+    ["Hello\nthere", "One\r\nTwo", 7], // CRLF
+    ["Hello\nthere", "One\nTwo", 7],
   ];
-  for (const [translation, length] of cases) {
-    assertEquals(text("Hello", translation, { maxLength: length }), [], translation);
+  for (const [english, translation, length] of cases) {
+    assertEquals(text(english, translation, { maxLength: length }), [], translation);
     assertEquals(
-      text("Hello", translation, { maxLength: length - 1 }),
+      text(english, translation, { maxLength: length - 1 }),
       [
         {
           check: "max_length",
@@ -746,7 +749,11 @@ test("identical: a warning when the English has letters", () => {
   assertEquals(summary(text("東京", "東京", { language: "ja" })), ["identical"]);
   assertEquals(summary(text("{{name}}: OK", "{{name}}: OK")), ["identical"]);
   assertEquals(text("Options", "Optionen"), []);
-  assertEquals(text("Options", "Options "), [], "white space makes a difference");
+  assertEquals(
+    summary(text("Options", "Options ")),
+    ["edge_whitespace"],
+    "spaces make a difference",
+  );
   assertEquals(text("A\r\nB", "A\nB"), [], "so do line endings");
 });
 
@@ -1079,6 +1086,109 @@ test("pluralOverride replaces the language's categories", () => {
   );
 });
 
+test("tags_differ: a warning naming the first missing tag, else the first extra one", () => {
+  assertEquals(text("Press <b>Start</b>", "Drücke Start"), [
+    {
+      check: "tags_differ",
+      severity: "warning",
+      message: "Tag <b> is missing.",
+      value: "<b>",
+    },
+  ]);
+  assertEquals(messages(text("Press <1>Start</1>", "Drücke <1>Start</1><br/>")), [
+    "Tag <br/> isn't in the English, or is repeated.",
+  ]);
+  assertEquals(
+    summary(plural("en-GB", COINS, { one: "<b>One</b> coin", other: "{{count}} gold coins" })),
+    ["tags_differ:one"],
+  );
+});
+
+test("tags_differ: attributes, letter case and order don't matter", () => {
+  assertEquals(
+    text('Read <a href="/rules">the rules</a>', 'Lies <A href="/regeln">die Regeln</A>'),
+    [],
+  );
+  assertEquals(text("<b>Big</b> <i>news</i>", "<i>Große</i> <b>Neuigkeiten</b>"), []);
+  assertEquals(text("One<br />two", "Eins<br/>zwei"), []);
+  assertEquals(text("1 < 2 and 3 > 2", "1 < 2 und 3 > 2"), [], "comparisons aren't tags");
+});
+
+test("edge_whitespace: a line break or space at either end that the English doesn't have", () => {
+  assertEquals(text("Play", "Spielen\n"), [
+    {
+      check: "edge_whitespace",
+      severity: "warning",
+      message: "The translation ends with a line break; the English doesn't.",
+    },
+  ]);
+  assertEquals(messages(text("Play\n", "Spielen")), [
+    "The English ends with a line break; the translation doesn't.",
+  ]);
+  assertEquals(messages(text(" Play", "  Spielen")), [
+    "The translation starts with 2 spaces; the English with a space.",
+  ]);
+  assertEquals(messages(text("Play\n\n", "Spielen \n")), [
+    "The translation ends with a line break; the English with 2 line breaks.",
+  ]);
+  assertEquals(
+    summary(plural("en-GB", COINS, { one: "One coin ", other: "{{count}} gold coins" })),
+    ["edge_whitespace:one"],
+  );
+});
+
+test("edge_whitespace: the same whitespace, in any line ending, is fine", () => {
+  assertEquals(text("Play\r\n", "Spielen\n"), []);
+  assertEquals(text("  Play ", "  Spielen "), []);
+});
+
+test("line_breaks_differ: compares the line breaks inside the text", () => {
+  assertEquals(text("Game over.\nTry again?", "Spiel vorbei. Nochmal?"), [
+    {
+      check: "line_breaks_differ",
+      severity: "warning",
+      message: "The English has 1 line break inside; the translation has 0.",
+    },
+  ]);
+  assertEquals(text("Game over.\r\nTry again?", "Spiel vorbei.\nNochmal?"), []);
+});
+
+test("double_space: two spaces in a row that the English doesn't have", () => {
+  assertEquals(text("New game", "Neues  Spiel"), [
+    { check: "double_space", severity: "warning", message: "Two spaces in a row." },
+  ]);
+  assertEquals(text("Score:  {{n}}", "Punkte:  {{n}}"), []);
+});
+
+test("end_punctuation: a different question mark, exclamation mark, ellipsis or colon", () => {
+  assertEquals(text("Quit?", "Beenden"), [
+    {
+      check: "end_punctuation",
+      severity: "warning",
+      message: "The English ends with a question mark; the translation doesn't.",
+    },
+  ]);
+  assertEquals(messages(text("Save as", "Speichern unter…")), [
+    "The translation ends with an ellipsis; the English doesn't.",
+  ]);
+  assertEquals(messages(text("You win!", "Du gewinnst?")), [
+    "The translation ends with a question mark; the English with an exclamation mark.",
+  ]);
+  assertEquals(messages(text("Name:", "Name")), [
+    "The English ends with a colon; the translation doesn't.",
+  ]);
+});
+
+test("end_punctuation: each script's own marks count", () => {
+  assertEquals(text("Quit?", "終了しますか？", { language: "ja" }), []);
+  assertEquals(text("Quit?", "هل تريد الخروج؟", { language: "ar" }), []);
+  assertEquals(text("Quit?", "Έξοδος;", { language: "el" }), []);
+  assertEquals(text("Loading...", "Wird geladen…"), []);
+  assertEquals(text("Name:", "名前：", { language: "ja" }), []);
+  assertEquals(text("Nice!", "Super !", { language: "fr" }), []);
+  assertEquals(text("Game over.", "Spiel vorbei"), [], "full stops aren't compared");
+});
+
 test("results: errors first, then in CHECKS order, then by form in CLDR order", () => {
   const results = plural(
     "pl",
@@ -1129,6 +1239,8 @@ test("results: every check id is reachable, with the severity from CHECKS", () =
       glossary: [{ term: "game", translation: "Spiel", kind: "translate" }],
     }),
     plural("pl", COINS, { two: "{{count}}" }),
+    text("<b>Quit?</b>", "<i>Beenden</i>"),
+    text("Quit?", " Beenden\n  jetzt"),
   ];
   for (const results of all) {
     for (const result of results) {

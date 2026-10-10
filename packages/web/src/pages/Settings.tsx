@@ -363,15 +363,16 @@ function Llm({ data }: { data: SettingsResult }) {
           change={(v) => update("autoTranslate", v)}
         />
         <Check
-          label="Update outdated green translations"
+          label="When an upload changes the English, rewrite its green translations"
           checked={llm.updateOutdated}
           change={(v) => update("updateOutdated", v)}
         />
         <Check
-          label="Propose updates for outdated proofread translations"
+          label="When an upload changes the English, propose updates for its proofread translations (they stay as they are until a manager accepts)"
           checked={llm.proposeForProofread}
           change={(v) => update("proposeForProofread", v)}
         />
+        <p className="field-hint">These apply to uploads only. Auto-translate asks each time.</p>
       </Fieldset>
       <Fieldset className="settings-field-group">
         <legend>Model & budget</legend>

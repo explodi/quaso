@@ -268,11 +268,17 @@ function estimateFromBatches(
     requests: batches.length,
     languages: languages.map((language) => ({ language, strings: 0, words: 0 })),
     files: [],
+    work: { translate: 0, retranslate: 0, update: 0, propose: 0 },
     estimatedTokens: { input: 0, output: 0 },
   };
   const files = new Map<string, JobEstimate["files"][number]>();
   for (const [index, batch] of batches.entries()) {
     const words = batch.items.reduce((sum, item) => sum + item.words, 0);
+    for (const item of batch.items) {
+      const untranslated = item.revision === 0;
+      if (item.action === "translate") result.work[untranslated ? "translate" : "retranslate"]++;
+      else result.work[item.action]++;
+    }
     const language = result.languages.find((entry) => entry.language === batch.language)!;
     language.strings += batch.items.length;
     language.words += words;

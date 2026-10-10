@@ -149,7 +149,7 @@ export const JOB_WORK_CASES: { name: string; run(sql: Sql): Promise<void> }[] = 
     },
   },
   {
-    name: "manual jobs update old green independently of the upload setting",
+    name: "manual jobs update old green and propose for old blue whatever the upload settings",
     async run(sql) {
       await seedJobWork(sql);
       const settings = { ...SETTINGS, updateOutdated: false, proposeForProofread: false };
@@ -157,7 +157,7 @@ export const JOB_WORK_CASES: { name: string; run(sql: Sql): Promise<void> }[] = 
       const upload = await readJobWork(sql, 0, "upload", { languages: ["de"] }, settings);
       checkEqual(
         manual.batches.flatMap((batch) => batch.items.map((item) => item.stringId)),
-        [1, 3, 7],
+        [1, 3, 5, 7],
       );
       checkEqual(
         upload.batches.flatMap((batch) => batch.items.map((item) => item.stringId)),

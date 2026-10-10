@@ -12,6 +12,7 @@ import {
   COLOUR_LABELS,
   colourOf,
   flagsOf,
+  outdatedExplanation,
   stateSentence,
 } from "../lib/states.ts";
 
@@ -43,7 +44,7 @@ export function StateBadge({ summary, describe }: { summary: Summary; describe?:
         {COLOUR_LABELS[colour]}
       </span>
       {flags.outdated && (
-        <span className="badge badge-flag" title="Made for an older English text">
+        <span className="badge badge-flag" title={outdatedExplanation("source text")}>
           <ClockIcon className="flag-outdated" />
           Outdated
         </span>

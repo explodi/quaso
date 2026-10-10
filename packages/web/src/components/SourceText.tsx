@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 /**
  * Text with its placeholders highlighted and its nesting references shown masked (`⟦1⟧`),
- * with a hint of what they refer to. Everything is rendered as text, never as HTML (design
+ * with a hint of what they refer to. Spaces and line breaks at either end, which the page
+ * would otherwise hide, show as signs (`·`, `↵`): a translation should usually have them too. Everything is rendered as text, never as HTML (design
  * §8: whatever people and the LLM write is user content).
  */
 import {
+  describeWhitespace,
   glossaryMatches,
   type GlossaryTerm,
   type InterpolationSyntax,
@@ -30,9 +32,13 @@ export function SourceText({
   lang?: string;
   dir?: "ltr" | "rtl";
 }) {
-  const tokens = tokenize(text, syntax);
+  const hasVisibleText = text.trim() !== "";
+  const leading = hasVisibleText ? (LEADING_WHITESPACE.exec(text)?.[0] ?? "") : "";
+  const trailing = hasVisibleText ? (TRAILING_WHITESPACE.exec(text)?.[0] ?? "") : "";
+  const tokens = tokenize(text.slice(leading.length, text.length - trailing.length), syntax);
   return (
     <span className="source-text" lang={lang} dir={dir}>
+      <EdgeWhitespace whitespace={leading} edge="start" />
       {tokens.map((token, index) => {
         if (token.type === "text") {
           return <GlossaryText key={index} text={token.text} terms={glossary} />;
@@ -61,6 +67,26 @@ export function SourceText({
           </mark>
         );
       })}
+      <EdgeWhitespace whitespace={trailing} edge="end" />
+    </span>
+  );
+}
+
+const LEADING_WHITESPACE = /^\s+/;
+const TRAILING_WHITESPACE = /\s+$/;
+
+function EdgeWhitespace({ whitespace, edge }: { whitespace: string; edge: "start" | "end" }) {
+  if (whitespace === "") return null;
+  const signs = Array.from(whitespace.replaceAll("\r\n", "\n"), (character) => {
+    if (character === "\n" || character === "\r") return "↵";
+    if (character === "\t") return "→";
+    return "·";
+  }).join("");
+  const description = `${edge === "start" ? "Starts" : "Ends"} with ${describeWhitespace(whitespace)}`;
+  return (
+    <span className="edge-whitespace" title={description}>
+      <span aria-hidden="true">{signs}</span>
+      <span className="sr-only">({description})</span>
     </span>
   );
 }

@@ -7,11 +7,12 @@
  * - it is untranslated (`translate`);
  * - re-translating, and it is green (`translate`; never blue, LLM-4);
  * - it is outdated and the scope takes outdated translations: green is updated (`update`);
- *   blue gets a proposal (`propose`) if the settings say so and no pending LLM proposal for
- *   the current English exists;
+ *   blue gets a proposal (`propose`) unless a pending LLM proposal for the current English
+ *   exists;
  *
- * minus the pairs the job already processed (`job_items`). An upload job follows the two
- * settings separately: `updateOutdated` for green, `proposeForProofread` for blue.
+ * minus the pairs the job already processed (`job_items`). Only an upload job follows the two
+ * settings, separately: `updateOutdated` for green, `proposeForProofread` for blue. A job a
+ * person starts does what its scope says.
  *
  * String and file lists go to SQLite as one JSON parameter (`json_each`), so any number of
  * them fits in one statement within the Durable Object limits.
@@ -107,7 +108,7 @@ function resolveWorkScope(
     retranslate: scope.retranslate === true,
     qa: scope.qa === true,
     updateGreen: outdated && (!upload || llm.updateOutdated),
-    proposeBlue: outdated && llm.proposeForProofread,
+    proposeBlue: outdated && (!upload || llm.proposeForProofread),
   };
 }
 

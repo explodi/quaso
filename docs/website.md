@@ -22,6 +22,8 @@ The home page lists every language the project translates into, with:
 - **"45% translated • 10% proofread"**, counted in English words;
 - the **words left**: the English words of strings nobody has translated yet;
 - flags for **outdated** strings, **pending** suggestions and **QA problems**, when there are any.
+  Hover over the outdated flag for what it means: the English changed after those strings were
+  translated, and players get the old translations until someone updates or approves them.
 
 Search the languages by name or tag, and sort them by name or by progress. Next to the list, the
 project's description and its details: the source language, the number of strings, words, files,
@@ -38,7 +40,8 @@ the sources and their counts.
 Click a language to see its **files**, in the same repository folders with progress per file. Type in **Filter files** to
 find one, and tick **Hide completed** to leave out files where every string is translated and up to
 date, without quality problems. The counts at the top ("3 outdated", "12 untranslated strings"…)
-open the editor with that filter.
+open the editor with that filter. When some strings are outdated, a line under the counts says what
+that means.
 
 **Translate all** opens the editor for the whole language; a file opens it for that file.
 
@@ -97,8 +100,18 @@ input.
 
 As you type, the **quality checks** run: a missing or extra placeholder, a missing plural form, an
 empty translation or one longer than the maximum length are **errors**, and saving waits until they
-are fixed. A translation identical to the English, or with different numbers, is only a **warning**.
-When a string has a maximum length, a counter shows the length in characters as the app counts them.
+are fixed. A placeholder or reference chip above the input turns red, with a warning sign, while the
+translation lacks it. **Warnings** point at likely slips without holding the save:
+
+- identical to the English, or different numbers;
+- an HTML or Trans tag, such as `<b>` or `<1>`, missing or added;
+- a space or line break at the start or the end that the English doesn't have, or the other way
+  round. The English shows such whitespace as `·` (space) and `↵` (line break);
+- a different number of line breaks inside the text;
+- two spaces in a row;
+- a different question mark, exclamation mark, ellipsis or colon at the end (each script's own
+  marks count, such as `？` or Greek `;`).
+  When a string has a maximum length, a counter shows the length in characters as the app counts them.
 
 For right-to-left languages, such as Arabic or Hebrew, the inputs are right to left, and so is the
 English when the project's source language is itself right to left.
@@ -106,6 +119,11 @@ English when the project's source language is itself right to left.
 ### What you can do
 
 What the panel offers depends on your role:
+
+An **outdated** string shows a banner above the English: the English changed after the translation
+was written, so players still get the old translation until someone updates or approves it. It shows
+the change, old words struck out and new ones underlined, and says what you can do: save an update,
+**Approve** the translation if it still fits, or review the LLM's proposal in **Suggestions**.
 
 | You are                   | You can                                                                                                                                                                                                                                            |
 | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -196,17 +214,17 @@ screen readers.
 
 Managers can choose **Auto-translate** from the dashboard, language page or editor. Select languages
 and files, review their word counts and the work estimate, and optionally add an instruction or
-choose a model for that run. **Untranslated only** also handles outdated work according to the
-request; retranslation can include green strings. Blue translations are never overwritten by the
-LLM. An outdated blue string receives a proposal for a manager to review.
+choose a model for that run. **Update outdated translations** (on by default) rewrites outdated green
+translations, and gives each outdated proofread (blue) one a proposal for a manager to review: blue
+translations are never overwritten by the LLM. Retranslation can include green strings. The estimate
+says how many strings get each treatment: untranslated, translated again, rewritten or proposed.
 
 Files use repository folders with checkboxes. Check a folder to select all files beneath it;
 unchecking one file leaves its folder partly checked. **All files** selects or clears the whole
 tree. Arrow keys move and expand folders; Space toggles a file or folder. Word counts beside
 each node and the per-language breakdown update with the estimate as you change the scope.
 The dashboard starts with all languages and files, a language page starts with that language,
-and the editor starts with its current language and file or folder. Outdated work is included
-by default. The line beneath languages names the configured LLM reference languages and links
+and the editor starts with its current language and file or folder. The line beneath languages names the configured LLM reference languages and links
 to their Settings section. Starting closes the dialog; the job indicator follows its progress.
 
 **Jobs** lists queued, running, paused and finished work. Open progress details for successes,
@@ -250,7 +268,9 @@ Administrators choose a section in **Settings**:
 - **Files and length limits**: describe file context and string constraints. Config-defined limits
   are locked here because the next upload owns them.
 - **LLM translation**: automatic translation, outdated handling, model, prompt, context languages,
-  batch size, neighboring strings, retries and safety. Resetting the prompt changes the draft; save
+  batch size, neighboring strings, retries and safety. The outdated options say what an upload that
+  changes the English does: rewrite green translations, propose updates for proofread ones, both or
+  neither. Auto-translate asks each time instead. Resetting the prompt changes the draft; save
   to apply it. Unknown prompt placeholders are rejected. Provider credentials stay on the server.
 - **API keys**: everyone's keys, with who created each. Create named `read` or `upload` keys, copy
   the secret once, and revoke unused keys. Read keys download and inspect status. Upload keys also

@@ -32,6 +32,7 @@ import {
   progressText,
   wordsLeftText,
 } from "../lib/format.ts";
+import { outdatedExplanation } from "../lib/states.ts";
 import { useDocumentTitle, useProject } from "../lib/hooks.ts";
 import { fillPattern, Link, useRoute } from "../lib/router.tsx";
 import { useSession } from "../lib/session.tsx";
@@ -272,6 +273,7 @@ export function Dashboard() {
 }
 
 function LanguageRow({ language }: { language: LanguageProgress }) {
+  const sourceLanguageName = useProject().data?.sourceLanguageName ?? "source text";
   return (
     <li className="language-row">
       <Link to={fillPattern("/languages/:lang", { lang: language.tag })} className="language-link">
@@ -286,7 +288,10 @@ function LanguageRow({ language }: { language: LanguageProgress }) {
         </span>
         <span className="language-flags">
           {language.outdated > 0 && (
-            <span className="flag">
+            <span
+              className="flag"
+              title={outdatedExplanation(sourceLanguageName, language.outdated)}
+            >
               <ClockIcon className="flag-outdated" /> {count(language.outdated, "outdated string")}
             </span>
           )}

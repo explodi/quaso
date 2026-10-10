@@ -28,10 +28,12 @@ import {
   checkTranslation,
   graphemeLength,
   type LanguageProgress,
+  placeholderKey,
   type ProjectInfo,
   type StringDetail,
   type StringSummary,
   textDirection,
+  tokenize,
   type TranslationInfo,
 } from "@quaso/core";
 import {
@@ -49,6 +51,7 @@ import { SourceText } from "../../components/SourceText.tsx";
 import { StateBadge } from "../../components/StateBadge.tsx";
 import { useToast } from "../../components/Toast.tsx";
 import { JobProgress } from "../../components/JobProgress.tsx";
+import { OutdatedNotice } from "./OutdatedNotice.tsx";
 import {
   ApiError,
   approveTranslation,
@@ -518,6 +521,19 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
   const generalChecks = forms.length > 1 ? shownChecks.filter((check) => !check.form) : [];
 
   const sourceDirection = textDirection(project.sourceLanguage);
+  // Placeholders and references the checks find missing, so their chips can say so.
+  const missing = new Set(
+    shownChecks
+      .filter(
+        (check) => check.check === "placeholder_missing" || check.check === "reference_missing",
+      )
+      .map((check) => check.value),
+  );
+  const chipMissing = (chip: (typeof masking.chips)[number]) => {
+    if (chip.kind === "reference") return missing.has(chip.raw);
+    const [token] = tokenize(chip.raw, syntax);
+    return token?.type === "placeholder" && missing.has(placeholderKey(token));
+  };
 
   return (
     <div className="panel" ref={root}>
@@ -545,6 +561,14 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
           <InfoIcon /> At most {detail.maxLength} characters.
         </p>
       )}
+
+      <OutdatedNotice
+        detail={detail}
+        sourceLanguage={project.sourceLanguage}
+        sourceLanguageName={project.sourceLanguageName}
+        canEdit={canEdit}
+        canSuggest={canSuggest}
+      />
 
       <section className="panel-source" aria-labelledby="source-heading">
         <div className="panel-section-head">
@@ -655,29 +679,35 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
               role="group"
               aria-label="Placeholders and references: click to insert"
             >
-              {masking.chips.map((chip, index) => (
-                <Chip
-                  key={`${chip.kind}:${chip.raw}`}
-                  kind={chip.kind}
-                  shortcut={index < 9 ? index + 1 : undefined}
-                  title={
-                    chip.kind === "reference"
-                      ? `${chip.insert} = ${chip.raw}${chip.english ? `: “${chip.english}”` : ""}`
-                      : `Insert ${chip.raw}`
-                  }
-                  aria-label={
-                    chip.kind === "reference"
-                      ? `Insert reference ${chip.insert}, ${chip.raw}${
-                          chip.english ? `: ${chip.english}` : ""
-                        }`
-                      : `Insert placeholder ${chip.raw}`
-                  }
-                  onMouseDown={(event) => event.preventDefault()}
-                  onClick={() => insert(chip.insert)}
-                >
-                  {chip.insert}
-                </Chip>
-              ))}
+              {masking.chips.map((chip, index) => {
+                const isMissing = chipMissing(chip);
+                const missingNote = isMissing ? " (missing from the translation)" : "";
+                return (
+                  <Chip
+                    key={`${chip.kind}:${chip.raw}`}
+                    kind={chip.kind}
+                    className={isMissing ? "chip-missing" : undefined}
+                    shortcut={index < 9 ? index + 1 : undefined}
+                    title={
+                      chip.kind === "reference"
+                        ? `${chip.insert} = ${chip.raw}${chip.english ? `: “${chip.english}”` : ""}${missingNote}`
+                        : `Insert ${chip.raw}${missingNote}`
+                    }
+                    aria-label={
+                      chip.kind === "reference"
+                        ? `Insert reference ${chip.insert}, ${chip.raw}${
+                            chip.english ? `: ${chip.english}` : ""
+                          }${missingNote}`
+                        : `Insert placeholder ${chip.raw}${missingNote}`
+                    }
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => insert(chip.insert)}
+                  >
+                    {isMissing && <WarningIcon />}
+                    {chip.insert}
+                  </Chip>
+                );
+              })}
             </div>
           )}
           {forms.map((form) => {

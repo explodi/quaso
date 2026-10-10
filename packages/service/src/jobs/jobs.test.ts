@@ -238,6 +238,30 @@ test("upload jobs follow updateOutdated and proposeForProofread separately", asy
   assertEquals(upload.job, null, "nothing to do: no job");
 });
 
+test("a person's job counts outdated work in its estimate and proposes whatever the upload settings", async () => {
+  using instance = await project();
+  await drain(instance);
+  writeBlue(instance, "title", "de", "Wanderer");
+  const settings = loadSettings(instance.ctx);
+  saveSettings(instance.ctx, {
+    ...settings,
+    llm: { ...settings.llm, autoTranslate: false, proposeForProofread: false },
+  });
+  await uploadJson(instance.service, {
+    "common.json": { ...COMMON, title: "Wayfarers", greeting: "Hello again, {{name}}!" },
+  });
+  const { estimate } = await instance.service.createJob(SYSTEM, {
+    dryRun: true,
+    languages: ["de"],
+  });
+  assertEquals(estimate?.work, { translate: 0, retranslate: 0, update: 1, propose: 1 });
+
+  await instance.service.createJob(SYSTEM, { languages: ["de"] });
+  await drain(instance);
+  assertEquals(count(instance.sql, "suggestions", "kind = 'llm' AND language = 'de'"), 1);
+  assertEquals((await translations(instance, "de")).greeting?.outdated, false);
+});
+
 test("a person's change during a batch wins over the LLM's result", async () => {
   const held = heldProvider();
   using instance = await project(held);

@@ -25,6 +25,7 @@ const ESTIMATE: JobEstimate = {
     { file: "common.json", strings: 4, words: 6 },
     { file: "menus/main.json", strings: 2, words: 2 },
   ],
+  work: { translate: 3, retranslate: 0, update: 2, propose: 1 },
   estimatedTokens: { input: 2400, output: 120 },
 };
 
@@ -57,6 +58,10 @@ test("translate --dry-run prints the estimate and starts nothing", async () => {
     assertStringIncludes(
       run.stdout,
       "6 strings (8 words) in 4 requests: about 2,400 input and 120 output tokens.",
+    );
+    assertStringIncludes(
+      run.stdout,
+      "Of these: 3 untranslated, 2 outdated green to update, 1 outdated proofread to get a proposal for review.",
     );
     assertStringIncludes(run.stderr, "Estimating the translation of de, pl on https://quaso.test");
 

@@ -27,6 +27,7 @@ import { ProgressBar } from "../components/ProgressBar.tsx";
 import { listFiles } from "../lib/api.ts";
 import { useQuery } from "../lib/data.ts";
 import { count, formatNumber, languageLabel, progressText, wordsLeftText } from "../lib/format.ts";
+import { outdatedExplanation } from "../lib/states.ts";
 import { useDocumentTitle, useProject, useRememberLanguage } from "../lib/hooks.ts";
 import { fillPattern, href, Link, useRoute } from "../lib/router.tsx";
 import { buildTree, filterTree, leaves } from "../lib/tree.ts";
@@ -182,6 +183,7 @@ export function LanguagePage() {
 }
 
 function LanguageSummary({ language }: { language: LanguageProgress }) {
+  const sourceLanguageName = useProject().data?.sourceLanguageName ?? "source text";
   return (
     <section className="card summary-card" aria-label="Progress">
       <ProgressBar progress={language} />
@@ -242,6 +244,14 @@ function LanguageSummary({ language }: { language: LanguageProgress }) {
           </li>
         )}
       </ul>
+      {language.outdated > 0 && (
+        <p className="summary-note muted">
+          <ClockIcon />
+          <span>
+            <strong>Outdated.</strong> {outdatedExplanation(sourceLanguageName, language.outdated)}
+          </span>
+        </p>
+      )}
     </section>
   );
 }

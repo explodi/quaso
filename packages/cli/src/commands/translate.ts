@@ -210,7 +210,19 @@ function renderEstimate(out: Output, estimate: JobEstimate): void {
       "en",
     )} output tokens.`,
   );
+  out.print(workSummary(estimate.work));
   out.print(dim("Thinking models use more tokens than this; retries add some too."));
+}
+
+/** "Of these: 3 untranslated, 2 outdated green to update…", leaving out what is zero. */
+function workSummary(work: JobEstimate["work"]): string {
+  const parts: string[] = [];
+  if (work.translate > 0) parts.push(`${work.translate} untranslated`);
+  if (work.retranslate > 0) parts.push(`${work.retranslate} green to translate again`);
+  if (work.update > 0) parts.push(`${work.update} outdated green to update`);
+  if (work.propose > 0)
+    parts.push(`${work.propose} outdated proofread to get a proposal for review`);
+  return `Of these: ${parts.join(", ")}.`;
 }
 
 function renderQueued(out: Output, job: JobInfo): void {
