@@ -46,6 +46,8 @@ export interface RunOptions {
   fetch?: Fetch;
   /** Default: `setTimeout`. Tests pass one that doesn't wait. */
   sleep?: (ms: number) => Promise<void>;
+  /** Default: true. Tests whose fake server has no `/wake` pass false. */
+  waitWhileAsleep?: boolean;
 }
 
 /** Runs the CLI with the arguments (without the program's name) and returns the exit code. */
@@ -99,7 +101,15 @@ export async function run(argv: readonly string[], options: RunOptions = {}): Pr
     }
 
     const cwd = await workingFolder(options.cwd ?? process.cwd(), option(args, "cwd"));
-    const ctx = new Context({ args, cwd, env, out, fetch: options.fetch, sleep: options.sleep });
+    const ctx = new Context({
+      args,
+      cwd,
+      env,
+      out,
+      fetch: options.fetch,
+      sleep: options.sleep,
+      waitWhileAsleep: options.waitWhileAsleep,
+    });
     const result = await command.run(ctx);
     if (json) out.document(resultDocument(name, result.exitCode, result.json));
     else result.render(out);

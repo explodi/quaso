@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 /**
- * The routes outside the API: `/healthz` (which also says where the data is), `/config.json`
- * for the website, the CLI config's JSON Schema, `/robots.txt` and the OpenAPI document.
+ * The routes outside the API: `/healthz` (which also says where the data is), the CLI
+ * config's JSON Schema and the OpenAPI document. The website's `/config.json` and
+ * `/robots.txt` are files in its build, so that a Worker can serve them without the server.
  */
 import { API_BASE, configJsonSchema } from "@quaso/core";
 import { type Logger, type ServiceApi, SYSTEM } from "@quaso/service";
 import type { Handler } from "../http/context.ts";
-import { json, text } from "../http/response.ts";
+import { json } from "../http/response.ts";
 import type { ApiRoute } from "./api.ts";
 import { openApiDocument } from "./openapi.ts";
 
@@ -48,9 +49,7 @@ export function siteRoutes(options: SiteRoutesOptions): [string, string, Handler
 
   return [
     ["GET", "/healthz", health],
-    ["GET", "/config.json", () => Promise.resolve(json({ apiBase: API_BASE }))],
     ["GET", schemaPath, () => Promise.resolve(json(configSchema))],
-    ["GET", "/robots.txt", () => Promise.resolve(text("User-agent: *\nDisallow: /api/\n"))],
     ["GET", `${API_BASE}/openapi.json`, () => Promise.resolve(json(openApi))],
   ];
 }

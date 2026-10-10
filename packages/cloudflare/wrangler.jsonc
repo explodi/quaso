@@ -19,6 +19,15 @@
   "workers_dev": false,
   "preview_urls": false,
   "version_metadata": { "binding": "CF_VERSION_METADATA" },
+  // The website is served by the Worker, so it loads while the container sleeps. The
+  // Worker runs first for every path: it routes the server's paths to the container and
+  // adds the website's security headers.
+  "build": { "command": "deno task build:web", "cwd": "../.." },
+  "assets": {
+    "directory": "../web/dist",
+    "binding": "ASSETS",
+    "run_worker_first": true,
+  },
   "containers": [
     {
       "class_name": "QuasoContainer",

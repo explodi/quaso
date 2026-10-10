@@ -6,8 +6,8 @@ import * as fs from "node:fs/promises";
  * 1. Creates `.quaso/` (with `--reset`, deletes it first) and seeds the demo project on the
  *    first run (`quaso seed-dev`).
  * 2. Starts the server with `--watch`, which restarts it when server code changes, and
- *    Vite's dev server, which proxies `/api`, `/auth`, `/config.json`, `/healthz` and
- *    `/schema` to it.
+ *    Vite's dev server, which proxies `/api`, `/auth`, `/healthz` and `/schema` to
+ *    it.
  * 3. Waits for `/healthz`, then prints the one address to open, which signs the browser in
  *    as the developer account (`/auth/dev-login`), and the development API key.
  *

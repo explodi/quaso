@@ -7,6 +7,14 @@ Release candidates are for deployment and migration testing. The team decides wh
 
 ### Added
 
+- On Cloudflare, the Worker serves the website itself, so it is on screen at once while the
+  container sleeps. Opening it starts the container, and the website shows "Waking up Quaso…" with
+  a progress bar, based on how long the last start took, until the server answers; a tab that
+  comes back after the container fell asleep shows the same above the page. `/wake` says whether
+  the server is ready.
+- The CLI waits for a sleeping instance before its first request, and says how far along the start
+  is, instead of timing out.
+
 - Every push to main publishes its CLI to npm under the tag `main`, as
   `<version>.main.g<commit>` (`-main.g<commit>` after a stable version), next to the image's
   `sha-<commit>`.
@@ -30,6 +38,10 @@ Release candidates are for deployment and migration testing. The team decides wh
   migration keeps every existing translation.
 
 ### Changed
+
+- On Cloudflare, a request that wakes the container waits for the whole start (up to two minutes)
+  instead of failing with a 503 after about 30 seconds.
+- `/config.json` and `/robots.txt` are files in the website's build instead of server routes.
 
 - The LLM's answer schema requires the plural forms every plural string of the batch needs, so
   structured output can't skip one (French `many`, for 1000000, went missing otherwise).

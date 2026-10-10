@@ -86,7 +86,7 @@ describe("the Worker's cache", () => {
   });
 
   it("never stores private answers, cookies being set, or errors", async () => {
-    for (const base of ["/private", "/cookie", "/missing"]) {
+    for (const base of ["/api/test/private", "/api/test/cookie", "/api/test/missing"]) {
       const path = unique(base);
       const first = await call(path);
       const second = await call(path);
@@ -100,12 +100,6 @@ describe("the Worker's cache", () => {
     expect(response.cache).toBe("bypass");
     expect(response.body?.seen.method).toBe("POST");
     expect(response.body?.seen.body).toBe("{}");
-  });
-
-  it("passes robots.txt through from the server", async () => {
-    const response = await call("/robots.txt");
-    expect(response.status).toBe(200);
-    expect(response.body?.seen.path).toBe("/robots.txt");
   });
 
   it("tells the server who is asking, and asks for an uncompressed answer", async () => {
@@ -124,7 +118,7 @@ describe("the Worker's cache", () => {
       requestId: "8c1a2b3c4d5e6f70-AMS",
       acceptEncoding: null,
     });
-    const spoofed = await call(unique("/x"), {
+    const spoofed = await call(unique("/api/test/x"), {
       method: "POST",
       headers: { "X-Forwarded-For": "198.51.100.1", "X-Request-Id": "made-up" },
     });
@@ -132,14 +126,18 @@ describe("the Worker's cache", () => {
   });
 
   it("answers 503 when the container doesn't start", async () => {
-    const response = await call("/down");
+    const response = await call("/api/test/down");
     expect(response.status).toBe(503);
     expect(response.headers.get("Retry-After")).toBe("10");
     expect(JSON.parse(response.text).error.code).toBe("unavailable");
   });
 
   it("answers its own 503 for the container library's plain-text errors", async () => {
-    for (const path of ["/no-instance", "/start-failed", "/rate-limited"]) {
+    for (const path of [
+      "/api/test/no-instance",
+      "/api/test/start-failed",
+      "/api/test/rate-limited",
+    ]) {
       const response = await call(path, { headers: { "CF-Ray": "ray-123" } });
       expect(response.status, path).toBe(503);
       expect(response.headers.get("Content-Type"), path).toMatch(/^application\/json/);
@@ -152,15 +150,17 @@ describe("the Worker's cache", () => {
       });
     }
     // The server's own errors pass as they are.
-    const failing = await call(unique("/failing"));
+    const failing = await call(unique("/api/test/failing"));
     expect(failing.status).toBe(500);
     expect(failing.body?.seen.path).toBe("/failing");
   });
 
   it("never lets a client choose the container's port", async () => {
-    const chosen = await call("/port", { headers: { "cf-container-target-port": "9229" } });
+    const chosen = await call("/api/test/port", {
+      headers: { "cf-container-target-port": "9229" },
+    });
     expect(chosen.body?.port).toBe(8000);
-    const junk = await call("/port", { headers: { "cf-container-target-port": "abc" } });
+    const junk = await call("/api/test/port", { headers: { "cf-container-target-port": "abc" } });
     expect([junk.status, junk.body?.port]).toEqual([200, 8000]);
     const posted = await call(unique("/api/v1/sources"), {
       method: "POST",
@@ -180,7 +180,7 @@ describe("the Worker's cache", () => {
   });
 
   it("keeps one copy per Origin when the server varies on it (CORS_ORIGINS)", async () => {
-    const path = unique("/cors");
+    const path = unique("/api/test/cors");
     const get = (origin: string | null) =>
       call(path, origin ? { headers: { Origin: origin } } : {});
     const expected: [string | null, string | null][] = [
@@ -207,7 +207,7 @@ describe("the Worker's cache", () => {
   });
 
   it("never lets a URL reach another request's copy through the key's parameter", async () => {
-    const path = unique("/cors");
+    const path = unique("/api/test/cors");
     const forged = `${path}&${ORIGIN_KEY_PARAM}=${encodeURIComponent("https://a.example")}`;
     // Without an Origin, the forged URL would have the key of path's copy for a.example.
     const first = await call(forged);
@@ -218,7 +218,7 @@ describe("the Worker's cache", () => {
   });
 
   it("doesn't store answers that vary on other request headers", async () => {
-    const path = unique("/language");
+    const path = unique("/api/test/language");
     const first = await call(path, { headers: { "Accept-Language": "pl" } });
     const second = await call(path, { headers: { "Accept-Language": "de" } });
     expect([first.cache, second.cache]).toEqual(["miss", "miss"]);

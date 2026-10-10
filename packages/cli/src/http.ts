@@ -19,6 +19,10 @@ export const MAX_RETRIES = 3;
 export const BASE_DELAY_MS = 500;
 /** The longest `Retry-After` the CLI waits for. */
 export const MAX_RETRY_AFTER_MS = 60_000;
+/** How often the CLI asks again while a sleeping instance starts. */
+export const WAKE_POLL_MS = 2000;
+/** How long the CLI waits for a start before sending its requests anyway. */
+export const MAX_WAKE_MS = 3 * 60_000;
 
 /**
  * When a request may be sent again:
@@ -40,6 +44,11 @@ export interface ClientOptions {
   now?: () => number;
   /** Where retries are reported (stderr). */
   log?: (message: string) => void;
+  /**
+   * Before the first request, wait while the instance's server starts (`/wake`, on
+   * deployments whose server sleeps), so that no request times out during a start.
+   */
+  waitWhileAsleep?: boolean;
 }
 
 export interface RequestOptions {
@@ -57,6 +66,7 @@ export class ApiClient {
   readonly #random: () => number;
   readonly #now: () => number;
   readonly #log: (message: string) => void;
+  #awake: Promise<void> | null;
 
   constructor(options: ClientOptions) {
     this.baseUrl = options.baseUrl;
@@ -66,6 +76,7 @@ export class ApiClient {
     this.#random = options.random ?? Math.random;
     this.#now = options.now ?? Date.now;
     this.#log = options.log ?? (() => {});
+    this.#awake = options.waitWhileAsleep ? null : Promise.resolve();
   }
 
   get<T>(path: string, options: Omit<RequestOptions, "body"> = {}): Promise<T> {
@@ -87,12 +98,59 @@ export class ApiClient {
     return url.toString();
   }
 
+  /**
+   * Asks `/wake` until the server is up, saying so every 15 seconds. Any other answer than
+   * a start in progress (a server without `/wake`, an error) ends the wait: the requests
+   * that follow report their own problems.
+   */
+  async #waitWhileAsleep(): Promise<void> {
+    const started = this.#now();
+    let reported = -Infinity;
+    while (this.#now() - started < MAX_WAKE_MS) {
+      const start = await this.#askWake();
+      if (start === null) return;
+      if (this.#now() - reported >= 15_000) {
+        const elapsed = Math.round(start.elapsedMs / 1000);
+        const expected = Math.round(start.expectedMs / 1000);
+        this.#log(`Waking up the instance: ${elapsed} s of about ${expected} s.`);
+        reported = this.#now();
+      }
+      await this.#sleep(WAKE_POLL_MS);
+    }
+  }
+
+  /** The start in progress, or null when the server is up or `/wake` says nothing. */
+  async #askWake(): Promise<{ elapsedMs: number; expectedMs: number } | null> {
+    try {
+      const response = await this.#fetch(`${this.baseUrl}/wake`, {
+        headers: { Accept: "application/json", "User-Agent": USER_AGENT },
+        redirect: "manual",
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
+      const json = response.headers.get("Content-Type")?.includes("application/json");
+      if (!response.ok || !json) {
+        await response.body?.cancel().catch(() => {});
+        return null;
+      }
+      const answer = await response.json();
+      const starting =
+        answer?.state === "starting" &&
+        typeof answer.elapsedMs === "number" &&
+        typeof answer.expectedMs === "number";
+      return starting ? { elapsedMs: answer.elapsedMs, expectedMs: answer.expectedMs } : null;
+    } catch {
+      return null;
+    }
+  }
+
   async request<T>(method: "GET" | "POST", path: string, options: RequestOptions): Promise<T> {
     const url = this.url(path, options.query);
     const policy = options.retry ?? (method === "GET" ? "safe" : "once");
     const timeoutMs = options.timeoutMs ?? TIMEOUT_MS;
     const headers = requestHeaders(this.#apiKey, options.body !== undefined);
     const body = options.body === undefined ? undefined : JSON.stringify(options.body);
+    this.#awake ??= this.#waitWhileAsleep();
+    await this.#awake;
     for (let attempt = 0; ; attempt++) {
       let response: Response | undefined;
       let text: string;

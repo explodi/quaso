@@ -291,3 +291,74 @@ test("backoffMs and retryAfterMs", () => {
   assertEquals(retryAfterMs("soon", now), null);
   assertEquals(retryAfterMs(null, now), null);
 });
+
+/** A client that waits while the instance is asleep, with a clock that moves 2 s per sleep. */
+function wakingClient(fetch: import("@quaso/core").Fetch, logs: string[]) {
+  let now = Date.parse("2026-10-10T12:00:00Z");
+  return new ApiClient({
+    baseUrl: "https://quaso.test",
+    apiKey: "qso_key",
+    fetch,
+    sleep: (ms) => {
+      now += ms;
+      return Promise.resolve();
+    },
+    now: () => now,
+    log: (message) => logs.push(message),
+    waitWhileAsleep: true,
+  });
+}
+
+const starting = (elapsedMs: number) =>
+  jsonResponse({ state: "starting", elapsedMs, expectedMs: 60_000 });
+
+test("waits while the instance starts, then sends the request", async () => {
+  const answers = [starting(10_000), starting(12_000), jsonResponse({ state: "ready" })];
+  const fetch = fakeFetch((_request, index) => answers[index] ?? jsonResponse({ ok: true }));
+  const logs: string[] = [];
+  const api = wakingClient(fetch, logs);
+  assertEquals(await api.get("/status"), { ok: true });
+  assertEquals(
+    fetch.requests.map((request) => request.url),
+    [
+      "https://quaso.test/wake",
+      "https://quaso.test/wake",
+      "https://quaso.test/wake",
+      "https://quaso.test/api/v1/status",
+    ],
+  );
+  assertEquals(fetch.requests[0].headers.get("Authorization"), null);
+  assertEquals(logs, ["Waking up the instance: 10 s of about 60 s."]);
+});
+
+test("asks /wake once per client", async () => {
+  const fetch = fakeFetch((request) =>
+    request.url.endsWith("/wake") ? jsonResponse({ state: "ready" }) : jsonResponse({ ok: true }),
+  );
+  const api = wakingClient(fetch, []);
+  await api.get("/status");
+  await api.get("/status");
+  assertEquals(fetch.requests.length, 3);
+});
+
+test("a server without /wake is taken as awake", async () => {
+  const fetch = fakeFetch((request) =>
+    request.url.endsWith("/wake")
+      ? new Response("<!doctype html>", { headers: { "Content-Type": "text/html" } })
+      : jsonResponse({ ok: true }),
+  );
+  const api = wakingClient(fetch, []);
+  assertEquals(await api.get("/status"), { ok: true });
+  assertEquals(fetch.requests.length, 2);
+});
+
+test("stops waiting for a start after three minutes and sends the request", async () => {
+  const fetch = fakeFetch((request) =>
+    request.url.endsWith("/wake") ? starting(5000) : jsonResponse({ ok: true }),
+  );
+  const logs: string[] = [];
+  const api = wakingClient(fetch, logs);
+  assertEquals(await api.get("/status"), { ok: true });
+  assertEquals(fetch.requests.length, 91);
+  assertEquals(logs.length, 12);
+});

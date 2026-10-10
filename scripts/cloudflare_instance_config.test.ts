@@ -4,7 +4,8 @@ import { describe, test } from "node:test";
 import { expect } from "@std/expect";
 import * as fs from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join, isAbsolute } from "node:path";
+import { dirname, join, isAbsolute, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { deploy, deployOptions } from "../packages/cloudflare/scripts/deploy.ts";
 import {
   configuredInstance,
@@ -76,6 +77,12 @@ describe("Cloudflare instance configuration", () => {
     expect(config.account_id).toBe(instance.accountId);
     expect(isAbsolute(config.main as string)).toBe(true);
     expect(Object.values(config.alias as object).every(isAbsolute)).toBe(true);
+    expect((config.assets as Record<string, string>).directory).toBe(
+      resolve(dirname(fileURLToPath(import.meta.url)), "../packages/web/dist"),
+    );
+    expect((config.build as Record<string, string>).cwd).toBe(
+      resolve(dirname(fileURLToPath(import.meta.url)), ".."),
+    );
     expect(selected.name).toBe(instance.workerName);
     expect(selected.version_metadata).toEqual({ binding: "CF_VERSION_METADATA" });
     expect(selected.routes).toEqual([{ pattern: instance.hostname, custom_domain: true }]);
