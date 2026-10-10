@@ -8,20 +8,23 @@ import { useProject } from "../lib/hooks.ts";
 import { useSession } from "../lib/session.tsx";
 import { Link } from "../lib/router.tsx";
 import { editorHref } from "../pages/LanguagePage.tsx";
+import { TerminologyReview, StyleGuideReview } from "./TerminologyReview.tsx";
 import { ErrorMessage } from "./ErrorMessage.tsx";
 
-export function MeaningCheckButton({
+export function QualityCheckButton({
   language,
   file,
   strings,
   suggestions,
   onChecked,
+  kind = "meaning",
 }: {
   language?: string;
   file?: string;
   strings?: number[];
   suggestions?: number[];
   onChecked?(): void;
+  kind?: QualityJobRequest["kind"];
 }) {
   const session = useSession();
   const project = useProject();
@@ -33,16 +36,23 @@ export function MeaningCheckButton({
     { invalidate: [["qualityJobs"]] },
   );
   if (!session.can("translate", language)) return null;
+  if (kind === "style_guide" && !session.can("settings")) return null;
+  const label =
+    kind === "meaning"
+      ? "Check meaning"
+      : kind === "terminology"
+        ? "Suggest glossary terms"
+        : "Draft style guide";
   const languages =
     project.data?.languages.filter((entry) => session.can("translate", entry.tag)) ?? [];
   return (
     <>
       <Button disabled={!project.data?.llmAvailable} onClick={() => setOpen(true)}>
-        Check meaning
+        {label}
       </Button>
       {jobId !== null && <QualityJobProgress id={jobId} onDone={onChecked} />}
       {open && (
-        <Dialog open title="Check translation meaning" onClose={() => setOpen(false)}>
+        <Dialog open title={label} onClose={() => setOpen(false)}>
           <form
             className="form"
             onSubmit={async (event) => {
@@ -50,7 +60,7 @@ export function MeaningCheckButton({
               const tags = selected ? [selected] : languages.map((entry) => entry.tag);
               try {
                 const job = await start.run({
-                  kind: "meaning",
+                  kind,
                   languages: tags,
                   files: file ? [file] : undefined,
                   strings,
@@ -64,8 +74,11 @@ export function MeaningCheckButton({
             }}
           >
             <p>
-              Compare the source with current translations. Results appear as QA warnings under the
-              fields.
+              {kind === "meaning"
+                ? "Compare source and translations; findings appear as QA warnings."
+                : kind === "terminology"
+                  ? "Extract recurring terms and review the existing renderings."
+                  : "Draft editable language instructions from proofread translations."}
             </p>
             <Label>
               Language
@@ -90,7 +103,7 @@ export function MeaningCheckButton({
               busy={start.pending}
               disabled={languages.length === 0}
             >
-              Start meaning check
+              Start analysis
             </Button>
           </form>
         </Dialog>
@@ -102,12 +115,21 @@ export function MeaningCheckButton({
 export function QualityJobCard({ job }: { job: QualityJobInfo }) {
   return (
     <article className="record-card">
-      <H2>Meaning check #{job.id}</H2>
+      <H2>
+        {job.kind === "meaning"
+          ? "Meaning check"
+          : job.kind === "terminology"
+            ? "Terminology report"
+            : "Style guide draft"}{" "}
+        #{job.id}
+      </H2>
       <p>
         {job.status} · {job.done} / {job.total} checked · {job.flagged} warnings
       </p>
       {job.error && <p className="field-error">{job.error}</p>}
-      {job.result.length > 0 && (
+      {job.kind === "terminology" && <TerminologyReview job={job} />}
+      {job.kind === "style_guide" && <StyleGuideReview drafts={job.result} />}
+      {job.kind === "meaning" && job.result.length > 0 && (
         <Details open>
           <Summary>Meaning differences</Summary>
           <ul>
@@ -167,7 +189,7 @@ export function QualityJobs() {
   );
   return (
     <section>
-      <H2>Meaning checks</H2>
+      <H2>Quality and terminology jobs</H2>
       {jobs.error !== undefined && <ErrorMessage error={jobs.error} />}
       {jobs.data?.jobs.map((job) => (
         <QualityJobCard key={job.id} job={job} />

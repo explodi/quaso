@@ -1062,7 +1062,9 @@ export const MeaningCheckSettings = s.object({
 });
 export type MeaningCheckSettings = Infer<typeof MeaningCheckSettings>;
 export const QualityJobRequest = s.object({
-  kind: s.enum(["meaning"]),
+  kind: s.enum(["meaning", "terminology", "style_guide"]),
+  minimumFrequency: s.integer({ min: 2, max: 1000 }).optional(),
+  minimumFiles: s.integer({ min: 1, max: 1000 }).optional(),
   languages: s.array(LanguageTag, { minItems: 1, unique: true }),
   files: s.array(FilePath).optional(),
   strings: s.array(Id, { maxItems: 500 }).optional(),
@@ -1077,20 +1079,57 @@ export interface MeaningFinding {
   suggestionId?: number;
   checks: CheckResult[];
 }
-export interface QualityJobInfo {
+export interface TerminologySuggestion {
+  kind: "translate" | "keep";
+  term: string;
+  language: string;
+  note: string;
+  preferred: string;
+  count: number;
+  files: number;
+  inconsistent: boolean;
+  renderings: { translation: string; count: number }[];
+  occurrences: {
+    id: number;
+    language: string;
+    file: string;
+    key: string;
+    source: TextValue;
+    translation: TextValue | null;
+    colour: Colour | null;
+    rendering: string;
+  }[];
+  status: "pending" | "accepted" | "dismissed";
+  glossaryId?: number;
+}
+export interface StyleGuideDraft {
+  language: string;
+  instructions: string;
+  samples: number;
+}
+interface QualityJobBase {
   id: number;
-  kind: "meaning";
   scope: QualityJobRequest;
   status: JobStatus;
   model: string;
   total: number;
   done: number;
   flagged: number;
-  result: MeaningFinding[];
   error: string | null;
   createdAt: number;
   finishedAt: number | null;
 }
+export type QualityJobInfo = QualityJobBase &
+  (
+    | { kind: "meaning"; result: MeaningFinding[] }
+    | { kind: "terminology"; result: TerminologySuggestion[] }
+    | { kind: "style_guide"; result: StyleGuideDraft[] }
+  );
+export const ReviewTerminologyRequest = s.object({
+  action: s.enum(["accept", "dismiss"]),
+  translation: s.string({ maxLength: 1000 }).optional(),
+});
+export type ReviewTerminologyRequest = Infer<typeof ReviewTerminologyRequest>;
 export const LlmSettings = s.object({
   meaningCheck: MeaningCheckSettings.optional(),
   translationMemory: s

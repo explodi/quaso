@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { QualityJobRequest } from "@quaso/core";
+import { ReviewTerminologyRequest, QualityJobRequest } from "@quaso/core";
 /**
  * The HTTP API's routes under `/api/v1` (design §5.11), as one table: the router serves it
  * and the OpenAPI document is generated from it. Each route checks its input against the
@@ -97,6 +97,18 @@ export const ActivityQuery = s.object({
 });
 
 export const API_ROUTES: ApiRoute[] = [
+  route({
+    method: "PATCH",
+    path: "/quality-jobs/:id/suggestions/:index",
+    operationId: "reviewTerminology",
+    summary: "Accept or dismiss a suggested glossary term",
+    tag: "Jobs",
+    access: "upload",
+    params: s.object({ id: Id, index: s.integer({ min: 0 }) }),
+    body: ReviewTerminologyRequest,
+    handle: ({ service, actor, params, body }) =>
+      service.reviewTerminology(actor, { ...params, ...body }),
+  }),
   route({
     method: "POST",
     path: "/quality-jobs",

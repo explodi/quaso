@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { MeaningCheckButton } from "../../components/QualityChecks.tsx";
+import { QualityCheckButton } from "../../components/QualityChecks.tsx";
 /**
  * The translation panel's tabs (S7.7): the history (who changed what, when, before and after,
  * with colour changes; STR-5), the suggestions (approve or reject for managers, withdraw for
@@ -295,7 +295,7 @@ function Suggestions({
                 <p className="muted">The current translation looks good to them.</p>
               )}
               {pending && (
-                <MeaningCheckButton
+                <QualityCheckButton
                   language={detail.language}
                   suggestions={[suggestion.id]}
                   onChecked={() => onChanged([detail.id])}

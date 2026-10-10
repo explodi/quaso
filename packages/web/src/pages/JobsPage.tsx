@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { H1, H2, EmptyState, Loading } from "@quaso/design-system";
 import type { JobsResult } from "@quaso/core";
-import { MeaningCheckButton, QualityJobs } from "../components/QualityChecks.tsx";
+import { QualityCheckButton, QualityJobs } from "../components/QualityChecks.tsx";
 import { AutoTranslateButton } from "../components/AutoTranslate.tsx";
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import { activeJob, JobCard } from "../components/JobProgress.tsx";
@@ -29,7 +29,7 @@ function Jobs() {
         </div>
         <div className="page-actions">
           <AutoTranslateButton />
-          <MeaningCheckButton />
+          <QualityCheckButton />
         </div>
       </div>
       <QualityJobs />

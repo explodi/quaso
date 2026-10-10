@@ -452,3 +452,17 @@ When meaning checks are enabled, translation jobs also accept notes about shown 
 translations. These become warnings on the reference language and job notes, with no extra
 comparison request. Only a reference actually shown to the model and still matching its value
 can receive that warning.
+
+On Glossary, **Suggest glossary terms** starts a terminology job per language. The model finds
+recurring domain nouns and labels across source files (three strings and two files by default),
+with verified examples and the renderings already used in translations. The review table counts
+variants and prefills the majority rendering; edit it, accept the glossary entry, or dismiss the
+row. Existing glossary terms also appear in consistency reports. After agreeing a term,
+**Re-translate N green strings with the glossary** queues its affected green entries for translation;
+proofread entries remain protected.
+
+Language pages offer administrators **Draft style guide**. It samples current proofread
+translations, drafts register, regional vocabulary, punctuation and placeholder-spacing
+instructions, and presents an editable draft. **Save language instructions** applies the reviewed
+draft; generating it changes no instructions or translations. Jobs lists these analyses beside
+translation and meaning jobs.
