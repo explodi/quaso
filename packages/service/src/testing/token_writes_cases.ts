@@ -97,11 +97,11 @@ export const TOKEN_WRITE_CASES: { name: string; run(sql: Sql): Promise<void> }[]
       await seed(sql);
       await rejected(() => createApiTokenAsync(sql, ANONYMOUS, REQUEST, 100), "unauthorized");
       await rejected(
-        () => createApiTokenAsync(sql, { type: "user", userId: 2 }, REQUEST, 100),
+        () => createApiTokenAsync(sql, { type: "token", tokenId: 1 }, REQUEST, 100),
         "forbidden",
       );
       await rejected(
-        () => revokeApiTokenAsync(sql, { type: "user", userId: 2 }, 999, 100),
+        () => revokeApiTokenAsync(sql, { type: "token", tokenId: 1 }, 999, 100),
         "forbidden",
       );
       await rejected(() => authenticateTokenAsync(sql, ADMIN, "nope", 100), "forbidden");
@@ -167,7 +167,7 @@ export const TOKEN_WRITE_CASES: { name: string; run(sql: Sql): Promise<void> }[]
     },
   },
   {
-    name: "a conflicting administrator demotion refuses creation on the fresh snapshot",
+    name: "a conflicting account deletion refuses creation on the fresh snapshot",
     async run(sql) {
       await seed(sql);
       let reads = 0;
@@ -177,7 +177,7 @@ export const TOKEN_WRITE_CASES: { name: string; run(sql: Sql): Promise<void> }[]
           reads++;
           const rows = await sql.read(statements);
           if (reads === 1)
-            await sql.commit(1, [{ sql: "UPDATE users SET role = 'manager' WHERE id = 1" }]);
+            await sql.commit(1, [{ sql: "UPDATE users SET deleted_at = 100 WHERE id = 1" }]);
           return rows;
         },
       };

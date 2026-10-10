@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import { assertEquals, assertMatch, assertNotEquals, assertRejects } from "@std/assert";
 import { sha256Hex } from "@quaso/core";
-import { ANONYMOUS, SYSTEM } from "./api.ts";
+import { type Actor, ANONYMOUS, SYSTEM } from "./api.ts";
 import { ServiceError } from "./errors.ts";
 import { addUser, createToken, startTestService, uploadJson } from "./test_helpers.ts";
 
@@ -98,17 +98,38 @@ test("keys are listed newest first, revoked ones included, with who made them", 
   assertEquals("secret" in tokens[0], false);
 });
 
-test("only administrators and the system manage keys", async () => {
+test("people see and revoke their own keys; administrators everyone's", async () => {
   using instance = await startTestService();
+  const admin = addUser(instance.sql, "administrator");
   const manager = addUser(instance.sql, "manager");
+  const other = addUser(instance.sql, "contributor");
+  const own = await instance.service.createApiToken(manager, { name: "Laptop", scope: "upload" });
+  await instance.service.createApiToken(other, { name: "Desktop", scope: "read" });
+  const ids = async (actor: Actor) =>
+    (await instance.service.listApiTokens(actor, {})).tokens.map((token) => token.name);
+  assertEquals(await ids(manager), ["Laptop"]);
+  assertEquals(await ids(admin), ["Desktop", "Laptop"]);
+  const notYours = await assertRejects(
+    () => instance.service.revokeApiToken(other, { id: own.id }),
+    ServiceError,
+  );
+  assertEquals(notYours.code, "not_found");
+  await instance.service.revokeApiToken(manager, { id: own.id });
+  const [row] = instance.sql.query<{ revoked_at: number | null }>(
+    "SELECT revoked_at FROM api_tokens WHERE id = ?",
+    own.id,
+  );
+  assertNotEquals(row.revoked_at, null);
+});
+
+test("keys can't manage keys, and visitors must sign in", async () => {
+  using instance = await startTestService();
   const token = await createToken(instance.service, "upload");
-  for (const actor of [manager, token.actor]) {
-    const error = await assertRejects(
-      () => instance.service.listApiTokens(actor, {}),
-      ServiceError,
-    );
-    assertEquals(error.code, "forbidden");
-  }
+  const fromKey = await assertRejects(
+    () => instance.service.listApiTokens(token.actor, {}),
+    ServiceError,
+  );
+  assertEquals(fromKey.code, "forbidden");
   const anonymous = await assertRejects(
     () => instance.service.createApiToken(ANONYMOUS, { name: "x", scope: "read" }),
     ServiceError,

@@ -7,6 +7,10 @@ Release candidates are for deployment and migration testing. The team decides wh
 
 ### Added
 
+- Personal API keys: everyone signed in creates, copies once and revokes their own keys on their
+  account page (Account → API keys), which says which CLI commands their role allows.
+  Administrators still see and revoke everyone's keys in Settings, now with who created each.
+
 - On Cloudflare, the Worker serves the website itself, so it is on screen at once while the
   container sleeps. Opening it starts the container, and the website shows "Waking up Quaso…" with
   a progress bar, based on how long the last start took, until the server answers; a tab that
@@ -38,6 +42,10 @@ Release candidates are for deployment and migration testing. The team decides wh
   migration keeps every existing translation.
 
 ### Changed
+
+- An API key never does more than the person who created it may do now: a demotion narrows it,
+  and deleting the account disables it. Keys created on the server (`quaso token create`) act by
+  their scope alone, as before. Create CI keys with an administrator account.
 
 - On Cloudflare, a request that wakes the container waits for the whole start (up to two minutes)
   instead of failing with a 503 after about 30 seconds.

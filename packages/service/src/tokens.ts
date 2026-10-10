@@ -3,6 +3,10 @@
  * API keys (OPS-3): random secrets starting with `qso_`, shown once and stored as SHA-256
  * hashes, with the `read` or `upload` scope. The server authenticates a key with
  * `authenticateToken` and passes the key's ID to the service as the actor.
+ *
+ * Everyone signed in creates, lists and revokes their own keys (`account`); administrators
+ * see and revoke everyone's (`tokens`). A key never does more than the person who created it
+ * may do now (`permissions.ts`), so a key outlives no role change.
  */
 import {
   type ApiTokenInfo,
@@ -16,7 +20,12 @@ import { ActorDirectory, type ActorRows } from "./actors.ts";
 import type { Actor, AuthenticatedToken } from "./api.ts";
 import type { Context } from "./context.ts";
 import { forbidden, notFound } from "./errors.ts";
-import { permissionReadStatements, permissionsFromRows } from "./permissions.ts";
+import {
+  type Permissions,
+  permissionReadStatements,
+  permissionsFromRows,
+  syncPermissions,
+} from "./permissions.ts";
 import type { Sql } from "./ports.ts";
 import { withRetries } from "./write.ts";
 
@@ -89,7 +98,7 @@ export async function createApiTokenAsync(
         { sql: "SELECT id, display_name, avatar_url FROM users WHERE id = ?", params: [createdBy] },
         ...permissionReadStatements(actor),
       ]);
-      permissionsFromRows(actor, permissionRows).require("tokens");
+      permissionsFromRows(actor, permissionRows).require("account");
       return {
         revision: Number(revision[0].revision),
         state: { id: Number(ids[0].id), users: users as ActorRows["users"] },
@@ -119,9 +128,10 @@ export async function createApiTokenAsync(
   );
 }
 
-/** Every key, newest first, revoked ones included. */
-export function listApiTokens(ctx: Context): ApiTokensResult {
-  const rows = ctx.sql.query<TokenRow>(`SELECT ${TOKEN_COLUMNS} FROM api_tokens ORDER BY id DESC`);
+/** The keys `actor` may see, newest first, revoked ones included. */
+export function listApiTokens(ctx: Context, actor: Actor): ApiTokensResult {
+  const all = ctx.sql.query<TokenRow>(`SELECT ${TOKEN_COLUMNS} FROM api_tokens ORDER BY id DESC`);
+  const rows = visibleTokens(syncPermissions(ctx, actor), all);
   const actors = new ActorDirectory(
     ctx.sql,
     [],
@@ -130,24 +140,46 @@ export function listApiTokens(ctx: Context): ApiTokensResult {
   return { tokens: rows.map((row) => describe(row, actors)) };
 }
 
-/** Administrative metadata and permission rows share a snapshot; secrets are never read. */
+/** Key metadata and permission rows share a snapshot; secrets are never read. */
 export async function listApiTokensAsync(sql: Sql, actor: Actor): Promise<ApiTokensResult> {
-  const [rows, users, ...permissionRows] = await sql.read([
+  const [all, users, ...permissionRows] = await sql.read([
     { sql: `SELECT ${TOKEN_COLUMNS} FROM api_tokens ORDER BY id DESC` },
     {
       sql: "SELECT id, display_name, avatar_url FROM users WHERE id IN (SELECT created_by FROM api_tokens)",
     },
     ...permissionReadStatements(actor),
   ]);
-  permissionsFromRows(actor, permissionRows).require("tokens");
+  const rows = visibleTokens(permissionsFromRows(actor, permissionRows), all as TokenRow[]);
   const actors = new ActorDirectory({ users: users as ActorRows["users"], tokens: [] });
-  return { tokens: (rows as TokenRow[]).map((row) => describe(row, actors)) };
+  return { tokens: rows.map((row) => describe(row, actors)) };
+}
+
+/** Every key for those who manage keys; one's own keys for everyone else signed in. */
+function visibleTokens(permissions: Permissions, rows: TokenRow[]): TokenRow[] {
+  if (permissions.can("tokens")) return rows;
+  permissions.require("account");
+  const actor = permissions.actor;
+  const userId = actor.type === "user" ? actor.userId : null;
+  return rows.filter((row) => row.created_by === userId);
+}
+
+/** Throws unless `actor` may revoke a key created by `createdBy`; others' keys are "not found". */
+function requireRevocable(permissions: Permissions, id: number, createdBy: number | null): void {
+  if (permissions.can("tokens")) return;
+  permissions.require("account");
+  const actor = permissions.actor;
+  const own = actor.type === "user" && actor.userId === createdBy;
+  if (!own) throw notFound(`API key ${id}`);
 }
 
 /** Revokes a key for good. Revoking it again changes nothing. */
-export function revokeApiToken(ctx: Context, id: number): void {
-  const rows = ctx.sql.query("SELECT id FROM api_tokens WHERE id = ?", id);
+export function revokeApiToken(ctx: Context, actor: Actor, id: number): void {
+  const rows = ctx.sql.query<{ created_by: number | null }>(
+    "SELECT created_by FROM api_tokens WHERE id = ?",
+    id,
+  );
   if (rows.length === 0) throw notFound(`API key ${id}`);
+  requireRevocable(syncPermissions(ctx, actor), id, rows[0].created_by);
   ctx.sql.run(
     "UPDATE api_tokens SET revoked_at = ? WHERE id = ? AND revoked_at IS NULL",
     ctx.clock(),
@@ -166,11 +198,15 @@ export async function revokeApiTokenAsync(
     async () => {
       const [revision, rows, ...permissionRows] = await sql.read([
         REVISION_READ,
-        { sql: "SELECT revoked_at FROM api_tokens WHERE id = ?", params: [id] },
+        { sql: "SELECT revoked_at, created_by FROM api_tokens WHERE id = ?", params: [id] },
         ...permissionReadStatements(actor),
       ]);
-      permissionsFromRows(actor, permissionRows).require("tokens");
-      if (rows.length === 0) throw notFound(`API key ${id}`);
+      const permissions = permissionsFromRows(actor, permissionRows);
+      if (rows.length === 0) {
+        permissions.require("account");
+        throw notFound(`API key ${id}`);
+      }
+      requireRevocable(permissions, id, rows[0].created_by as number | null);
       return { revision: Number(revision[0].revision), state: rows[0].revoked_at };
     },
     (revokedAt) => ({
