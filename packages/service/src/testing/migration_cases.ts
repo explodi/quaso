@@ -47,19 +47,19 @@ async function rejected(run: () => Promise<unknown>): Promise<unknown> {
 
 export const MIGRATION_CASES: { name: string; run(sql: Sql): Promise<void> }[] = [
   {
-    name: "a hypothetical second migration extends the fresh Beta 2 schema",
+    name: "a future migration extends the current Beta 2 schema",
     async run(sql) {
       await migrateAsync(sql);
       const future: BatchMigration = {
-        version: 2,
+        version: DATABASE_VERSION + 1,
         name: "future notes",
         statements: [
           { sql: "CREATE TABLE future_notes (id INTEGER PRIMARY KEY, body TEXT NOT NULL) STRICT" },
         ],
       };
       checkEqual(await migrateAsync(sql, { migrations: [...BATCH_MIGRATIONS, future] }), {
-        from: 1,
-        to: 2,
+        from: DATABASE_VERSION,
+        to: DATABASE_VERSION + 1,
         created: false,
       });
       const [generation, guards] = await sql.read([

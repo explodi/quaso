@@ -7,6 +7,11 @@ Release candidates are for deployment and migration testing. The team decides wh
 
 ### Added
 
+- File-wide `duplicate_translation` QA warnings name different source strings that share a
+  translation. Both affected keys appear in the QA filter; corrections clear both warnings.
+  Schema version 2 stores contextual check results and clears them when translations change.
+  Startup migrates existing databases automatically; retain a backup before upgrading.
+
 - Personal API keys: everyone signed in creates, copies once and revokes their own keys on their
   account page (Account → API keys), which says which CLI commands their role allows.
   Administrators still see and revoke everyone's keys in Settings, now with who created each.

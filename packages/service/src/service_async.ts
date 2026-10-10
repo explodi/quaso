@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 /** The complete service composed from async batch operations on SQLite or D1. */
+import { refreshContextualChecks, withContextualChecks } from "./contextual_checks.ts";
 import { UploadRequest } from "@quaso/core";
 import { unfinishedRestoreAsync } from "./backup.ts";
 import { FALLBACK_MODEL } from "./context.ts";
@@ -24,11 +25,12 @@ export function createAsyncService(options: AsyncServiceOptions): Service {
   const clock = options.clock ?? Date.now;
   const logger = options.logger ?? silentLogger;
   const model = options.defaultModel ?? FALLBACK_MODEL;
+  const checkedSql = withContextualChecks(options.sql);
   const publication =
     options.store === undefined
       ? null
-      : createPublication(options.sql, options.store, options.scheduler, { clock, model, logger });
-  const sql = publication?.sql ?? options.sql;
+      : createPublication(checkedSql, options.store, options.scheduler, { clock, model, logger });
+  const sql = publication?.sql ?? checkedSql;
   const llm = createAsyncLlm(sql, {
     provider: options.provider,
     providerFactory: options.providerFactory,
@@ -70,6 +72,7 @@ export function createAsyncService(options: AsyncServiceOptions): Service {
     }),
     async start() {
       const migrated = await initializeDatabase(options.sql, options);
+      await refreshContextualChecks(options.sql);
       await resume();
       logger.info("Service started", {
         schemaVersion: migrated.to,
