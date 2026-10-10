@@ -208,7 +208,8 @@ export async function startServer(options: ServerOptions = {}): Promise<TestServ
       // A mocked session has no server cookie; real signed-in tests exercise job polling.
       const activeJobs =
         url.pathname === "/api/v1/jobs" && url.searchParams.get("active") === "true";
-      if (activeJobs) return Response.json({ jobs: [] }, { headers });
+      const qualityJobs = request.method === "GET" && url.pathname === "/api/v1/quality-jobs";
+      if (activeJobs || qualityJobs) return Response.json({ jobs: [] }, { headers });
     }
     return await next(request);
   };
