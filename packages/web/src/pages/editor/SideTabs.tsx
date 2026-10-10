@@ -108,6 +108,7 @@ const EVENT_LABELS: Record<HistoryEvent, string> = {
   source_restored: "Source restored",
   source_renamed: "Key renamed",
   translation_saved: "Translation saved",
+  translation_reused: "Reused translation",
   translation_llm: "Translated by the LLM",
   translation_imported: "Imported",
   translation_approved: "Approved",
@@ -151,6 +152,12 @@ function History({ detail, sourceLanguage }: { detail: StringDetail; sourceLangu
 
 function HistoryItem({ entry, sourceLanguage }: { entry: HistoryEntry; sourceLanguage: string }) {
   const lang = entry.language ?? sourceLanguage;
+  const reusedFrom =
+    entry.event === "translation_reused" &&
+    typeof entry.detail?.file === "string" &&
+    typeof entry.detail?.key === "string"
+      ? `${entry.detail.file} › ${entry.detail.key}`
+      : null;
   const comment = typeof entry.detail?.comment === "string" ? entry.detail.comment : null;
   const colourChanged = entry.beforeColour !== entry.afterColour;
   return (
@@ -159,7 +166,9 @@ function HistoryItem({ entry, sourceLanguage }: { entry: HistoryEntry; sourceLan
         <strong>
           {entry.event === "source_renamed" && typeof entry.detail?.from === "string"
             ? `Renamed from ${entry.detail.from}`
-            : (EVENT_LABELS[entry.event] ?? entry.event)}
+            : reusedFrom
+              ? `Reused from ${reusedFrom}`
+              : (EVENT_LABELS[entry.event] ?? entry.event)}
         </strong>
         <span className="muted">
           by {entry.actor.name}, <When at={entry.createdAt} />
