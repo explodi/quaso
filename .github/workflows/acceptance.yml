@@ -28,13 +28,16 @@ jobs:
         env:
           CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           STAGING_URL: ${{ vars.STAGING_URL }}
+          INSTANCE_CONFIG: ${{ vars.STAGING_INSTANCE_CONFIG }}
+          IMAGE_PUBLISH_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
           ADMIN_EMAIL: ${{ secrets.STAGING_ADMIN_EMAIL }}
           ADMIN_PASSWORD: ${{ secrets.STAGING_ADMIN_PASSWORD }}
         shell: python
         run: |
           import os
           staging = all(os.environ.get(name) for name in (
-              "CF_TOKEN", "STAGING_URL", "ADMIN_EMAIL", "ADMIN_PASSWORD"))
+              "CF_TOKEN", "STAGING_URL", "INSTANCE_CONFIG", "IMAGE_PUBLISH_TOKEN",
+              "ADMIN_EMAIL", "ADMIN_PASSWORD"))
           with open(os.environ["GITHUB_OUTPUT"], "a") as output:
               output.write(f"staging={str(staging).lower()}\n")
           if not staging:
@@ -85,6 +88,8 @@ jobs:
       QUASO_ADMIN_EMAIL: ${{ secrets.STAGING_ADMIN_EMAIL }}
       QUASO_ADMIN_PASSWORD: ${{ secrets.STAGING_ADMIN_PASSWORD }}
       QUASO_SETUP_KEY: ${{ secrets.STAGING_SETUP_KEY }}
+      INSTANCE_CONFIG: ${{ vars.STAGING_INSTANCE_CONFIG }}
+      IMAGE: ${{ vars.DOCKERHUB_IMAGE || format('{0}/quaso', github.repository_owner) }}
     steps:
       - uses: actions/checkout@v4
       - uses: denoland/setup-deno@v2
@@ -93,8 +98,28 @@ jobs:
       - run: deno install --frozen-lockfile
       - run: deno task e2e:browser
       - run: deno task build:cli
-      # The staging Worker/domain/bucket and its secrets must already be configured.
-      - run: deno task cf:deploy --env staging
+      - name: Restore staging instance configuration
+        shell: python
+        run: |
+          import os
+          from pathlib import Path
+          config = Path("quaso.cloudflare.jsonc")
+          config.write_text(os.environ["INSTANCE_CONFIG"])
+          config.chmod(0o600)
+      # Docker publication runs concurrently; never deploy a previous commit's image.
+      - name: Wait for the image from this commit
+        run: |
+          image="$IMAGE:sha-${GITHUB_SHA:0:7}"
+          for attempt in {1..60}; do
+            if docker manifest inspect "$image" > /dev/null 2>&1; then
+              echo "STAGING_IMAGE=$image" >> "$GITHUB_ENV"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "The image for this commit was not published: $image" >&2
+          exit 1
+      - run: deno task cf:deploy --env staging --image "$STAGING_IMAGE"
       - name: Wait for the deployed service
         run: curl --fail --retry 12 --retry-all-errors --retry-delay 5 "$STAGING_URL/healthz"
       - name: Run the HTTP, CLI and browser acceptance checks
