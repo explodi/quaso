@@ -11,7 +11,7 @@ import { check, checkEqual } from "./assert.ts";
 const OPTIONS = { model: "test", clock: () => 100, llmAvailable: false };
 const FILE = { path: "menu.json", repoPath: "menu.json", content: '{"old":"Hello"}' };
 
-export async function resetUploadSql(sql: Sql): Promise<void> {
+export async function resetUploadSql(sql: Sql, options: { empty?: boolean } = {}): Promise<void> {
   const tables = MIGRATIONS.flatMap((migration) =>
     [...migration.sql.matchAll(/CREATE TABLE (?:IF NOT EXISTS )?(\w+)/g)].map((match) => match[1]),
   );
@@ -20,7 +20,7 @@ export async function resetUploadSql(sql: Sql): Promise<void> {
     { sql: "DROP TABLE IF EXISTS revision_guard" },
     ...tables.reverse().map((table) => ({ sql: `DROP TABLE IF EXISTS ${table}` })),
   ]);
-  await initializeUploadSql(sql);
+  if (!options.empty) await initializeUploadSql(sql);
 }
 
 export async function initializeUploadSql(sql: Sql): Promise<void> {

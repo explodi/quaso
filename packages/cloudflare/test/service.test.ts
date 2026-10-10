@@ -8,7 +8,7 @@ import { runScenario, type ScenarioInput } from "./scenario.ts";
 import { ANONYMOUS, createAsyncService, SYSTEM } from "@quaso/service";
 
 describe("the demo scenario on D1", () => {
-  beforeEach(() => resetUploadSql(sql));
+  beforeEach(() => resetUploadSql(sql, { empty: true }));
   it("gives exactly the local SQLite reads, exports, backup and table rows", async () => {
     const output = await runScenario(sql, fixture.input as unknown as ScenarioInput);
     expect(output.export).toEqual(fixture.output.export);

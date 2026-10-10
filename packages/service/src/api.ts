@@ -51,9 +51,9 @@ import type {
   UpdateStringResult,
 } from "@quaso/core";
 import type { BackupChunk, BackupInfo, BeginRestoreInput, BeginRestoreResult } from "./backup.ts";
-import { LATER_SAFE_METHODS, type LaterApi } from "./later_api.ts";
-import { ACCOUNTS_SAFE_METHODS, type AccountsApi } from "./accounts_api.ts";
-import { LLM_SAFE_METHODS, type LlmMethods } from "./jobs/llm_service.ts";
+import type { LaterApi } from "./later_api.ts";
+import type { AccountsApi } from "./accounts_api.ts";
+import type { LlmMethods } from "./jobs/llm_service.ts";
 
 /** Who is calling. */
 export type Actor =
@@ -225,7 +225,20 @@ export const READ_METHODS = [
   "backupTables",
   "checkRestoreToken",
   "getAdminInfo",
-  ...ACCOUNTS_SAFE_METHODS,
-  ...LLM_SAFE_METHODS,
-  ...LATER_SAFE_METHODS,
+  "getSession",
+  "resolveSession",
+  "validateSetupToken",
+  "getAccount",
+  "listVolunteerRequests",
+  "listMembers",
+  "listInvites",
+  "checkInvite",
+  "listSuggestions",
+  "getJob",
+  "listJobs",
+  "getUsage",
+  "listModels",
+  "listGlossary",
+  "listComments",
+  "listLanguageRequests",
 ] as const satisfies readonly (keyof ServiceApi)[];
