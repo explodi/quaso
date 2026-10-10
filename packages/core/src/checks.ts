@@ -7,6 +7,7 @@
  * pass the categories the service reports as the `pluralOverride`, and the service has the
  * last word.
  */
+import { canonicalValue } from "./hash.ts";
 import { glossaryMatches } from "./glossary.ts";
 import { categoriesFor, coversExactlyOne, type PluralOverride } from "./plurals.ts";
 import { graphemeLength, languageName } from "./text.ts";
@@ -68,6 +69,8 @@ export const CHECKS = {
   glossary: "warning",
   /** Different source strings share the same translation within a file. */
   duplicate_translation: "warning",
+  /** Identical source strings have different translations in a language. */
+  consistency: "warning",
 } as const satisfies Record<string, Severity>;
 
 export type CheckId = keyof typeof CHECKS;
@@ -785,6 +788,7 @@ export interface FileTranslation {
   id: number;
   fileId: number;
   language: string;
+  file?: string;
   key: string;
   kind: EntryKind;
   source: TextValue;
@@ -842,6 +846,37 @@ export function checkDuplicateTranslations(
         ),
       );
       checks.set(key, results);
+    }
+  }
+  return checks;
+}
+
+/** Identical sources, including their kind and plural shape, should agree across files. */
+export function checkTranslationConsistency(
+  entries: readonly FileTranslation[],
+): Map<string, CheckResult[]> {
+  const groups = new Map<string, FileTranslation[]>();
+  for (const entry of entries) {
+    if (!isTranslatable(entry.kind)) continue;
+    const source = canonicalValue(entry.source);
+    const key = JSON.stringify([entry.language, entry.kind, source]);
+    const group = groups.get(key) ?? [];
+    group.push(entry);
+    groups.set(key, group);
+  }
+  const valueOf = (entry: FileTranslation) => canonicalValue(entry.translation);
+  const checks = new Map<string, CheckResult[]>();
+  for (const group of groups.values()) {
+    const first = group[0];
+    const firstValue = valueOf(first);
+    const different = group.find((entry) => valueOf(entry) !== firstValue);
+    if (!different) continue;
+    for (const entry of group) {
+      const peer = valueOf(entry) === firstValue ? different : first;
+      const key = peer.file ? `${peer.file} › ${peer.key}` : peer.key;
+      checks.set(JSON.stringify([entry.id, entry.language]), [
+        result("consistency", `Different from ${key}, which has the same English.`, { value: key }),
+      ]);
     }
   }
   return checks;

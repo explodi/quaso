@@ -102,6 +102,7 @@ export function renderJob(out: Output, waited: WaitedJob): void {
     return;
   }
   const parts = [green(`${translated} translated`)];
+  if (job.progress.reused) parts.push(`${job.progress.reused} reused`);
   if (proposed > 0) parts.push(`${proposed} proposed for proofread strings`);
   if (skipped > 0) parts.push(dim(`${skipped} skipped (changed meanwhile)`));
   if (failed > 0) parts.push(red(`${failed} failed`));

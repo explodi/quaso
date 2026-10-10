@@ -79,7 +79,7 @@ import {
   unmaskText,
   valueFrom,
 } from "../../lib/masking.ts";
-import { href, useRoute } from "../../lib/router.tsx";
+import { Link, href, useRoute } from "../../lib/router.tsx";
 import { useSession } from "../../lib/session.tsx";
 import { isMac } from "../../lib/shortcuts.ts";
 import {
@@ -604,6 +604,22 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
               </div>
             ))}
           </dl>
+        )}
+        {detail.identicalSources && detail.identicalSources.length > 0 && (
+          <p className="panel-hint">
+            Same source as{" "}
+            {detail.identicalSources.map((peer, index) => (
+              <span key={peer.id}>
+                {index > 0 && ", "}
+                <Link to={`/translate/${tag}?id=${peer.id}`}>
+                  <code>
+                    {peer.file} › {peer.key}
+                  </code>
+                </Link>
+              </span>
+            ))}
+            . Review these together when changing the wording.
+          </p>
         )}
         {masking.enabled && masking.references.length > 0 && (
           <p className="panel-hint muted">

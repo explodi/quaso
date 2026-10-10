@@ -131,7 +131,7 @@ export interface PromptContext {
   /** The same strings in other languages. */
   otherLanguages: { id: number; language: string; value: TextValue; proofread: boolean }[];
   /** Proofread translations of identical English elsewhere in the project. */
-  identicalStrings: { english: TextValue; translation: TextValue }[];
+  identicalStrings: { english: TextValue; translation: TextValue; proofread?: boolean }[];
   /** Strings before and after the batch in the file, with their current translation. */
   neighbours: { key: string; english: TextValue; translation: TextValue | null }[];
   /** What each reference in the batch stands for, by its raw text (`$t(common:play)`). */
@@ -298,7 +298,13 @@ export function renderPrompt(
       )
       .join("\n"),
     identicalStrings: context.identicalStrings
-      .map((item) => JSON.stringify({ english: item.english, translation: item.translation }))
+      .map((item) =>
+        JSON.stringify({
+          english: item.english,
+          translation: item.translation,
+          ...(item.proofread === undefined ? {} : { proofread: item.proofread }),
+        }),
+      )
       .join("\n"),
     glossary: context.glossary,
     neighbours: context.neighbours

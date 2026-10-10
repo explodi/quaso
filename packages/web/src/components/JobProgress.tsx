@@ -57,6 +57,7 @@ export function JobCard({ job }: { job: JobInfo }) {
       </Label>
       <p>
         {job.progress.translated} translated · {job.progress.proposed} proposed ·{" "}
+        {job.progress.reused ? `${job.progress.reused} reused · ` : ""}
         {job.progress.failed} failed · {job.progress.skipped} skipped
       </p>
       {job.outdatedLeft !== undefined && job.outdatedLeft > 0 && (
