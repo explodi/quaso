@@ -265,7 +265,19 @@ export function planSettingsChange(current: ProjectSettings, request: UpdateSett
 function changedKeys(before: ProjectSettings, after: ProjectSettings): string[] {
   return Object.keys(after).filter(
     (key) =>
-      toJson(before[key as keyof ProjectSettings]) !== toJson(after[key as keyof ProjectSettings]),
+      toJson(orderedSettingsValue(before[key as keyof ProjectSettings])) !==
+      toJson(orderedSettingsValue(after[key as keyof ProjectSettings])),
+  );
+}
+
+// Schema parsing orders keys; that must not turn a no-op into a settings write.
+function orderedSettingsValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(orderedSettingsValue);
+  if (value === null || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.entries(value)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, field]) => [key, orderedSettingsValue(field)]),
   );
 }
 
