@@ -105,6 +105,8 @@ export class QuasoContainer extends Container<Env> {
   private requests = new Set<Promise<Response>>();
   /** The start in progress, shared by every request that waits for it. */
   private startup: { done: Promise<void>; startedAt: number } | null = null;
+  /** The stop of a server an earlier deploy started, which requests wait for. */
+  private retirement: Promise<void> | null = null;
   constructor(ctx: ConstructorParameters<typeof Container>[0], env: Env) {
     super(ctx, env, {
       defaultPort: CONTAINER_PORT,
@@ -119,15 +121,25 @@ export class QuasoContainer extends Container<Env> {
     const state = await this.getState();
     return this.ctx.container?.running === true && state.status === "healthy";
   }
-  /** Starts the server once, however many requests wait, and remembers how long it took. */
+  /** The Worker version deployed now; every deploy, even of secrets only, makes a new one. */
+  private deployId() {
+    return this.env.CF_VERSION_METADATA?.id ?? "";
+  }
+  /**
+   * Starts the server once, however many requests wait, and remembers how long it took and
+   * which deploy started it.
+   */
   private startServer(): Promise<void> {
     if (this.startup) return this.startup.done;
     const startedAt = Date.now();
+    const deploy = this.deployId();
     const done = this.startAndWaitForPorts({
       ports: CONTAINER_PORT,
       cancellationOptions: START_LIMITS,
     })
-      .then(() => this.ctx.storage.put("lastStartMs", Date.now() - startedAt))
+      .then(() =>
+        this.ctx.storage.put({ lastStartMs: Date.now() - startedAt, serverDeploy: deploy }),
+      )
       .finally(() => {
         this.startup = null;
       });
@@ -145,12 +157,42 @@ export class QuasoContainer extends Container<Env> {
     const expectedMs = (await this.ctx.storage.get<number>("lastStartMs")) ?? TYPICAL_START_MS;
     return { state: "starting", elapsedMs: Date.now() - startedAt, expectedMs };
   }
+  /**
+   * Stops a server that an earlier deploy started, so that the next start runs this deploy's
+   * image and settings. Cloudflare gives a new image only to the next start, and a server in
+   * use never sleeps: the website, updated at once, would call a server without its endpoints.
+   */
+  private async retireIfOutdated() {
+    const outdated = (await this.ctx.storage.get<string>("serverDeploy")) !== this.deployId();
+    // Requests already at the old server would fail: a later, quieter request retires it.
+    const othersInFlight = this.requests.size > 1;
+    if (!outdated || othersInFlight || this.retirement) return;
+    this.retirement = this.stopIdleServer().finally(() => {
+      this.retirement = null;
+    });
+    await this.retirement;
+  }
+  /** Stops the server and waits until it exits, unless it is running an LLM job or an export. */
+  private async stopIdleServer() {
+    try {
+      const response = await super.containerFetch("http://container/healthz");
+      const health = (await response.json()) as { busy?: unknown };
+      if (health.busy !== false) return;
+      await this.stop();
+      await this.ctx.container?.monitor();
+    } catch (error) {
+      const log = createLogger("controller");
+      log.error("Couldn't retire the server of an earlier deploy", { error });
+    }
+  }
   override async containerFetch(
     ...args: Parameters<Container<Env>["containerFetch"]>
   ): Promise<Response> {
     const work = (async () => {
       if (await this.restorePaused())
         return new Response("The instance is paused for restoration.", { status: 503 });
+      if (this.retirement) await this.retirement;
+      if (await this.serverReady()) await this.retireIfOutdated();
       if (!(await this.serverReady())) {
         try {
           await this.startServer();
