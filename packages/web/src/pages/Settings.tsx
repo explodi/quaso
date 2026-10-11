@@ -448,6 +448,18 @@ function Llm({ data }: { data: SettingsResult }) {
             onChange={(model) => update("model", model)}
           />
         </Field>
+        <Field label="Model for editor suggestions" path="llm.suggestionModel">
+          <ModelSelect
+            models={data.models}
+            value={llm.suggestionModel}
+            blankLabel={`The project model (${llm.model})`}
+            onChange={(model) => update("suggestionModel", model)}
+          />
+        </Field>
+        <p className="field-hint">
+          Suggestions appear while translators type, so a faster model helps. Jobs, uploads and
+          Auto-translate use the model above.
+        </p>
         <Field label="Requests in parallel" path="llm.concurrency">
           <Input
             type="number"

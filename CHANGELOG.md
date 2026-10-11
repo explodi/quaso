@@ -16,6 +16,9 @@ Release candidates are for deployment and migration testing. The team decides wh
 - Models are chosen from a drop-down of what the provider offers, in Settings (the project's and
   the meaning checks') and in the Auto-translate dialog, instead of typed. Models for speech,
   images, audio and robots aren't offered. Without a list, a text field remains.
+- A model of its own for the editor's LLM suggestions (`llm.suggestionModel`, Settings → AI
+  translation → Model for editor suggestions): someone is waiting for a suggestion, so a faster
+  model suits it, while jobs keep the project's model. Left blank, suggestions use the project's.
 - Glossary bootstrapping suggests recurring domain terms from the source corpus, counts current
   language renderings and shows inconsistencies with source examples. Managers accept, edit or
   dismiss suggestions and retranslate affected green strings with the agreed glossary.

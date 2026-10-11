@@ -165,6 +165,10 @@ suggestion, and you type your own. To take the LLM's text for many strings, sele
 **Translate with the LLM** instead: a job sends 25 strings per request and its results are green at
 once. The switch is there when the server has an LLM provider.
 
+Suggestions use the project's model unless an administrator picks **Model for editor suggestions** in
+Settings → AI translation: since you are waiting for them, a faster model suits them, while jobs keep
+the project's model. Choosing "The project model" again ends the override.
+
 The editor opens in **To do first** order: untranslated strings, outdated translations, then
 completed translations. Within each group, strings follow their file and position. Choose **File
 order** to browse in source order; the address keeps your choice. Filters apply to either order.

@@ -132,7 +132,7 @@ export async function suggestWithLlm(
         facts,
         context,
         batch,
-        model: settings.llm.model,
+        model: settings.llm.suggestionModel || settings.llm.model,
         clock: options.clock,
         canRequest: () => true,
         record: (entry) => options.record({ ...entry, jobId: null, provider: provider.name }),

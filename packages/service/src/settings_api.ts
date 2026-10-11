@@ -142,6 +142,14 @@ const PLACEHOLDER = /%[A-Za-z][A-Za-z0-9]*%/g;
 const MODEL_NAME = /^[\w.-]+$/;
 const KNOWN_PLACEHOLDERS: ReadonlySet<string> = new Set(PROMPT_PLACEHOLDERS);
 
+/** A model name goes into the provider's URL (`llm/gemini.ts` refuses anything else); blank is no model. */
+function checkModelName(path: string, name: string): void {
+  if (name === "" || MODEL_NAME.test(name)) return;
+  throw badRequest(`Not a model name: ${name}`, [
+    { path, message: "must be a model name, such as gemini-flash-latest" },
+  ]);
+}
+
 /**
  * Checks a prompt template (design §5.6): it must send the strings (`%strings%`), and use
  * only the placeholders the service fills in.
@@ -251,11 +259,9 @@ export function planSettingsChange(current: ProjectSettings, request: UpdateSett
   }
   const next = validateInput(ProjectSettings, merged);
   checkPromptTemplate(next.llm.promptTemplate);
-  // The model goes into the provider's URL (`llm/gemini.ts` refuses anything else).
-  if (next.llm.model !== current.llm.model && !MODEL_NAME.test(next.llm.model)) {
-    throw badRequest(`Not a model name: ${next.llm.model}`, [
-      { path: "llm.model", message: "must be a model name, such as gemini-flash-latest" },
-    ]);
+  if (next.llm.model !== current.llm.model) checkModelName("llm.model", next.llm.model);
+  if (next.llm.suggestionModel !== current.llm.suggestionModel) {
+    checkModelName("llm.suggestionModel", next.llm.suggestionModel);
   }
   const changed = changedKeys(current, next);
   return { next, changed };

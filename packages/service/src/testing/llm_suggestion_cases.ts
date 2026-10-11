@@ -186,6 +186,42 @@ export const LLM_SUGGESTION_CASES: { name: string; run(sql: Sql): Promise<void> 
     },
   },
   {
+    name: "a suggestion uses the project's model when the settings name none for suggestions",
+    async run(sql) {
+      await seed(sql);
+      await sql.commit(2, [
+        { sql: `INSERT INTO settings VALUES (1, '{"llm":{"model":"project-model"}}')` },
+      ]);
+      const { provider, requests } = recording(createFakeTranslator());
+      await suggestWithLlm(
+        sql,
+        MANAGER_OF_DE,
+        { language: "de", ids: [1] },
+        options(sql, { provider }),
+      );
+      checkEqual(requests[0].model, "project-model");
+    },
+  },
+  {
+    name: "a suggestion uses the model the settings name for suggestions",
+    async run(sql) {
+      await seed(sql);
+      await sql.commit(2, [
+        {
+          sql: `INSERT INTO settings VALUES (1, '{"llm":{"model":"project-model","suggestionModel":"fast-model"}}')`,
+        },
+      ]);
+      const { provider, requests } = recording(createFakeTranslator());
+      await suggestWithLlm(
+        sql,
+        MANAGER_OF_DE,
+        { language: "de", ids: [1] },
+        options(sql, { provider }),
+      );
+      checkEqual(requests[0].model, "fast-model");
+    },
+  },
+  {
     name: "an answer that fails the checks isn't asked for again",
     async run(sql) {
       await seed(sql);

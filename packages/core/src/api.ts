@@ -1163,6 +1163,9 @@ export const LlmSettings = s.object({
     .boolean()
     .describe("Propose updates for outdated blue translations, as pending suggestions"),
   model: s.string({ minLength: 1, maxLength: 200 }),
+  suggestionModel: s
+    .string({ maxLength: 200 })
+    .describe("The model for the editor's LLM suggestions; blank uses the model above"),
   concurrency: s.integer({ min: 1, max: 64 }),
   monthlyTokenBudget: s.integer({ min: 1, max: Number.MAX_SAFE_INTEGER }).nullable(),
   promptTemplate: s.string({ minLength: 1, maxLength: 50_000 }),

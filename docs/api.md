@@ -81,7 +81,8 @@ compacted before download; the operator's database and retained volume copies ke
 Backup metadata retains only the names of configured provider credentials. Restore results include
 `missingSecrets`, the names to enter again. Settings shows the same list until those keys are
 re-entered or removed. The LLM and Email sections offer masked set/replace/remove controls.
-Gemini reads the stored key. `PATCH /api/v1/settings` accepts `llm.model`, `llm.concurrency`
+Gemini reads the stored key. `PATCH /api/v1/settings` accepts `llm.model`, `llm.suggestionModel`
+(the model for the editor's suggestions, `""` to use `llm.model`), `llm.concurrency`
 (an integer from 1 to 64) and `llm.monthlyTokenBudget` (a positive safe integer, or `null` for
 unlimited). The default concurrency is 4. Each alarm slice captures its configuration;
 key and limit changes apply to subsequent slices without restarting the server. Key or budget
