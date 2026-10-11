@@ -93,11 +93,11 @@ browserTest(
     );
     assertEquals((await text(page, "main")).includes("Gemini key works"), false);
     await fill(page, "Requests in parallel", "2");
-    await fill(page, "Monthly token budget (blank for unlimited)", "100000");
-    await click(page, "Save");
+    await fill(page, "Monthly token budget", "100000");
+    await click(page, "Save AI settings");
     await waitFor(page, () => {
       const section = [...document.querySelectorAll(".management-section")].find(
-        (item) => item.querySelector("h2")?.textContent === "LLM translation",
+        (item) => item.querySelector("h2")?.textContent === "AI translation",
       );
       return section?.querySelector('[role="status"]')?.textContent === "Saved.";
     });
@@ -185,23 +185,23 @@ browserTest(
     );
     await signIn(page, server, OWNER);
     await page.goto(`${server.url}/settings`, { waitUntil: "networkidle0" });
-    await page.click('.settings-navigation a[href*="section=languages"]');
+    await page.click('nav.settings-nav a[href*="section=languages"]');
     await waitFor(page, () => new URLSearchParams(location.search).get("section") === "languages");
-    assert(await page.$('.settings-navigation a[aria-current="page"][href*="section=languages"]'));
-    await page.click('.settings-navigation a[href*="section=general"]');
+    assert(await page.$('nav.settings-nav a[aria-current="page"][href*="section=languages"]'));
+    await page.click('nav.settings-nav a[href*="section=general"]');
     await waitFor(page, () => new URLSearchParams(location.search).get("section") === "general");
     await page.evaluate(() => history.back());
     await waitFor(page, () => new URLSearchParams(location.search).get("section") === "languages");
     await page.reload({ waitUntil: "networkidle0" });
-    assert(await page.$('.settings-navigation a[aria-current="page"][href*="section=languages"]'));
+    assert(await page.$('nav.settings-nav a[aria-current="page"][href*="section=languages"]'));
     await page.setViewport({ width: 360, height: 800 });
-    await page.select(".settings-mobile-section select", "general");
+    await page.select("label.settings-mobile-nav > select", "general");
     await waitFor(page, () => new URLSearchParams(location.search).get("section") === "general");
     await fill(page, "Project name", "Renamed project");
-    await click(page, "Save");
+    await click(page, "Save project");
     await waitFor(
       page,
-      () => document.querySelector('.settings-save [role="status"]')?.textContent === "Saved.",
+      () => document.querySelector('.settings-actions [role="status"]')?.textContent === "Saved.",
     );
     assertEquals((await server.service.getSettings(SYSTEM, {})).settings.name, "Renamed project");
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
@@ -225,7 +225,7 @@ async function sources(server: TestServer, value = "Play") {
 async function fill(page: Page, label: string, value: string) {
   await page.evaluate((name: string) => {
     const label = [...document.querySelectorAll<HTMLLabelElement>("label")].find(
-      (l) => l.textContent?.trim() === name,
+      (l) => (l.querySelector(".field-label")?.textContent ?? l.textContent)?.trim() === name,
     );
     const field = label?.htmlFor
       ? document.getElementById(label.htmlFor)
@@ -465,12 +465,7 @@ browserTest(
     await sources(server);
     const tab = await openTab(browser, server, "/signin");
     await signIn(tab.page, server, OWNER);
-    await tab.page.goto(`${server.url}/settings`, { waitUntil: "networkidle0" });
-    await tab.page.evaluate(() => {
-      const select = document.querySelector<HTMLSelectElement>("main select")!;
-      select.value = "keys";
-      select.dispatchEvent(new Event("change", { bubbles: true }));
-    });
+    await tab.page.goto(`${server.url}/settings?section=keys`, { waitUntil: "networkidle0" });
     await waitFor(tab.page, () =>
       [...document.querySelectorAll("label")].some((l) => l.textContent?.includes("Key name")),
     );
@@ -522,10 +517,13 @@ browserTest(
     await page.goto(`${server.url}/settings`, { waitUntil: "networkidle0" });
     const section = async (value: string) => {
       await page.evaluate((value: string) => {
-        const select = document.querySelector<HTMLSelectElement>("main select")!;
-        select.value = value;
-        select.dispatchEvent(new Event("change", { bubbles: true }));
+        document.querySelector<HTMLAnchorElement>(`a[href="/settings?section=${value}"]`)!.click();
       }, value);
+      await waitFor(
+        page,
+        (value: string) => new URL(location.href).searchParams.get("section") === value,
+        [value],
+      );
     };
     const save = async (title: string) => {
       await page.evaluate((title: string) => {
@@ -557,14 +555,14 @@ browserTest(
       }, label);
 
     await fill(page, "Project name", "Saved project name");
-    await save("General");
+    await save("Project details");
     await section("retention");
     await fill(page, "File history days", "0");
     await fill(page, "Backup retention days", "7");
-    await save("Retention");
+    await save("History & retention");
     await section("llm");
     await fill(page, "Project instructions", "Use a friendly voice.");
-    await save("LLM translation");
+    await save("AI translation");
     await section("general");
     assertEquals(await value("Project name"), "Saved project name");
     await section("retention");
@@ -576,12 +574,109 @@ browserTest(
     await fill(page, "File context", "Buttons in the main menu.");
     await save("common.json");
     await waitFor(page, () => document.querySelector('input[type="number"]') !== null);
-    await fill(page, "Maximum characters (empty means no limit)", "12");
+    await fill(page, "Maximum characters", "12");
     await save("common.json: play");
     await section("general");
     await section("files");
     assertEquals(await value("File context"), "Buttons in the main menu.");
-    assertEquals(await value("Maximum characters (empty means no limit)"), "12");
+    assertEquals(await value("Maximum characters"), "12");
+    assertEquals(tab.problems, []);
+  },
+);
+
+browserTest(
+  "settings URLs support browser history and placeholder exceptions remain editable on mobile",
+  { prepare },
+  async ({ server, browser }) => {
+    const tab = await openTab(browser, server, "/signin", (page) =>
+      page.setViewport({ width: 1280, height: 900 }),
+    );
+    const { page } = tab;
+    await signIn(page, server, OWNER);
+    await page.goto(`${server.url}/settings`, { waitUntil: "networkidle0" });
+    await page.click('a[href="/settings?section=placeholders"]');
+    await waitFor(
+      page,
+      () => document.querySelector("main h2")?.textContent === "Placeholder rules",
+    );
+    assertEquals(new URL(page.url()).searchParams.get("section"), "placeholders");
+    await page.click('a[href="/settings?section=llm"]');
+    await waitFor(page, () => document.querySelector("main h1")?.textContent === "AI translation");
+    await page.goBack();
+    await waitFor(
+      page,
+      () => document.querySelector("main h2")?.textContent === "Placeholder rules",
+    );
+    assertEquals(new URL(page.url()).searchParams.get("section"), "placeholders");
+    await page.reload({ waitUntil: "networkidle0" });
+    assertEquals(await text(page, "main h2"), "Placeholder rules");
+
+    await page.setViewport({ width: 320, height: 760 });
+    await page.select(".settings-mobile-nav select", "general");
+    await waitFor(page, () => document.querySelector("main h2")?.textContent === "Project details");
+    assertEquals(new URL(page.url()).searchParams.get("section"), "general");
+    await page.select(".settings-mobile-nav select", "placeholders");
+    await waitFor(
+      page,
+      () => document.querySelector("main h2")?.textContent === "Placeholder rules",
+    );
+    await click(page, "Add language exception");
+    await fill(page, "Placeholder", "{{article}}");
+    // Type the separator naturally: normalizing after each keystroke used to swallow it.
+    await fill(page, "Languages", "es, fr");
+    const languages = () =>
+      page.evaluate(() => {
+        const field = [...document.querySelectorAll("label")].find(
+          (label) => label.querySelector(".field-label")?.textContent === "Languages",
+        );
+        return field?.querySelector("input")?.value;
+      });
+    assertEquals(await languages(), "es, fr");
+    await click(page, "Save placeholder rules");
+    await waitFor(
+      page,
+      () => document.querySelector('main [role="status"]')?.textContent === "Saved.",
+    );
+    assertEquals((await server.service.getSettings(SYSTEM, {})).settings.syntax.optional, [
+      { placeholder: "{{article}}", languages: ["es", "fr"] },
+    ]);
+    await click(page, "Add language exception");
+    assertEquals(await page.$('main [role="status"]'), null);
+    await page.reload({ waitUntil: "networkidle0" });
+    assertEquals(await text(page, "main h2"), "Placeholder rules");
+    assertEquals(await languages(), "es, fr");
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
+    assertEquals(overflow, false);
+    assertEquals(tab.problems, []);
+  },
+);
+
+browserTest(
+  "invalid advanced settings reopen their section and focus the field before saving",
+  { prepare },
+  async ({ server, browser }) => {
+    const tab = await openTab(browser, server, "/signin");
+    const { page } = tab;
+    await signIn(page, server, OWNER);
+    await page.goto(`${server.url}/settings?section=llm`, { waitUntil: "networkidle0" });
+    await page.click(".settings-advanced > summary");
+    await fill(page, "Strings per batch", "0");
+    await page.click(".settings-advanced > summary");
+    assertEquals(await page.$(".settings-advanced[open]"), null);
+    await click(page, "Save AI settings");
+    await waitFor(page, () => {
+      const advanced = document.querySelector<HTMLDetailsElement>(".settings-advanced");
+      const field = advanced?.querySelector('[data-settings-path="llm.batchSize"] input');
+      return advanced?.open && document.activeElement === field;
+    });
+    assertEquals(await page.$('.settings-actions [role="status"]'), null);
+    await fill(page, "Strings per batch", "10");
+    await click(page, "Save AI settings");
+    await waitFor(
+      page,
+      () => document.querySelector('.settings-actions [role="status"]')?.textContent === "Saved.",
+    );
+    assertEquals((await server.service.getSettings(SYSTEM, {})).settings.llm.batchSize, 10);
     assertEquals(tab.problems, []);
   },
 );

@@ -53,7 +53,7 @@ async function prepare(service: Service) {
 async function fill(page: Page, name: string, value: string) {
   await page.evaluate((name: string) => {
     const label = [...document.querySelectorAll<HTMLLabelElement>("label")].find(
-      (l) => l.textContent?.trim() === name,
+      (l) => (l.querySelector(".field-label")?.textContent ?? l.textContent)?.trim() === name,
     );
     const input = label?.htmlFor
       ? document.getElementById(label.htmlFor)
@@ -278,12 +278,7 @@ browserTest(
     await waitFor(tab.page, () =>
       document.querySelector(".request-list")?.textContent?.includes("2 votes"),
     );
-    await tab.page.goto(`${server.url}/settings`, { waitUntil: "networkidle0" });
-    await tab.page.evaluate(() => {
-      const section = document.querySelector<HTMLSelectElement>("main select")!;
-      section.value = "requests";
-      section.dispatchEvent(new Event("change", { bubbles: true }));
-    });
+    await tab.page.goto(`${server.url}/settings?section=requests`, { waitUntil: "networkidle0" });
     // Settings uses a dedicated section so deciding a request never depends on an unrelated form.
     await click(tab.page, "Approve language", ".language-requests-admin li");
     await waitFor(
@@ -315,7 +310,7 @@ browserTest(
     assertEquals(await tab.page.$(".language-requests"), null);
     await tab.page.goto(`${server.url}/settings?section=requests`, { waitUntil: "networkidle0" });
     await tab.page.click('main input[type="checkbox"]');
-    await click(tab.page, "Save");
+    await click(tab.page, "Save changes");
     await waitFor(
       tab.page,
       () => document.querySelector('[role="status"]')?.textContent === "Saved.",
@@ -331,7 +326,7 @@ browserTest(
       true,
     );
     await tab.page.click('main input[type="checkbox"]');
-    await click(tab.page, "Save");
+    await click(tab.page, "Save changes");
     await waitFor(
       tab.page,
       () => document.querySelector('[role="status"]')?.textContent === "Saved.",
