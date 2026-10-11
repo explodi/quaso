@@ -45,7 +45,8 @@ import { ShortcutsDialog } from "./ShortcutsDialog.tsx";
 import { type SideTab, SideTabs } from "./SideTabs.tsx";
 import { StringList } from "./StringList.tsx";
 import { type PanelHandle, stringKey, TranslationPanel } from "./TranslationPanel.tsx";
-import { neighbourIndex, queueCounter, useStringList } from "./useStringList.ts";
+import { LOOKAHEAD } from "./useLlmSuggestion.ts";
+import { neighbourIndex, queueCounter, upcomingToDo, useStringList } from "./useStringList.ts";
 
 /** Polling: the project's revision says when anything changed. */
 const POLL = 15_000;
@@ -299,6 +300,7 @@ export function EditorPage() {
   const tree = useMemo(() => buildTree(files.data?.files ?? []), [files.data]);
   const fileProgress = file ? files.data?.files.find((f) => f.path === file) : undefined;
   const summary = list.strings.find((s) => s.id === id);
+  const upcoming = upcomingToDo(list.strings, id, LOOKAHEAD);
 
   if (project.data && !language) {
     return (
@@ -573,6 +575,7 @@ export function EditorPage() {
                       language={language}
                       project={project.data}
                       summary={summary}
+                      upcoming={upcoming}
                       onNext={() => handlers.current.goToDo(1, true)}
                       onChanged={onChanged}
                       onJobStarted={() => setFast(true)}

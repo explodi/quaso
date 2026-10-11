@@ -718,10 +718,31 @@ export type CreateJobResult =
       estimate: JobEstimate;
     };
 
-/** `POST /strings/{id}/translations/{lang}/llm-suggestion`: the LLM's translation, not saved. */
+/** Most strings one `POST /llm-suggestions` takes. */
+export const MAX_LLM_SUGGESTIONS = 8;
+
+/** `POST /llm-suggestions` */
+export const LlmSuggestionsRequest = s.object({
+  language: LanguageTag,
+  ids: s.array(Id, { minItems: 1, maxItems: MAX_LLM_SUGGESTIONS, unique: true }),
+});
+export type LlmSuggestionsRequest = Infer<typeof LlmSuggestionsRequest>;
+
+/** The LLM's translation of one string, not saved. */
 export interface LlmSuggestion {
+  id: number;
   value: TextValue;
   model: string;
+}
+
+/**
+ * `POST /llm-suggestions`: the LLM's translations of a few strings in one language, for the
+ * editor to offer while someone types their own. A string it couldn't translate is in
+ * `failed`, with the reason.
+ */
+export interface LlmSuggestionsResult {
+  suggestions: LlmSuggestion[];
+  failed: { id: number; message: string }[];
 }
 
 /** `GET /jobs` */
@@ -1142,6 +1163,9 @@ export const LlmSettings = s.object({
     .boolean()
     .describe("Propose updates for outdated blue translations, as pending suggestions"),
   model: s.string({ minLength: 1, maxLength: 200 }),
+  suggestionModel: s
+    .string({ maxLength: 200 })
+    .describe("The model for the editor's LLM suggestions; blank uses the model above"),
   concurrency: s.integer({ min: 1, max: 64 }),
   monthlyTokenBudget: s.integer({ min: 1, max: Number.MAX_SAFE_INTEGER }).nullable(),
   promptTemplate: s.string({ minLength: 1, maxLength: 50_000 }),

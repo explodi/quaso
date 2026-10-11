@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
-import { Fieldset, Label, Checkbox, Button, Dialog, Field, Loading } from "@quaso/design-system";
+import { Fieldset, Label, Checkbox, Button, Dialog, Loading } from "@quaso/design-system";
 /** Managers choose a scope, get a live dry-run estimate, and follow the created job. */
 import { languageName, type JobScope } from "@quaso/core";
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { createJob, listSources, request } from "../lib/api.ts";
 import { useMutation, useQuery } from "../lib/data.ts";
 import { fieldError } from "../lib/forms.ts";
@@ -11,6 +11,7 @@ import { checkJobRequest } from "../lib/management-api.ts";
 import { useSession } from "../lib/session.tsx";
 import { ErrorMessage } from "./ErrorMessage.tsx";
 import { LanguagePicker, SelectField, TextField } from "./Management.tsx";
+import { ModelSelect } from "./ModelSelect.tsx";
 import { FileTree } from "./FileTree.tsx";
 import { buildTree, type TreeNode } from "../lib/tree.ts";
 import { Link } from "../lib/router.tsx";
@@ -49,6 +50,7 @@ export function AutoTranslateDialog({
   const [outdated, setOutdated] = useState(true);
   const [instruction, setInstruction] = useState("");
   const [model, setModel] = useState("");
+  const modelId = useId();
   const fileQuery = useQuery(["sources"], () => listSources({ fresh: true }), { staleTime: 0 });
   const tree = useMemo(() => buildTree(fileQuery.data?.files ?? []), [fileQuery.data]);
   const selectedFiles = (fileQuery.data?.files ?? [])
@@ -94,6 +96,7 @@ export function AutoTranslateDialog({
       if (result.job) onClose();
     },
   });
+  const modelError = fieldError(start.error, "model");
   const count = estimate.data?.estimate;
   const words = new Map(count?.files.map((entry) => [entry.file, entry.words]) ?? []);
   const references = project.data?.referenceLanguages ?? [];
@@ -173,20 +176,19 @@ export function AutoTranslateDialog({
           maxLength={4000}
           error={fieldError(start.error, "instruction")}
         />
-        <Field
-          label="Model (optional)"
-          value={model}
-          onChange={(e) => setModel(e.target.value)}
-          list="job-models"
-          maxLength={200}
-          hint="Leave empty to use the project’s default model."
-          error={fieldError(start.error, "model")}
-        />
-        <datalist id="job-models">
-          {models.data?.models.map((name) => (
-            <option key={name} value={name} />
-          ))}
-        </datalist>
+        <div className="field">
+          <Label className="field-label" htmlFor={modelId}>
+            Model
+          </Label>
+          <ModelSelect
+            id={modelId}
+            models={models.data?.models ?? []}
+            value={model}
+            blankLabel="The project’s default model"
+            onChange={setModel}
+          />
+          {modelError && <p className="field-error">{modelError}</p>}
+        </div>
         <div aria-live="polite" className="estimate">
           {!validScope ? (
             <p>Choose at least one language and one file.</p>

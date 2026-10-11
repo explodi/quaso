@@ -13,6 +13,7 @@ import {
   createGeminiProvider,
   GEMINI_BASE_URL,
   HARM_CATEGORIES,
+  lowThinking,
   parseRetryAfter,
   safetySettings,
   toGeminiSchema,
@@ -160,6 +161,56 @@ test("gemini: each safety level reaches the request", async () => {
     await gemini.translate({ ...REQUEST, safety });
     assertEquals((sent[0].body as any).safetySettings, safetySettings(safety));
   }
+});
+
+test("gemini: a request that doesn't ask for less thinking leaves the model's own", async () => {
+  const { gemini, sent } = provider([json(await recorded("generate_ok.json"))]);
+  await gemini.translate(REQUEST);
+  assertEquals((sent[0].body as any).generationConfig.thinkingConfig, undefined);
+});
+
+test("gemini: low thinking is a level for Gemini 3 and the latest aliases", async () => {
+  const { gemini, sent } = provider([
+    json(await recorded("generate_ok.json")),
+    json(await recorded("generate_ok.json")),
+  ]);
+  await gemini.translate({ ...REQUEST, model: "gemini-3.8-flash", thinking: "low" });
+  await gemini.translate({ ...REQUEST, thinking: "low" });
+  assertEquals((sent[0].body as any).generationConfig.thinkingConfig, { thinkingLevel: "low" });
+  assertEquals((sent[1].body as any).generationConfig.thinkingConfig, { thinkingLevel: "low" });
+});
+
+test("gemini: low thinking is a token budget for Gemini 2.5, and Pro can't go to none", () => {
+  assertEquals(lowThinking("gemini-2.5-flash"), { thinkingBudget: 0 });
+  assertEquals(lowThinking("gemini-2.5-flash-lite"), { thinkingBudget: 0 });
+  assertEquals(lowThinking("gemini-2.5-pro"), { thinkingBudget: 128 });
+});
+
+test("gemini: a model that isn't Gemini gets no thinking settings", () => {
+  assertEquals(lowThinking("gemma-3-27b-it"), undefined);
+});
+
+test("gemini: a model that refuses the thinking settings is asked again without them, for good", async () => {
+  const refusal = JSON.stringify({
+    error: { code: 400, message: "Thinking level is not supported for this model." },
+  });
+  const { gemini, sent } = provider([
+    json(refusal, 400),
+    json(await recorded("generate_ok.json")),
+    json(await recorded("generate_ok.json")),
+  ]);
+  await gemini.translate({ ...REQUEST, thinking: "low" });
+  await gemini.translate({ ...REQUEST, thinking: "low" });
+  assertEquals(sent.length, 3);
+  assertEquals((sent[0].body as any).generationConfig.thinkingConfig, { thinkingLevel: "low" });
+  assertEquals((sent[1].body as any).generationConfig.thinkingConfig, undefined);
+  assertEquals((sent[2].body as any).generationConfig.thinkingConfig, undefined);
+});
+
+test("gemini: a 400 that isn't about thinking isn't asked again", async () => {
+  const { gemini, sent } = provider([json(await recorded("error_400.json"), 400)]);
+  await assertRejects(() => gemini.translate({ ...REQUEST, thinking: "low" }), ProviderError);
+  assertEquals(sent.length, 1);
 });
 
 test("gemini: the key is only in the x-goog-api-key header", async () => {
@@ -335,6 +386,31 @@ test("gemini: models, from every page, only those that generate content", async 
     "Chdtb2RlbHMvZ2VtaW5pLTIuNS1mbGFzaA==",
   );
   assertEquals(sent[0].method, "GET");
+});
+
+test("gemini: models for speech, images, audio and robots aren't offered to translate with", async () => {
+  const model = (name: string) => ({
+    name: `models/${name}`,
+    supportedGenerationMethods: ["generateContent"],
+  });
+  const { gemini } = provider([
+    json(
+      JSON.stringify({
+        models: [
+          model("gemini-3.8-flash"),
+          model("gemini-2.5-flash-preview-tts"),
+          model("gemini-2.5-flash-image"),
+          model("gemini-3-pro-image-preview"),
+          model("gemini-2.5-flash-native-audio-preview-09-2025"),
+          model("gemini-live-2.5-flash-preview"),
+          model("gemini-robotics-er-1.5-preview"),
+          model("gemini-2.5-computer-use-preview-10-2025"),
+          model("gemini-flash-latest"),
+        ],
+      }),
+    ),
+  ]);
+  assertEquals(await gemini.listModels(), ["gemini-3.8-flash", "gemini-flash-latest"]);
 });
 
 test("gemini: generateText returns the text without thoughts", async () => {

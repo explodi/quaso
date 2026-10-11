@@ -34,12 +34,17 @@ export async function translateBatch(input: {
   canRequest(): boolean | Promise<boolean>;
   record(entry: Omit<RequestRecord, "jobId" | "provider">): number | Promise<number>;
   pauseForAuth(error: ProviderError): void | Promise<void>;
+  /** Default: the settings'. */
+  retries?: number;
+  thinking?: ProviderRequest["thinking"];
+  /** Ends the provider request, such as a deadline. */
+  signal?: AbortSignal;
 }): Promise<{ successes: Map<number, BatchSuccess>; failures: Map<number, string> }> {
   const { provider, settings, facts, context, batch } = input;
   const items = new Map(batch.items.map((item) => [item.stringId, item]));
   const successes = new Map<number, BatchSuccess>();
   const failures = new Map<number, string>();
-  const retries = settings.llm.retries;
+  const retries = input.retries ?? settings.llm.retries;
   const check = (string: PromptString, value: TextValue) =>
     checkValue(
       facts,
@@ -76,6 +81,8 @@ export async function translateBatch(input: {
       prompt: rendered.prompt,
       responseSchema: responseSchemaFor(rendered.batch.strings),
       safety: settings.llm.safety,
+      thinking: input.thinking,
+      signal: input.signal,
       batch: rendered.batch,
     };
     const base = { language: batch.language, fileId: batch.fileId, strings: group.length };

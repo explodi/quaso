@@ -9,6 +9,7 @@ import {
   neighbourIndex,
   PAGE_SIZE,
   queueCounter,
+  upcomingToDo,
 } from "./useStringList.ts";
 
 test("queue details retain opening order and cursor slots even when a string disappears", async () => {
@@ -157,6 +158,30 @@ test("the next string is beside the current one, or takes its place when it left
   assertEquals(neighbourIndex(-1, 1_005, 1), 1_005);
   assertEquals(neighbourIndex(-1, 1_005, -1), 1_004);
   assertEquals(neighbourIndex(-1, 0, -1), -1);
+});
+
+const UNTRANSLATED = (id: number) => ({ id, translation: null }) as StringSummary;
+const OUTDATED = (id: number) => ({ id, translation: { outdated: true } }) as StringSummary;
+const FINISHED = (id: number) => ({ id, translation: { outdated: false } }) as StringSummary;
+const ROWS = [UNTRANSLATED(1), FINISHED(2), UNTRANSLATED(3), OUTDATED(4), UNTRANSLATED(5)];
+
+test("the upcoming strings are the next ones to do, without the finished ones", () => {
+  assertEquals(
+    upcomingToDo(ROWS, 1, 2).map((row) => row.id),
+    [3, 4],
+  );
+});
+
+test("the open string and those before it aren't upcoming", () => {
+  assertEquals(
+    upcomingToDo(ROWS, 3, 5).map((row) => row.id),
+    [4, 5],
+  );
+});
+
+test("a string that isn't in the list has no upcoming strings", () => {
+  assertEquals(upcomingToDo(ROWS, 99, 5), []);
+  assertEquals(upcomingToDo(ROWS, null, 5), []);
 });
 
 test("queue counters keep the opening total, skip completed states and account for removed rows", () => {

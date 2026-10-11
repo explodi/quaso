@@ -4,6 +4,8 @@ import { ServiceError } from "../errors.ts";
 import { suggestWithLlm, type LlmSuggestionOptions } from "../jobs/llm_suggestion.ts";
 import { recordRequestAsync } from "../jobs/usage.ts";
 import { createFakeTranslator, FAKE_MODEL } from "../llm/fake.ts";
+import type { ProviderRequest, TranslationProvider } from "../llm/provider.ts";
+import { NO_TRANSLATION } from "../llm/results.ts";
 import { silentLogger, type Sql } from "../ports.ts";
 import { check, checkEqual } from "./assert.ts";
 import { seedJobWork } from "./job_work_cases.ts";
@@ -32,6 +34,30 @@ function options(sql: Sql, change: Partial<LlmSuggestionOptions> = {}): LlmSugge
   };
 }
 
+/** A provider that keeps the requests it gets. */
+function recording(inner: TranslationProvider) {
+  const requests: ProviderRequest[] = [];
+  const provider: TranslationProvider = {
+    ...inner,
+    translate(request) {
+      requests.push(request);
+      return inner.translate(request);
+    },
+  };
+  return { provider, requests };
+}
+
+/** A provider whose answers never have a translation, as if the model ignored the strings. */
+const SILENT_PROVIDER: TranslationProvider = {
+  ...createFakeTranslator(),
+  translate: () =>
+    Promise.resolve({
+      answer: { translations: [] },
+      usage: { inputTokens: 0, outputTokens: 0, thinkingTokens: 0 },
+      durationMs: 0,
+    }),
+};
+
 async function failure(run: () => Promise<unknown>): Promise<string> {
   try {
     await run();
@@ -44,23 +70,77 @@ async function failure(run: () => Promise<unknown>): Promise<string> {
 
 export const LLM_SUGGESTION_CASES: { name: string; run(sql: Sql): Promise<void> }[] = [
   {
-    name: "a manager gets the LLM's translation of the string",
+    name: "a manager gets the LLM's translation of a string",
     async run(sql) {
       await seed(sql);
-      const suggestion = await suggestWithLlm(
+      const result = await suggestWithLlm(
         sql,
         MANAGER_OF_DE,
-        { id: 1, language: "de" },
+        { language: "de", ids: [1] },
         options(sql),
       );
-      checkEqual(suggestion, { value: "[Ĥéļļö]", model: FAKE_MODEL });
+      checkEqual(result, {
+        suggestions: [{ id: 1, value: "[Ĥéļļö]", model: FAKE_MODEL }],
+        failed: [],
+      });
     },
   },
   {
-    name: "the suggestion isn't saved as a translation",
+    name: "several strings of a file are one request, answered in the order asked",
     async run(sql) {
       await seed(sql);
-      await suggestWithLlm(sql, MANAGER_OF_DE, { id: 1, language: "de" }, options(sql));
+      const { provider, requests } = recording(createFakeTranslator());
+      const result = await suggestWithLlm(
+        sql,
+        MANAGER_OF_DE,
+        { language: "de", ids: [3, 1, 2] },
+        options(sql, { provider }),
+      );
+      checkEqual(
+        result.suggestions.map((suggestion) => suggestion.id),
+        [3, 1, 2],
+      );
+      checkEqual(requests.length, 1);
+    },
+  },
+  {
+    name: "strings of different files are one request per file",
+    async run(sql) {
+      await seed(sql);
+      await suggestWithLlm(sql, MANAGER_OF_DE, { language: "de", ids: [1, 7] }, options(sql));
+      const [rows] = await sql.read([
+        { sql: "SELECT file_id, strings FROM llm_requests ORDER BY file_id" },
+      ]);
+      checkEqual(rows, [
+        { file_id: 1, strings: 1 },
+        { file_id: 2, strings: 1 },
+      ]);
+    },
+  },
+  {
+    name: "a string without a suggestion doesn't hold up the others",
+    async run(sql) {
+      await seed(sql);
+      const result = await suggestWithLlm(
+        sql,
+        MANAGER_OF_DE,
+        { language: "de", ids: [1, 8, 2] },
+        options(sql),
+      );
+      checkEqual(
+        result.suggestions.map((suggestion) => suggestion.id),
+        [1, 2],
+      );
+      checkEqual(result.failed, [
+        { id: 8, message: "String 8 wasn't found, or isn't translated." },
+      ]);
+    },
+  },
+  {
+    name: "the suggestions aren't saved as translations",
+    async run(sql) {
+      await seed(sql);
+      await suggestWithLlm(sql, MANAGER_OF_DE, { language: "de", ids: [1] }, options(sql));
       const [rows] = await sql.read([
         { sql: "SELECT COUNT(*) AS n FROM translations WHERE string_id = 1" },
       ]);
@@ -71,24 +151,103 @@ export const LLM_SUGGESTION_CASES: { name: string; run(sql: Sql): Promise<void> 
     name: "the request counts in the usage, outside any job",
     async run(sql) {
       await seed(sql);
-      await suggestWithLlm(sql, MANAGER_OF_DE, { id: 1, language: "de" }, options(sql));
+      await suggestWithLlm(sql, MANAGER_OF_DE, { language: "de", ids: [1, 2] }, options(sql));
       const [rows] = await sql.read([
         { sql: "SELECT job_id, language, strings, outcome FROM llm_requests" },
       ]);
-      checkEqual(rows, [{ job_id: null, language: "de", strings: 1, outcome: "ok" }]);
+      checkEqual(rows, [{ job_id: null, language: "de", strings: 2, outcome: "ok" }]);
     },
   },
   {
     name: "a proofread string gets a fresh suggestion too",
     async run(sql) {
       await seed(sql);
-      const suggestion = await suggestWithLlm(
+      const result = await suggestWithLlm(
         sql,
         MANAGER_OF_DE,
-        { id: 4, language: "de" },
+        { language: "de", ids: [4] },
         options(sql),
       );
-      checkEqual(suggestion.value, "[Ĥéļļö]");
+      checkEqual(result.suggestions[0].value, "[Ĥéļļö]");
+    },
+  },
+  {
+    name: "a suggestion asks for as little thinking as the model allows",
+    async run(sql) {
+      await seed(sql);
+      const { provider, requests } = recording(createFakeTranslator());
+      await suggestWithLlm(
+        sql,
+        MANAGER_OF_DE,
+        { language: "de", ids: [1] },
+        options(sql, { provider }),
+      );
+      checkEqual(requests[0].thinking, "low");
+    },
+  },
+  {
+    name: "a suggestion uses the project's model when the settings name none for suggestions",
+    async run(sql) {
+      await seed(sql);
+      await sql.commit(2, [
+        { sql: `INSERT INTO settings VALUES (1, '{"llm":{"model":"project-model"}}')` },
+      ]);
+      const { provider, requests } = recording(createFakeTranslator());
+      await suggestWithLlm(
+        sql,
+        MANAGER_OF_DE,
+        { language: "de", ids: [1] },
+        options(sql, { provider }),
+      );
+      checkEqual(requests[0].model, "project-model");
+    },
+  },
+  {
+    name: "a suggestion uses the model the settings name for suggestions",
+    async run(sql) {
+      await seed(sql);
+      await sql.commit(2, [
+        {
+          sql: `INSERT INTO settings VALUES (1, '{"llm":{"model":"project-model","suggestionModel":"fast-model"}}')`,
+        },
+      ]);
+      const { provider, requests } = recording(createFakeTranslator());
+      await suggestWithLlm(
+        sql,
+        MANAGER_OF_DE,
+        { language: "de", ids: [1] },
+        options(sql, { provider }),
+      );
+      checkEqual(requests[0].model, "fast-model");
+    },
+  },
+  {
+    name: "an answer that fails the checks isn't asked for again",
+    async run(sql) {
+      await seed(sql);
+      const { provider, requests } = recording(SILENT_PROVIDER);
+      const result = await suggestWithLlm(
+        sql,
+        MANAGER_OF_DE,
+        { language: "de", ids: [1] },
+        options(sql, { provider }),
+      );
+      checkEqual(result.failed, [{ id: 1, message: NO_TRANSLATION }]);
+      checkEqual(requests.length, 1);
+    },
+  },
+  {
+    name: "a request that outlasts the deadline is reported as too slow",
+    async run(sql) {
+      await seed(sql);
+      const slow = createFakeTranslator({ delayMs: 5_000 });
+      const result = await suggestWithLlm(
+        sql,
+        MANAGER_OF_DE,
+        { language: "de", ids: [1] },
+        options(sql, { provider: slow, deadlineMs: 10 }),
+      );
+      checkEqual(result.failed, [{ id: 1, message: "The LLM took too long to answer." }]);
     },
   },
   {
@@ -96,7 +255,7 @@ export const LLM_SUGGESTION_CASES: { name: string; run(sql: Sql): Promise<void> 
     async run(sql) {
       await seed(sql);
       const code = await failure(() =>
-        suggestWithLlm(sql, CONTRIBUTOR, { id: 1, language: "de" }, options(sql)),
+        suggestWithLlm(sql, CONTRIBUTOR, { language: "de", ids: [1] }, options(sql)),
       );
       checkEqual(code, "forbidden");
     },
@@ -106,7 +265,7 @@ export const LLM_SUGGESTION_CASES: { name: string; run(sql: Sql): Promise<void> 
     async run(sql) {
       await seed(sql);
       const code = await failure(() =>
-        suggestWithLlm(sql, MANAGER_OF_DE, { id: 1, language: "fr" }, options(sql)),
+        suggestWithLlm(sql, MANAGER_OF_DE, { language: "fr", ids: [1] }, options(sql)),
       );
       checkEqual(code, "forbidden");
     },
@@ -116,7 +275,7 @@ export const LLM_SUGGESTION_CASES: { name: string; run(sql: Sql): Promise<void> 
     async run(sql) {
       await seed(sql);
       const code = await failure(() =>
-        suggestWithLlm(sql, SYSTEM, { id: 1, language: "de" }, options(sql, { provider: null })),
+        suggestWithLlm(sql, SYSTEM, { language: "de", ids: [1] }, options(sql, { provider: null })),
       );
       checkEqual(code, "llm_unavailable");
     },
@@ -129,7 +288,7 @@ export const LLM_SUGGESTION_CASES: { name: string; run(sql: Sql): Promise<void> 
         suggestWithLlm(
           sql,
           SYSTEM,
-          { id: 1, language: "de" },
+          { language: "de", ids: [1] },
           options(sql, { monthlyTokenBudget: 0 }),
         ),
       );
@@ -140,10 +299,12 @@ export const LLM_SUGGESTION_CASES: { name: string; run(sql: Sql): Promise<void> 
     name: "a string copied from the English has no suggestion",
     async run(sql) {
       await seed(sql);
-      const code = await failure(() =>
-        suggestWithLlm(sql, SYSTEM, { id: 8, language: "de" }, options(sql)),
+      const result = await suggestWithLlm(sql, SYSTEM, { language: "de", ids: [8] }, options(sql));
+      checkEqual(result.suggestions, []);
+      checkEqual(
+        result.failed.map((entry) => entry.id),
+        [8],
       );
-      checkEqual(code, "not_found");
     },
   },
   {
@@ -151,7 +312,7 @@ export const LLM_SUGGESTION_CASES: { name: string; run(sql: Sql): Promise<void> 
     async run(sql) {
       await seed(sql);
       const code = await failure(() =>
-        suggestWithLlm(sql, SYSTEM, { id: 1, language: "it" }, options(sql)),
+        suggestWithLlm(sql, SYSTEM, { language: "it", ids: [1] }, options(sql)),
       );
       checkEqual(code, "not_found");
     },

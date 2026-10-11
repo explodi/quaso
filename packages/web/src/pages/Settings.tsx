@@ -50,6 +50,7 @@ import {
   UpdateStringRequest,
 } from "@quaso/core";
 import { Access, ConfirmButton, LanguagePicker, OneTimeSecret } from "../components/Management.tsx";
+import { ModelSelect } from "../components/ModelSelect.tsx";
 import { apiUrl, errorMessage, request } from "../lib/api.ts";
 import { queryCache, useQuery } from "../lib/data.ts";
 import { fieldError, validated } from "../lib/forms.ts";
@@ -174,7 +175,8 @@ function Field({
       </span>
       <span className="settings-control">
         {Children.map(children, (child) =>
-          isValidElement(child) && [Input, Select, TextArea].includes(child.type as typeof Input)
+          isValidElement(child) &&
+          [Input, Select, TextArea, ModelSelect].includes(child.type as typeof Input)
             ? cloneElement(child as ReactElement<Record<string, unknown>>, {
                 "aria-labelledby": id,
                 "aria-describedby":
@@ -671,28 +673,36 @@ function Llm({ data }: { data: SettingsResult }) {
         <Field
           label="Meaning-check model"
           path="llm.meaningCheck.model"
-          hint="Leave blank to use the project model."
+          hint="Choose another model, or follow the project model."
         >
-          <Input
+          <ModelSelect
+            models={data.models}
             value={meaning.model}
-            onChange={(event) => updateMeaning({ model: event.target.value })}
-            maxLength={200}
+            blankLabel={`The project model (${llm.model})`}
+            onChange={(model) => updateMeaning({ model })}
           />
         </Field>
       </SettingsGroup>
       <SettingsGroup title="Model & budget">
         <Field label="Model" path="llm.model">
-          <Input
-            list="llm-models"
+          <ModelSelect
+            models={data.models}
             value={llm.model}
             required
-            onChange={(event) => update("model", event.target.value)}
+            onChange={(model) => update("model", model)}
           />
-          <datalist id="llm-models">
-            {data.models.map((model) => (
-              <option key={model} value={model} />
-            ))}
-          </datalist>
+        </Field>
+        <Field
+          label="Model for editor suggestions"
+          path="llm.suggestionModel"
+          hint="Suggestions appear while translators type, so a faster model helps. Jobs, uploads and Auto-translate use the model above."
+        >
+          <ModelSelect
+            models={data.models}
+            value={llm.suggestionModel}
+            blankLabel={`The project model (${llm.model})`}
+            onChange={(model) => update("suggestionModel", model)}
+          />
         </Field>
         <Field
           label="Requests in parallel"

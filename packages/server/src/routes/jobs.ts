@@ -4,14 +4,13 @@
  * file, a language or everything (`quaso translate`, the website's Auto-translate dialog),
  * their progress and cancelling, the usage per day or month, and the provider's models.
  * Managers, administrators and API keys with the `upload` scope; the service decides.
- * And the editor's LLM suggestion for one string, which nothing saves.
+ * And the editor's LLM suggestions for a few strings, which nothing saves.
  */
-import { CreateJobRequest, Id, JobsQuery, LanguageTag, s, UsageQuery } from "@quaso/core";
+import { CreateJobRequest, Id, JobsQuery, LlmSuggestionsRequest, s, UsageQuery } from "@quaso/core";
 import type { ApiRoute } from "./api.ts";
 import { route } from "./route.ts";
 
 const JobParams = s.object({ id: Id });
-const TranslationParams = s.object({ id: Id, lang: LanguageTag });
 
 export const JOB_ROUTES: ApiRoute[] = [
   route({
@@ -76,16 +75,13 @@ export const JOB_ROUTES: ApiRoute[] = [
   }),
   route({
     method: "POST",
-    path: "/strings/:id/translations/:lang/llm-suggestion",
+    path: "/llm-suggestions",
     operationId: "suggestWithLlm",
     summary:
-      "The LLM's translation of one string, for the editor to offer while someone types theirs; nothing is saved",
+      "The LLM's translations of a few strings, for the editor to offer while someone types theirs; nothing is saved",
     tag: "LLM",
     access: "manager",
-    params: TranslationParams,
-    optionalBody: true,
-    body: s.object({}),
-    handle: ({ service, actor, params }) =>
-      service.suggestWithLlm(actor, { id: params.id, language: params.lang }),
+    body: LlmSuggestionsRequest,
+    handle: ({ service, actor, body }) => service.suggestWithLlm(actor, body),
   }),
 ];

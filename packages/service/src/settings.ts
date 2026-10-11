@@ -111,6 +111,7 @@ export function defaultSettings(model: string): ProjectSettings {
       updateOutdated: true,
       proposeForProofread: true,
       model,
+      suggestionModel: "",
       concurrency: 4,
       monthlyTokenBudget: null,
       promptTemplate: DEFAULT_PROMPT_TEMPLATE,

@@ -118,6 +118,8 @@ export interface TranslationPanelProps {
   project: ProjectInfo;
   /** The string as the list has it, to show at once while the details load. */
   summary?: StringSummary;
+  /** The strings to do after this one: LLM suggestions are fetched for them ahead of time. */
+  upcoming?: StringSummary[];
   onNext(): void;
   /** After a change: refresh these strings wherever they are shown. */
   onChanged(ids: number[]): Promise<void>;
@@ -288,7 +290,12 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
   const canAskLlm = canEdit && project.llmAvailable;
   // Only strings to do: a current translation is already there to start from.
   const toDo = !current || current.outdated;
-  const llm = useLlmSuggestion(detail.id, tag, canAskLlm && suggestionsOn && toDo);
+  const llm = useLlmSuggestion(
+    tag,
+    detail,
+    props.upcoming ?? [],
+    canAskLlm && suggestionsOn && toDo,
+  );
   const llmDraft = useMemo(
     () => (llm.status === "ready" ? draftFrom(llm.suggestion.value, forms, mask) : null),
     [llm, forms, mask],

@@ -51,6 +51,8 @@ export interface ProviderRequest {
   /** The JSON schema of the answer (`RESPONSE_SCHEMA` in `prompt.ts`). */
   responseSchema: JsonSchemaObject;
   safety: SafetyLevel;
+  /** "low": as little thinking as the model allows, for answers a person waits for. */
+  thinking?: "low";
   signal?: AbortSignal;
   batch?: ProviderBatch;
 }

@@ -145,16 +145,29 @@ while you work: the editor checks for changes every few seconds after you start 
 ### LLM suggestions
 
 Managers who translate by hand can turn on **LLM suggestions**, the switch at the end of the translation
-tools, above the input (the browser remembers it). Each untranslated or outdated string you open is then also sent
-to the LLM, in the background, with the same instructions, context and quality checks as an LLM job.
-You type as usual; when the LLM's translation arrives, usually within seconds, it appears under the
-input. If it says what you were going to write, click it (or press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+
-<kbd>Enter</kbd>) and it replaces your text, then save. <kbd>Ctrl</kbd>+<kbd>Z</kbd> brings your text
-back. Strings with plural forms get a suggestion under each form's input.
+tools, above the input (the browser remembers it). When you stay on an untranslated or outdated string, it is
+sent to the LLM in the background, with the same instructions, context and quality checks as an LLM job,
+together with the next three strings to do. You type as usual; when the LLM's translation arrives, it
+appears under the input. If it says what you were going to write, click it (or press
+<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd>) and it replaces your text, then save.
+<kbd>Ctrl</kbd>+<kbd>Z</kbd> brings your text back. Strings with plural forms get a suggestion under
+each form's input.
+
+Only the first string makes you wait, a few seconds. The editor keeps asking ahead as you move on, a
+few strings in one request, so the next ones are usually there when you open them. It waits half a
+second on a string before asking, so skimming past strings costs nothing.
 
 Nothing is saved until you save: the suggestion is only offered. Its tokens count in the LLM usage
 and against the monthly token budget, like a job's; going back to a string shows the same
-suggestion without asking again. The switch is there when the server has an LLM provider.
+suggestion without asking again. Because you are waiting, a suggestion asks the model for as little
+thinking as it allows and isn't retried: a string whose answer fails the quality checks has no
+suggestion, and you type your own. To take the LLM's text for many strings, select them and use
+**Translate with the LLM** instead: a job sends 25 strings per request and its results are green at
+once. The switch is there when the server has an LLM provider.
+
+Suggestions use the project's model unless an administrator picks **Model for editor suggestions** in
+Settings → AI translation: since you are waiting for them, a faster model suits them, while jobs keep
+the project's model. Choosing "The project model" again ends the override.
 
 The editor opens in **To do first** order: untranslated strings, outdated translations, then
 completed translations. Within each group, strings follow their file and position. Choose **File
@@ -273,7 +286,8 @@ Administrators choose a section in **Settings**:
 - **Files and length limits**: describe file context and string constraints. Config-defined limits
   are locked here because the next upload owns them.
 - **LLM translation**: automatic translation, outdated handling, model, prompt, context languages,
-  batch size, neighboring strings, retries and safety. The outdated options say what an upload that
+  batch size, neighboring strings, retries and safety. Models are chosen from a drop-down of what
+  the provider offers (a text field when it can't list them). The outdated options say what an upload that
   changes the English does: rewrite green translations, propose updates for proofread ones, both or
   neither. Auto-translate asks each time instead. Resetting the prompt changes the draft; save
   to apply it. Unknown prompt placeholders are rejected. Provider credentials stay on the server.

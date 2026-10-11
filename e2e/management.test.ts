@@ -153,6 +153,62 @@ browserTest(
   },
 );
 
+browserTest(
+  "LLM suggestions are asked for ahead: the open string and the next three, then the next four",
+  {
+    prepare,
+    serviceOptions: { provider: createFakeTranslator() },
+  },
+  async ({ server, browser }) => {
+    const english = Object.fromEntries(
+      Array.from({ length: 12 }, (_, index) => [`key${index + 1}`, `Text ${index + 1}`]),
+    );
+    await server.api("/sources", {
+      method: "POST",
+      body: JSON.stringify({
+        files: [{ path: "common.json", repoPath: "common.json", content: JSON.stringify(english) }],
+        sourceLanguage: "en",
+        languages: ["fr"],
+      }),
+    });
+    const ids = (await getStrings(server, "fr")).strings.map((string) => string.id);
+    const tab = await openTab(browser, server, "/signin");
+    await signIn(tab.page, server, OWNER);
+    await tab.page.evaluate(() => localStorage.setItem("quaso:llm-suggestions", "on"));
+    const asked: number[][] = [];
+    tab.page.on("request", (request) => {
+      if (request.url().endsWith("/api/v1/llm-suggestions")) {
+        asked.push(JSON.parse(request.postData() ?? "{}").ids);
+      }
+    });
+
+    await tab.page.goto(`${server.url}/translate/fr?id=${ids[0]}`, { waitUntil: "networkidle0" });
+    await waitFor(tab.page, () => document.querySelector(".llm-offer-button") !== null);
+    assertEquals(asked, [ids.slice(0, 4)]);
+
+    // On the second string fewer than three answers are ahead: the next four are asked for.
+    const refill = tab.page.waitForRequest((request) =>
+      request.url().endsWith("/api/v1/llm-suggestions"),
+    );
+    await click(tab.page, "Next", ".editor-string-navigation");
+    await refill;
+    assertEquals(asked, [ids.slice(0, 4), ids.slice(4, 8)]);
+
+    // Further on, the answers are there already: nothing is asked.
+    await click(tab.page, "Next", ".editor-string-navigation");
+    await click(tab.page, "Next", ".editor-string-navigation");
+    await waitFor(
+      tab.page,
+      (id: number) => new URLSearchParams(location.search).get("id") === String(id),
+      [ids[3]],
+    );
+    await waitFor(tab.page, () => document.querySelector(".llm-offer-button") !== null);
+    await new Promise((done) => setTimeout(done, 1_200));
+    assertEquals(asked.length, 2);
+    assertEquals(tab.problems, []);
+  },
+);
+
 async function prepare(service: Service) {
   const { token } = await service.ensureSetupToken(SYSTEM, {});
   await service.completeSetup(ANONYMOUS, {

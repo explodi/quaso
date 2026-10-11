@@ -114,6 +114,30 @@ export function toGeminiSchema(schema: JsonSchemaObject): JsonSchemaObject {
   return out;
 }
 
+/**
+ * The thinking settings that make a model think as little as it allows: Gemini 2.5 takes a
+ * token budget (Pro can't go below 128), the generations after it a level. The API refuses
+ * both in one request. `undefined` for a model we don't know to think.
+ */
+export function lowThinking(model: string): Record<string, number | string> | undefined {
+  if (model.startsWith("gemini-2.5-pro")) return { thinkingBudget: 128 };
+  if (model.startsWith("gemini-2.5")) return { thinkingBudget: 0 };
+  if (model.startsWith("gemini-")) return { thinkingLevel: "low" };
+  return undefined;
+}
+
+/** Models that generate content other than text to translate: speech, images, audio, robots. */
+const NOT_FOR_TRANSLATION = /-(tts|image|audio|live|robotics|computer-use)(-|$)/;
+
+/** The API refuses the request, and says it is about thinking. */
+function refusesThinking(error: unknown): boolean {
+  return (
+    error instanceof ProviderError &&
+    error.kind === "invalid_request" &&
+    /thinking/i.test(error.message)
+  );
+}
+
 /** Creates the Gemini provider. */
 export function createGeminiProvider(options: GeminiOptions): TranslationProvider {
   return new GeminiProvider(options);
@@ -144,6 +168,8 @@ class GeminiProvider implements TranslationProvider {
   readonly #maxDelayMs: number;
   readonly #maxRetryAfterMs: number;
   readonly #timeoutMs: number;
+  /** Models that refused the thinking settings: they don't get them again. */
+  readonly #refusingThinking = new Set<string>();
 
   constructor(options: GeminiOptions) {
     if (options.apiKey.trim() === "") throw new Error("The Gemini API key is empty");
@@ -162,17 +188,30 @@ class GeminiProvider implements TranslationProvider {
 
   async translate(request: ProviderRequest): Promise<ProviderResult> {
     const started = this.#now();
-    const body = {
+    const bodyWith = (thinkingConfig: Record<string, number | string> | undefined) => ({
       systemInstruction: { parts: [{ text: request.system }] },
       contents: [{ role: "user", parts: [{ text: request.prompt }] }],
       generationConfig: {
         responseMimeType: "application/json",
         responseSchema: toGeminiSchema(request.responseSchema),
         temperature: 0.2,
+        ...(thinkingConfig && { thinkingConfig }),
       },
       safetySettings: safetySettings(request.safety),
-    };
-    const response = await this.#generate(request.model, body, request.signal);
+    });
+    const thinking =
+      request.thinking === "low" && !this.#refusingThinking.has(request.model)
+        ? lowThinking(request.model)
+        : undefined;
+    let response: GeminiResponse;
+    try {
+      response = await this.#generate(request.model, bodyWith(thinking), request.signal);
+    } catch (error) {
+      if (thinking === undefined || !refusesThinking(error)) throw error;
+      // Asking for less thinking is only a speed-up: a model that can't, answers as before.
+      this.#refusingThinking.add(request.model);
+      response = await this.#generate(request.model, bodyWith(undefined), request.signal);
+    }
     const usage = usageOf(response);
     const durationMs = this.#now() - started;
     const blocked = blockReason(response);
@@ -216,7 +255,8 @@ class GeminiProvider implements TranslationProvider {
       for (const model of body.models ?? []) {
         if (typeof model.name !== "string") continue;
         if (!(model.supportedGenerationMethods ?? []).includes("generateContent")) continue;
-        models.push(model.name.replace(/^models\//, ""));
+        const name = model.name.replace(/^models\//, "");
+        if (!NOT_FOR_TRANSLATION.test(name)) models.push(name);
       }
       pageToken = body.nextPageToken || undefined;
       if (!pageToken) break;

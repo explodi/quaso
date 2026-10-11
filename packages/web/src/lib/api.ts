@@ -24,7 +24,7 @@ import type {
   SourceFilesResult,
   HistoryResult,
   InviteCheck,
-  LlmSuggestion,
+  LlmSuggestionsResult,
   ProjectInfo,
   ResetPasswordRequest,
   ReviewRequest,
@@ -391,13 +391,9 @@ function translationPath(id: number, language: string): string {
   return `/strings/${id}/translations/${encodeURIComponent(language)}`;
 }
 
-/** The LLM's translation of one string, for the editor to offer; nothing is saved. */
-export function suggestWithLlm(
-  id: number,
-  language: string,
-  signal?: AbortSignal,
-): Promise<LlmSuggestion> {
-  return request(`${translationPath(id, language)}/llm-suggestion`, { method: "POST", signal });
+/** The LLM's translations of a few strings, for the editor to offer; nothing is saved. */
+export function suggestWithLlm(language: string, ids: number[]): Promise<LlmSuggestionsResult> {
+  return request("/llm-suggestions", { method: "POST", body: { language, ids } });
 }
 
 /** A manager's save: blue. */

@@ -52,6 +52,20 @@ export function isToDo(row: StringSummary): boolean {
   return row.translation === null || row.translation.outdated;
 }
 
+/** The strings to do after this one, in the order "next to do" opens them. */
+export function upcomingToDo(
+  rows: StringSummary[],
+  id: number | null,
+  count: number,
+): StringSummary[] {
+  const index = rows.findIndex((row) => row.id === id);
+  if (index === -1) return [];
+  return rows
+    .slice(index + 1)
+    .filter(isToDo)
+    .slice(0, count);
+}
+
 /** Unloaded IDs retain their opening state until their details arrive. */
 export function queueCounter(
   ids: number[],

@@ -183,6 +183,23 @@ test("the prompt template must send %strings% and use known placeholders", async
   assertEquals(withNote.settings.llm.promptTemplate, noted);
 });
 
+test("the model for suggestions is a model name, or blank to follow the project's", async () => {
+  using instance = await project();
+  const { service, admin } = instance;
+  assertEquals((await service.getSettings(admin, {})).settings.llm.suggestionModel, "");
+  await rejects(
+    service.updateSettings(admin, { llm: { suggestionModel: "../v1/files" } }),
+    "bad_request",
+    "Not a model name",
+  );
+  const named = await service.updateSettings(admin, {
+    llm: { suggestionModel: "gemini-3.6-flash" },
+  });
+  assertEquals(named.settings.llm.suggestionModel, "gemini-3.6-flash");
+  const blank = await service.updateSettings(admin, { llm: { suggestionModel: "" } });
+  assertEquals(blank.settings.llm.suggestionModel, "");
+});
+
 test("the source language can't change once there are strings", async () => {
   using instance = await project();
   await rejects(
