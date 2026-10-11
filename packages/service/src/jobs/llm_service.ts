@@ -11,8 +11,8 @@ import {
   type JobInfo,
   JobsQuery,
   type JobsResult,
-  LanguageTag,
-  type LlmSuggestion,
+  LlmSuggestionsRequest,
+  type LlmSuggestionsResult,
   s,
   type Schema,
   UsageQuery,
@@ -58,8 +58,8 @@ export interface LlmMethods {
   getUsage(actor: Actor, input: UsageQuery): Promise<UsageResult>;
   /** Managers, administrators and `upload` keys: the provider's models, or none. */
   listModels(actor: Actor, input: Record<string, never>): Promise<{ models: string[] }>;
-  /** People who may edit the language: the LLM's translation of one string, not saved. */
-  suggestWithLlm(actor: Actor, input: { id: number; language: string }): Promise<LlmSuggestion>;
+  /** People who may edit the language: the LLM's translation of a few strings, not saved. */
+  suggestWithLlm(actor: Actor, input: LlmSuggestionsRequest): Promise<LlmSuggestionsResult>;
 }
 
 /** The names of the LLM methods, for the internal API's allowlists. */
@@ -92,7 +92,6 @@ export type Call = <I, O>(
 
 const Empty = s.object({});
 const IdInput = s.object({ id: Id });
-const StringInput = s.object({ id: Id, language: LanguageTag });
 
 export interface Llm {
   test(): Promise<LlmTestResult>;
@@ -219,10 +218,16 @@ export function createLlm(ctx: Context, options: LlmOptions): Llm {
       },
       async suggestWithLlm(actor, input) {
         // The provider request can't wait inside a transaction: only the input is checked here.
-        const checked = await call(actor, null, StringInput, input, (request, caller) => ({
-          request,
-          caller,
-        }));
+        const checked = await call(
+          actor,
+          null,
+          LlmSuggestionsRequest,
+          input,
+          (request, caller) => ({
+            request,
+            caller,
+          }),
+        );
         const config = runtime.read(ctx);
         const read: Pick<Sql, "read"> = {
           read: (statements) =>

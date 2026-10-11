@@ -9,6 +9,7 @@ import {
   CreateGlossaryTermRequest,
   AddLanguageRequest,
   LanguageTag,
+  LlmSuggestionsRequest,
   UpdateLanguageRequest,
   UpdateSettingsRequest,
   UpdateFileRequest,
@@ -269,23 +270,17 @@ export function asyncWriteMethods(options: {
       return result;
     },
     suggestWithLlm: (caller, input) =>
-      call(
-        caller,
-        "edit",
-        s.object({ id: Id, language: LanguageTag }),
-        input,
-        async (request, actor) => {
-          const config = await configuration();
-          return suggestWithLlm(options.sql, actor, request, {
-            provider: config.provider,
-            model,
-            monthlyTokenBudget: config.monthlyTokenBudget,
-            clock,
-            logger,
-            record: (entry) => recordRequestAsync(options.sql, SYSTEM, entry, clock()),
-          });
-        },
-      ),
+      call(caller, "edit", LlmSuggestionsRequest, input, async (request, actor) => {
+        const config = await configuration();
+        return suggestWithLlm(options.sql, actor, request, {
+          provider: config.provider,
+          model,
+          monthlyTokenBudget: config.monthlyTokenBudget,
+          clock,
+          logger,
+          record: (entry) => recordRequestAsync(options.sql, SYSTEM, entry, clock()),
+        });
+      }),
     cancelJob: (caller, input) =>
       call(caller, null, s.object({ id: Id }), input, ({ id }, actor) =>
         cancelJobAsync(options.sql, actor, id, clock(), logger),

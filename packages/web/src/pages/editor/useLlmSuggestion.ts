@@ -1,67 +1,167 @@
 // SPDX-License-Identifier: MIT
 /**
  * The editor's LLM suggestions: while someone types a translation, the LLM translates the
- * same string in the background, and its answer is offered next to the input. Asking never
- * delays the editor: the request starts when the string opens, and the panel shows the
- * answer whenever it comes.
+ * string in the background, and its answer is offered next to the input. The editor knows
+ * which strings come next, so they are asked about too, several to a request: by the time
+ * the translator gets to a string, its suggestion is usually there.
  */
-import type { LlmSuggestion } from "@quaso/core";
-import { useCallback, useEffect, useState } from "react";
-import { suggestWithLlm } from "../../lib/api.ts";
+import type { LlmSuggestion, LlmSuggestionsResult, TextValue } from "@quaso/core";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { errorMessage, suggestWithLlm } from "../../lib/api.ts";
+
+/** A string the LLM may be asked about. */
+export interface SuggestionTarget {
+  id: number;
+  /** A suggestion is for the English it was asked about. */
+  source: TextValue;
+}
 
 export type LlmSuggestionState =
   | { status: "off" }
   | { status: "loading" }
   | { status: "ready"; suggestion: LlmSuggestion }
-  | { status: "failed"; message: string };
+  | { status: "failed"; message: string; failedAt: number };
+
+type Entry = Exclude<LlmSuggestionState, { status: "off" }>;
+
+/** Strings in one request. */
+const CHUNK = 4;
+/** Ask again when fewer strings than this, after the open one, are answered or on their way. */
+const REFILL_BELOW = 3;
+/** How many strings after the open one the editor hands over: enough for a refill to fill its request. */
+export const LOOKAHEAD = REFILL_BELOW - 1 + CHUNK;
+/** How long the person stays on a string before the LLM is asked: skimming past costs nothing. */
+const ASK_DELAY_MS = 500;
+/** A string that got no suggestion isn't asked about again for this long. */
+const RETRY_AFTER_MS = 30_000;
+
+const OFF: LlmSuggestionState = { status: "off" };
+const LOADING: Entry = { status: "loading" };
 
 /**
- * Answers by language and string, while the page stays open: going back to a string shows
- * its suggestion at once, without paying for another request. Failures are dropped, so that
- * the next visit asks again.
+ * Which of the open string and those after it to ask the LLM about now, in one request. It
+ * waits until the open string has no answer, or the answers ahead run low, so that a request
+ * carries `CHUNK` strings rather than one.
  */
-const answers = new Map<string, Promise<LlmSuggestion>>();
-
-function ask(id: number, language: string): Promise<LlmSuggestion> {
-  const key = `${language}:${id}`;
-  let answer = answers.get(key);
-  if (answer === undefined) {
-    answer = suggestWithLlm(id, language);
-    answers.set(key, answer);
-    answer.catch(() => answers.delete(key));
-  }
-  return answer;
+export function stringsToAsk<T>(openAndNext: T[], covered: (string: T) => boolean): T[] {
+  if (openAndNext.length === 0) return [];
+  const [open, ...ahead] = openAndNext;
+  const openNeedsAnswer = !covered(open);
+  const firstUncoveredAhead = ahead.findIndex((string) => !covered(string));
+  const coveredAhead = firstUncoveredAhead === -1 ? ahead.length : firstUncoveredAhead;
+  const aheadRunsLow = coveredAhead < REFILL_BELOW;
+  if (!openNeedsAnswer && !aheadRunsLow) return [];
+  return openAndNext.filter((string) => !covered(string)).slice(0, CHUNK);
 }
 
+function keyOf(language: string, string: SuggestionTarget): string {
+  return `${language}:${string.id}:${JSON.stringify(string.source)}`;
+}
+
+/** The suggestions asked for so far, by language, string and English, and who waits for them. */
+export class SuggestionCache {
+  readonly #ask: (language: string, ids: number[]) => Promise<LlmSuggestionsResult>;
+  readonly #now: () => number;
+  readonly #entries = new Map<string, Entry>();
+  readonly #listeners = new Set<() => void>();
+
+  constructor(
+    ask: (language: string, ids: number[]) => Promise<LlmSuggestionsResult>,
+    now: () => number = Date.now,
+  ) {
+    this.#ask = ask;
+    this.#now = now;
+  }
+
+  /** For `useSyncExternalStore`. */
+  subscribe = (listener: () => void): (() => void) => {
+    this.#listeners.add(listener);
+    return () => {
+      this.#listeners.delete(listener);
+    };
+  };
+
+  /** What is known about the string, when it was asked about. */
+  stateOf(language: string, string: SuggestionTarget): LlmSuggestionState | undefined {
+    return this.#entries.get(keyOf(language, string));
+  }
+
+  /** Asks about what the open string and those after it need, and settles when the answer comes. */
+  async askFor(language: string, openAndNext: SuggestionTarget[]): Promise<void> {
+    const strings = stringsToAsk(openAndNext, (string) => this.#isCovered(language, string));
+    if (strings.length === 0) return;
+    for (const string of strings) this.#entries.set(keyOf(language, string), LOADING);
+    this.#notify();
+    try {
+      const result = await this.#ask(
+        language,
+        strings.map((string) => string.id),
+      );
+      this.#settle(language, strings, result);
+    } catch (error) {
+      const message = errorMessage(error);
+      const failed = strings.map((string) => ({ id: string.id, message }));
+      this.#settle(language, strings, { suggestions: [], failed });
+    }
+    this.#notify();
+  }
+
+  /** Whether the string has an answer, is waiting for one, or failed too recently to ask again. */
+  #isCovered(language: string, string: SuggestionTarget): boolean {
+    const entry = this.#entries.get(keyOf(language, string));
+    if (entry === undefined) return false;
+    if (entry.status !== "failed") return true;
+    return this.#now() - entry.failedAt < RETRY_AFTER_MS;
+  }
+
+  #settle(language: string, strings: SuggestionTarget[], result: LlmSuggestionsResult): void {
+    const suggestions = new Map(
+      result.suggestions.map((suggestion) => [suggestion.id, suggestion]),
+    );
+    const reasons = new Map(result.failed.map((failure) => [failure.id, failure.message]));
+    for (const string of strings) {
+      const suggestion = suggestions.get(string.id);
+      this.#entries.set(
+        keyOf(language, string),
+        suggestion
+          ? { status: "ready", suggestion }
+          : {
+              status: "failed",
+              message: reasons.get(string.id) ?? "The LLM sent no suggestion.",
+              failedAt: this.#now(),
+            },
+      );
+    }
+  }
+
+  #notify(): void {
+    for (const listener of this.#listeners) listener();
+  }
+}
+
+/** One for the page's lifetime: going back to a string shows its suggestion at once. */
+const cache = new SuggestionCache(suggestWithLlm);
+
+/**
+ * The LLM's suggestion for the open string. While it is `wanted`, the open string and the ones
+ * after it are asked about, once the person has stayed on it a moment.
+ */
 export function useLlmSuggestion(
-  id: number,
   language: string,
+  open: SuggestionTarget,
+  upcoming: SuggestionTarget[],
   wanted: boolean,
 ): LlmSuggestionState {
-  const key = `${language}:${id}`;
-  // The answer, with the string it is for: until the answer for this string comes, it is loading.
-  const [settled, setSettled] = useState<{ key: string; state: LlmSuggestionState } | null>(null);
+  const state = useSyncExternalStore(cache.subscribe, () => cache.stateOf(language, open));
+  const openAndNext = [open, ...upcoming];
+  const openAndNextKey = openAndNext.map((string) => keyOf(language, string)).join("\n");
   useEffect(() => {
     if (!wanted) return;
-    // The request goes on after the person moves to another string: its answer waits in
-    // `answers` for their return.
-    let shown = true;
-    ask(id, language).then(
-      (suggestion) => {
-        if (shown) setSettled({ key, state: { status: "ready", suggestion } });
-      },
-      (error: unknown) => {
-        const message = error instanceof Error ? error.message : String(error);
-        if (shown) setSettled({ key, state: { status: "failed", message } });
-      },
-    );
-    return () => {
-      shown = false;
-    };
-  }, [id, language, key, wanted]);
-  if (!wanted) return { status: "off" };
-  if (settled?.key !== key) return { status: "loading" };
-  return settled.state;
+    const timer = setTimeout(() => cache.askFor(language, openAndNext), ASK_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [language, wanted, openAndNextKey]);
+  if (!wanted) return OFF;
+  return state ?? LOADING;
 }
 
 const PREFERENCE = "quaso:llm-suggestions";

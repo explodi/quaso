@@ -42,12 +42,15 @@ language returns `404`.
 `GET /api/v1/project` includes `referenceLanguages`, the configured language tags used as LLM
 references. This public metadata lets managers see the references without access to Settings.
 
-`POST /api/v1/strings/{id}/translations/{lang}/llm-suggestion` with no body returns the LLM's
-translation of one string, `{value, model}`, without saving anything: the editor offers it while
-someone types their own. It requires permission to edit the language (a manager of it, or an
-administrator). The request uses a job's prompt and quality checks and counts in the usage and the
-monthly budget. No provider returns `503`, a used-up budget `429`, and an answer that still fails
-the checks after the configured retries `503`.
+`POST /api/v1/llm-suggestions` with `{language, ids}`, one to eight string IDs, returns the LLM's
+translations of those strings, `{suggestions: [{id, value, model}], failed: [{id, message}]}`,
+without saving anything: the editor offers them while someone types their own, and asks about the
+next strings to do together with the open one. It requires permission to edit the language (a
+manager of it, or an administrator). Each file's strings are one request, with a job's prompt and
+quality checks. Someone waits for the answer, so a request asks for as little thinking as the model
+allows, isn't retried when an answer fails the checks, and ends after 30 seconds. Its tokens count
+in the usage and the monthly budget. A string that gets no suggestion is in `failed`, with the
+reason. No provider returns `503`, and a used-up budget `429`.
 
 `POST /api/v1/jobs` with `dryRun: true` returns `job: null` and an `estimate`, without creating
 a job. It requires translation permission and accepts the same scope as a real job.
