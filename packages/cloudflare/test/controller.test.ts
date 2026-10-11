@@ -182,14 +182,21 @@ describe("controller sleep and wake-up hooks", () => {
   });
 });
 
-/** A stopped controller whose starts wait until the test finishes them. */
-function stoppedController(storage: DurableObjectStorage) {
+/** A controller of deploy "deploy-2" whose starts wait until the test finishes them. */
+function stoppedController(storage: DurableObjectStorage, running = false) {
   const starts: { options: unknown; finish: () => void }[] = [];
-  const runtime = { running: false };
+  const runtime = { running, monitor: async () => {} };
+  let stops = 0;
   const instance = Object.assign(Object.create(QuasoContainer.prototype), {
     ctx: { storage, container: runtime },
+    env: { CF_VERSION_METADATA: { id: "deploy-2" } },
     requests: new Set(),
     startup: null,
+    retirement: null,
+    async stop() {
+      stops++;
+      runtime.running = false;
+    },
     async getState() {
       return { status: runtime.running ? "healthy" : "stopped", lastChange: 0 };
     },
@@ -205,7 +212,7 @@ function stoppedController(storage: DurableObjectStorage) {
       });
     },
   }) as QuasoContainer;
-  return { instance, starts };
+  return { instance, starts, stops: () => stops };
 }
 
 describe("controller start-up", () => {
@@ -261,6 +268,55 @@ describe("controller start-up", () => {
       await ctx.storage.put("restorePaused", true);
       expect(await instance.startupStatus()).toEqual({ state: "paused" });
       expect(starts.length).toBe(0);
+    });
+  });
+});
+
+describe("controller after a deploy", () => {
+  afterEach(() => vi.restoreAllMocks());
+  it("restarts an idle server an earlier deploy started, and records this deploy", async () => {
+    await runInDurableObject(freshObject(), async (_object, ctx) => {
+      await ctx.storage.put("serverDeploy", "deploy-1");
+      const { instance, starts, stops } = stoppedController(ctx.storage, true);
+      vi.spyOn(Container.prototype, "containerFetch")
+        .mockResolvedValueOnce(Response.json({ ok: true, busy: false, nextWakeUp: null }))
+        .mockResolvedValueOnce(new Response("from the new server"));
+      const response = instance.containerFetch(new Request("http://container/api/v1/project"));
+      await vi.waitFor(() => expect(starts.length).toBe(1));
+      starts[0].finish();
+      expect(await (await response).text()).toBe("from the new server");
+      expect(stops()).toBe(1);
+      expect(await ctx.storage.get("serverDeploy")).toBe("deploy-2");
+    });
+  });
+  it("keeps a busy server of an earlier deploy until a later request", async () => {
+    await runInDurableObject(freshObject(), async (_object, ctx) => {
+      await ctx.storage.put("serverDeploy", "deploy-1");
+      const { instance, starts, stops } = stoppedController(ctx.storage, true);
+      vi.spyOn(Container.prototype, "containerFetch")
+        .mockResolvedValueOnce(Response.json({ ok: true, busy: true, nextWakeUp: null }))
+        .mockResolvedValueOnce(new Response("from the old server"));
+      const response = await instance.containerFetch(
+        new Request("http://container/api/v1/project"),
+      );
+      expect(await response.text()).toBe("from the old server");
+      expect(stops()).toBe(0);
+      expect(starts.length).toBe(0);
+    });
+  });
+  it("leaves the server this deploy started alone", async () => {
+    await runInDurableObject(freshObject(), async (_object, ctx) => {
+      await ctx.storage.put("serverDeploy", "deploy-2");
+      const { instance, stops } = stoppedController(ctx.storage, true);
+      const proxied = vi
+        .spyOn(Container.prototype, "containerFetch")
+        .mockResolvedValue(new Response("from the server"));
+      const response = await instance.containerFetch(
+        new Request("http://container/api/v1/project"),
+      );
+      expect(await response.text()).toBe("from the server");
+      expect(proxied).toHaveBeenCalledTimes(1);
+      expect(stops()).toBe(0);
     });
   });
 });

@@ -124,6 +124,10 @@ Release candidates are for deployment and migration testing. The team decides wh
 
 ### Fixed
 
+- On Cloudflare, a deploy reaches the server too: the container a previous deploy started is
+  restarted on the new image once it isn't busy. Cloudflare gives a new image only to the next
+  start, and a server in use never sleeps, so the website could call endpoints its server didn't
+  have yet ("This server doesn't support this yet"). A change of secrets restarts it too.
 - In Safari, the links in the header's menus (Team, Settings, Account and the others) work: the
   menu closed before the click reached them, because Safari doesn't focus a clicked link.
 
