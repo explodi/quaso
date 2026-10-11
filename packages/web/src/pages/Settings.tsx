@@ -46,6 +46,7 @@ import {
   OneTimeSecret,
   SelectField,
 } from "../components/Management.tsx";
+import { ModelSelect } from "../components/ModelSelect.tsx";
 import { apiUrl, errorMessage, request } from "../lib/api.ts";
 import { queryCache, useQuery } from "../lib/data.ts";
 import { fieldError, validated } from "../lib/forms.ts";
@@ -425,14 +426,12 @@ function Llm({ data }: { data: SettingsResult }) {
           checked={meaning.countsAgainstBudget}
           change={(countsAgainstBudget) => updateMeaning({ countsAgainstBudget })}
         />
-        <Field
-          label="Meaning-check model (blank uses the project model)"
-          path="llm.meaningCheck.model"
-        >
-          <Input
+        <Field label="Meaning-check model" path="llm.meaningCheck.model">
+          <ModelSelect
+            models={data.models}
             value={meaning.model}
-            onChange={(event) => updateMeaning({ model: event.target.value })}
-            maxLength={200}
+            blankLabel={`The project model (${llm.model})`}
+            onChange={(model) => updateMeaning({ model })}
           />
         </Field>
         <p className="field-hint">
@@ -442,17 +441,12 @@ function Llm({ data }: { data: SettingsResult }) {
       <Fieldset className="settings-field-group">
         <legend>Model & budget</legend>
         <Field label="Model" path="llm.model">
-          <Input
-            list="llm-models"
+          <ModelSelect
+            models={data.models}
             value={llm.model}
             required
-            onChange={(e) => update("model", e.target.value)}
+            onChange={(model) => update("model", model)}
           />
-          <datalist id="llm-models">
-            {data.models.map((m) => (
-              <option key={m} value={m} />
-            ))}
-          </datalist>
         </Field>
         <Field label="Requests in parallel" path="llm.concurrency">
           <Input

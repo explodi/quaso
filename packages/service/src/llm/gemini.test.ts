@@ -388,6 +388,31 @@ test("gemini: models, from every page, only those that generate content", async 
   assertEquals(sent[0].method, "GET");
 });
 
+test("gemini: models for speech, images, audio and robots aren't offered to translate with", async () => {
+  const model = (name: string) => ({
+    name: `models/${name}`,
+    supportedGenerationMethods: ["generateContent"],
+  });
+  const { gemini } = provider([
+    json(
+      JSON.stringify({
+        models: [
+          model("gemini-3.8-flash"),
+          model("gemini-2.5-flash-preview-tts"),
+          model("gemini-2.5-flash-image"),
+          model("gemini-3-pro-image-preview"),
+          model("gemini-2.5-flash-native-audio-preview-09-2025"),
+          model("gemini-live-2.5-flash-preview"),
+          model("gemini-robotics-er-1.5-preview"),
+          model("gemini-2.5-computer-use-preview-10-2025"),
+          model("gemini-flash-latest"),
+        ],
+      }),
+    ),
+  ]);
+  assertEquals(await gemini.listModels(), ["gemini-3.8-flash", "gemini-flash-latest"]);
+});
+
 test("gemini: generateText returns the text without thoughts", async () => {
   const answer = {
     candidates: [

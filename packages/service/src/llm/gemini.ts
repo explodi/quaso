@@ -126,6 +126,9 @@ export function lowThinking(model: string): Record<string, number | string> | un
   return undefined;
 }
 
+/** Models that generate content other than text to translate: speech, images, audio, robots. */
+const NOT_FOR_TRANSLATION = /-(tts|image|audio|live|robotics|computer-use)(-|$)/;
+
 /** The API refuses the request, and says it is about thinking. */
 function refusesThinking(error: unknown): boolean {
   return (
@@ -252,7 +255,8 @@ class GeminiProvider implements TranslationProvider {
       for (const model of body.models ?? []) {
         if (typeof model.name !== "string") continue;
         if (!(model.supportedGenerationMethods ?? []).includes("generateContent")) continue;
-        models.push(model.name.replace(/^models\//, ""));
+        const name = model.name.replace(/^models\//, "");
+        if (!NOT_FOR_TRANSLATION.test(name)) models.push(name);
       }
       pageToken = body.nextPageToken || undefined;
       if (!pageToken) break;

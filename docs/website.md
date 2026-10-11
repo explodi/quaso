@@ -282,7 +282,8 @@ Administrators choose a section in **Settings**:
 - **Files and length limits**: describe file context and string constraints. Config-defined limits
   are locked here because the next upload owns them.
 - **LLM translation**: automatic translation, outdated handling, model, prompt, context languages,
-  batch size, neighboring strings, retries and safety. The outdated options say what an upload that
+  batch size, neighboring strings, retries and safety. Models are chosen from a drop-down of what
+  the provider offers (a text field when it can't list them). The outdated options say what an upload that
   changes the English does: rewrite green translations, propose updates for proofread ones, both or
   neither. Auto-translate asks each time instead. Resetting the prompt changes the draft; save
   to apply it. Unknown prompt placeholders are rejected. Provider credentials stay on the server.

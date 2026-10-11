@@ -32,10 +32,11 @@ container. Do not put secrets in git. See [Docker](deploy-docker.md) and
 ## LLM
 
 Configure Gemini in Settings → LLM translation. The API key is stored write-only in the
-instance database. The default model is `gemini-flash-latest`, requests in parallel default to
-4 (range 1–64), and the monthly token budget defaults to unlimited. A positive integer sets
-that budget; clearing it removes the limit. Jobs resume when the budget is raised or cleared.
-Key replacement and setting changes take effect without restarting the server.
+instance database. The default model is `gemini-flash-latest`; Settings offers the models the
+provider lists in a drop-down, without those for speech, images, audio and robots. Requests in
+parallel default to 4 (range 1–64), and the monthly token budget defaults to unlimited. A positive
+integer sets that budget; clearing it removes the limit. Jobs resume when the budget is raised or
+cleared. Key replacement and setting changes take effect without restarting the server.
 
 The server no longer reads `GEMINI_API_KEY`, `GEMINI_MODEL`, `LLM_CONCURRENCY` or
 `LLM_MONTHLY_TOKEN_BUDGET` from the environment.
