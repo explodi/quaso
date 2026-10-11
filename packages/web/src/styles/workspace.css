@@ -100,93 +100,9 @@
 .glossary-list .actions {
   margin-block-start: 0;
 }
-.settings-layout {
-  display: grid;
-  grid-template-columns: 13rem minmax(0, 1fr);
-  gap: var(--space-6);
-  align-items: start;
-}
-.settings-navigation {
-  position: sticky;
-  top: calc(var(--header-block-size, var(--header-height)) + var(--space-5));
-  display: grid;
-  gap: var(--space-5);
-}
-.settings-navigation-group {
-  display: grid;
-  gap: var(--space-1);
-}
-.settings-navigation-group > p {
-  padding: var(--space-2) var(--space-3);
-  color: var(--fg-muted);
-  font-size: var(--text-xs);
-  font-weight: 650;
-  text-transform: uppercase;
-}
-.settings-navigation a {
-  display: flex;
-  align-items: center;
-  min-height: var(--control-height);
-  padding: var(--space-2) var(--space-3);
-  color: var(--fg);
-  text-decoration: none;
-}
-.settings-navigation a:hover {
-  background: var(--hover);
-}
-.settings-navigation a[aria-current="page"] {
-  background: var(--selected);
-  font-weight: 650;
-}
-.settings-content {
-  display: grid;
-  gap: var(--space-5);
-  min-width: 0;
-  max-width: 52rem;
-}
-.settings-section-intro {
-  display: grid;
-  gap: var(--space-2);
-  padding-block: var(--space-2) var(--space-4);
-  border-block-end: 1px solid var(--border);
-}
-.settings-mobile-section {
-  display: none;
-}
-.settings-content .management-section > form,
-.settings-fields,
-.settings-field-group,
-.settings-disclosure-body,
 .account-field-group {
   display: grid;
   gap: var(--space-4);
-}
-.settings-disclosure {
-  border: 1px solid var(--border);
-  padding: var(--space-3);
-}
-.settings-disclosure-body {
-  margin-block-start: var(--space-4);
-}
-.settings-field-group > legend {
-  padding-inline: var(--space-2);
-  font-size: var(--text-sm);
-  font-weight: 650;
-}
-.settings-page .settings-fields {
-  border: 0;
-  padding: 0;
-}
-.settings-save {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  border-block-start: 1px solid var(--border);
-  padding-block-start: var(--space-4);
-}
-.settings-save p {
-  color: var(--success);
-  font-size: var(--text-sm);
 }
 .team-requests .record-list:empty {
   display: none;
@@ -400,15 +316,6 @@
   }
 }
 @media (max-width: 52rem) {
-  .settings-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .settings-navigation {
-    display: none;
-  }
-  .settings-mobile-section {
-    display: grid;
-  }
   .auth-page {
     max-width: 34rem;
     padding-block: var(--space-5);

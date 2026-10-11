@@ -1,21 +1,31 @@
 // SPDX-License-Identifier: MIT
 import {
-  TextArea,
-  Fieldset,
-  Label,
-  Checkbox,
-  Input,
-  Details,
-  Summary,
-  Select,
   A,
+  Button,
+  Details,
+  Fieldset,
+  H1,
   H2,
   H3,
-  H1,
-  Button,
+  Input,
+  Label,
   Loading,
+  Select,
+  Summary,
+  Switch,
+  TextArea,
 } from "@quaso/design-system";
-import { createContext, type ReactNode, useContext, useState } from "react";
+import {
+  Children,
+  cloneElement,
+  createContext,
+  isValidElement,
+  type ReactElement,
+  type ReactNode,
+  useContext,
+  useId,
+  useState,
+} from "react";
 import {
   AddLanguageRequest,
   type ApiTokensResult,
@@ -24,14 +34,14 @@ import {
   languageName,
   type LanguageSettings,
   type LlmSettings,
-  PLURAL_CATEGORIES,
-  PROMPT_PLACEHOLDERS,
-  type SettingsResult,
-  type SecretsResult,
-  type SecretStatus,
   type LlmTestResult,
   type ManagedSecretName,
+  PLURAL_CATEGORIES,
+  PROMPT_PLACEHOLDERS,
+  type SecretsResult,
+  type SecretStatus,
   SetSecretRequest,
+  type SettingsResult,
   type StringsPage,
   type StringSummary,
   UpdateFileRequest,
@@ -39,43 +49,58 @@ import {
   UpdateSettingsRequest,
   UpdateStringRequest,
 } from "@quaso/core";
-import {
-  Access,
-  ConfirmButton,
-  LanguagePicker,
-  OneTimeSecret,
-  SelectField,
-} from "../components/Management.tsx";
+import { Access, ConfirmButton, LanguagePicker, OneTimeSecret } from "../components/Management.tsx";
 import { apiUrl, errorMessage, request } from "../lib/api.ts";
 import { queryCache, useQuery } from "../lib/data.ts";
 import { fieldError, validated } from "../lib/forms.ts";
-import { href, Link, useRoute } from "../lib/router.tsx";
+import { SETTINGS_SECTIONS, SettingsNavigation } from "../components/SettingsNavigation.tsx";
+import { useRoute } from "../lib/router.tsx";
 import { useDocumentTitle } from "../lib/hooks.ts";
 import { AdminDetails } from "./Admin.tsx";
 import { LanguageRequestsAdmin } from "../components/LanguageRequests.tsx";
 
 const FormError = createContext<unknown>(undefined);
+
+/** A validation error must stay reachable even when its advanced section is collapsed. */
+function revealSetting(element: Element) {
+  for (let parent = element.parentElement; parent; parent = parent.parentElement) {
+    if (parent instanceof HTMLDetailsElement) parent.open = true;
+  }
+}
 function SaveForm({
   title,
   children,
   save,
-  label = "Save",
+  label = "Save changes",
+  description,
 }: {
   title: string;
   children: ReactNode;
   save(): Promise<unknown>;
   label?: string;
+  description?: ReactNode;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>();
   const [saved, setSaved] = useState(false);
   return (
-    <section className="management-section">
-      <H2 ui>{title}</H2>
+    <section className="management-section settings-card">
+      <header className="settings-card-header">
+        <H2 ui>{title}</H2>
+        {description && <p>{description}</p>}
+      </header>
       <form
+        className="settings-form"
         onChange={() => setSaved(false)}
+        onInvalidCapture={(event) => revealSetting(event.target as HTMLElement)}
+        onClickCapture={(event) => {
+          // Collection actions and prompt resets also change a draft without a change event.
+          if ((event.target as HTMLElement).closest('button:not([type="submit"])')) setSaved(false);
+        }}
         onSubmit={async (event) => {
           event.preventDefault();
+          if (busy) return;
+          const form = event.currentTarget;
           setBusy(true);
           setError(undefined);
           setSaved(false);
@@ -90,6 +115,9 @@ function SaveForm({
             setSaved(true);
           } catch (caught) {
             setError(caught);
+            for (const field of form.querySelectorAll<HTMLElement>("[data-settings-path]")) {
+              if (fieldError(caught, field.dataset.settingsPath!)) revealSetting(field);
+            }
           } finally {
             setBusy(false);
           }
@@ -101,48 +129,127 @@ function SaveForm({
           </Fieldset>
         </FormError.Provider>
         {error !== undefined && (
-          <p role="alert" className="field-error">
+          <p role="alert" className="field-error settings-form-error">
             {errorMessage(error)}
           </p>
         )}
-        <div className="settings-save">
+        <footer className="settings-actions">
           <Button type="submit" variant="primary" busy={busy}>
             {label}
           </Button>
-          {saved && <p role="status">Saved.</p>}
-        </div>
+          {saved ? (
+            <p role="status">Saved.</p>
+          ) : (
+            <p className="muted">Changes apply when you save.</p>
+          )}
+        </footer>
       </form>
     </section>
   );
 }
-function Field({ label, path, children }: { label: string; path: string; children: ReactNode }) {
+function Field({
+  label,
+  path,
+  hint,
+  children,
+}: {
+  label: string;
+  path: string;
+  hint?: ReactNode;
+  children: ReactNode;
+}) {
   const error = fieldError(useContext(FormError), path);
+  const id = useId();
   return (
-    <Label className="field">
-      <span className="field-label">{label}</span>
-      {children}
-      {error && <span className="field-error">{error}</span>}
+    <Label className="field settings-row" data-settings-path={path}>
+      <span className="settings-label">
+        <span id={id} className="field-label">
+          {label}
+        </span>
+        {hint && (
+          <span id={`${id}-hint`} className="field-hint">
+            {hint}
+          </span>
+        )}
+      </span>
+      <span className="settings-control">
+        {Children.map(children, (child) =>
+          isValidElement(child) && [Input, Select, TextArea].includes(child.type as typeof Input)
+            ? cloneElement(child as ReactElement<Record<string, unknown>>, {
+                "aria-labelledby": id,
+                "aria-describedby":
+                  [hint && `${id}-hint`, error && `${id}-error`].filter(Boolean).join(" ") ||
+                  undefined,
+                "aria-invalid": error ? true : undefined,
+              })
+            : child,
+        )}
+        {error && (
+          <span id={`${id}-error`} className="field-error">
+            {error}
+          </span>
+        )}
+      </span>
     </Label>
   );
 }
 function Check({
   label,
+  hint,
   checked,
   change,
 }: {
   label: string;
+  hint?: ReactNode;
   checked: boolean;
   change(value: boolean): void;
 }) {
+  const id = useId();
   return (
-    <Label className="check-label">
-      <Checkbox checked={checked} onChange={(e) => change(e.target.checked)} />
-      {label}
+    <Label className="settings-row settings-check">
+      <span className="settings-label">
+        <span id={id} className="field-label">
+          {label}
+        </span>
+        {hint && (
+          <span id={`${id}-hint`} className="field-hint">
+            {hint}
+          </span>
+        )}
+      </span>
+      <Switch
+        aria-labelledby={id}
+        aria-describedby={hint ? `${id}-hint` : undefined}
+        checked={checked}
+        onChange={(e) => change(e.target.checked)}
+      />
     </Label>
   );
 }
+function SettingsGroup({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className="settings-group">
+      <header className="settings-group-header">
+        <H3 ui>{title}</H3>
+        {description && <p>{description}</p>}
+      </header>
+      {children}
+    </section>
+  );
+}
 function patchSettings(body: unknown) {
-  return request("/settings", { method: "PATCH", body: validated(UpdateSettingsRequest, body) });
+  return request("/settings", {
+    method: "PATCH",
+    body: validated(UpdateSettingsRequest, body),
+  });
 }
 
 function General({ data }: { data: SettingsResult }) {
@@ -150,187 +257,311 @@ function General({ data }: { data: SettingsResult }) {
   const [description, setDescription] = useState(data.settings.description);
   const [logoUrl, setLogoUrl] = useState(data.settings.logoUrl ?? "");
   const [links, setLinks] = useState(data.settings.links);
-  const [syntax, setSyntax] = useState(data.settings.syntax);
-  const extra = syntax.extra ?? [];
-  const setExtra = (index: number, delimiters: { prefix: string; suffix: string }) =>
-    setSyntax({ ...syntax, extra: extra.map((item, j) => (j === index ? delimiters : item)) });
-  const optional = syntax.optional ?? [];
-  const setOptional = (index: number, entry: { placeholder: string; languages: string[] }) =>
-    setSyntax({
-      ...syntax,
-      optional: optional.map((item, j) => (j === index ? entry : item)),
-    });
   return (
     <>
       <SaveForm
-        title="General"
-        save={() => patchSettings({ name, description, logoUrl: logoUrl || null, links })}
+        title="Project details"
+        label="Save project"
+        description="Introduce your project to the people translating it."
+        save={() => patchSettings({ name, description, logoUrl: logoUrl || null })}
       >
-        <Field label="Project name" path="name">
+        <Field
+          label="Project name"
+          path="name"
+          hint="Shown in the header and on the project dashboard."
+        >
           <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={120} />
         </Field>
-        <Field label="Description" path="description">
+        <Field
+          label="Description"
+          path="description"
+          hint="A short introduction to your game or app."
+        >
           <TextArea
             autoGrow={false}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            rows={4}
+            rows={3}
           />
         </Field>
-        <Field label="Logo URL" path="logoUrl">
-          <Input type="url" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} />
+        <Field
+          label="Logo URL"
+          path="logoUrl"
+          hint="A link to your project’s logo. Leave blank to use the default."
+        >
+          <Input
+            type="url"
+            value={logoUrl}
+            placeholder="https://example.com/logo.png"
+            onChange={(e) => setLogoUrl(e.target.value)}
+          />
         </Field>
-        <Fieldset>
-          <legend>Project links</legend>
-          {links.map((link, i) => (
-            <div className="record-card" key={i}>
-              <Field label={`Link ${i + 1} label`} path={`links.${i}.label`}>
-                <Input
-                  value={link.label}
-                  onChange={(e) =>
-                    setLinks(links.map((l, j) => (i === j ? { ...l, label: e.target.value } : l)))
-                  }
-                  required
-                />
-              </Field>
-              <Field label={`Link ${i + 1} URL`} path={`links.${i}.url`}>
-                <Input
-                  type="url"
-                  value={link.url}
-                  onChange={(e) =>
-                    setLinks(links.map((l, j) => (i === j ? { ...l, url: e.target.value } : l)))
-                  }
-                  required
-                />
-              </Field>
-              <Button onClick={() => setLinks(links.filter((_, j) => i !== j))}>
-                Remove link {i + 1}
-              </Button>
-            </div>
-          ))}
+      </SaveForm>
+      <SaveForm
+        title="Project links"
+        label="Save links"
+        description="Links to your website, store page, or community. These appear in the footer."
+        save={() => patchSettings({ links })}
+      >
+        {links.length === 0 && (
+          <p className="settings-note">
+            No project links yet. Add a destination for your community.
+          </p>
+        )}
+        {links.map((link, i) => (
+          <div className="settings-repeat-row" key={i}>
+            <Field label="Label" path={`links.${i}.label`}>
+              <Input
+                value={link.label}
+                placeholder="Website"
+                required
+                onChange={(e) =>
+                  setLinks(
+                    links.map((item, j) => (i === j ? { ...item, label: e.target.value } : item)),
+                  )
+                }
+              />
+            </Field>
+            <Field label="URL" path={`links.${i}.url`}>
+              <Input
+                type="url"
+                value={link.url}
+                placeholder="https://example.com"
+                required
+                onChange={(e) =>
+                  setLinks(
+                    links.map((item, j) => (i === j ? { ...item, url: e.target.value } : item)),
+                  )
+                }
+              />
+            </Field>
+            <Button
+              variant="ghost"
+              aria-label={`Remove link ${i + 1}`}
+              onClick={() => setLinks(links.filter((_, j) => i !== j))}
+            >
+              Remove
+            </Button>
+          </div>
+        ))}
+        <div className="settings-add">
           <Button
             disabled={links.length >= 20}
             onClick={() => setLinks([...links, { label: "", url: "" }])}
           >
             Add link
           </Button>
-        </Fieldset>
-      </SaveForm>
-      <SaveForm title="Placeholder syntax" save={() => patchSettings({ syntax })}>
-        <p>Changing the syntax rechecks translations. Use the same delimiters as your app.</p>
-        <Field label="Prefix" path="syntax.prefix">
-          <Input
-            value={syntax.prefix}
-            required
-            maxLength={10}
-            onChange={(e) => setSyntax({ ...syntax, prefix: e.target.value })}
-          />
-        </Field>
-        <Field label="Suffix" path="syntax.suffix">
-          <Input
-            value={syntax.suffix}
-            required
-            maxLength={10}
-            onChange={(e) => setSyntax({ ...syntax, suffix: e.target.value })}
-          />
-        </Field>
-        <Fieldset>
-          <legend>Other placeholders</legend>
-          <p>
-            Delimiters of placeholders your app fills in itself, such as <code>{"{"}</code> and{" "}
-            <code>{"}"}</code> for <code>{"{name}"}</code>. They are checked and kept like the
-            others.
-          </p>
-          {extra.map((delimiters, i) => (
-            <div className="record-card" key={i}>
-              <Field label={`Other placeholder ${i + 1} prefix`} path={`syntax.extra.${i}.prefix`}>
-                <Input
-                  value={delimiters.prefix}
-                  required
-                  maxLength={10}
-                  onChange={(e) => setExtra(i, { ...delimiters, prefix: e.target.value })}
-                />
-              </Field>
-              <Field label={`Other placeholder ${i + 1} suffix`} path={`syntax.extra.${i}.suffix`}>
-                <Input
-                  value={delimiters.suffix}
-                  required
-                  maxLength={10}
-                  onChange={(e) => setExtra(i, { ...delimiters, suffix: e.target.value })}
-                />
-              </Field>
-              <Button
-                onClick={() => setSyntax({ ...syntax, extra: extra.filter((_, j) => i !== j) })}
-              >
-                Remove other placeholder {i + 1}
-              </Button>
-            </div>
-          ))}
-          <Button
-            disabled={extra.length >= 10}
-            onClick={() => setSyntax({ ...syntax, extra: [...extra, { prefix: "", suffix: "" }] })}
-          >
-            Add other placeholder
-          </Button>
-        </Fieldset>
-        <Fieldset>
-          <legend>Placeholders some languages leave out</legend>
-          <p>
-            A placeholder that some languages have no use for, such as an English article filled in
-            as <code>{"{article}"}</code>, in languages without articles. Those languages may leave
-            it out; elsewhere it is required as usual.
-          </p>
-          {optional.map((entry, i) => (
-            <div className="record-card" key={i}>
-              <Field
-                label={`Optional placeholder ${i + 1}`}
-                path={`syntax.optional.${i}.placeholder`}
-              >
-                <Input
-                  value={entry.placeholder}
-                  required
-                  maxLength={100}
-                  onChange={(e) => setOptional(i, { ...entry, placeholder: e.target.value })}
-                />
-              </Field>
-              <Field
-                label={`Languages that may leave out placeholder ${i + 1}, such as pl, tr, ja`}
-                path={`syntax.optional.${i}.languages`}
-              >
-                <Input
-                  value={entry.languages.join(", ")}
-                  required
-                  onChange={(e) =>
-                    setOptional(i, {
-                      ...entry,
-                      languages: e.target.value
-                        .split(",")
-                        .map((tag) => tag.trim())
-                        .filter((tag) => tag !== ""),
-                    })
-                  }
-                />
-              </Field>
-              <Button
-                onClick={() =>
-                  setSyntax({ ...syntax, optional: optional.filter((_, j) => i !== j) })
-                }
-              >
-                Remove optional placeholder {i + 1}
-              </Button>
-            </div>
-          ))}
-          <Button
-            disabled={optional.length >= 50}
-            onClick={() =>
-              setSyntax({ ...syntax, optional: [...optional, { placeholder: "", languages: [] }] })
-            }
-          >
-            Add optional placeholder
-          </Button>
-        </Fieldset>
+        </div>
       </SaveForm>
     </>
+  );
+}
+
+function Placeholders({ data }: { data: SettingsResult }) {
+  const [syntax, setSyntax] = useState(data.settings.syntax);
+  // Keep the user's text intact while typing; normalize language codes only when saving.
+  const [optional, setOptional] = useState(
+    (data.settings.syntax.optional ?? []).map((entry) => ({
+      ...entry,
+      languages: entry.languages.join(", "),
+    })),
+  );
+  const extra = syntax.extra ?? [];
+  return (
+    <SaveForm
+      title="Placeholder rules"
+      label="Save placeholder rules"
+      description="Placeholders are values your app inserts into a translation, such as a player’s name."
+      save={() =>
+        patchSettings({
+          syntax: {
+            ...syntax,
+            optional: optional.map((entry) => ({
+              ...entry,
+              languages: entry.languages
+                .split(",")
+                .map((tag) => tag.trim())
+                .filter(Boolean),
+            })),
+          },
+        })
+      }
+    >
+      <SettingsGroup
+        title="Default format"
+        description="Match the opening and closing characters used by your app."
+      >
+        <div className="settings-inline-fields">
+          <Field label="Opening characters" path="syntax.prefix">
+            <Input
+              value={syntax.prefix}
+              required
+              maxLength={10}
+              onChange={(e) => setSyntax({ ...syntax, prefix: e.target.value })}
+            />
+          </Field>
+          <Field label="Closing characters" path="syntax.suffix">
+            <Input
+              value={syntax.suffix}
+              required
+              maxLength={10}
+              onChange={(e) => setSyntax({ ...syntax, suffix: e.target.value })}
+            />
+          </Field>
+        </div>
+        <p className="settings-preview">
+          Example{" "}
+          <code>
+            {syntax.prefix}player_name{syntax.suffix}
+          </code>
+          <span className="muted">→ the player’s name in your app</span>
+        </p>
+      </SettingsGroup>
+      <SettingsGroup
+        title="Additional formats"
+        description={
+          <>
+            Recognize other placeholder formats too, such as <code>{"{name}"}</code> alongside{" "}
+            <code>{"{{name}}"}</code>.
+          </>
+        }
+      >
+        {extra.length === 0 && (
+          <p className="settings-note">Only the default format is recognized.</p>
+        )}
+        {extra.map((delimiters, i) => (
+          <div className="settings-repeat-row" key={i}>
+            <Field label="Opening characters" path={`syntax.extra.${i}.prefix`}>
+              <Input
+                value={delimiters.prefix}
+                required
+                maxLength={10}
+                onChange={(e) =>
+                  setSyntax({
+                    ...syntax,
+                    extra: extra.map((item, j) =>
+                      i === j ? { ...item, prefix: e.target.value } : item,
+                    ),
+                  })
+                }
+              />
+            </Field>
+            <Field label="Closing characters" path={`syntax.extra.${i}.suffix`}>
+              <Input
+                value={delimiters.suffix}
+                required
+                maxLength={10}
+                onChange={(e) =>
+                  setSyntax({
+                    ...syntax,
+                    extra: extra.map((item, j) =>
+                      i === j ? { ...item, suffix: e.target.value } : item,
+                    ),
+                  })
+                }
+              />
+            </Field>
+            <Button
+              variant="ghost"
+              aria-label={`Remove format ${i + 1}`}
+              onClick={() =>
+                setSyntax({
+                  ...syntax,
+                  extra: extra.filter((_, j) => i !== j),
+                })
+              }
+            >
+              Remove
+            </Button>
+          </div>
+        ))}
+        <div className="settings-add">
+          <Button
+            disabled={extra.length >= 10}
+            onClick={() =>
+              setSyntax({
+                ...syntax,
+                extra: [...extra, { prefix: "", suffix: "" }],
+              })
+            }
+          >
+            Add format
+          </Button>
+        </div>
+      </SettingsGroup>
+      <SettingsGroup
+        title="Language exceptions"
+        description={
+          <>
+            Allow a specific placeholder to be left out in selected languages. For example, a
+            language without articles may not need <code>{"{article}"}</code>.
+          </>
+        }
+      >
+        {optional.length === 0 && (
+          <p className="settings-note">All placeholders are required in every language.</p>
+        )}
+        {optional.map((entry, i) => (
+          <div className="settings-repeat-row" key={i}>
+            <Field
+              label="Placeholder"
+              path={`syntax.optional.${i}.placeholder`}
+              hint="Include its opening and closing characters."
+            >
+              <Input
+                value={entry.placeholder}
+                placeholder="{article}"
+                required
+                maxLength={100}
+                onChange={(e) =>
+                  setOptional(
+                    optional.map((item, j) =>
+                      i === j ? { ...item, placeholder: e.target.value } : item,
+                    ),
+                  )
+                }
+              />
+            </Field>
+            <Field
+              label="Languages"
+              path={`syntax.optional.${i}.languages`}
+              hint="Language codes, separated by commas."
+            >
+              <Input
+                value={entry.languages}
+                placeholder="pl, tr, ja"
+                required
+                onChange={(e) =>
+                  setOptional(
+                    optional.map((item, j) =>
+                      i === j ? { ...item, languages: e.target.value } : item,
+                    ),
+                  )
+                }
+              />
+            </Field>
+            <Button
+              variant="ghost"
+              aria-label={`Remove language exception ${i + 1}`}
+              onClick={() => setOptional(optional.filter((_, j) => i !== j))}
+            >
+              Remove
+            </Button>
+          </div>
+        ))}
+        <div className="settings-add">
+          <Button
+            disabled={optional.length >= 50}
+            onClick={() => setOptional([...optional, { placeholder: "", languages: "" }])}
+          >
+            Add language exception
+          </Button>
+        </div>
+      </SettingsGroup>
+      <p className="settings-note">
+        Saving these rules rechecks existing translations for missing or changed placeholders.
+      </p>
+    </SaveForm>
   );
 }
 
@@ -352,7 +583,6 @@ const PLACEHOLDER_HELP: Record<(typeof PROMPT_PLACEHOLDERS)[number], string> = {
   "%customInstruction%": "Instructions for this job",
 };
 function Llm({ data }: { data: SettingsResult }) {
-  const { location } = useRoute();
   const [llm, setLlm] = useState(data.settings.llm);
   const meaning = llm.meaningCheck ?? {
     enabled: false,
@@ -367,49 +597,62 @@ function Llm({ data }: { data: SettingsResult }) {
   const update = <K extends keyof LlmSettings>(key: K, value: LlmSettings[K]) =>
     setLlm({ ...llm, [key]: value });
   return (
-    <SaveForm title="LLM translation" save={() => patchSettings({ llm })}>
+    <SaveForm
+      title="AI translation"
+      label="Save AI settings"
+      description="Choose when translations run and give the model guidance for your project."
+      save={() => patchSettings({ llm })}
+    >
       {!data.llmAvailable && (
         <p role="status">Translation is off. Enter a Gemini API key above to turn it on.</p>
       )}
-      <Fieldset className="settings-field-group">
-        <legend>Automatic translation</legend>
+      <SettingsGroup
+        title="Automatic translation"
+        description="These settings apply to uploads. Auto-translate asks each time."
+      >
         <Check
-          label="Reuse current translations of identical source strings before asking the LLM"
+          label="Reuse translations of identical source strings"
+          hint="Use current translations of matching source text before asking the model."
           checked={llm.translationMemory ?? false}
-          change={(v) => update("translationMemory", v)}
+          change={(value) => update("translationMemory", value)}
         />
         <Check
           label="Automatically translate on upload"
+          hint="Translate new source strings as soon as you upload them."
           checked={llm.autoTranslate}
-          change={(v) => update("autoTranslate", v)}
+          change={(value) => update("autoTranslate", value)}
         />
         <Check
-          label="When an upload changes the English, rewrite its green translations"
+          label="Update outdated unreviewed translations"
+          hint="Refresh unreviewed translations when an upload changes their source text."
           checked={llm.updateOutdated}
-          change={(v) => update("updateOutdated", v)}
+          change={(value) => update("updateOutdated", value)}
         />
         <Check
-          label="When an upload changes the English, propose updates for its proofread translations (they stay as they are until a manager accepts)"
+          label="Suggest updates to proofread translations"
+          hint="When an upload changes the source, create a suggestion for review. The proofread translation stays in place until a manager accepts."
           checked={llm.proposeForProofread}
-          change={(v) => update("proposeForProofread", v)}
+          change={(value) => update("proposeForProofread", value)}
         />
-        <p className="field-hint">These apply to uploads only. Auto-translate asks each time.</p>
-      </Fieldset>
-      <Fieldset className="settings-field-group">
-        <legend>Meaning checks</legend>
+      </SettingsGroup>
+      <SettingsGroup
+        title="Meaning checks"
+        description="Compare a translation with its source and flag differences as warnings. You can also run checks for a language, file, or string."
+      >
         <Check
-          label="Automatically compare translation meaning with the source"
+          label="Automatically compare translation meaning"
           checked={meaning.enabled}
           change={(enabled) => updateMeaning({ enabled })}
         />
-        <SelectField
-          label="Which translations"
-          value={meaning.colours}
-          onChange={(colours) => updateMeaning({ colours: colours as "blue" | "all" })}
-        >
-          <option value="blue">Proofread translations only</option>
-          <option value="all">Every colour</option>
-        </SelectField>
+        <Field label="Which translations" path="llm.meaningCheck.colours">
+          <Select
+            value={meaning.colours}
+            onChange={(event) => updateMeaning({ colours: event.target.value as "blue" | "all" })}
+          >
+            <option value="blue">Proofread translations only</option>
+            <option value="all">Every colour</option>
+          </Select>
+        </Field>
         <Check
           label="Check on save"
           checked={meaning.onSave}
@@ -426,8 +669,9 @@ function Llm({ data }: { data: SettingsResult }) {
           change={(countsAgainstBudget) => updateMeaning({ countsAgainstBudget })}
         />
         <Field
-          label="Meaning-check model (blank uses the project model)"
+          label="Meaning-check model"
           path="llm.meaningCheck.model"
+          hint="Leave blank to use the project model."
         >
           <Input
             value={meaning.model}
@@ -435,26 +679,26 @@ function Llm({ data }: { data: SettingsResult }) {
             maxLength={200}
           />
         </Field>
-        <p className="field-hint">
-          Meaning differences are warnings. Run checks manually for a language, file or string.
-        </p>
-      </Fieldset>
-      <Fieldset className="settings-field-group">
-        <legend>Model & budget</legend>
+      </SettingsGroup>
+      <SettingsGroup title="Model & budget">
         <Field label="Model" path="llm.model">
           <Input
             list="llm-models"
             value={llm.model}
             required
-            onChange={(e) => update("model", e.target.value)}
+            onChange={(event) => update("model", event.target.value)}
           />
           <datalist id="llm-models">
-            {data.models.map((m) => (
-              <option key={m} value={m} />
+            {data.models.map((model) => (
+              <option key={model} value={model} />
             ))}
           </datalist>
         </Field>
-        <Field label="Requests in parallel" path="llm.concurrency">
+        <Field
+          label="Requests in parallel"
+          path="llm.concurrency"
+          hint="How many translation requests can run at the same time."
+        >
           <Input
             type="number"
             min={1}
@@ -464,7 +708,11 @@ function Llm({ data }: { data: SettingsResult }) {
             onChange={(event) => update("concurrency", Number(event.target.value))}
           />
         </Field>
-        <Field label="Monthly token budget (blank for unlimited)" path="llm.monthlyTokenBudget">
+        <Field
+          label="Monthly token budget"
+          path="llm.monthlyTokenBudget"
+          hint="Stop new translation jobs when the budget is reached. Leave blank for no limit."
+        >
           <Input
             type="number"
             min={1}
@@ -478,8 +726,12 @@ function Llm({ data }: { data: SettingsResult }) {
             }
           />
         </Field>
-      </Fieldset>
-      <Field label="Project instructions" path="llm.projectInstructions">
+      </SettingsGroup>
+      <Field
+        label="Project instructions"
+        path="llm.projectInstructions"
+        hint="Describe tone, terminology, and any rules every language should follow."
+      >
         <TextArea
           autoGrow={false}
           rows={4}
@@ -487,105 +739,90 @@ function Llm({ data }: { data: SettingsResult }) {
           onChange={(e) => update("projectInstructions", e.target.value)}
         />
       </Field>
-      <Details className="settings-disclosure">
-        <Summary>Customize the prompt</Summary>
-        <div className="settings-disclosure-body">
-          <Field label="Prompt template" path="llm.promptTemplate">
-            <TextArea
-              autoGrow={false}
-              className="prompt-template"
-              rows={16}
-              value={llm.promptTemplate}
-              onChange={(e) => update("promptTemplate", e.target.value)}
+      <div id="reference-languages">
+        <LanguagePicker
+          label="Reference languages"
+          value={llm.context.otherLanguages}
+          onChange={(v) => update("context", { ...llm.context, otherLanguages: v ?? [] })}
+        />
+      </div>
+      {(
+        [
+          ["identicalStrings", "Include identical proofread strings"],
+          ["fileContext", "Include file context"],
+          ["glossary", "Include glossary"],
+        ] as const
+      ).map(([key, label]) => (
+        <Check
+          key={key}
+          label={label}
+          checked={llm.context[key]}
+          change={(v) => update("context", { ...llm.context, [key]: v })}
+        />
+      ))}
+      <Details className="settings-advanced">
+        <Summary>Advanced: prompt and performance</Summary>
+        <Field label="Prompt template" path="llm.promptTemplate">
+          <TextArea
+            autoGrow={false}
+            className="prompt-template"
+            rows={16}
+            value={llm.promptTemplate}
+            onChange={(e) => update("promptTemplate", e.target.value)}
+          />
+        </Field>
+        <ConfirmButton
+          variant="secondary"
+          title="Reset the prompt?"
+          description="This replaces the draft with Quaso’s default prompt. Save to apply it."
+          onConfirm={() => {
+            update("promptTemplate", data.defaultPromptTemplate);
+            return Promise.resolve();
+          }}
+        >
+          Reset to default
+        </ConfirmButton>
+        <Details>
+          <Summary>Prompt placeholders</Summary>
+          <dl>
+            {PROMPT_PLACEHOLDERS.map((p) => (
+              <div key={p}>
+                <dt>
+                  <code>{p}</code>
+                </dt>
+                <dd>{PLACEHOLDER_HELP[p]}</dd>
+              </div>
+            ))}
+          </dl>
+        </Details>
+        {(
+          [
+            ["batchSize", "Strings per batch", 1, 100],
+            ["neighbours", "Neighbouring strings", 0, 20],
+            ["retries", "Retries", 0, 5],
+          ] as const
+        ).map(([key, label, min, max]) => (
+          <Field key={key} label={label} path={`llm.${key}`}>
+            <Input
+              type="number"
+              min={min}
+              max={max}
+              required
+              value={llm[key]}
+              onChange={(e) => update(key, e.target.valueAsNumber)}
             />
           </Field>
-          <ConfirmButton
-            variant="secondary"
-            title="Reset the prompt?"
-            description="This replaces the draft with Quaso’s default prompt. Save to apply it."
-            onConfirm={() => {
-              update("promptTemplate", data.defaultPromptTemplate);
-              return Promise.resolve();
-            }}
+        ))}
+        <Field label="Safety level" path="llm.safety">
+          <Select
+            value={llm.safety}
+            onChange={(e) => update("safety", e.target.value as LlmSettings["safety"])}
           >
-            Reset to default
-          </ConfirmButton>
-          <Details>
-            <Summary>Prompt placeholders</Summary>
-            <dl>
-              {PROMPT_PLACEHOLDERS.map((p) => (
-                <div key={p}>
-                  <dt>
-                    <code>{p}</code>
-                  </dt>
-                  <dd>{PLACEHOLDER_HELP[p]}</dd>
-                </div>
-              ))}
-            </dl>
-          </Details>
-        </div>
-      </Details>
-      <Details
-        className="settings-disclosure"
-        open={location.hash === "#reference-languages" || undefined}
-      >
-        <Summary>Translation context & reference languages</Summary>
-        <div className="settings-disclosure-body">
-          <div id="reference-languages">
-            <LanguagePicker
-              label="Reference languages"
-              value={llm.context.otherLanguages}
-              onChange={(v) => update("context", { ...llm.context, otherLanguages: v ?? [] })}
-            />
-          </div>
-          {(
-            [
-              ["identicalStrings", "Include identical proofread strings"],
-              ["fileContext", "Include file context"],
-              ["glossary", "Include glossary"],
-            ] as const
-          ).map(([key, label]) => (
-            <Check
-              key={key}
-              label={label}
-              checked={llm.context[key]}
-              change={(v) => update("context", { ...llm.context, [key]: v })}
-            />
-          ))}
-        </div>
-      </Details>
-      <Details className="settings-disclosure">
-        <Summary>Advanced translation settings</Summary>
-        <div className="settings-disclosure-body">
-          {(
-            [
-              ["batchSize", "Strings per batch", 1, 100],
-              ["neighbours", "Neighbouring strings", 0, 20],
-              ["retries", "Retries", 0, 5],
-            ] as const
-          ).map(([key, label, min, max]) => (
-            <Field key={key} label={label} path={`llm.${key}`}>
-              <Input
-                type="number"
-                min={min}
-                max={max}
-                required
-                value={llm[key]}
-                onChange={(e) => update(key, e.target.valueAsNumber)}
-              />
-            </Field>
-          ))}
-          <Field label="Safety level" path="llm.safety">
-            <Select
-              value={llm.safety}
-              onChange={(e) => update("safety", e.target.value as LlmSettings["safety"])}
-            >
-              {["permissive", "default", "strict"].map((s) => (
-                <option key={s}>{s}</option>
-              ))}
-            </Select>
-          </Field>
-        </div>
+            {["permissive", "default", "strict"].map((s) => (
+              <option key={s}>{s}</option>
+            ))}
+          </Select>
+        </Field>
       </Details>
     </SaveForm>
   );
@@ -607,12 +844,19 @@ function LanguageRow({
       save={async () => {
         await request(`/languages/${encodeURIComponent(language.tag)}`, {
           method: "PATCH",
-          body: validated(UpdateLanguageRequest, { instructions, pluralOverride: override }),
+          body: validated(UpdateLanguageRequest, {
+            instructions,
+            pluralOverride: override,
+          }),
         });
         await refresh();
       }}
     >
-      <Field label="Language instructions" path="instructions">
+      <Field
+        label="Language instructions"
+        path="instructions"
+        hint="Guidance for this language, in addition to the project instructions."
+      >
         <TextArea
           autoGrow={false}
           rows={3}
@@ -655,7 +899,9 @@ function LanguageRow({
         description="The language disappears from the project. Its translations and history are kept and return if you add it again."
         onConfirm={async () => {
           try {
-            await request(`/languages/${encodeURIComponent(language.tag)}`, { method: "DELETE" });
+            await request(`/languages/${encodeURIComponent(language.tag)}`, {
+              method: "DELETE",
+            });
             await refresh();
             await queryCache.invalidate(["project"]);
           } catch (e) {
@@ -721,7 +967,11 @@ function FileContext({ file }: { file: SettingsResult["files"][number] }) {
         })
       }
     >
-      <Field label="File context" path="context">
+      <Field
+        label="File context"
+        path="context"
+        hint="Explain where these strings appear so the model can translate them in context."
+      >
         <TextArea
           autoGrow={false}
           rows={3}
@@ -741,11 +991,13 @@ function LimitRow({ string }: { string: StringSummary }) {
       save={() =>
         request(`/strings/${string.id}`, {
           method: "PATCH",
-          body: validated(UpdateStringRequest, { maxLength: limit === "" ? null : Number(limit) }),
+          body: validated(UpdateStringRequest, {
+            maxLength: limit === "" ? null : Number(limit),
+          }),
         })
       }
     >
-      <Field label="Maximum characters (empty means no limit)" path="maxLength">
+      <Field label="Maximum characters" path="maxLength" hint="Leave blank for no limit.">
         <Input
           type="number"
           min="0"
@@ -839,10 +1091,10 @@ function ApiKeys() {
         <Field label="Key name" path="name">
           <Input value={name} onChange={(e) => setName(e.target.value)} required />
         </Field>
-        <Field label="Scope" path="scope">
+        <Field label="Permissions" path="scope" hint="Choose what this key is allowed to do.">
           <Select value={scope} onChange={(e) => setScope(e.target.value)}>
-            <option value="read">Read</option>
-            <option value="upload">Upload</option>
+            <option value="read">Download translations</option>
+            <option value="upload">Download, upload & translate</option>
           </Select>
         </Field>
       </SaveForm>
@@ -869,7 +1121,9 @@ function ApiKeys() {
               description="Any scripts using this key will lose access immediately."
               onConfirm={async () => {
                 try {
-                  await request(`/api-tokens/${key.id}`, { method: "DELETE" });
+                  await request(`/api-tokens/${key.id}`, {
+                    method: "DELETE",
+                  });
                   await tokens.refresh();
                 } catch (e) {
                   setError(e);
@@ -914,7 +1168,10 @@ function SecretCredential({
         title={label}
         label={status.set ? "Replace" : "Set key"}
         save={async () => {
-          await request(path, { method: "PUT", body: validated(SetSecretRequest, { value }) });
+          await request(path, {
+            method: "PUT",
+            body: validated(SetSecretRequest, { value }),
+          });
           setValue("");
           await refresh();
         }}
@@ -947,7 +1204,10 @@ function SecretCredential({
                   method: "POST",
                   body: {},
                 });
-                setTestResult({ updatedAt: result.keyUpdatedAt, models: result.models });
+                setTestResult({
+                  updatedAt: result.keyUpdatedAt,
+                  models: result.models,
+                });
               } catch (error) {
                 setTestError({ updatedAt: status.updatedAt, error });
               } finally {
@@ -1040,7 +1300,10 @@ function EmailConfiguration({
           <Select
             value={email.provider}
             onChange={(event) => {
-              setEmail({ ...email, provider: event.target.value as typeof email.provider });
+              setEmail({
+                ...email,
+                provider: event.target.value as typeof email.provider,
+              });
               setError(undefined);
             }}
           >
@@ -1112,13 +1375,12 @@ function LanguageRequestSettings({ data }: { data: SettingsResult }) {
         title="Language requests"
         save={() => patchSettings({ languageRequestsEnabled: enabled })}
       >
-        <Label>
-          <Checkbox checked={enabled} onChange={(event) => setEnabled(event.target.checked)} />
-          Let members request and vote for languages
-        </Label>
-        <p className="muted">
-          Turning requests off hides the board and stops new votes. Existing requests are kept.
-        </p>
+        <Check
+          label="Let members request and vote for languages"
+          checked={enabled}
+          change={setEnabled}
+          hint="Turning this off hides the request board and stops new votes. Existing requests are kept."
+        />
       </SaveForm>
       {data.settings.languageRequestsEnabled && <LanguageRequestsAdmin />}
     </>
@@ -1130,10 +1392,15 @@ function Retention({ data }: { data: SettingsResult }) {
   const [backupRetentionDays, setBackupRetentionDays] = useState(data.settings.backupRetentionDays);
   return (
     <SaveForm
-      title="Retention"
+      title="History & retention"
+      description="Choose how long to keep older files and local backups."
       save={() => patchSettings({ fileHistoryDays, backupRetentionDays })}
     >
-      <Field label="File history days" path="fileHistoryDays">
+      <Field
+        label="File history days"
+        path="fileHistoryDays"
+        hint="How long to keep replaced file versions. Set to 0 to remove them at the next cleanup. Current files are always kept."
+      >
         <Input
           type="number"
           min={0}
@@ -1143,11 +1410,11 @@ function Retention({ data }: { data: SettingsResult }) {
           onChange={(event) => setFileHistoryDays(Number(event.target.value))}
         />
       </Field>
-      <p>
-        Keep replaced file versions for this many days. Zero removes replaced versions at the next
-        cleanup. Current files are always kept.
-      </p>
-      <Field label="Backup retention days" path="backupRetentionDays">
+      <Field
+        label="Backup retention days"
+        path="backupRetentionDays"
+        hint="Applies at the next backup or cleanup. Local backups always keep the most recent 48 hours."
+      >
         <Input
           type="number"
           min={1}
@@ -1157,142 +1424,46 @@ function Retention({ data }: { data: SettingsResult }) {
           onChange={(event) => setBackupRetentionDays(Number(event.target.value))}
         />
       </Field>
-      <p>
-        Changes apply at the next backup or cleanup. Local backups always keep the most recent 48
-        hours.
-      </p>
     </SaveForm>
   );
 }
 
-const SETTINGS_SECTIONS = [
-  {
-    id: "general",
-    label: "Project details",
-    group: "Project",
-    description: "Give your project a name, context and placeholder rules.",
-  },
-  {
-    id: "languages",
-    label: "Languages",
-    group: "Project",
-    description:
-      "Choose the languages you support and give translators language-specific guidance.",
-  },
-  {
-    id: "files",
-    label: "Files & length limits",
-    group: "Project",
-    description: "Explain where strings appear and how much space translations can use.",
-  },
-  {
-    id: "requests",
-    label: "Language requests",
-    group: "Project",
-    description: "Let your community help decide which languages to add next.",
-  },
-  {
-    id: "llm",
-    label: "AI translation",
-    group: "Connections",
-    description: "Connect Gemini, guide the translator and control automatic translation.",
-  },
-  {
-    id: "email",
-    label: "Email delivery",
-    group: "Connections",
-    description: "Connect email for account verification, sign-in links and password resets.",
-  },
-  {
-    id: "keys",
-    label: "API keys",
-    group: "Connections",
-    description: "Give your CLI and continuous integration access to the project.",
-  },
-  {
-    id: "backups",
-    label: "Backups",
-    group: "Data",
-    description: "Download a copy of the project and check your automatic backups.",
-  },
-  {
-    id: "retention",
-    label: "History & retention",
-    group: "Data",
-    description: "Choose how long to keep replaced files and project backups.",
-  },
-] as const;
-
 function SettingsContent() {
-  useDocumentTitle("Settings");
-  const { query: routeQuery, setQuery } = useRoute();
+  const { query: routeQuery } = useRoute();
   const query = useQuery(["settings"], ({ fresh }) =>
     request<SettingsResult>("/settings", { fresh }),
   );
   const secrets = useQuery(["settings-secrets"], ({ fresh }) =>
     request<SecretsResult>("/settings/secrets", { fresh }),
   );
-  const current =
-    SETTINGS_SECTIONS.find((entry) => entry.id === routeQuery.section) ?? SETTINGS_SECTIONS[0];
-  const section = current.id;
+  const currentSection =
+    SETTINGS_SECTIONS.find((item) => item.id === routeQuery.section) ?? SETTINGS_SECTIONS[0];
+  const section = currentSection.id;
+  useDocumentTitle(`${currentSection.label} · Settings`);
   return (
     <div className="page management-page settings-page">
-      <div className="page-head workspace-heading">
-        <div>
-          <H1 ui>Settings</H1>
-          <p className="muted">Make Quaso work the way your team translates.</p>
-        </div>
-      </div>
-      {secrets.data && secrets.data.missingSecrets.length > 0 && (
-        <p role="alert">
-          This backup omitted credentials. Enter them again:{" "}
-          {secrets.data.missingSecrets.map((name) => SECRET_LABELS[name]).join(", ")}.
-        </p>
-      )}
-      {secrets.error !== undefined && (
-        <p role="alert">
-          {errorMessage(secrets.error)}{" "}
-          <Button onClick={() => void secrets.refresh().catch(() => {})}>
-            Retry loading credentials
-          </Button>
-        </p>
-      )}
       <div className="settings-layout">
-        <nav className="settings-navigation" aria-label="Settings sections">
-          {["Project", "Connections", "Data"].map((group) => (
-            <div className="settings-navigation-group" key={group}>
-              <p>{group}</p>
-              {SETTINGS_SECTIONS.filter((entry) => entry.group === group).map((entry) => (
-                <Link
-                  key={entry.id}
-                  to={href("/settings", { ...routeQuery, section: entry.id })}
-                  quiet
-                  aria-current={section === entry.id ? "page" : undefined}
-                >
-                  {entry.label}
-                </Link>
-              ))}
-            </div>
-          ))}
-        </nav>
-        <div className="settings-content">
-          <Label className="field settings-mobile-section">
-            Section
-            <Select
-              value={section}
-              onChange={(e) => setQuery({ section: e.target.value }, { replace: false })}
-            >
-              {SETTINGS_SECTIONS.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {entry.label}
-                </option>
-              ))}
-            </Select>
-          </Label>
-          <div className="settings-section-intro">
-            <H2 ui>{current.label}</H2>
-            <p className="muted">{current.description}</p>
-          </div>
+        <SettingsNavigation section={section} />
+        <div className="settings-content" key={section}>
+          <header className="settings-page-heading">
+            <p className="settings-eyebrow">Settings / {currentSection.group}</p>
+            <H1 ui>{currentSection.label}</H1>
+            <p className="muted">{currentSection.description}</p>
+          </header>
+          {secrets.data && secrets.data.missingSecrets.length > 0 && (
+            <p role="alert">
+              This backup omitted credentials. Enter them again:{" "}
+              {secrets.data.missingSecrets.map((name) => SECRET_LABELS[name]).join(", ")}.
+            </p>
+          )}
+          {secrets.error !== undefined && (
+            <p role="alert">
+              {errorMessage(secrets.error)}{" "}
+              <Button onClick={() => void secrets.refresh().catch(() => {})}>
+                Retry loading credentials
+              </Button>
+            </p>
+          )}
           {query.loading && <Loading label="Loading settings…" />}
           {query.error !== undefined && (
             <p role="alert">
@@ -1303,6 +1474,7 @@ function SettingsContent() {
           {query.data && (
             <>
               {section === "general" && <General data={query.data} />}
+              {section === "placeholders" && <Placeholders data={query.data} />}
               {section === "retention" && <Retention data={query.data} />}
               {section === "requests" && <LanguageRequestSettings data={query.data} />}
               {section === "languages" && (
@@ -1356,23 +1528,25 @@ function SettingsContent() {
               )}
               {section === "keys" && <ApiKeys />}
               {section === "backups" && (
-                <section className="management-section">
-                  <H2>Backups</H2>
-                  <p>
-                    Backups include user records and API key hashes. Keep them in private storage.
-                  </p>
-                  <p>
-                    <A href={apiUrl("/backup", { format: "sqlite" })} download>
-                      Download SQLite backup
-                    </A>
-                  </p>
-                  <p>
-                    <A href={apiUrl("/backup", { format: "json" })} download>
-                      Download JSON backup
-                    </A>
-                  </p>
+                <>
+                  <section className="management-section">
+                    <H2>Backups</H2>
+                    <p>
+                      Backups include user records and API key hashes. Keep them in private storage.
+                    </p>
+                    <p>
+                      <A href={apiUrl("/backup", { format: "sqlite" })} download>
+                        Download SQLite backup
+                      </A>
+                    </p>
+                    <p>
+                      <A href={apiUrl("/backup", { format: "json" })} download>
+                        Download JSON backup
+                      </A>
+                    </p>
+                  </section>
                   <AdminDetails backupsOnly />
-                </section>
+                </>
               )}
             </>
           )}
