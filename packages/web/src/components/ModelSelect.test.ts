@@ -51,3 +51,17 @@ test("without a list, a blank choice becomes the placeholder", () => {
   const html = render({ models: [], value: "", blankLabel: "The project model" });
   assertMatch(html, /placeholder="The project model"/);
 });
+
+test("the control keeps the labelling its field gives it, as a drop-down and as text", () => {
+  const labelled = { "aria-labelledby": "model-label", "aria-invalid": true };
+  const dropDown = renderToStaticMarkup(
+    createElement(ModelSelect, { models: MODELS, value: "", onChange: noop, ...labelled }),
+  );
+  const text = renderToStaticMarkup(
+    createElement(ModelSelect, { models: [], value: "", onChange: noop, ...labelled }),
+  );
+  assertMatch(dropDown, /aria-labelledby="model-label"/);
+  assertMatch(dropDown, /aria-invalid="true"/);
+  assertMatch(text, /aria-labelledby="model-label"/);
+  assertMatch(text, /aria-invalid="true"/);
+});
