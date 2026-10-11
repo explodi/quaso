@@ -250,24 +250,24 @@ browserTest(
     await press(page, "Enter");
     await waitFor(page, () => document.querySelector(".user-name") !== null);
     await page.goto(`${server.url}/settings?section=general`, { waitUntil: "networkidle0" });
-    await page.click('.settings-navigation a[href="/settings?section=retention"]');
+    await page.click('nav.settings-nav a[href="/settings?section=retention"]');
     await waitFor(page, () => new URLSearchParams(location.search).get("section") === "retention");
-    assertStringIncludes(await text(page, ".settings-section-intro"), "History & retention");
+    assertStringIncludes(await text(page, "header.settings-page-heading"), "History & retention");
     await page.goBack({ waitUntil: "networkidle0" });
     await waitFor(page, () => new URLSearchParams(location.search).get("section") === "general");
-    assertStringIncludes(await text(page, ".settings-section-intro"), "Project details");
+    assertStringIncludes(await text(page, "header.settings-page-heading"), "Project details");
     assert(
-      await page.$('.settings-navigation a[aria-current="page"][href="/settings?section=general"]'),
+      await page.$('nav.settings-nav a[aria-current="page"][href="/settings?section=general"]'),
     );
 
     await page.setViewport({ width: 360, height: 800 });
-    await page.select(".settings-mobile-section select", "retention");
+    await page.select("label.settings-mobile-nav > select", "retention");
     await waitFor(page, () => new URLSearchParams(location.search).get("section") === "retention");
     await page.goBack({ waitUntil: "networkidle0" });
     await waitFor(page, () => new URLSearchParams(location.search).get("section") === "general");
     assertEquals(
       await page.$eval(
-        ".settings-mobile-section select",
+        "label.settings-mobile-nav > select",
         (select) => (select as HTMLSelectElement).value,
       ),
       "general",
@@ -275,7 +275,7 @@ browserTest(
     await page.goForward({ waitUntil: "networkidle0" });
     await waitFor(page, () => new URLSearchParams(location.search).get("section") === "retention");
     await page.reload({ waitUntil: "networkidle0" });
-    assertStringIncludes(await text(page, ".settings-section-intro"), "History & retention");
+    assertStringIncludes(await text(page, "header.settings-page-heading"), "History & retention");
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     assertEquals(problems, []);
   },

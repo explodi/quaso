@@ -10,7 +10,9 @@ export interface ModelSelectProps {
   /** For a setting that may follow another model: the choice that leaves it blank. */
   blankLabel?: string;
   required?: boolean;
+  "aria-labelledby"?: string;
   "aria-describedby"?: string;
+  "aria-invalid"?: boolean;
 }
 
 /**
