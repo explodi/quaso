@@ -156,7 +156,7 @@ without an enabled translator. Human-check challenges may skip automated volunte
 the independent browser fixture tests for those controls. The production Compose case intentionally
 has no fake-provider override. The development instance exercises the fake translator instead.
 
-`.github/workflows/acceptance.yml` runs the disposable Compose case on main, nightly and manually.
+`.github/workflows/acceptance.yml` runs the disposable Compose case on main and manually.
 Optional staging jobs activate only when the following configuration is present:
 
 | Configuration                                                      | Purpose                                                                                             |
@@ -167,7 +167,6 @@ Optional staging jobs activate only when the following configuration is present:
 | Secrets `CLOUDFLARE_API_TOKEN`, optionally `CLOUDFLARE_ACCOUNT_ID` | Deploy the preconfigured staging Worker                                                             |
 | Secrets `STAGING_ADMIN_EMAIL`, `STAGING_ADMIN_PASSWORD`            | Dedicated administrator account for repeated acceptance runs                                        |
 | Secret `STAGING_SETUP_KEY`                                         | Initial claim only; must match the staging instance's setup key                                     |
-| Secret `STAGING_READ_API_KEY`                                      | Enable nightly authenticated response measurements with a read-scoped key                           |
 
 Configure the staging hostname, bucket and Worker secrets using the deployment guide before enabling
 those jobs. Acceptance restores the instance configuration in its clean checkout and waits for
@@ -176,15 +175,12 @@ when configured, or `<GitHub owner>/quaso`, and overrides the saved image for th
 The instance configuration contains resource identifiers, not API keys or passwords. The preflight
 exposes only enabled/disabled flags; it does not print configuration or secret values.
 
-`.github/workflows/nightly.yml` runs the large local stress case and workerd tests without
-credentials. The D1 performance case uses 3,000 strings in ten languages, with 30,000
-translations and 100 exported files; upload, export and browsing operations each have a 30-second
-budget. With the read key the workflow saves request timings as an artifact. Its manual
-**cold_starts** option adds `--cold-starts 3 --sleep 660`: three measurements, each after an
-eleven-minute idle period. Keep the container's sleep timeout below that interval. Acceptance and
-nightly workflows share a concurrency group so their own staging requests do not overlap; other
-users or uptime probes can still prevent sleep. The workflows do not claim to measure multiple
-geographic regions.
+Nothing runs on a schedule. The large local stress case runs with `QUASO_SMOKE=1 deno task test`
+(below); the D1 performance case, in `deno task cf:test`, uses 3,000 strings in ten languages, with
+30,000 translations and 100 exported files; upload, export and browsing operations each have a
+30-second budget. To time staging requests, run `scripts/measure.ts` by hand: `--cold-starts 3`
+with `--sleep 660` adds three measurements, each after an eleven-minute idle period. Keep the
+container's sleep timeout below that interval.
 
 ## Optional external and large tests
 
