@@ -5,14 +5,12 @@ name: Acceptance
 on:
   push:
     branches: [main, master]
-  schedule:
-    - cron: "17 2 * * *"
   workflow_dispatch:
 
 permissions:
   contents: read
 
-# Also used by nightly.yml, so cold-start measurements never overlap staging writes.
+# Runs never overlap their staging writes.
 concurrency:
   group: quaso-staging-checks
   cancel-in-progress: false
