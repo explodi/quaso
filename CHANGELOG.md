@@ -21,7 +21,7 @@ Release candidates are for deployment and migration testing. The team decides wh
 - LLM suggestions in the editor: managers who translate by hand turn on the **LLM suggestions**
   switch and see the LLM's translation under the input, while they type their own. The editor asks
   about the open string and the next three to do in one request, and keeps asking ahead as they
-  move on, so only the first string makes them wait. A suggestion asks the model for as little
+  move on to reduce waits. A suggestion asks the model for as little
   thinking as it allows, isn't retried and ends after 30 seconds. `POST /llm-suggestions` takes up
   to eight strings of a language.
 - Models are chosen from a drop-down of what the provider offers, in Settings (the project's and
