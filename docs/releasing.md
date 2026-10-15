@@ -45,7 +45,8 @@ chosen. With no new changes, final 1.0.0 notes copy the latest 1.0.0 candidate's
 changes made after a candidate under Unreleased.
 
 For a final release, run `deno task release 1.0.0`, repeat the checks, and have the team approve the
-candidate and migration results before running the printed tag/push commands. Never reuse a
+candidate and migration results before running the printed tag/push commands. Tag a commit that is
+already on main: the release and website workflows fail for any other commit. Never reuse a
 published version. If publication succeeds in one registry and fails in another, a new version might
 be needed. npm does not let you publish another package with the same name and version.
 

@@ -35,6 +35,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      # A pushed tag or a manual run from a branch must not publish an unmerged commit.
+      - name: The commit is on the default branch
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: git merge-base --is-ancestor "$GITHUB_SHA" "origin/$DEFAULT_BRANCH"
       - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
         with:
           deno-version-file: .dvmrc
