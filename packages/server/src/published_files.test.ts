@@ -97,7 +97,7 @@ test("published files: HTTP validators, nested history routes and CLI downloads 
       async (dir) => {
         const options = {
           cwd: dir,
-          env: { QUASO_HOSTNAME: "http://quaso.test", QUASO_API_KEY: token.secret },
+          env: { QUASO_HOSTNAME: "https://quaso.test", QUASO_API_KEY: token.secret },
           fetch: (input: RequestInfo | URL, init?: RequestInit) => app(new Request(input, init)),
         };
         const first = await runCli(["download", "--at", firstAt], options);
