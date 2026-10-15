@@ -440,8 +440,9 @@ Account for these limits when testing your deployment:
 - **One container** (`max_instances: 1`). Test with your project data and expected request load
   before choosing this setup.
 - **Request bodies:** source uploads and translation imports accept up to 50 MiB of JSON. Other
-  routes have their own limits. The backup restore script accepts files up to 1 GiB; the Cloudflare
-  account plan can impose a lower limit on the incoming request; check
+  routes have their own limits. The backup restore script accepts files up to 1 GiB, and at most
+  512 MiB of JSON once decompressed; the Cloudflare account plan can impose a lower limit on the
+  incoming request; check
   [request limits](https://developers.cloudflare.com/workers/platform/limits/#request-and-response-limits).
 - **The cache** keeps anonymous API reads for their `Cache-Control` time (30 seconds), and serves
   them stale for a while as it refreshes them. API requests with a cookie or API key bypass this

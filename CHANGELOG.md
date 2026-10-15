@@ -141,6 +141,12 @@ Release candidates are for deployment and migration testing. The team decides wh
 - In Safari, the links in the header's menus (Team, Settings, Account and the others) work: the
   menu closed before the click reached them, because Safari doesn't focus a clicked link.
 
+### Security
+
+- A restore reads at most 512 MiB of JSON, counted as a gzip backup decompresses, and refuses a
+  larger document with 413 `payload_too_large`. A small gzip body could otherwise expand until the
+  server ran out of memory, including through `POST /restore` with the setup key.
+
 ## [1.0.0-rc.2] - 2026-10-08
 
 ### Added
