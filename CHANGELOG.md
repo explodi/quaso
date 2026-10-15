@@ -21,7 +21,7 @@ Release candidates are for deployment and migration testing. The team decides wh
 - LLM suggestions in the editor: managers who translate by hand turn on the **LLM suggestions**
   switch and see the LLM's translation under the input, while they type their own. The editor asks
   about the open string and the next three to do in one request, and keeps asking ahead as they
-  move on, so only the first string makes them wait. A suggestion asks the model for as little
+  move on to reduce waits. A suggestion asks the model for as little
   thinking as it allows, isn't retried and ends after 30 seconds. `POST /llm-suggestions` takes up
   to eight strings of a language.
 - Models are chosen from a drop-down of what the provider offers, in Settings (the project's and
@@ -61,15 +61,14 @@ Release candidates are for deployment and migration testing. The team decides wh
   account page (Account → API keys), which says which CLI commands their role allows.
   Administrators still see and revoke everyone's keys in Settings, now with who created each.
 
-- On Cloudflare, the Worker serves the website itself, so it is on screen at once while the
-  container sleeps. Opening it starts the container, and the website shows "Waking up Quaso…" with
-  a progress bar, based on how long the last start took, until the server answers; a tab that
-  comes back after the container fell asleep shows the same above the page. `/wake` says whether
-  the server is ready.
-- The CLI waits for a sleeping instance before its first request, and says how far along the start
-  is, instead of timing out.
+- On Cloudflare, the Worker serves the website without waiting for the container to start.
+  Opening the website starts the container. A progress bar estimates the wait from the previous
+  start time. A tab reopened after the container sleeps shows the same progress above the page.
+  `/wake` reports whether the server is ready.
+- The CLI checks for a sleeping instance before its first request and waits for it to start,
+  showing progress. A failed or slow start can still time out.
 
-- Every push to main publishes its CLI to npm under the tag `main`, as
+- Successful builds on main publish the CLI to npm under the tag `main`, as
   `<version>.main.g<commit>` (`-main.g<commit>` after a stable version), next to the image's
   `sha-<commit>`.
 - `"untranslated": "omit"` in `quaso.config.json` (`untranslated=omit` on `GET /export`): download
@@ -87,9 +86,9 @@ Release candidates are for deployment and migration testing. The team decides wh
   such as `{name}` beside i18next's `{{count}}`, are found, checked, shown as chips and kept by the
   LLM like i18next's. Each string in the prompt lists its `placeholders`; instances on the
   previous default prompt get the new one.
-- `quaso import --allow-qa-errors` (`allowQaErrors` in `POST /imports`) imports values that fail
-  the quality checks with their QA errors, listed as `flagged`, instead of refusing them, so a
-  migration keeps every existing translation.
+- `quaso import --allow-qa-errors` (`allowQaErrors` in `POST /imports`) can import values that fail
+  quality checks. The result lists their errors as `flagged`. Other import rules, including the
+  handling of empty values, unknown keys, and existing proofread translations, still apply.
 - An outdated string shows a banner in the editor: the English changed after it was translated,
   players still get the old translation, how the English changed (as a word diff), and what to do
   about it. Wherever outdated counts appear, they say the same.

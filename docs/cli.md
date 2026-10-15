@@ -1,10 +1,9 @@
-# The CLI
+# CLI reference
 
-`quaso` is the command line of Quaso. It sends your game's English (source) files to your Quaso
-instance, asks the instance's LLM to translate them, writes the translations back into your
-repository, shows progress, holds a release back when translations are missing, and imports
-translations you already have. It works the same on a laptop, in CI and for AI agents: it never asks
-anything, it can print JSON, and its exit codes say what happened.
+`quaso` is Quaso's command-line interface (CLI). Use it to upload source files, start translation
+jobs, download translations, check progress, and import existing translations. Commands do not
+prompt for input. JSON output and exit codes support scripts, continuous integration (CI), and AI
+agents. For your first setup, follow [Add Quaso to your game](add-to-your-game.md).
 
 - [Installing](#installing)
 - [Connecting to your instance](#connecting-to-your-instance)
@@ -21,60 +20,70 @@ anything, it can print JSON, and its exit codes say what happened.
 
 ## Installing
 
-The CLI runs on Node 22 or later and on Deno 2.9 or later. It is one JavaScript file with no
-dependencies.
+This reference describes the current `main` branch. The examples install the `main` package tag.
+For a tagged release, use its matching CLI package and documentation; older releases can lack
+options described here.
 
-**With npm**, pin it in your game's `package.json`, so that everyone and CI use the same version:
+The CLI runs on Node 22 or later and on Deno 2.9 or later. The published package contains one JavaScript file with no
+separate runtime dependencies.
+
+**With npm**, install it in your game and commit the package lockfile so the team and CI use the
+same version:
 
 ```sh
-npm install --save-dev @quaso-i18n/cli
+npm install --save-dev @quaso-i18n/cli@main
 npx quaso status
 ```
 
-Or run a version without installing it: `npx @quaso-i18n/cli@1.0.0-rc.2 status`.
+Or run a version without installing it: `npx @quaso-i18n/cli@main status`.
 
 **With Deno**, run it from npm:
 
 ```sh
-deno run -A npm:@quaso-i18n/cli@1.0.0-rc.2 status
+deno run -A npm:@quaso-i18n/cli@main status
 ```
 
-To install a global `quaso` command, run `deno install --global -A --name quaso npm:@quaso-i18n/cli`.
+To install a global `quaso` command, run `deno install --global -A --name quaso npm:@quaso-i18n/cli@main`.
 
-Every commit on Quaso's main is also published, as `<version>.main.g<commit>` under the npm tag
-`main` (`npx @quaso-i18n/cli@main`), for instances deployed from main's `sha-<commit>` image: pin
-the CLI of the commit your instance runs. Deno may hold back an npm version published in the last
-day (its minimum dependency age), so a project that installs a fresh one with Deno needs
-`deno install --min-dep-age 0`.
+Successful main builds publish a version ending in `main.g<commit>` under the npm tag `main`.
+The separator is `.` after a version such as `1.0.0-rc.2`, or `-` after a version such as `1.0.0`.
+Use the package version for the commit your instance runs. Because `main` moves, keep the package
+lockfile and use `npm ci` for later installs.
+
+Deno can hold back npm packages published in the last day. To install a newly published package
+in a Deno project, use `deno install --min-dep-age 0`.
 
 ## Connecting to your instance
 
 Two environment variables connect the CLI to your team's Quaso instance:
 
-| Variable         | What it is                                                                                                                                |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `QUASO_HOSTNAME` | The instance, such as `translate.yourgame.com`. HTTPS is assumed; a full URL such as `http://localhost:8000` also works, for development. |
-| `QUASO_API_KEY`  | An API key of the instance. A key with the `read` scope can `download` and see `status`; `upload` and `import` need the `upload` scope.   |
+| Variable         | What it is                                                                                                                                                                       |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `QUASO_HOSTNAME` | The instance, such as `translate.yourgame.com`. HTTPS is assumed; a full URL such as `http://localhost:8000` also works, for development.                                        |
+| `QUASO_API_KEY`  | A key created by an administrator: `read` permits `download` and `status`; `upload` also permits `upload`, `import`, and `translate`. Creator permissions also apply; see below. |
 
 ```sh
 export QUASO_HOSTNAME=translate.yourgame.com
-export QUASO_API_KEY=qso_…
+export QUASO_API_KEY='your API key'
 ```
 
-Create your API key on the instance, on your account page (**Account → API keys**). A key does
-what you may do and no more: with a manager's role an upload key translates, and only an
-administrator's uploads and downloads. It follows your role, and stops working if your account is
-deleted. The key only ever comes from the environment: the CLI refuses a config file that contains
-one. A team that prefers to commit the hostname can put
+Create a key in **Account → API keys**. Replace the example hostname and key with your own
+values. A key is limited by both its scope and its creator's current role. An administrator's
+key supports the full CLI workflow. A manager's `upload` key can translate in their assigned
+languages, but cannot upload, import, download, or run `status`. The key stops working if its creator's
+account is deleted.
+
+The key comes only from the environment: the CLI refuses a config file that contains one.
+A team that prefers to commit the hostname can put
 `"hostname"` in the config file instead; `QUASO_HOSTNAME` wins over it.
 
-The CLI never follows redirects, so your key only goes where `QUASO_HOSTNAME` points. If the
+The CLI never follows redirects, so your key only goes to the configured host. If the
 instance redirects (for example from `http://` to `https://`), the error says which address to use.
 
 ## The config file
 
-The CLI reads `quaso.config.json` from the current folder, or from the nearest parent folder that
-has one. That folder is the project folder: every path in the config is relative to it, and the CLI
+For source file rules, see [File formats](file-formats.md). The CLI reads `quaso.config.json` from the current folder, or from the nearest parent folder that
+has one. That folder is the project folder: source and translation paths are relative to it, and the CLI
 never writes outside it. `quaso init` writes a starter file.
 
 ```json
@@ -95,22 +104,23 @@ never writes outside it. `quaso init` writes a starter file.
 }
 ```
 
-| Field                      | Meaning                                                                                                                                                                                                                                                          |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `$schema`                  | The JSON Schema of the file, which your instance publishes at `/schema/config-v1.json`, for completion and checks in editors. Optional.                                                                                                                          |
-| `hostname`                 | The instance, when `QUASO_HOSTNAME` isn't set. Optional.                                                                                                                                                                                                         |
-| `sourceLanguage`           | The language of your source files, as a BCP 47 tag such as `en`.                                                                                                                                                                                                 |
-| `languages`                | The languages to translate into: what `download` writes and `status --fail-on` counts. `upload` adds any of them that the instance lacks. Languages that the instance has and the config doesn't list, such as one volunteers are just starting, are left alone. |
-| `translationsInRepository` | Languages authored in the repository. Upload imports their selected local files as blue, replacing the instance's values. Must name target languages.                                                                                                            |
-| `languageMapping`          | The name a language has in your game, when it differs from its tag: `{ "zh-Hans": "zh-CN" }` writes Simplified Chinese to `src/locales/zh-CN/`. Optional.                                                                                                        |
-| `files`                    | Where the files are: one or more entries, each with `source`, `translation` and an optional `exclude`.                                                                                                                                                           |
-| `files[].source`           | A glob of the source files, such as `src/locales/en/**/*.json`.                                                                                                                                                                                                  |
-| `files[].translation`      | Where translations go, with `{lang}` (the language as your game names it, after `languageMapping`) and `{path}` (the source file's path below the folder where the glob starts).                                                                                 |
-| `files[].exclude`          | Globs of source files to leave out, relative to the project folder. Optional.                                                                                                                                                                                    |
-| `limits`                   | Maximum lengths, such as for app store fields, in user-perceived characters. `file` is the file's path as the instance knows it (below the folder where the glob starts). They win over limits set on the website. Optional.                                     |
-| `pluralExclusions`         | Groups of keys that only look like plurals (`menu.power_one`, `menu.power_other`), named without the category. Optional.                                                                                                                                         |
-| `outdated`                 | What `download` writes for translations of an older source: `"write"` (default), or `"omit"` so the app falls back to its source language.                                                                                                                       |
-| `untranslated`             | What `download` writes for a string that isn't translated: `"source"` (the default), its source text, so every file has every key; or `"omit"`, nothing, for apps whose i18n falls back to the source language by itself (i18next's `fallbackLng`). Optional.    |
+| Field                      | Meaning                                                                                                                                                                                                                                                                 |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `$schema`                  | The JSON Schema of the file, which your instance publishes at `/schema/config-v1.json`, for completion and checks in editors. Optional.                                                                                                                                 |
+| `hostname`                 | The instance, when `QUASO_HOSTNAME` isn't set. Optional.                                                                                                                                                                                                                |
+| `sourceLanguage`           | The language of your source files, as a BCP 47 tag such as `en`.                                                                                                                                                                                                        |
+| `languages`                | The languages to translate into: what `download` writes and `status --fail-on` counts. `upload` adds any of them that the instance lacks. Languages that the instance has and the config doesn't list, such as one volunteers are just starting, are left alone.        |
+| `descriptionSuffix`        | A suffix for JSON keys that describe another source string, such as `@description`. These description keys are not translated. Optional.                                                                                                                                |
+| `translationsInRepository` | Languages authored in the repository. Upload imports their selected local files as blue, replacing the instance's values. Must name target languages.                                                                                                                   |
+| `languageMapping`          | The name a language has in your game, when it differs from its tag: `{ "zh-Hans": "zh-CN" }` writes Simplified Chinese to `src/locales/zh-CN/`. Optional.                                                                                                               |
+| `files`                    | Where the files are: one or more entries, each with `source`, `translation` and an optional `exclude`.                                                                                                                                                                  |
+| `files[].source`           | A glob of the source files, such as `src/locales/en/**/*.json`.                                                                                                                                                                                                         |
+| `files[].translation`      | Where translations go, with `{lang}` (the language as your game names it, after `languageMapping`) and `{path}` (the source file's path below the folder where the glob starts).                                                                                        |
+| `files[].exclude`          | Globs of source files to leave out, relative to the project folder. Optional.                                                                                                                                                                                           |
+| `limits`                   | Maximum lengths, such as for app store fields, in user-perceived characters. `file` is the file's path as the instance knows it (below the folder where the glob starts). They win over limits set on the website. Optional.                                            |
+| `pluralExclusions`         | Groups of keys that only look like plurals (`menu.power_one`, `menu.power_other`), named without the category. Optional.                                                                                                                                                |
+| `outdated`                 | What `download` writes for translations of an older source: `"write"` (default), or `"omit"` so the app falls back to its source language.                                                                                                                              |
+| `untranslated`             | What `download` writes for a string that isn't translated: `"source"` (the default), its source text, so every file has every key; or `"omit"`, nothing, for apps that fall back to the source language themselves (for example, i18next with `fallbackLng`). Optional. |
 
 **Globs** use `/` on every system: `*` matches within a folder, `**` matches any number of folders,
 `?` one character, `{a,b}` either alternative, and `[abc]`, `[a-z]` or `[!abc]` one character of a
@@ -122,15 +132,11 @@ where its glob starts: with `src/locales/en/**/*.json`, the file `src/locales/en
 files can't have the same path on the instance. A single file works too:
 `"source": "locales/en.json"` with `"translation": "locales/{lang}.json"`.
 
-**Markdown documents.** A source file ending in `.md` or `.markdown` is a document: the whole
-file is one string, translated as one text, and the file is its identity, so its key is empty. Add
-a `files` entry for them beside the one for the JSON files, such as
-`"source": "text/en/**/*.md"` with `"translation": "text/{lang}/{path}"`. A translation must keep
-the document's placeholders and its paragraphs (blocks separated by blank lines): the quality
-checks compare the number of paragraphs instead of line breaks, and leave the Markdown syntax to
-the translator. Downloads write the translation with one final newline, so an editor's final
-newline never counts as a change. `limits`, `pluralExclusions` and `--rename` don't apply to
-documents.
+**Markdown documents.** Add a file rule such as `"source": "text/en/**/*.md"` with
+`"translation": "text/{lang}/{path}"`. Each `.md` or `.markdown` file is one translatable string;
+its key is empty because its file path identifies it. `limits`, `pluralExclusions`, and `--rename`
+do not apply to documents. See [File formats](file-formats.md) for paragraph checks and output
+formatting.
 
 **Translations stay out of the source globs.** A `translation` pattern must not write where a
 `source` glob looks, or the next upload would send the German files as English ones. The CLI refuses
@@ -177,7 +183,7 @@ reported fields and language proposals before uploading. It converts `%two_lette
 `%locale%` and `%language%`, per-file `languages_mapping`, ignore patterns and file paths.
 `**/%original_file_name%` preserves nested paths below the source glob's base;
 `%original_path%/%original_file_name%` includes that base and requires
-`preserve_hierarchy: true`. These semantics follow [Crowdin's path and mapping rules](https://crowdin.github.io/crowdin-cli/advanced).
+`preserve_hierarchy: true`. This behavior follows [Crowdin's path and mapping rules](https://crowdin.github.io/crowdin-cli/advanced).
 Layouts that would flatten recursive source paths and unsupported placeholders are reported
 and skipped. Conversion fails without writing when no file entries can be converted.
 
@@ -190,21 +196,21 @@ and its credentials are never copied into the config or printed in YAML errors.
 ### `quaso upload`
 
 Sends every source file to the instance, unchanged, with the config's languages, limits and plural
-exclusions, and prints what was added, changed and removed. The instance parses the files, so a fix
-in how files are read never needs a new CLI.
+exclusions, and prints what was added, changed and removed. The instance parses the files and checks their contents.
 
 Each upload includes two paths: the identity below the source glob's base (`menu.json`) and
 its display path relative to `quaso.config.json` (`src/locales/en/menu.json`). Moving that display
 path preserves translations and history. Download and import still use the identity path.
 
-| Option               | Meaning                                                                                                                                                                                                                                                                                  |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--dry-run`          | Compute and show the changes without saving them.                                                                                                                                                                                                                                        |
-| `--file <path>`      | Upload only this file: its path on the instance (`common.json`) or its local path. Repeatable. The other files stay as they are. Without `--file`, files missing from the upload are hidden on the instance (never deleted; they come back with their translations when uploaded again). |
-| `--rename <old=new>` | Move a key's translations and history to its new name: `old=new`, or `file:old=new` when the key isn't unique. A key with `=` in it is written as a JSON string: `"x = y"=equation`. Repeatable.                                                                                         |
-| `--wait`             | Wait for the automatic translation job the upload queues, if any, as [`quaso translate`](#quaso-translate) does: progress on stderr, then the strings that failed, with exit code 6.                                                                                                     |
+| Option                                 | Meaning                                                                                                                                                                                                                                                                                  |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--dry-run`                            | Compute and show the changes without saving them.                                                                                                                                                                                                                                        |
+| `--file <path>`                        | Upload only this file: its path on the instance (`common.json`) or its local path. Repeatable. The other files stay as they are. Without `--file`, files missing from the upload are hidden on the instance (never deleted; they come back with their translations when uploaded again). |
+| `--rename <old=new>`                   | Move a key's translations and history to its new name: `old=new`, or `file:old=new` when the key isn't unique. A key with `=` in it is written as a JSON string: `"x = y"=equation`. Repeatable.                                                                                         |
+| `--import-translations <lang[:state]>` | Import selected local translation files after upload. State: `blue` (default) or `green`. Repeatable, or a comma list. Existing blue values stay unless the language is in `translationsInRepository`.                                                                                   |
+| `--wait`                               | Wait for the automatic translation job the upload queues, if any, as [`quaso translate`](#quaso-translate) does: progress on stderr, then the strings that failed, with exit code 6.                                                                                                     |
 
-When a removed key and an added key have the same English, the output suggests a rename and prints
+When a removed key and an added key have the same source text, the output suggests a rename and prints
 the exact command, quoted for the shell:
 
 ```text
@@ -213,30 +219,30 @@ Possible renames (a removed key and an added key with the same English):
     quaso upload --rename common.json:saved=gameSaved
 ```
 
-Uploading the same files twice changes nothing. A file that isn't valid JSON, or has a duplicate
+Uploading unchanged source files preserves their revision. A JSON file that has invalid syntax or a duplicate
 key, stops the upload with exit code 5 and its place:
 `src/locales/en/menus.json:3:19: trailing comma is not allowed`.
 
-When the instance translates automatically (a setting, on by default, when it has an LLM), the
-upload queues a translation job for the added and changed strings, and says so. It also updates
-outdated translations that aren't proofread, and proposes updates for proofread ones. With `--wait`,
-the command waits for that job.
+When automatic translation is enabled and a Gemini key is configured, upload queues a job for
+new and changed strings. Automatic translation is enabled by default. Separate settings control
+updates to outdated green translations and proposals for outdated blue translations; both are on
+by default. Use `--wait` to wait for the job.
 
-Local translations for new or changed keys appear in upload output with a ready-to-run
+Local translations for new, changed, or restored keys appear in upload output with an import
 `quaso import --as blue --language <tag> --file <file>` command. Use
 `quaso upload --import-translations es:blue` (or `es:green`) to import selected local files in the
-same run. Explicit imports preserve existing blue translations. For a language authored in Git,
+same run. Explicit imports preserve existing blue translations. For a language maintained in your repository,
 set `"translationsInRepository": ["es"]`; uploads import its selected files as blue every time,
-including unchanged source uploads, replacing the instance's values and retaining identical-source
-wording. Review QA refusals printed by the command; exit code 6 means some values were refused.
+including unchanged source uploads, replacing the instance's values and keeping text identical to the source.
+This config setting takes precedence over `--import-translations` for the same language. Review QA refusals printed by the command; exit code 6 means some values were refused.
 Dry runs report the import plan without importing.
 
 Per-string descriptions can live beside the source in `common.descriptions.json`, with matching
-nested key paths and text values. Upload sends them as metadata, excludes sidecars from source
+nested key paths and text values. Upload sends them as metadata, excludes these description files from source
 strings, and reports descriptions whose keys have no source. Both files stay unchanged. For plural
 strings, use the group's base key. Alternatively set `"descriptionSuffix": "@description"` and
 write `"bridge@description": "The bridge spans the canal"` beside `"bridge"` in the source file;
-annotation keys are excluded from translations and downloaded game files. Descriptions may contain
+description keys are excluded from translations and downloaded game files. Descriptions may contain
 up to 4,000 characters. Missing entries preserve descriptions written on the website; empty text
 clears them. The editor and model prompts receive the saved descriptions.
 
@@ -245,10 +251,12 @@ clears them. The editor and model prompts receive the saved descriptions.
 Writes every language's files where the config's `translation` pattern says. Strings that aren't
 translated yet are written in the source language, so the game always has every key; with
 `"untranslated": "omit"` in the config they are left out instead, as are the plural forms a
-translation lacks, and an array with an untranslated element (the app then falls back to the
-source language's array). `--at` can't be combined with `omit`: published versions are stored with
-the source text. Files whose
-content hasn't changed are left alone: a second download writes nothing.
+translation lacks. An array with an untranslated element is also left out. Configure your app
+to fall back to the source language before using `omit`. `--at` refuses both omission settings because it reads stored published files. Files whose content has not changed are left alone: a second download writes nothing.
+
+By default, a normal download reads current accepted translations, including green, blue, and outdated values.
+It does not wait for publication and does not include pending suggestions. Use
+`status --fail-on outdated,green` if your release requires current, proofread translations.
 
 Downloads list every older-source translation included, with its language, file, key and the
 source file's latest upload revision, in normal output, dry runs and JSON. Run `quaso translate`
@@ -259,11 +267,12 @@ Historical `--at` downloads preserve the original bytes and refuse either omissi
 A document (a Markdown file) with nothing to write, because it is untranslated with
 `"untranslated": "omit"` or outdated with `"outdated": "omit"`, is deleted from the repository
 instead of being written empty, and listed as deleted, so the app falls back to its source
-language. A document edited in the repository is kept, like any local edit.
+language. Local edits to a document are protected unless you pass `--overwrite-local`.
 
 | Option              | Meaning                                                                                                                                                                                               |
 | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--dry-run`         | List what would be written or deleted, without changing anything.                                                                                                                                     |
+| `--overwrite-local` | Replace local changes. Review or import them first.                                                                                                                                                   |
+| `--dry-run`         | List what would be written, deleted, or kept because of local edits, without changing anything.                                                                                                       |
 | `--at <UTC time>`   | Download the published versions current at this time, such as `2026-09-01T00:00Z`.                                                                                                                    |
 | `--language <lang>` | Only these languages. Repeatable, or a comma list. Default: the config's `languages`.                                                                                                                 |
 | `--file <path>`     | Only this file: its path on the instance or its source file's local path (in every language), or a translation file's local path (in that language only). Repeatable.                                 |
@@ -274,26 +283,33 @@ The CLI computes every path itself and checks all of them before it writes the f
 naming a translation file of another language than `--language` is an error.
 
 `--at` reads stored published bytes, so later translation edits do not change the result.
-The instance publishes after five seconds without download-changing writes, capped at one minute.
+The instance publishes after five seconds without writes that change the downloaded content, capped at one minute.
 Only versions still in history are available; a missing version object returns `410 expired`.
 Local path checks and the config's language and file selection still apply.
 
 Downloads keep the last written values in `.quaso/download-state`, scoped to the instance and
-local file. When a download would change a hand-edited value, it lists `local edit`, keeps the
+local file. When a download would change a locally changed value, it lists `local edit`, keeps the
 whole file and returns exit code 6. Other files can still download. `--dry-run` lists conflicts
-without changing files or the baseline. Import local fixes with `quaso import --as blue`, or use
+without changing files or the saved comparison values; a dry run returns exit code 0 even when it lists local edits. Import local fixes with `quaso import --as blue`, or use
 `--overwrite-local` after reviewing them. On the first download, existing values that match
-neither the incoming values nor source fallbacks are treated as local edits. Keep `.quaso/`
-ignored by Git; it contains local state, not project source.
+neither the incoming values nor source values are treated as local edits. Keep `.quaso/`
+ignored by Git; it contains local state.
+
+`--prune` does not check local edits in files whose source no longer exists. Review its dry-run
+list before allowing those deletions.
 
 ### `quaso translate`
 
-Asks the instance's LLM to translate the untranslated strings of the config's languages (or
-`--language`), in every file (or `--file`), and waits for it. Outdated translations (made for an
-English that has changed since) are updated too; proofread (blue) translations never change: an
-outdated one gets a proposal that a manager reviews. This doesn't depend on the upload settings.
-Every result goes through the quality checks, like a person's translation, and a string whose result
-keeps failing them stays untranslated.
+Asks the instance's large language model (LLM) to translate the untranslated strings of the config's languages (or
+`--language`), in every file (or `--file`), and waits for it. Outdated translations are updated too;
+proofread (blue) translations never change: an outdated one gets a proposal that a manager reviews.
+If **Reuse translations of identical source strings** is enabled, a job can copy a current
+matching translation as green before asking the model. This setting is off by default.
+Every result goes through the quality checks. Results that keep failing are not saved; any
+previously accepted translation remains.
+
+This command updates outdated translations regardless of the automatic translation settings used
+for uploads.
 
 ```text
 Starting the translation of de, fr, pl on https://translate.yourgame.com…
@@ -305,22 +321,21 @@ Strings that stayed untranslated (1):
   src/locales/pl/store.json › title (pl): at most 30 characters; this has 34
 ```
 
-| Option                 | Meaning                                                                                                                 |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `--language <lang>`    | Only these languages. Repeatable, or a comma list. Default: the config's `languages`.                                   |
-| `--file <path>`        | Only this file: its path on the instance (`common.json`) or its source file's local path. Repeatable.                   |
-| `--retranslate`        | Also translate green (translated, not proofread) strings again. Blue (proofread) strings never change.                  |
-| `--qa`                 | Also translate again the green strings that fail the quality checks, such as values imported with `--allow-qa-errors`.  |
-| `--instruction <text>` | An instruction for this run, such as `"Address the player informally"`. It comes after the instance's own instructions. |
-| `--model <name>`       | The model for this run, instead of the instance's, such as `gemini-2.5-pro`.                                            |
-| `--no-wait`            | Start the job and exit. The instance runs it; `quaso status` shows the result.                                          |
-| `--dry-run`            | Count the strings and words, and estimate the requests and tokens, without translating anything (see below).            |
+| Option                 | Meaning                                                                                                                |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `--language <lang>`    | Only these languages. Repeatable, or a comma list. Default: the config's `languages`.                                  |
+| `--file <path>`        | Only this file: its path on the instance (`common.json`) or its source file's local path. Repeatable.                  |
+| `--retranslate`        | Also translate green (translated, not proofread) strings again. Blue (proofread) strings never change.                 |
+| `--qa`                 | Also translate again the green strings that fail the quality checks, such as values imported with `--allow-qa-errors`. |
+| `--instruction <text>` | An instruction for this run, such as `"Address the player informally"`. It is added to the prompt for this run.        |
+| `--model <name>`       | The model for this run, instead of the instance's, such as `gemini-2.5-pro`.                                           |
+| `--no-wait`            | Start the job and exit. The instance runs it; `quaso status` shows the result.                                         |
+| `--dry-run`            | Count the strings and words, and estimate the requests and tokens, without translating anything (see below).           |
 
-By default the command waits for the job, asking the instance for its progress every 2 seconds, and
-prints the progress on stderr. It exits with code 6 when strings failed, listing each one as
-`file › key (lang): reason`, with the local path of the translation file; also when the job failed,
-was cancelled, or paused (because the instance's monthly token budget is used up, or its Gemini key
-was refused: the job goes on by itself once that is fixed).
+By default, the command checks job progress every two seconds and prints it to stderr. It exits
+with code 6 if strings failed or the job failed, was cancelled, or paused. Failures use
+`file › key (lang): reason`, with the local translation path. A job paused for a spent monthly
+token budget or a rejected Gemini key can resume after the issue is resolved.
 
 `--dry-run` prints what a run would do:
 
@@ -335,7 +350,7 @@ Of these: 78 untranslated, 4 outdated green to update, 2 outdated proofread to g
 
 The estimate counts characters / 4 of each request's prompt and the expected answer; thinking models
 use more, and retries add some. An instance without an LLM (no Gemini key in its Settings) answers with exit
-code 4 and says so; an API key needs the `upload` scope.
+code 4 and says so. An API key needs the `upload` scope and a creator who can translate the selected languages.
 
 ### `quaso status`
 
@@ -351,24 +366,33 @@ ja     Japanese                       40      0     0         0        0   0  0%
 ```
 
 Green translations are translated but not proofread; blue ones are proofread; outdated ones were
-made for older English; pending strings have suggestions waiting for review; QA counts translations
-that fail the quality checks. The percentages count words.
+made for older source text; pending strings have suggestions waiting for review; QA counts quality
+errors and stored warnings, such as meaning or consistency issues. The percentages count source words.
+See [Translation concepts](concepts.md) for how states overlap. Quality assurance (QA) checks cover issues such as missing
+placeholders and excess length; they do not prove that a translation has the right meaning.
 
 | Option              | Meaning                                                                                                                                                                   |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `--language <lang>` | Only these languages. Repeatable, or a comma list.                                                                                                                        |
 | `--fail-on <state>` | Exit with code 7 when a string of the config's languages (or of `--language`) is `untranslated`, `outdated`, or `green` (not yet proofread). Repeatable, or a comma list. |
 
-Languages the instance has but the config doesn't list are shown with a `*`, and `--fail-on` leaves
-them out. A language of the config that the instance doesn't have yet (`quaso upload` adds it)
-counts as untranslated, with a warning, whether or not `--language` names it. A language that
-neither has is an error (exit code 2).
+`--fail-on` does not check pending suggestions or QA errors. Review those counts separately before
+a release.
+
+Languages present on the instance but absent from the config are shown with a `*`. By default,
+`--fail-on` checks only the config's languages. When you pass `--language`, it checks the named
+languages instead, including languages outside the config. A language missing from both the config
+and instance is an error (exit code 2).
+
+A selected language that exists only in the config produces a warning and counts as untranslated,
+using the source string count from the instance's other languages. If the instance has no target
+languages, that count is zero. Run `upload` before using status as a release check.
 
 ### `quaso import`
 
 Imports translation files you already have, such as those from Crowdin, from where the config's
-`translation` pattern points. Upload the English first: keys the English doesn't have are skipped
-and listed. A Markdown translation file is imported whole; a blank one is skipped.
+`translation` pattern points. Upload the source files first. Keys absent from the source are skipped and listed.
+A Markdown translation file is imported whole; a blank one is skipped.
 
 | Option              | Meaning                                                                                                                                          |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -377,7 +401,7 @@ and listed. A Markdown translation file is imported whole; a blank one is skippe
 | `--language <lang>` | Only these languages. Repeatable, or a comma list. Default: the config's `languages`.                                                            |
 | `--file <path>`     | Only this file: its path on the instance or a local source path (in every language), or a local translation path (in its language). Repeatable.  |
 | `--overwrite`       | Also replace blue (proofread) translations on the instance. Without it, they stay.                                                               |
-| `--keep-identical`  | Keep values identical to the English. Without it, they are skipped, because tools such as Crowdin write the English into untranslated entries.   |
+| `--keep-identical`  | Keep values identical to the source. Without it, they are skipped because exports can use source text for untranslated entries.                  |
 | `--allow-qa-errors` | Import values that fail the quality checks, with their QA errors, instead of refusing them. They are listed, and the instance counts them in QA. |
 | `--dry-run`         | Show what would be imported without saving anything.                                                                                             |
 
@@ -385,14 +409,15 @@ To preserve Crowdin's proofread state, import its approved-only export first wit
 `quaso import --as blue --from /tmp/crowdin-approved`, then import the full export with
 `quaso import --as green`. With `src/locales/{lang}/{path}` in the config, `--from` reads
 `/tmp/crowdin-approved/src/locales/{lang}/{path}`. Relative folders are resolved from the
-current directory. The export needs no config or English files; the project supplies those.
-Blue translations stay, and values identical to English are skipped in both runs.
+current directory. The export needs no config or source files; the project supplies those.
+Blue translations stay, and values identical to the source are skipped in both runs. Empty values
+are always skipped, including with `--keep-identical`.
 
-Plural forms a language doesn't use are ignored rather than refused: files that repeat the English
-categories, such as `coins_one` beside `coins_other` in Japanese, import their `other` form, and the
-summary counts the unused forms dropped. Values that fail the quality checks are refused and listed,
-and the exit code is 6; the other values are imported (with `--allow-qa-errors`, they are imported
-too, listed under "Imported with QA errors", and the exit code stays 0):
+Unused plural forms are dropped and counted in the summary. For example, Japanese uses `other`,
+so an import of `coins_one` and `coins_other` keeps only `coins_other`. Values that fail the quality
+checks are listed and refused; valid values still import, and the command exits with code 6.
+With `--allow-qa-errors`, those values import too and appear under **Imported with QA errors**.
+QA errors alone then do not cause exit code 6. A refusal looks like this:
 
 ```text
 Refused by the quality checks (1):
@@ -426,7 +451,7 @@ terminal, never when `NO_COLOR` is set (to any value), and never with `--json`.
 
 ## JSON output
 
-With `--json`, stdout gets exactly one JSON document, whatever happens:
+With `--json`, the CLI writes one JSON document to stdout for a result or a handled error:
 
 ```json
 {
@@ -451,7 +476,7 @@ With `--json`, stdout gets exactly one JSON document, whatever happens:
 }
 ```
 
-(The language is shortened here: it has every count, and each file's.)
+This example omits some language counts and per-file results.
 
 - `schemaVersion` changes only when the documents change in a way that could break a script.
 - `ok` is true when `exitCode` is 0.
@@ -463,30 +488,35 @@ With `--json`, stdout gets exactly one JSON document, whatever happens:
   and `failures` in `wait`); for `status`, every language's counts (and each file's) and `failOn`;
   for `import`, each language's counts, and the `refused` values, `unknownKeys` and `invalid` files
   with their local paths, and the `failed` languages.
-- When the command fails, `error` replaces `result`:
-  `{ "code": "missing_key", "message": "…", "hint": "…", "details": [ … ] }`. `code` is the
+- When an error stops the command, `error` replaces `result`. A completed command can still return
+  `result` with a nonzero `exitCode`, such as an import with refused values or a status condition.
+  An error has this shape: `{ "code": "missing_key", "message": "…", "hint": "…", "details": [ … ] }`. `code` is the
   instance's error code (such as `invalid_source`, `unauthorized`, `validation_failed`) or one of
   the CLI's own, such as `usage`, `invalid_config`, `config_not_found`, `missing_key`,
   `invalid_key`, `missing_hostname`, `network`, `timeout`, `unsafe_path`, `unknown_file`,
   `unknown_language`, `redirect`, `bad_response`. Each detail names what applies of `file` (a local
   path), `key`, `language`, `line`, `column` and `check`.
 
+Download results also include `outdated`, `localEdits`, and `removed` (documents removed by an
+omission setting). Upload results include `localTranslations` and `imports`. Read these fields
+even when a command returns a result with a nonzero exit code.
+
 ## Exit codes
 
-| Code | Meaning                                                                |
-| ---- | ---------------------------------------------------------------------- |
-| 0    | success                                                                |
-| 1    | unexpected error                                                       |
-| 2    | bad usage or invalid config                                            |
-| 3    | authentication or permission problem (missing API key, wrong scope)    |
-| 4    | network error or server unavailable (safe to retry)                    |
-| 5    | invalid source file (JSON syntax, duplicate key)                       |
-| 6    | finished, but some items were refused or failed; the output lists them |
-| 7    | the `status --fail-on` condition is met                                |
+| Code | Meaning                                                                               |
+| ---- | ------------------------------------------------------------------------------------- |
+| 0    | success                                                                               |
+| 1    | unexpected error                                                                      |
+| 2    | bad usage or invalid config                                                           |
+| 3    | authentication or permission problem (missing API key, wrong scope)                   |
+| 4    | network error or server unavailable; check before repeating a write                   |
+| 5    | invalid source file (JSON syntax, duplicate key)                                      |
+| 6    | some items failed, were refused, or were kept because of local edits; read the output |
+| 7    | the `status --fail-on` condition is met                                               |
 
-Requests that change nothing are retried after network errors (including an answer that breaks off),
-timeouts, and when the instance is busy (429, 502, 503, 504), up to three times with increasing,
-jittered waits, honouring `Retry-After`. Uploads and imports are retried only when retrying is safe.
+Read requests and previews are retried up to three times after network errors, timeouts, and
+HTTP 429, 502, 503, or 504 responses. The delay increases between attempts, includes a random
+variation, and respects `Retry-After` values of up to 60 seconds. Uploads and imports are retried only when retrying is safe.
 Requests time out after 30 seconds (5 minutes for uploads, downloads and imports).
 
 What the instance doesn't have (a file not uploaded yet, a language), a request larger than it
@@ -496,15 +526,20 @@ with exit code 4, and nothing is written.
 
 ## Running in CI
 
-Upload the English on every push to the main branch, and check that a release is fully translated.
-The CLI never runs git: to commit the downloaded files, your workflow does.
+Upload source files when they change on the main branch. Check translation status before a release.
+The CLI does not run Git. Your workflow creates a pull request for downloaded files.
+The example assumes English sources in `src/locales/en/`, a committed CLI dependency and lockfile,
+and an upload key created by an administrator, stored as the `QUASO_API_KEY` repository secret.
+Replace the hostname. This workflow treats target files as generated: `--overwrite-local` lets a
+fresh checkout replace them and submit the changes for review. Import any edits made directly
+in those files before running it; a fresh runner has no previous download state.
 
 ```yaml
 name: Translations
 on:
   push:
     branches: [main, master]
-    paths: ["src/locales/en/**"]
+    paths: ["src/locales/en/**", "quaso.config.json"]
   schedule:
     - cron: "0 6 * * *"
   workflow_dispatch:
@@ -527,7 +562,7 @@ jobs:
           node-version: 22
       - run: npm ci
       - run: npx quaso upload
-      - run: npx quaso download
+      - run: npx quaso download --overwrite-local
       - uses: peter-evans/create-pull-request@v7
         with:
           branch: translations
@@ -541,12 +576,17 @@ In a release pipeline, hold the release back until every string is translated:
 npx quaso status --fail-on untranslated
 ```
 
+Enable **Allow GitHub Actions to create and approve pull requests** in the repository settings.
+See [CI setup](add-to-your-game.md#ci) for separate upload and release workflows.
+
 To translate in CI as well, add `npx quaso translate` after the upload (or `npx quaso upload --wait`
 when the instance translates new strings automatically), before the download. Exit code 6 then means
-that some strings stayed untranslated: the output lists them.
+that some strings or the job failed: the output lists the result.
 
-Exit code 4 means the instance couldn't be reached or was busy: it is safe to run the step again.
-Exit code 3 usually means the secret is missing, the key lacks the `upload` scope, or the secret has
+Exit code 4 means a network or server failure. Reads and previews can be repeated. If a write
+timed out or its response was lost, check the instance before repeating it: the write might have
+finished. This matters for renames and translation jobs, which can change the result or spend tokens.
+Exit code 3 usually means the secret is missing, the key lacks the required scope or creator permissions, or the secret has
 a stray character such as a quote or a line break (the CLI never prints the key). The exit code
 stays the command's when a pipe closes early, as in `quaso status 2>&1 | head -1`.
 
@@ -554,14 +594,13 @@ stays the command's when a pipe closes early, as in `quaso status 2>&1 | head -1
 
 - Pass `--json` and read one JSON document from stdout; progress and errors go to stderr.
 - `quaso help --json` describes every command, option and exit code.
-- Nothing is ever asked: missing options are errors (exit code 2) that say what to add.
+- Commands do not prompt for input. Missing options produce errors (exit code 2) that say what to add.
 - Try changes with `--dry-run` first: `upload`, `download`, `translate` and `import` take it.
-  `quaso translate --dry-run --json` gives the strings, words, requests and tokens a run would take,
-  before it spends any.
-- Errors name the file (local path), key and language, in the same format as in the JSON details:
+  `quaso translate --dry-run --json` gives the strings, words, requests and estimated tokens before starting a job.
+- Errors name the file (local path), key and language, and JSON error details identify the same items:
   `src/locales/pl/common.json › inventory.itemCount (pl): placeholder {{total}} is missing`.
 - After `upload`, `result.renameSuggestions[].command` is the exact command to apply each rename,
-  and `result.renameCommand` applies them all. Check the suggestions first: the same English under a
+  and `result.renameCommand` applies them all. Check the suggestions first: the same source text under a
   new key is usually, but not always, a rename.
 
 ## Safety
@@ -573,10 +612,10 @@ stays the command's when a pipe closes early, as in `quaso status 2>&1 | head -1
   would find, or anything outside the project folder, including through a symbolic link, and it
   checks every path before it writes the first file. `--prune` only deletes files the `translation`
   pattern could have written for a source file that no longer exists.
-- It only sends files that are inside the project folder: `upload` and `import` refuse a symbolic
-  link that leads outside it.
+- Upload reads files inside the project folder. Import reads there by default, or inside the
+  folder selected with `--from`. Both refuse a symbolic link that leads outside their input folder.
 - Files are written through a temporary file and a rename, so none is ever half-written.
 - It never starts other programs and never runs git. The build fails if the bundle could start a
   process.
-- Tests run every command against a real server and check that the English files are byte for byte
+- Tests run every command against a real server and check that the source files are byte for byte
   the same afterwards.

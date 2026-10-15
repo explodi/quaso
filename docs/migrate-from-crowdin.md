@@ -1,11 +1,11 @@
 # Migrate from Crowdin
 
 Move a copy of your repository first, compare the result, and switch the team's workflow
-after it passes. You need a Quaso instance and upload API key, your English i18next JSON
+after it passes. You need a Quaso instance and an administrator-created upload API key, your English i18next JSON
 v4 sources, `crowdin.yml`, and permission to export Crowdin translations. This guide uses
 `src/locales/en/` sources and the matching `src/locales/<language>/` exports.
 
-Follow [Connect the repository](workflow.md#1-connect-the-repository) to install the Beta 2
+Follow [Connect the repository](workflow.md#1-connect-the-repository) to install the
 CLI, load the key from `.env`, and add the project tasks. Stop before its `init` command:
 convert your existing layout below instead. Keep the original repository and Crowdin
 exports for comparison. In Quaso, disable automatic translation while importing.
@@ -18,8 +18,8 @@ exports for comparison. In Quaso, disable automatic translation while importing.
 | Sources                                       | Sources, displayed in repository folders                                     |
 | Delete obsolete sources / `--delete-obsolete` | Missing sources are hidden on a full upload; translations and history remain |
 
-Quaso's blue and green have different meanings from Crowdin's familiar colors. Explain
-the table to reviewers before switching.
+Explain Quaso's blue and green states to reviewers before switching. Use the state names when
+comparing the two systems.
 
 ## 1. Convert and review the layout
 
@@ -42,7 +42,7 @@ Review a proposed `zh-Hans` tag against your actual Chinese variant.
 Check each source glob and translation pattern. `**/%original_file_name%` keeps folders
 below the source glob's base; `%original_path%/%original_file_name%` includes that base
 and requires `preserve_hierarchy: true`. Unsupported placeholders and recursive layouts
-that would flatten folders are reported rather than guessed. If nothing is convertible,
+that would flatten folders are reported rather than guessed. If no file entries can be converted,
 no config is written; create the layout with [CLI init options](cli.md#quaso-init).
 The converter requires `base_path: .` or an omitted base path.
 
@@ -51,9 +51,9 @@ path for every language, especially mappings such as `zh-Hans` → `zh`. Correct
 before importing. See [Crowdin's layout rules](https://crowdin.github.io/crowdin-cli/advanced).
 
 If your strings also use placeholders that your app fills in itself, such as `{name}` beside
-i18next's `{{count}}`, add their delimiters in **Settings → General → Other placeholders** before
-importing. Crowdin recognizes such placeholders by itself; Quaso checks and keeps only the
-delimiters it knows.
+i18next's `{{count}}`, add their delimiters in **Settings → Placeholders → Additional formats** before
+importing. Quaso checks placeholders that use its configured delimiters. For example, the opening and closing
+delimiters for `{name}` are `{` and `}`.
 
 ## 2. Upload the source
 
@@ -80,8 +80,9 @@ The first folder should contain only approved entries; the second contains the f
 export. `--all` permits exports without local source files under these temporary roots.
 Crowdin's [download reference](https://crowdin.github.io/crowdin-cli/commands/crowdin-download-translations)
 explains that `--export-only-approved` alone fills unapproved entries with source text;
-with `--skip-untranslated-strings`, JSON files keep those keys with empty values instead, and
-Quaso's import skips empty values as untranslated. Add your normal branch option if you use a
+with `--skip-untranslated-strings`,
+[i18next JSON exports keep empty values](https://support.crowdin.com/project-settings/export/#skip-untranslated-strings)
+for those entries. Quaso skips empty values during import. Add your normal branch option if you use a
 Crowdin branch.
 
 Check the exported paths before importing: with `src/locales/{lang}/{path}` in Quaso's
@@ -104,11 +105,14 @@ first pass. The second pass adds green translations and preserves existing blue 
 Do not add `--overwrite`. Both exports are read only; the project config and English
 files still come from your repository.
 
-Crowdin accepts translations that Quaso's checks refuse, such as a Polish plural without its
-`few` form, or a placeholder the English no longer has. To bring every existing translation
-across as it is, add `--allow-qa-errors` to both imports: such values are imported with their QA
-errors and listed, and the QA column shows them until someone fixes them; `quaso translate --qa`
-has the LLM translate the green ones again (blue ones wait for a person).
+An export can contain values that Quaso's quality assurance (QA) checks refuse, such as a Polish
+plural without its `few` form or a placeholder absent from the source. To retain these values, add
+`--allow-qa-errors` to the import commands. Quaso lists the imported errors and counts them in the
+**QA** column until someone fixes them. Other import rules still apply: empty values and unknown
+keys are skipped.
+
+After import, `quaso translate --qa` asks the LLM to translate green values with QA errors again.
+Review blue values with QA errors by hand; this option does not replace them.
 
 Source-identical values are skipped because Crowdin can use English for untranslated
 entries. If an identical value is intentional, review it and import only that
@@ -129,16 +133,18 @@ untranslated key still uses English after download. Compare nested paths, plural
 placeholders and language coverage in the game. Plural groups count as one Quaso string;
 literal/reference-only entries and skipped source-identical values can explain count
 differences. Download follows source formatting, so a first download may reformat files.
+If download reports local edits, compare them with the imported values before using
+`--overwrite-local`. The CLI keeps each affected file until you resolve the conflict.
 
-Copy project/language instructions, glossary terms and reference-language choices into
-Settings. Adapt your AI prompt to Quaso's placeholders and output rules using
+Copy project and language instructions and reference language choices into **Settings**. Add
+terms on the **Glossary** page. Adapt your AI prompt to Quaso's placeholders and output rules using
 [the prompt mapping](move-from-crowdin.md#prompt-and-context-mapping). Translation-file
 imports do not carry Crowdin comments, tasks, accounts, history, screenshots or external
 translation memory. Quaso starts its own history at import.
 
 ## 6. Switch the workflow
 
-Follow [the repository-to-language workflow](workflow.md#3-translate-one-language-yourself)
+Follow [the translation workflow](workflow.md#3-translate-one-language-yourself)
 to review one language, use it as an LLM reference, translate the rest, and download and
 commit. Invite contributors and managers, assign their languages, and explain accepted
 translations versus pending suggestions. Enable automatic translation only after the
@@ -157,8 +163,8 @@ migration.
   with an actual exported filename. `--from` changes the root, not the pattern.
 - **Language missing on the instance:** upload the configured sources/languages before
   importing. The CLI checks all requested languages before the first import.
-- **Approved count is smaller:** inspect skipped English-identical entries and QA failures;
+- **Approved count is smaller:** check skipped English-identical entries and QA failures;
   compare plural groups and active keys, rather than treating raw totals as equivalent.
-- **A blue translation appears wrong:** verify the approved-only export contains only
+- **A blue translation appears wrong:** check that the approved-only export contains only
   approved entries, then correct the affected key through review. Keep the full export
   separate and retain the comparison copy.

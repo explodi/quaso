@@ -1,77 +1,75 @@
 <p align="center">
-  <img src="packages/design-system/src/assets/quaso-cat.svg" width="256" height="208" alt="Quaso, a tiny gray cat tucked into a golden croissant" />
+  <img src="packages/design-system/src/assets/quaso-cat.svg" width="256" height="208" alt="Quaso, a gray cat tucked into a croissant" />
 </p>
 
 # Quaso
 
-An open-source localization platform for games that use [i18next](https://www.i18next.com/)
-JSON files, and Markdown documents translated whole. **Ship every language today, proofread
-tomorrow:** translations never hold up a release.
-
-Developers write in one source language and upload the files with a CLI. An LLM translates new
-strings at once, and the CLI downloads them into the repository, so the next build ships in every
-language. Your team and community proofread on a public website at their own pace, and each fix
-reaches the build after. Each game runs its own instance, for example at
-`translate.yourgame.com`, with Docker Compose on a VM or on Cloudflare.
-
-- **No limits** on words, strings or languages. Only storage and the LLM bill limit an instance.
-- **Ship now, proofread later.** LLM translations pass the quality checks and go into the next
-  download; proofreading improves them build after build. `quaso status --fail-on green` holds a
-  release for a language that must be proofread first.
-- **Your files are never at risk.** The CLI never changes the source files, downloads are
-  byte-stable, and suggestions waiting for review never reach the files.
-- **Human work is never lost.** The LLM never overwrites a proofread translation, and every change
-  is kept in history.
-- **Easy to run.** One Deno application and one SQLite database, in one Docker container.
-
-Quaso 1.0 is in release-candidate testing: the server is `explodi/quaso` on Docker Hub, and the
-CLI is `@quaso-i18n/cli` on npm.
-
-![Quaso dashboard with progress for each language](site/public/screenshots/dashboard.png)
-
-![Quaso Quest’s French-to-English plural editing with source text and quality checks](site/public/screenshots/editor-plurals.png)
-
-![The Quaso translation workspace in dark mode](site/public/screenshots/editor-dark.png)
+Quaso is a self-hosted tool for translating games that use i18next JSON files and Markdown documents. Upload source text,
+translate it with Gemini or your team, and download the translations into your game. Your game
+loads those files without a connection to Quaso.
 
 ## Quick start
 
-The [quick start](docs/README.md) takes you from nothing to a game that ships in every language:
+Follow the [quick start](docs/README.md) to complete your first upload and download:
 
-1. **Host your Quaso**, with Docker Compose on a VM or on Cloudflare.
-2. **Connect your game:** `npm install --save-dev @quaso-i18n/cli`, `npx quaso init` and
-   `npx quaso upload`.
-3. **Translate** with the LLM (`npx quaso translate`), by hand on the website, or both.
-4. **Download and ship:** `npx quaso download` writes every language into your repository.
+1. **Host Quaso** with [Docker Compose](docs/deploy-docker.md) or
+   [Cloudflare](docs/deploy-cloudflare.md), and create an administrator account.
+2. **Connect your game** with the command-line tool: install `@quaso-i18n/cli`, create an API key,
+   and run `npx quaso init` with your target languages.
+3. **Upload and translate** your source files. Use your Gemini API key for machine translation,
+   or translate on the website.
+4. **Download and check** the files with `npx quaso download`, then include them in your build.
 
-| I want to…                         | Read                                                         |
-| ---------------------------------- | ------------------------------------------------------------ |
-| Play a game and try translating it | [Quaso Quest](examples/demo-game/README.md)                  |
-| Deploy Quaso with Docker Compose   | [docs/deploy-docker.md](docs/deploy-docker.md)               |
-| Deploy Quaso on Cloudflare         | [docs/deploy-cloudflare.md](docs/deploy-cloudflare.md)       |
-| Add Quaso to my game and CI        | [docs/add-to-your-game.md](docs/add-to-your-game.md)         |
-| Use the CLI                        | [docs/cli.md](docs/cli.md)                                   |
-| Move from Crowdin                  | [docs/migrate-from-crowdin.md](docs/migrate-from-crowdin.md) |
-| Work on Quaso                      | [CONTRIBUTING.md](CONTRIBUTING.md)                           |
+To try Quaso locally before setting up a server, run [Quaso Quest](examples/demo-game/README.md).
+This sample game includes a local Quaso instance and a test translator. Its generated translations
+show the workflow; they are not real translations.
+
+## How Quaso works
+
+Each instance holds one project, its source language, and the languages you want to translate into.
+The website is public: visitors can read source text and translations. Contributors suggest
+changes; managers and administrators review them or edit accepted translations directly.
+
+With a Gemini key and automatic translation enabled, uploads queue work for new and changed
+strings. Machine translations can be downloaded before proofreading. The language model does not
+replace proofread translations: changes to their source text can produce proposals for review.
+
+By default, downloads use the current accepted translations, including translations marked outdated. Pending
+suggestions are excluded. By default, missing translations use source text. Use status checks in
+your build if you require complete or proofread translations before a release.
+
+Read [How translation works](docs/concepts.md) for states, roles, and release checks, or
+[Supported files and translation checks](docs/file-formats.md) for format rules.
+
+## Find a guide
+
+Choose the guide for your task:
+
+| Task                                         | Guide                                                                          |
+| -------------------------------------------- | ------------------------------------------------------------------------------ |
+| Connect a game and automate its builds       | [Add Quaso to your game](docs/add-to-your-game.md)                             |
+| Work through an upload, review, and download | [A complete workflow](docs/workflow.md)                                        |
+| Translate or review on the website           | [Website guide](docs/website.md)                                               |
+| Move existing translations from Crowdin      | [Migration guide](docs/migrate-from-crowdin.md)                                |
+| Back up, restore, or upgrade an instance     | [Operations guide](docs/operations.md)                                         |
+| Look up commands, settings, or API requests  | [CLI](docs/cli.md), [configuration](docs/configuration.md), [API](docs/api.md) |
+| Develop Quaso                                | [Contributor guide](docs/contributing/README.md)                               |
 
 ## Working on Quaso
 
-You need [Deno](https://deno.com/) 2.9.6 (pinned in `.dvmrc`) and git:
+Use the Deno version in `.dvmrc` and Git to start a local development instance:
 
 ```sh
-git clone 'https://github.com/explodi/quaso.git'
+git clone https://github.com/explodi/quaso.git
 cd quaso
 deno install --frozen-lockfile
 deno task dev
 ```
 
-`deno task dev` starts a working Quaso with a demo project, hot reloading, a signed-in developer
-account and a fake translator, with no accounts, keys, Docker or cloud services. See
-[CONTRIBUTING.md](CONTRIBUTING.md).
-
-This populated development project uses a stable translation fixture. To try translating a game
-from scratch, [Quaso Quest](examples/demo-game/README.md) has French source text, empty English and
-German targets, and its own Docker Compose setup.
+The development instance includes sample data, an administrator account, and a test translator.
+Refer to the [contributor guide](docs/contributing/README.md) for setup requirements, checks, and the
+source layout. Do not expose the development instance as a public server.
 
 ## Licence
 
-[MIT](LICENSE).
+Quaso is [MIT licensed](LICENSE). You pay for your hosting and any external services you use.

@@ -1,44 +1,98 @@
 # Add Quaso to your game
 
-Quaso reads i18next JSON v4 files. Keep the source language in your repository and let Quaso write
-the other languages. First [deploy an instance](deploy-docker.md) and create an upload API key in
-Settings. For local Quaso development, run `deno task cli` from a checkout against its development
-instance, or follow [Quaso Quest's Docker setup](../examples/demo-game/README.md).
+Connect your game repository to Quaso, choose where translations go, and add checks before a
+release. Quaso reads [i18next JSON v4 files and Markdown documents](file-formats.md). The downloaded files become ordinary
+game assets; the game needs no connection to Quaso at runtime.
+
+## Before you start
+
+You need a Quaso instance, an API key with the `upload` scope, and Node 22 or later with npm.
+Create the key while signed in as an administrator, in **Account → API keys**.
+A key follows its creator's current role; an upload scope alone does not grant file access. To host an instance, follow
+[Deploy with Docker](deploy-docker.md) or [Deploy on Cloudflare](deploy-cloudflare.md).
+
+These instructions describe current `main`. The examples install the `main` CLI package; for a
+tagged release, use the CLI and documentation from that release. Keep the package version matched
+to your instance.
+
+The examples use English source files in `src/locales/en/` and German, French, and Polish as target
+languages. Replace the example hostname, key, paths, and language tags with your own values. For
+an existing Crowdin project, use [Migrate from Crowdin](migrate-from-crowdin.md) instead.
 
 ## Connect and upload
 
-Install the CLI in your game repository (Node 22 or later):
+1. In your game repository, install the command-line interface (CLI) and set the connection values:
+
+   ```sh
+   npm install --save-dev @quaso-i18n/cli@main
+   export QUASO_HOSTNAME=translate.example.com
+   export QUASO_API_KEY='your upload API key'
+   ```
+
+   These environment commands work in a POSIX shell, such as Bash or Zsh. For project tasks that
+   load a `.env` file, follow [Connect the repository](workflow.md#1-connect-the-repository).
+   Commit your package lockfile. Keep the API key out of version control.
+
+2. Create the config:
+
+   ```sh
+   npx quaso init --languages de,fr,pl
+   ```
+
+   Check `quaso.config.json` before continuing. The default source language is `en` and the source
+   pattern is `src/locales/en/**/*.json`. If your source language differs, pass `--source` to
+   `init`. If a config already exists, edit it; `init` does not overwrite it.
+
+3. Preview the upload, check the listed files, then upload:
+
+   ```sh
+   npx quaso upload --dry-run
+   npx quaso upload
+   ```
+
+   Open **Sources** on the website and check the file paths and counts. Upload adds the target
+   languages listed in the config. A full upload hides files missing from the upload, while
+   retaining their translations and history. Use `upload --file` for a partial upload.
+
+4. Translate on the website or start a job:
+
+   ```sh
+   npx quaso translate
+   ```
+
+   This command requires a Gemini key in **Settings → AI translation**. An upload can already
+   start a job when automatic translation is enabled; use `upload --wait` to wait for that job.
+   You can also translate by hand without a Gemini key. Follow [the translation workflow](workflow.md)
+   to review a language and use it as a reference for later jobs.
+
+5. Download, check the result, and test your game:
+
+   ```sh
+   npx quaso download --dry-run
+   npx quaso download
+   npx quaso status --fail-on untranslated
+   git diff -- src/locales
+   ```
+
+   A missing translation downloads as source text by default. Download includes green, blue, and
+   outdated accepted translations by default; it excludes pending suggestions. The status command exits with
+   code 7 if any selected language has untranslated strings. Add `--fail-on outdated,green` if the
+   release requires current, proofread text. These conditions do not check quality assurance (QA) errors; review the
+   **QA** counts separately. See [Translation concepts](concepts.md) for the states and counts.
+
+   If download reports a local edit, it keeps that file and exits with code 6. Import the edit or
+   review it before using `download --overwrite-local`. Keep `.quaso/` in `.gitignore`; the CLI
+   stores its previous downloads there to detect local changes.
+
+With Deno 2.9 or later, replace `npx quaso` with `deno run -A npm:@quaso-i18n/cli@main`, for example:
 
 ```sh
-npm i -D @quaso-i18n/cli
-export QUASO_HOSTNAME=translate.example.com
-export QUASO_API_KEY='your upload API key'
-npx quaso init --languages de,fr,pl
-npx quaso upload
-npx quaso translate
-npx quaso download
-npx quaso status --fail-on untranslated
+deno run -A npm:@quaso-i18n/cli@main init --languages de,fr,pl
 ```
-
-With Deno 2.9, use `deno run -A npm:@quaso-i18n/cli` in place of `npx quaso`, for example:
-
-```sh
-deno run -A npm:@quaso-i18n/cli init --languages de,fr,pl
-```
-
-`init` writes `quaso.config.json` without prompting. Edit it before uploading if your files live
-elsewhere. Commit the config and your package lockfile; keep the API key out of both. The hostname
-may be in the config, but the environment overrides it. Source language defaults to `en`; use
-`--source` for another language.
-
-An upload queues automatic translation when the instance has a Gemini key and automatic translation
-is enabled. `upload --wait` waits for that job. `translate` explicitly starts a run and waits for
-it. People proofread on the website while development continues. A missing translation downloads as
-the source text; `status --fail-on untranslated` exits 7 if any selected language still needs
-translation. Add `--fail-on outdated` or `--fail-on green` when your release policy requires current
-or proofread text.
 
 ## Configure paths and languages
+
+Use `quaso.config.json` to define the source files and each language's output path:
 
 ```json
 {
@@ -51,63 +105,70 @@ or proofread text.
       "translation": "src/locales/{lang}/{path}",
       "exclude": ["src/locales/en/private/**"]
     }
-  ],
-  "limits": [{ "file": "store.json", "key": "title", "maxLength": 30 }],
-  "pluralExclusions": [{ "file": "menus.json", "key": "power" }]
+  ]
 }
 ```
 
-- `sourceLanguage` and `languages` use BCP 47 tags. Upload adds missing target languages to the
-  instance. The language list also defines which languages the release status gate checks.
-- `source` is a glob relative to the config. `**/*.json` includes subfolders. `exclude` removes
-  matching source paths. Keep source and translation folders separate.
-- `{lang}` is the target language's folder name, after `languageMapping`. `{path}` is the source
-  path below the glob's fixed directory: `src/locales/en/ui/menu.json` becomes
-  `src/locales/pl/ui/menu.json`. A single source file can map to `locales/{lang}.json` instead.
-- `languageMapping` changes filenames only, not language tags, plural rules or the API.
-- `limits` measures user-perceived characters, including placeholders. Its `file` is the server path
-  (`store.json`), not the local path. Config limits take precedence over website limits.
-- `pluralExclusions` lists key groups that resemble plurals but are ordinary text. Use the group
-  name without `_one` or `_other`; ordinal groups use `place_ordinal`. A literal dotted key can use
-  a JSON array key path encoded as a string. For ambiguous limits use `#text`, `#plural` or
-  `#ordinal`.
-- Markdown documents: an entry such as `{ "source": "text/en/**/*.md", "translation":
-"text/{lang}/{path}" }` translates each `.md` or `.markdown` file whole, as one string that keeps
-  its paragraphs and Markdown syntax. See [the config file](cli.md#the-config-file).
+In this config, `src/locales/en/ui/menu.json` becomes `src/locales/pl/ui/menu.json` for Polish.
+`{path}` is the path below the fixed part of the source pattern. `{lang}` is the language tag,
+replaced by `languageMapping` where set: Simplified Chinese uses the folder `zh-CN`, while its
+language tag remains `zh-Hans`.
 
-The CLI refuses paths outside the project, symlinks, and translation patterns that overlap source
-globs. It validates all output paths before writing any file. It never changes source files or runs
-git. Repeated downloads touch only files with changed bytes. See [the CLI reference](cli.md) for
-file filtering, renames, imports, pruning, JSON output and exit codes.
+To translate Markdown documents, add another file rule, such as `"source": "text/en/**/*.md"`
+with `"translation": "text/{lang}/{path}"`. Each file is translated as one text. See
+[File formats](file-formats.md) for the document rules.
+
+Keep source and translation folders separate. The CLI checks output paths before writing any
+file and refuses writes outside the project or over source files. A second download writes only
+files whose contents changed.
+
+If a target language is maintained in your repository, set `translationsInRepository` to its
+language tag. Every upload then imports its selected local files as proofread, replacing values
+on the instance. Review import refusals before proceeding. For a one-time import that keeps
+existing proofread values, use `upload --import-translations es:blue` instead.
+
+See [the CLI config reference](cli.md#the-config-file) for all fields, patterns, and path rules.
+See [File formats](file-formats.md) for placeholders, plural groups, and length limits.
 
 ## CI
 
-Set repository variable `QUASO_HOSTNAME` to your instance and repository secret `QUASO_API_KEY` to a
-named upload key. Use a separate read key if the download workflow lives in a separate environment.
-Copy the workflows from [Quaso Quest](../examples/demo-game/), adjusting the source language path
-for your game:
+For continuous integration (CI), use separate workflows to upload source changes and prepare
+translations for release. The [Quaso Quest example](../examples/demo-game/README.md) includes both:
 
-- `translations-upload.yml` uploads when source files or the config change on `main`.
-- `translations-download.yml` runs manually or as a reusable workflow before your release. It
-  downloads, requires no untranslated strings, and opens a pull request for review. Call it from
-  your release preparation workflow with `secrets: inherit`. Merge its pull request before creating
-  the release tag; it never changes an already published release.
+- [Upload source strings](../examples/demo-game/.github/workflows/translations-upload.yml) runs
+  when source files or the config change on `main` or `master`.
+- [Prepare translations for release](../examples/demo-game/.github/workflows/translations-download.yml)
+  runs manually or as a reusable workflow. It downloads, checks for untranslated strings, and
+  opens a pull request. Merge that request and run your game tests before creating a release tag.
 
-The pull request keeps generated changes visible in code review and lets your usual tests run.
-Enable GitHub Actions to create pull requests in repository settings. A repository that requires
-checks triggered by that pull request may need its own GitHub App token: events from `GITHUB_TOKEN`
-do not start most other Actions workflows. Keep that policy in your game's workflow, not in Quaso.
+To use these workflows:
 
-If source files are at the game repository root, keep the example workflows unchanged. When running
-inside a monorepo, set `defaults.run.working-directory` and adjust the trigger and pull-request
-paths. Commit your lockfile after installing the pinned CLI, then use `npm ci` for repeatable
-workflow installs.
+1. Set the repository variable `QUASO_HOSTNAME` to your instance hostname and the repository secret
+   `QUASO_API_KEY` to an upload key. A download-only workflow can use a separate read key created by an administrator.
+2. Copy the workflows and change `src/locales/fr/` to your source path. Adjust the branch name and
+   output paths to match your repository. Commit the CLI dependency and lockfile so `npm ci` works.
+3. Enable **Allow GitHub Actions to create and approve pull requests** in repository settings.
+4. Run the download workflow manually and review its pull request before relying on it for releases.
+   A fresh runner has no download state, so existing translations can count as local edits.
+   The example stops when that happens. If your target files are generated and all local changes
+   have been imported, use `download --overwrite-local` in your copy of the workflow; review its
+   pull request before merging.
+
+If the game lives below the repository root, also set `defaults.run.working-directory` for shell
+steps. Trigger paths and the pull request's `add-paths` still need paths from the repository root.
+
+Pull requests created or updated with `GITHUB_TOKEN` can start workflows that require a person
+to approve the runs. For automatic runs without that approval step, use a suitable GitHub App
+token or personal access token. Check [GitHub's workflow trigger guidance](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow)
+for the events and access rules that apply to your repository.
 
 ## Load the downloaded files
 
-The playable [Quaso Quest example](../examples/demo-game/README.md) starts in French, with English
-and German ready to translate. Its [src/i18n.js](../examples/demo-game/src/i18n.js) loads JSON
-namespaces with i18next and falls back to French while translations are missing:
+[Quaso Quest](../examples/demo-game/README.md) is a playable example with French sources and English
+and German targets. Its [i18next setup](../examples/demo-game/src/i18n.js) loads language files and
+falls back to French while translations are missing.
+
+From a Quaso checkout, run:
 
 ```sh
 cd examples/demo-game
@@ -115,6 +176,5 @@ npm install
 npm run dev
 ```
 
-Follow the example's README to start a local Quaso instance with Docker Compose, upload its French
-strings, and download your translations. Select English or German in the game to see the result.
-Quaso needs no runtime connection from the game: translated JSON files are ordinary game assets.
+Follow the example's README to start a local Quaso instance, upload its source files, and download
+translations. Select English or German in the game to check the result.

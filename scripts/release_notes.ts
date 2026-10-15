@@ -15,11 +15,13 @@ export function releaseNotes(changelog: string, version: string, repository?: st
     : "docs/operations.md";
   return (
     `## ${section.trim()}\n\n## Upgrading\n\n` +
-    `Back up the instance and retain its SECRET_KEY and previous image before upgrading.\n\n` +
+    "Back up the instance, test a restore, and record the current source commit and image " +
+    "before upgrading. Keep provider credentials separately for a restore.\n\n" +
     `- Docker Compose: pin image version \`${version}\`, then run ` +
     "`docker compose pull` and `docker compose up -d`. Check `/healthz` and the logs.\n" +
-    "- Cloudflare: deploy this source tag with `deno task cf:deploy --env production`, " +
-    "then check `/healthz` and the jobs page.\n\n" +
+    "- Cloudflare: check out this source tag, run `deno install --frozen-lockfile`, and set " +
+    "`image` in `quaso.cloudflare.jsonc` to this release's published image. Deploy with " +
+    "`deno task cf:deploy --env production`, then check `/healthz` and the jobs page.\n\n" +
     "Migrations are forward-only. Keep the pre-migration snapshot with the previous image. " +
     `Read [operations and rollback](${operations}) before changing production.\n`
   );

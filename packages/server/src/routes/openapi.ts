@@ -67,7 +67,8 @@ export function openApiDocument(routes: ApiRoute[], options: OpenApiOptions): Js
         apiKey: {
           type: "http",
           scheme: "bearer",
-          description: "An API key (qso_…), from the Settings page or `quaso token create`",
+          description:
+            "Personal API keys (qso_…) are created in Account → API keys and limited by scope and the creator's role. Server-created keys use their scope alone.",
         },
         session: {
           type: "apiKey",
@@ -79,7 +80,7 @@ export function openApiDocument(routes: ApiRoute[], options: OpenApiOptions): Js
           type: "apiKey",
           in: "header",
           name: SETUP_KEY_HEADER,
-          description: "The one-time setup key from the server's log, until setup is done",
+          description: "The configured SETUP_KEY, accepted only before initial setup is complete",
         },
       },
       schemas: { Error: ERROR_SCHEMA },

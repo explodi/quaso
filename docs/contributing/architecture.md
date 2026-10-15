@@ -1,13 +1,14 @@
 # Architecture
 
 This page explains how Quaso is built, for people who want to change it. For how to set up a
-development environment, see [CONTRIBUTING.md](../../CONTRIBUTING.md).
+development environment, see [development setup](README.md).
 
 ## One application, one database, one game
 
-Quaso is one Deno application for one game. It serves a static website and an HTTP API (`/api/v1`),
-and keeps all its data in one SQLite database. A deployment serves one game, for example at
-`translate.yourgame.com`; a studio with several games runs one deployment per game.
+Each Quaso instance serves one project with an HTTP API at `/api/v1` and a React website. The
+service runs in a Deno server and stores project records in SQLite, either locally or through
+Cloudflare D1. Published files and backups use separate object storage. For several games, run one
+instance per game.
 
 ```text
  CLI (Node or Deno)           Browsers
@@ -21,30 +22,37 @@ and keeps all its data in one SQLite database. A deployment serves one game, for
 ┌──────────────────────────────────────────────┐
 │ service: the logic and the data, in SQLite   │
 │  local storage: a SQLite file                │
-│  Cloudflare storage: D1 and R2               │
+│  Cloudflare storage: D1 + R2 objects         │
 └──────────────────────┬───────────────────────┘
                        ▼
                    Gemini API
 ```
 
+The diagram shows the local request path. On Cloudflare, a Worker serves the website and
+published files, caches public API reads, and forwards server requests to the Deno container.
+The website can load while the container wakes. See [Cloudflare development](cloudflare.md).
+
+The packages divide the work as follows:
+
 - **The website** (`packages/web`) is a static React app. It only talks to the HTTP API, so anything
   it does can also be scripted.
-- **The design system** (`packages/design-system`) supplies shared React primitives, themes,
+- **The design system** (`packages/design-system`) supplies shared React base components, themes,
   typography and assets to the app and public project website (`site`). Consumers import
   `@quaso/design-system`; the package does not import the app, its router, or domain types.
   See the [design-system guide](design-system.md) for component and styling conventions.
 - **The server** (`packages/server`) serves the website's files and the API. It authenticates people
   and API keys, validates requests, and calls the service.
 - **The service** (`packages/service`) holds the logic and the data: files, strings, translations,
-  suggestions, history, LLM jobs, people, roles, sessions and API keys.
-- **core** (`packages/core`) is everything about i18next files and quality: parsing, plural rules,
-  rendering files, and the quality checks. The service, the website and the CLI all use it, so a
-  translation the editor accepts is always one the API accepts.
+  suggestions, history, translation and quality jobs, people, roles, sessions, and API keys.
+- **core** (`packages/core`) is source-file parsing, plural rules,
+  file output, and quality checks for i18next JSON and whole-file Markdown. The service, the website and the CLI all use it, to keep format and quality rules consistent. The service also checks permissions, current
+  settings, and revisions; it can reject a request that passed the editor's local checks.
 - **The CLI** (`packages/cli`) talks only to the API. It never runs git.
 
 ## Two places for the data
 
-The service always runs inside the server, with exactly the same code. Only its storage differs:
+Both deployments run the same service code inside the Deno server. Storage and request handling
+differ:
 
 | Storage         | Where the server runs                         | The database                                       | Files and backups |
 | --------------- | --------------------------------------------- | -------------------------------------------------- | ----------------- |
@@ -57,8 +65,8 @@ Worker's bindings. See [working on the Cloudflare package](cloudflare.md).
 
 ### Ports
 
-The service never calls a runtime API directly. It uses small interfaces, each with one
-implementation per place:
+The service's main logic uses standard web APIs and small interfaces called **ports**. Adapters
+implement these ports for each storage mode:
 
 - `Sql` (`packages/service/src/ports.ts`): read statements in one consistent snapshot, commit a
   batch of writes against the revision it read, and apply a migration. On `node:sqlite` with local
@@ -68,7 +76,7 @@ implementation per place:
 - `Scheduler`: wake the service up later, for LLM jobs and backups. A timer in the server; on
   Cloudflare the container controller also wakes a sleeping container when work is due.
 
-This is why `core` and `service` may only use web-standard APIs: no `Deno.*`, and no `node:`,
+This is why `core` and the main `service` logic use standard web APIs. They do not use `Deno.*` or `node:`,
 `jsr:`, `npm:` or `@std/` imports outside tests. CI checks it.
 
 ### One writer at a time
@@ -76,24 +84,26 @@ This is why `core` and `service` may only use web-standard APIs: no `Deno.*`, an
 Every operation (an upload, an approval, an LLM result) reads the database at one revision, decides
 its writes, and commits them as one batch guarded by that revision (`packages/service/src/write.ts`).
 If another commit landed in between, the batch aborts before changing anything, and the operation
-reads again and retries; after four tries it answers that the project is busy. Operations therefore
-never interleave, on either storage. While the service waits for Gemini, it keeps serving other
+reads again and retries; after four tries it answers that the project is busy. Each successful batch is atomic: all its writes commit together. Concurrent operations can
+read and prepare work at the same time, but a stale batch must retry. While the service waits for Gemini, it keeps serving other
 requests.
 
 ## The data model
 
+The service keeps these records and states:
+
 - A **string** is a key in a source-language file, identified by its file and key path, never by its
-  text. Plural groups (`coins_one`, `coins_other`) are one string with a form per plural category.
+  text. A Markdown document uses one string with an empty key path; the file identifies it. Plural groups (`coins_one`, `coins_other`) are one string with a form per plural category.
 - A **translation** is the current accepted text of one string in one language, with its colour:
-  green (from the LLM) or blue (proofread by a person). No translation means red. Downloads read
-  only translations.
+  green (awaiting review) or blue (marked as proofread). Imports can set either state. No translation means red. Downloads use accepted translations, with source fallback or omission according to export options.
+  Pending suggestions never supply exported text.
 - A translation is **outdated** when the source text changed after it was made: it remembers the
   hash of the source it was made for.
 - **Suggestions** are pending changes from volunteers, and the LLM's proposals for outdated blue
   translations. Downloads never read them.
-- **History** records every change, in the same transaction as the change.
+- **History** records accepted translation changes in the same transaction as each change.
 - **Uploads delete nothing.** Removed keys and files are hidden, and come back with their
-  translations.
+  translations. Retention rules for old published file versions do not remove these source records.
 
 Every change to a translation goes through one function in the service, which enforces the rules
 (for example, the LLM never overwrites a blue translation), writes history and raises the project's
@@ -101,20 +111,37 @@ revision.
 
 ## Files
 
-`core` reads JSON with its own order-preserving parser: it keeps key order (even for keys like
+`core` reads JSON with a parser that preserves order: it keeps key order (even for keys like
 `"10"`), rejects duplicate keys, reports line and column, and records the file's indentation and
 line endings. The renderer rebuilds each language's file from the source-language structure, in the
-same order and format, so downloading twice gives the same bytes and a download with nothing new
-produces no git diff.
+same order and format. Given the same source, translations, and export options, it produces the same bytes. This
+keeps repeated downloads from causing changes in Git.
+
+Markdown files use a different path: the entire document is one value. The core removes a byte
+order mark, normalizes line endings, and removes final whitespace. Downloads add one final
+newline. Quality checks preserve the number of paragraphs, separated by blank lines, rather than
+each internal line break. The source parser does not split Markdown into headings or sentences.
+
+Repository descriptions can accompany source strings in sidecar files or fields with a configured
+suffix. They supply translation context without becoming translatable strings. Stored source
+warnings record possible ambiguity; descriptions can resolve a source's needs-context listing.
 
 ## Accounts and permissions
 
 Authentication lives at the server boundary, while authorization lives beside the data in the
-service. Passwords use salted PBKDF2 with the instance secret mixed in. The service stores hashed
+service. Passwords use PBKDF2-SHA-256 with an independent random salt per password. Changing the instance
+signing secret does not change password verification. The service stores hashed
 session IDs and API keys; the server signs short-lived session cookies and checks Origin on browser
-writes. Roles are none, contributor, manager and administrator, optionally limited to languages.
-Invites and volunteer requests grant no rights until the service accepts them. The website's `can()`
+writes. Roles are none, contributor, manager, and administrator. Contributors and managers can be limited
+to selected languages.
+A pending volunteer request allows comments but not translation edits. An invite grants its role
+and language access when redeemed through an allowed account flow. The website's `can()`
 helpers control visible actions but never replace service checks.
+
+Every signed-in user can create, list, and revoke their own API keys. Administrators can manage
+all keys. A user-created key requires both an allowed scope and the creator's current permissions;
+its language limits follow the creator too. A deleted creator makes it unusable. Keys created by
+the server command have no user owner and follow their scope alone.
 
 Session cookies carry a signed one-hour token. The server may trust it without a storage lookup only
 for public API reads identified by the route's access declaration. The session response itself,
@@ -138,20 +165,34 @@ LLM jobs persist their scope, progress, request outcomes and next wakeup. The lo
 timers; Cloudflare uses alarms, shared with nightly backups. Batches call the translator outside a
 transaction, then recheck source hashes, translation revisions and blue status before saving.
 Quality checks run on every result, and outdated blue strings receive proposals instead of
-replacement text. Provider keys stay with the service; the browser and CLI never receive them.
+replacement text. Administrators submit provider keys through Settings. The service stores them and returns only
+status and a short ending, not the saved key. Translation requests use the stored key on the server.
+
+Editor LLM drafts use a separate request path. They have the same quality rules and usage
+accounting as translation work, but do not write translations or pending suggestions. The browser
+caches drafts while the page remains open and requests upcoming strings in small batches. A
+separate model setting can serve these drafts without changing the normal job model.
+
+Optional translation memory reuses current accepted values with identical source, kind, and
+plural structure in the same language. Copied values are green and record their origin in history;
+proofread originals are unchanged. Quality jobs separately compare meaning, propose glossary
+terms, and draft language instructions. They store review findings and drafts, not replacement
+translations. Their result writes check that source, value, and relevant context are still current.
 
 Local storage snapshots use SQLite's backup API and run in a worker on a read-only connection.
 Pre-migration snapshots are taken before schema changes. Portable JSON exports stream table chunks
 and check the database revision, restarting when concurrent changes would mix states. Cloudflare
 streams the nightly export to R2. SQLite and JSON restores share the service import path, reject a
-used destination and migrate older schemas. They preserve accounts but omit sessions and transient
-authentication secrets; password verification still needs the original instance secret.
+used destination and migrate older schemas. Restores preserve account password hashes, clear sessions and email tokens, and keep the destination
+instance's signing secrets. Both restore formats skip the source instance's provider secrets; enter those again after restore.
+Portable JSON backups omit these secrets, but SQLite snapshots contain them and need private storage.
 
 ## Tests
 
-- Tests sit next to the code (`*.test.ts`) and run with `deno task test`: offline, in seconds, with
-  an in-memory database and a fake translator.
-- The same test cases run against both implementations of each port.
-- The Cloudflare package has its own tests, which run in `workerd` (`deno task cf:test`).
+Tests sit next to the code as `*.test.ts`. `deno task test` runs the normal local suite using a
+fake translator. Shared cases under `packages/service/src/testing/` check storage behavior against
+local SQLite and the D1 adapter through the production storage handler. The former Durable
+Object storage service has been removed; Durable Objects still control the Cloudflare container. Cloudflare tests run separately in `workerd` with
+`deno task cf:test`.
 
 See [testing](testing.md) for commands, and [Cloudflare development](cloudflare.md) for its runtime.

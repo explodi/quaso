@@ -1,487 +1,423 @@
 # Translating and reviewing on the website
 
-Every Quaso instance has a public website, such as `translate.yourgame.com`. Anyone can read it
-without an account: the languages, their progress, every string and its translations, their history
-and the project's activity. To take part, you sign in:
-
-- **Volunteers** (the _contributor_ role) suggest translations and corrections, and say "looks good"
-  about machine translations. Their changes wait for a review.
-- **Managers** edit translations directly, approve or reject suggestions, and run the LLM.
-- **Administrators** do all that, and manage the team and the settings.
-
-This guide covers the dashboard, the editor, the states and their colours, the keyboard shortcuts,
-and how suggestions are reviewed. The last section is the keyboard audit of the website's
-accessibility.
-
-## The dashboard
-
-The home page lists every language the project translates into, with:
-
-- a **progress bar**: blue for proofread words, green (striped) for words translated but not yet
-  proofread, grey for the rest;
-- **"45% translated • 10% proofread"**, counted in English words;
-- the **words left**: the English words of strings nobody has translated yet;
-- flags for **outdated** strings, **pending** suggestions and **QA problems**, when there are any.
-  Hover over the outdated flag for what it means: the English changed after those strings were
-  translated, and players get the old translations until someone updates or approves them.
-
-Search the languages by name or tag, and sort them by name or by progress. Next to the list, the
-project's description and its details: the source language, the number of strings, words, files,
-languages and members, and when something last happened.
-
-## A language
-
-Open **Sources** next to Dashboard to see the uploaded files in their repository folders.
-Each file and folder shows its string and word counts; files also show when an upload last changed
-them. Filter by any part of the repository path. Clicking a file opens its editor in the last
-language you visited, or the first project language. Without target languages, you can still browse
-the sources and their counts.
-
-Click a language to see its **files**, in the same repository folders with progress per file. Type in **Filter files** to
-find one, and tick **Hide completed** to leave out files where every string is translated and up to
-date, without quality problems. The counts at the top ("3 outdated", "12 untranslated strings"…)
-open the editor with that filter. When some strings are outdated, a line under the counts says what
-that means.
-
-**Translate all** opens the editor for the whole language; a file opens it for that file.
-
-## The editor
-
-The editor has three panes, like Crowdin's:
-
-1. **Files**: the file tree with progress. "All files" shows every string. On a narrow screen, the
-   **Files** button in the editor's bar opens this pane.
-2. **Strings**: every string, with its state, its English (placeholders highlighted) and its key
-   underneath. Above the list:
-   - **Search** by key or text (English or translation);
-   - **filters** by state: untranslated, translated (green), proofread (blue), outdated, pending and
-     QA problems, each with its count.
-3. **Translation**: the selected string, and below it the **History**, **Suggestions**, **Other
-   languages**, **Glossary** and **Comments** tabs.
-
-The address bar always holds the file, the filter, the search and the selected string, so you can
-share a link to exactly what you see.
-
-### States and colours
-
-| Shape               | Colour | State        | What it means                                                                                                          |
-| ------------------- | ------ | ------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| Empty circle        | red    | Untranslated | No translation: the app shows the English.                                                                             |
-| Half-filled circle  | green  | Translated   | Translated by the LLM (or imported), **not yet proofread** by a person.                                                |
-| Circle with a check | blue   | Proofread    | Written or approved by a person.                                                                                       |
-| Clock               |        | Outdated     | The English changed since this was translated. The old translation is still used until someone updates or confirms it. |
-| Hourglass           |        | Pending      | Suggestions wait for a review.                                                                                         |
-| Warning triangle    |        | QA problems  | The translation fails a quality check.                                                                                 |
-
-**Blue means proofread and green means translated by the LLM: the reverse of Crowdin's colours.** In
-Crowdin, green is approved; here, green asks for a person to look at it.
-
-Colour is never the only signal: every state has its own shape and label, and the three colours (a
-vermilion red, a bluish-green teal and a strong blue) differ in lightness as well as hue, so they
-stay apart for people with red–green colour blindness. Hover over a state, or read the label in the
-translation panel, to see it in words.
-
-### Translating a string
-
-The translation panel shows the string's **key**, its file, its state, the **description** the
-developers wrote, and its **maximum length** if it has one. Then the **English**:
-
-- **Placeholders** such as `{{count}}` or `{{name}}` are highlighted. The app fills them in, so a
-  translation must keep every one of them, unchanged. Click a placeholder chip above the input to
-  insert it at the cursor.
-- **References** to other strings, such as `$t(common:play)`, are shown as `⟦1⟧`, `⟦2⟧`… with the
-  English they refer to (hover over the chip). Keep them where they belong in your language; they
-  turn back into the exact reference when you save.
-
-Strings with **plural forms** (such as "1 coin", "5 coins") have one input per form your language
-needs, each labelled with the numbers it is used for: Polish has _one_ (1), _few_ (2–4, 22–24,
-32–34, …), _many_ (0, 5–21, 25–31, …) and _other_ (1.5). The English of each form is shown above its
-input.
-
-A **document**, a Markdown file translated whole, shows its file name instead of a key, the whole
-file as the source, a taller input and a paragraph counter: the translation must keep the English's
-paragraphs (blocks separated by blank lines) and placeholders, while line breaks inside a paragraph
-and the Markdown syntax are up to you.
-
-As you type, the **quality checks** run: a missing or extra placeholder, a missing plural form, an
-empty translation, one longer than the maximum length, or whitespace at either edge or line-break
-counts that differ from the source are **errors**, and saving waits until they are fixed. A placeholder or reference chip above the input turns red, with a warning sign, while the
-translation lacks it. **Warnings** point at likely slips without holding the save:
-
-- identical to the English, or different numbers;
-- an HTML or Trans tag, such as `<b>` or `<1>`, missing or added;
-- two spaces in a row;
-- a translation shared by another key in the same file whose source differs. Stored duplicate
-  warnings also appear in the QA filter, name the other key and show its source text. Identical
-  source strings, reference-only/literal entries and values of two characters or fewer are excluded;
-- a different question mark, exclamation mark, ellipsis or colon at the end (each script's own
-  marks count, such as `？` or Greek `;`).
-  When a string has a maximum length, a counter shows the length in characters as the app counts them.
-
-Single-line source strings keep single-line translation inputs: Enter does not insert a newline.
-Ctrl/⌘+Enter still saves. Whitespace is checked per plural form, with the source's matching category
-or `other` as the reference. The source shows edge whitespace as `·` (space) and `↵` (line break).
-Imports can retain failures with `--allow-qa-errors`; they remain flagged for review.
-
-For right-to-left languages, such as Arabic or Hebrew, the inputs are right to left, and so is the
-English when the project's source language is itself right to left.
-
-### What you can do
-
-What the panel offers depends on your role:
-
-An **outdated** string shows a banner above the English: the English changed after the translation
-was written, so players still get the old translation until someone updates or approves it. It shows
-the change, old words struck out and new ones underlined, and says what you can do: save an update,
-**Approve** the translation if it still fits, or review the LLM's proposal in **Suggestions**.
-
-| You are                   | You can                                                                                                                                                                                                                                            |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Not signed in             | Read everything; "Sign in to suggest a translation".                                                                                                                                                                                               |
-| Signed in, without a role | Read everything; an administrator can make you a contributor.                                                                                                                                                                                      |
-| Contributor               | **Suggest** a translation or a correction; **Looks good** on a green string.                                                                                                                                                                       |
-| Manager or administrator  | **Save** (the translation becomes blue); **Approve** a green string as it is (or confirm an outdated one); **Unapprove** a blue string (it becomes green); **Delete** a translation (the string becomes untranslated); **Translate with the LLM**. |
-
-Managers can also select several strings with their checkboxes (Shift-click, or Shift+Space, selects
-a range) to **Approve** the green ones, or to **Translate with the LLM**, in one go. When the server
-has no LLM provider, the website says that LLM translation is off. Translations from the LLM arrive
-while you work: the editor checks for changes every few seconds after you start a run.
-
-### LLM suggestions
-
-Managers who translate by hand can turn on **LLM suggestions**, the switch at the end of the translation
-tools, above the input (the browser remembers it). When you stay on an untranslated or outdated string, it is
-sent to the LLM in the background, with the same instructions, context and quality checks as an LLM job,
-together with the next three strings to do. You type as usual; when the LLM's translation arrives, it
-appears under the input. If it says what you were going to write, click it (or press
-<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd>) and it replaces your text, then save.
-<kbd>Ctrl</kbd>+<kbd>Z</kbd> brings your text back. Strings with plural forms get a suggestion under
-each form's input.
-
-Only the first string makes you wait, a few seconds. The editor keeps asking ahead as you move on, a
-few strings in one request, so the next ones are usually there when you open them. It waits half a
-second on a string before asking, so skimming past strings costs nothing.
-
-Nothing is saved until you save: the suggestion is only offered. Its tokens count in the LLM usage
-and against the monthly token budget, like a job's; going back to a string shows the same
-suggestion without asking again. Because you are waiting, a suggestion asks the model for as little
-thinking as it allows and isn't retried: a string whose answer fails the quality checks has no
-suggestion, and you type your own. To take the LLM's text for many strings, select them and use
-**Translate with the LLM** instead: a job sends 25 strings per request and its results are green at
-once. The switch is there when the server has an LLM provider.
-
-Suggestions use the project's model unless an administrator picks **Model for editor suggestions** in
-Settings → AI translation: since you are waiting for them, a faster model suits them, while jobs keep
-the project's model. Choosing "The project model" again ends the override.
-
-The editor opens in **To do first** order: untranslated strings, outdated translations, then
-completed translations. Within each group, strings follow their file and position. Choose **File
-order** to browse in source order; the address keeps your choice. Filters apply to either order.
-
-The queue stays in its opening order while you work. Its counter, such as **1 / 23**, uses the
-initial number of untranslated or outdated strings and shows **Done** once those entries are
-finished. **Previous to do** and **Next to do** skip entries completed since the queue opened.
-Reloading or changing a file, filter or order opens a fresh queue.
-
-After you save or suggest, the editor moves to the next string still to do.
-
-If someone else changed the translation while you were editing it, the editor shows their version
-and asks: **Use their version**, or **Save mine over it**. If it changed just before you pressed
-Approve, Unapprove, Delete or Looks good, the editor shows their version and offers to **Reload**,
-or to do the same to their version (**Approve their version**, say): never to put your older text
-back.
-
-If your session ends while you work (it expired, or you signed out in another tab), the header shows
-it at once and the error offers **Sign in**, which brings you back to the same string. What you
-typed stays while the page is open.
-
-Messages after an action appear at the bottom of the window. They go after a few seconds, but not
-while the pointer is over them or one of them has focus; error messages stay until you dismiss them.
-
-### Suggestions and review
-
-A contributor's change doesn't replace the translation at once: it waits, **pending**, until a
-manager reviews it. The **Suggestions** tab lists the pending suggestions of the string (and those
-reviewed in the last 30 days), with the quality checks of each. Managers **Approve** one (the string
-becomes blue with that text; the string's other pending suggestions are superseded) or **Reject**
-it. The author can **Withdraw** their own pending suggestion.
-
-The **History** tab shows who changed the string and when: the text before and after, and the colour
-changes. The **Other languages** tab shows the same string in every other language, with its state;
-click a language to open the string there.
-
-## Review queue and your contributions
-
-Managers open **Review queue** to review suggestions across strings. Filter by language, file,
-person or status. Each entry shows the source, current translation and proposed change, with a word
-diff and current quality checks. **Approve** makes its text blue and supersedes competing proposals.
-**Reject** can include a review comment. Select several entries for bulk approval or rejection;
-conflicting or invalid entries report their own errors while successful entries finish.
-
-**My contributions** shows your own suggestions and their status, including approved, rejected,
-superseded and withdrawn entries. You can withdraw a pending suggestion. A rejected suggestion does
-not change the accepted translation. Follow its string link to revise and submit a new suggestion.
-
-## Auto-translate, jobs and usage
-
-Starting a bulk translation closes the dialog. While jobs are queued or running, a small
-panel in the bottom-right corner follows their combined progress across pages and reloads.
-Polling pauses while the tab is hidden. Follow **View job** to inspect a job's status,
-counts and failures; with several jobs, the panel shows their total progress.
-
-When a job finishes, a message shows the translated and failed counts for 10 seconds, or
-until dismissed. Cancelled and failed jobs have separate messages. **View failures** opens
-the job's failures. Completion refreshes the dashboard, language files and editor counts
-without a reload. Both the panel and job cards expose percentages and string counts to
-screen readers.
-
-Managers can choose **Auto-translate** from the dashboard, language page or editor. Select languages
-and files, review their word counts and the work estimate, and optionally add an instruction or
-choose a model for that run. **Update outdated translations** (on by default) rewrites outdated green
-translations, and gives each outdated proofread (blue) one a proposal for a manager to review: blue
-translations are never overwritten by the LLM. Retranslation can include green strings. The estimate
-says how many strings get each treatment: untranslated, translated again, rewritten or proposed.
-
-Files use repository folders with checkboxes. Check a folder to select all files beneath it;
-unchecking one file leaves its folder partly checked. **All files** selects or clears the whole
-tree. Arrow keys move and expand folders; Space toggles a file or folder. Word counts beside
-each node and the per-language breakdown update with the estimate as you change the scope.
-The dashboard starts with all languages and files, a language page starts with that language,
-and the editor starts with its current language and file or folder. The line beneath languages names the configured LLM reference languages and links
-to their Settings section. Starting closes the dialog; the job indicator follows its progress.
-
-**Jobs** lists queued, running, paused and finished work. Open progress details for successes,
-failures and skipped strings. Cancellation stops remaining work, and failed items can be retried.
-Completed translations remain accepted even if another item fails. A provider failure or monthly
-budget can pause work; an operator may need to fix the key or budget before it can finish.
-
-**Usage** shows requests and input, output and thinking tokens, by day or month, language and model.
-It also shows the configured monthly budget. These are usage counts, not a provider invoice or a
-promise about cost. A server without a configured provider explains why translation cannot start.
-
-## Joining and managing the team
-
-A signed-in visitor can choose **Become a volunteer**, select languages and send a short message.
-The request waits for an administrator; signing up alone does not allow translation edits. An invite
-link can grant its configured role and language access when the account joins.
-
-Administrators use **Team** to approve or reject volunteer requests, assign roles and language
-access, remove a member's role, create expiring invite links and revoke invites. Password reset
-links are available when a person needs help signing in. Copy a new invite or reset link when shown
-and share it privately. Quaso prevents removing the final administrator.
-
-In **Account**, change your name, email or password and link or unlink configured GitHub/Discord
-sign-in methods. Sensitive changes may ask for your current password. You cannot remove the last way
-to sign in. Deleting your account keeps contributed translations in the project; the confirmation
-explains what happens before you proceed.
-
-## Settings and administration
-
-Administrators choose a section in **Settings**:
-
-- **General**: project name, description, logo, links and interpolation delimiters. Match your app's
-  placeholder syntax; changing it rechecks translations. **Other placeholders** adds the delimiters
-  of placeholders your app fills in itself, such as `{` and `}` for `{name}` beside i18next's
-  `{{count}}`: the checks, the editor and the LLM keep them like i18next's. **Placeholders some
-  languages leave out** lists placeholders that only make sense in some languages, such as an
-  English article filled in as `{article}`: the languages listed may leave them out, and the LLM
-  is told so.
-- **Languages**: add or remove target languages, set instructions and override cardinal or ordinal
-  plural categories when the app's runtime needs different rules.
-- **Files and length limits**: describe file context and string constraints. Config-defined limits
-  are locked here because the next upload owns them.
-- **LLM translation**: automatic translation, outdated handling, model, prompt, context languages,
-  batch size, neighboring strings, retries and safety. Models are chosen from a drop-down of what
-  the provider offers (a text field when it can't list them). The outdated options say what an upload that
-  changes the English does: rewrite green translations, propose updates for proofread ones, both or
-  neither. Auto-translate asks each time instead. Resetting the prompt changes the draft; save
-  to apply it. Unknown prompt placeholders are rejected. Provider credentials stay on the server.
-- **API keys**: everyone's keys, with who created each. Create named `read` or `upload` keys, copy
-  the secret once, and revoke unused keys. Read keys download and inspect status. Upload keys also
-  upload, import and start translation jobs, as far as their creator's role allows. Everyone
-  signed in also creates and revokes their own keys on their account page.
-- **Backups**: download SQLite or JSON and inspect the last backup. Store exports privately: they
-  hold account data. See [operations](operations.md) for restore drills.
-
-**Admin** shows the release version, storage mode, schema/revision, translator and job health,
-recent errors and last backup. It is a diagnostic page for administrators. On Cloudflare, operators
-rewind the database with D1 Time Travel; its instructions are in the
-[deployment guide](deploy-cloudflare.md#backups-and-recovery).
-
-## Glossary, comments and language requests
-
-Anyone can browse **Glossary** at `/glossary`, search terms and filter by language. A term either
-specifies a preferred translation or says **Never translate**. Managers can add, edit and delete
-terms for their assigned languages; global terms require an administrator or a manager with access
-to all languages. Terms can be case-sensitive and have a note explaining their use.
-
-The editor highlights matching whole-word terms. Its **Glossary** tab shows the applicable
-translation or instruction. Enabled glossary context is also included in LLM prompts. Glossary QA
-messages are warnings: inspect them, but they do not prevent a save when wording needs to differ.
-
-Use the editor's **Comments** tab to discuss a translation. Contributors and managers can comment in
-their permitted languages. A person with a pending volunteer request can also join the discussion
-before receiving a contributor role. Check **Problem in the English** to report a source-text issue
-shared across languages. This reports the problem; source files still belong in the game's
-repository.
-
-Authors may resolve or delete their own comments. Managers can resolve comments in their permitted
-languages and source issues; administrators can delete any comment. Managers find unresolved source
-reports through **Source issues** in the navigation. The page, **Problems in the English**, is at
-`/issues`, with links back to the strings.
-
-The dashboard's **Requested languages** section lists community requests. Signed-in people choose
-**Request a language**, enter a valid language tag and an optional message, or **Vote for this
-language** on an existing request. Each person gets one vote per language. An enabled human check
-must be completed for requests and votes. Administrators review requests in **Settings →
-Languages**; **Approve language** adds it to the project through the usual language setup, while
-**Reject language** closes the request. Add approved languages to the game's CLI config when they
-should be downloaded or included in release gates.
-
-## Keyboard shortcuts
-
-Press <kbd>?</kbd> in the editor (outside a text input) for this list. On a Mac, use
-<kbd>⌘</kbd> for <kbd>Ctrl</kbd> and <kbd>⌥</kbd> for <kbd>Alt</kbd>, except for inserting
-placeholders (below).
-
-| Keys                                                                                             | What they do                                                                                             |
-| ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| <kbd>Ctrl</kbd>+<kbd>Enter</kbd>                                                                 | Save (or suggest), then go to the next string to do. Without a change, just go to the next string to do. |
-| <kbd>Alt</kbd>+<kbd>↓</kbd> / <kbd>Alt</kbd>+<kbd>↑</kbd>                                        | The next / the previous string                                                                           |
-| <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>↓</kbd> / <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>↑</kbd>      | The next / the previous string still to do                                                               |
-| <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd>                                                    | Copy the English into the input (it replaces the text; undo with <kbd>Ctrl</kbd>+<kbd>Z</kbd>)           |
-| <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd>                                                | Put the LLM suggestion into the input (it replaces the text; undo with <kbd>Ctrl</kbd>+<kbd>Z</kbd>)     |
-| <kbd>Alt</kbd>+<kbd>1</kbd>…<kbd>9</kbd>; on a Mac, <kbd>Control</kbd>+<kbd>1</kbd>…<kbd>9</kbd> | Insert the first to ninth placeholder or reference (the number is on its chip). See below.               |
-| <kbd>↑</kbd> <kbd>↓</kbd> <kbd>Home</kbd> <kbd>End</kbd> <kbd>Page Up</kbd> <kbd>Page Down</kbd> | Move in the string list                                                                                  |
-| <kbd>Enter</kbd>                                                                                 | Open the focused string (in the list)                                                                    |
-| <kbd>Space</kbd>                                                                                 | Select the focused string, for bulk actions (managers)                                                   |
-| <kbd>?</kbd>                                                                                     | The list of shortcuts                                                                                    |
-| <kbd>Esc</kbd>                                                                                   | Close a dialog                                                                                           |
-
-Why these keys for placeholders: on Windows and Linux, browsers keep <kbd>Ctrl</kbd>+digits for
-switching tabs, so the editor uses <kbd>Alt</kbd>. On a Mac, <kbd>⌥</kbd>+digits type characters on
-most keyboard layouts (<kbd>⌥</kbd>+<kbd>8</kbd> is `{` on a German keyboard,
-<kbd>⌥</kbd>+<kbd>2</kbd> is `@` on a Spanish one), and those are exactly the characters
-placeholders are made of, so the editor leaves them alone and uses <kbd>Control</kbd>. Clicking a
-chip inserts it too. The shortcuts never take keys from the search box.
+Use the Quaso website to suggest translations, review changes, and manage a translation team.
+Anyone can browse the project's languages, source strings, translations, history, and activity
+without an account. To change anything, sign in and get the access your task needs.
+
+A **source string** is a piece of text from the game. Its **source language** can be any language;
+examples on this page use English. See [how translation works](concepts.md) for the full workflow
+and the difference between a translation and a suggestion.
 
 ## Signing in
 
-Sign in with your email address and password (at least 10 characters). Depending on the instance,
-you can also sign in with GitHub or Discord, or ask for a sign-in link by email. GitHub or Discord
-opens the account with the same email address only once that account's address is verified;
-otherwise, sign in with your password first, then link them to your account. An invite link from an
-administrator gives your new account its role at once.
+Sign in with your email address and password. New passwords need at least 10 characters. If the
+instance offers them, you can also use GitHub, Discord, or an email sign-in link.
 
-Email sign-in links work only after the account's email address has been verified, including for
-accounts without a password. If a link says the address is unverified, use password reset to recover
-access. A reset replaces the password and signs out every old session. For an unverified address it
-also verifies that address and removes any previously linked GitHub or Discord identities; link your
-own sign-in methods again after recovery.
+Creating an account does not grant permission to translate. Choose **Become a volunteer**, select
+languages, and send a message to the administrators. Wait for approval, or use an invite link that
+grants a role and language access.
 
-If you forgot your password and the instance sends emails, ask for a reset link on the sign-in page.
-Otherwise an administrator creates a reset link for you on the Team page. A revoked session cannot
-change data, read private account information or link a sign-in method on its next request. Public
-project reads may still recognize its signed cookie for up to an hour.
+These roles control what you can do:
+
+| Role                      | Access                                                                                                                      |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Signed in, without a role | Browse the project and request volunteer access or a new language. A pending volunteer request also allows comments.        |
+| Contributor               | Suggest translations and corrections, or choose **Looks good** on a green translation. A manager reviews these suggestions. |
+| Manager                   | Save translations directly, review suggestions, manage glossary terms, and start automatic translation.                     |
+| Administrator             | Do the manager's tasks, manage the team, and change settings.                                                               |
+
+Contributors and managers can be limited to specific languages. An administrator can change these
+limits. Signing in alone does not make a language editable. Every signed-in person can create and
+revoke their own API keys in **Account**; a key never grants more access than its creator has.
+
+### Recover access
+
+If the instance sends email, use the password-reset link on the sign-in page. Otherwise, ask an
+administrator for a reset link from **Team**. A reset changes the password and signs out old sessions.
+
+Email sign-in links require a verified email address. GitHub and Discord can join an existing
+account with a matching email only if that account's address is verified. Otherwise, sign in with
+your password and link the method in **Account**. If you cannot access an unverified account, use
+password reset. Recovery verifies the address and removes linked GitHub and Discord identities;
+link your own methods again afterward.
+
+## The dashboard
+
+The home page, **Overview**, lists the project's target languages. Search by language name or tag, then sort by
+name or progress. Each language shows:
+
+- A progress bar: blue for proofread words, striped green for translated words awaiting review,
+  and an unfilled area for untranslated words.
+- Translated and proofread percentages, measured in **source words**. Translated progress includes
+  both green and blue translations.
+- The number of source words without a translation.
+- Counts for outdated translations, pending suggestions, and quality problems when present.
+
+Project details include the source language, description, file and string counts, and recent
+activity. Select a language name to explore its files, or choose **Open editor** to go directly
+to its translation queue. The desktop navigation groups pages under **Project**, **Contribute**,
+and **Manage**. On small screens and in the editor, use **Menu** to reach those pages.
+
+## A language
+
+The language page lists files in their repository folders, with progress for each file. Use
+**Filter files** to find a path. Select **Hide completed** to hide files whose strings are translated,
+up to date, and free of quality problems. Completion here does not require every translation to
+be proofread.
+
+Open a file to translate it, or choose **Translate all** to work across the language. Summary counts,
+such as untranslated or outdated strings, open the editor with that filter.
+
+To browse the source files first, open **Sources** in the navigation. It shows string and word
+counts and when each file changed. Opening a file uses your last visited target language, or the
+first target language. You can browse sources even before the project has target languages.
+
+## The editor
+
+The editor has three panes:
+
+1. **Files** lists files and folders. **All files** includes every source file. On a narrow screen,
+   use the file selector above the string list, labeled **All files** or the current file name,
+   to open this pane.
+2. **Strings** lists source text, keys, and translation states. Search by key, source text, or
+   translation. Open the **All strings** filter to choose untranslated, translated, proofread,
+   outdated, pending, or quality problems.
+3. **Translation** shows the selected string and the **History**, **Suggestions**, **Other languages**,
+   **Glossary**, and **Comments** tabs.
+
+The page address records the selected string, file, filter, search, and sort order. Copy it to share
+that view with someone else.
+
+### States and colours
+
+| Shape              | Colour | State        | Meaning                                                                                                            |
+| ------------------ | ------ | ------------ | ------------------------------------------------------------------------------------------------------------------ |
+| Empty square       | Red    | Untranslated | No accepted translation exists. Downloads use the source text unless configured to leave missing translations out. |
+| Half-filled square | Green  | Translated   | A translation exists but is not marked as proofread. It can come from the LLM, an import, or **Unapprove**.        |
+| Checked square     | Blue   | Proofread    | A person saved or approved the translation, or it was imported as proofread.                                       |
+| Clock              |        | Outdated     | The source changed. Downloads keep the old translation unless configured to omit outdated text.                    |
+| Hourglass          |        | Pending      | One or more suggestions await review.                                                                              |
+| Warning triangle   |        | QA problems  | The translation has a quality-check error.                                                                         |
+
+**QA** means quality assurance. The icons and text labels identify states as well as colour.
+Outdated, pending, and quality problems are flags that can appear alongside a translation state.
+Blue and green record review status; they do not guarantee that a translation is correct. The
+**QA problems** filter also includes stored duplicate, consistency, and meaning warnings, even when
+they do not block a save.
+
+### Translating a string
+
+You need contributor, manager, or administrator access for the language.
+
+1. Open a language and a file, then select a string.
+2. Read the source text, description, maximum length, and relevant glossary terms.
+3. Enter the translation. For a plural string, fill in each form shown by the editor. Each input
+   gives example numbers and the matching source text, or the source's `other` form.
+4. Fix any errors shown below the inputs. Review warnings too; they do not block saving.
+5. Choose **Suggest** as a contributor, or **Save** as a manager or administrator.
+6. Check **Suggestions** for your pending proposal, or **History** for a saved translation. The
+   editor moves to the next string still to do after submission.
+
+A **placeholder**, such as `{{count}}`, marks text that the game fills in. Keep its spelling and
+brackets unchanged. Select a chip above the input to insert it. Some projects allow specific
+placeholders to be left out in selected languages; the quality checks use those settings.
+
+References to other strings, such as `$t(common:play)`, normally appear as `⟦1⟧`, `⟦2⟧`, and so on.
+Hover over a reference chip to see its source text. Keep each reference where it belongs in your
+translation. Saving restores the original reference syntax. If this numbered notation would
+conflict with the string's text, the editor keeps the original references visible.
+
+The editor checks for missing or extra placeholders and references, missing plural forms, empty
+translations, and length limits as you type. A missing placeholder or reference turns its chip red.
+For JSON strings, leading and trailing whitespace and the number of line breaks must match the
+source. A single-line source keeps a single-line input: Enter does not add a line break, while
+Ctrl/⌘+Enter still saves. The source marks spaces at its edges with `·` and line breaks with `↵`.
+
+Errors block **Save** and **Suggest**. Warnings include text identical to the source, different
+numbers, changed HTML or Trans tags, repeated spaces, and differences in ending punctuation.
+A translation reused for different source text in the same file can also produce a warning.
+Length limits count visible characters, including placeholder text, rather than bytes.
+See [file formats and quality checks](file-formats.md) for the full rules and exceptions.
+
+A Markdown **document** is translated as one text. Its file name replaces the key, and the editor
+shows the full source, a taller input, and a paragraph counter. Keep the number of paragraphs
+(blocks separated by blank lines) and placeholders. Line breaks within paragraphs and Markdown
+formatting can change. The checks ignore final whitespace when comparing documents.
+
+For a language written from right to left, the input uses that direction. Source text also uses the
+source language's direction.
+
+### What you can do
+
+For an outdated translation, a notice shows how the source changed and explains whether to update
+the translation, approve it as still valid, or review an LLM proposal.
+
+Managers and administrators have these additional actions within their language access:
+
+- **Approve** marks a green translation as proofread, or confirms that an outdated translation
+  still fits the source.
+- **Unapprove** changes a blue translation to green.
+- **Delete** removes the accepted translation after confirmation. The string becomes untranslated.
+- **Translate with the LLM** requests a machine translation when a provider is available. An
+  up-to-date blue translation does not offer this action. An outdated blue translation receives
+  a proposal for review.
+
+**LLM** means large language model, the service used for automatic translation. Managers can select
+several strings with checkboxes and approve green translations or request LLM translations in a
+batch. Shift-click or Shift+Space selects a range.
+
+The editor starts in **To do first** order: untranslated strings, outdated translations, then the
+remaining strings. Within each group, it follows file and source order. Choose **File order** for
+source order throughout.
+
+The queue keeps its opening order as you work. Its counter uses the initial untranslated and
+outdated entries, then shows **Done** when those entries are complete. **Previous to do** and
+**Next to do** skip completed entries. Reloading or changing the file, filter, or order starts a
+new queue. A suggestion alone does not turn an untranslated string into an accepted translation.
+
+If someone changes a translation before you save, compare their version with yours. Choose
+**Use their version** or **Save mine over it**. Conflicts during other actions offer **Reload** or
+an action on the newer version, such as **Approve their version**.
+
+If your session expires, the next failed request offers **Sign in** and a return to the same string.
+Your current draft stays while the page remains open; copy it before closing or reloading the page.
+Action messages pause while hovered or focused. Errors stay until dismissed.
+
+### Suggestions and review
+
+A suggestion does not replace the current translation until a manager approves it. The
+**Suggestions** tab shows pending suggestions and those reviewed in the last 30 days. Managers can
+**Approve** or **Reject** them. Authors can **Withdraw** their own pending suggestions.
+
+Approval makes the suggested text blue and closes competing pending suggestions as superseded.
+The **History** tab shows accepted changes, their authors, and state changes. **Other languages**
+shows the same string's translations and links to open them.
+
+### LLM suggestions
+
+Managers and administrators can enable **LLM suggestions** above the input when a provider is
+available. The browser remembers this choice. After you stay on an untranslated or outdated string
+for half a second, the editor asks for a draft for that string and up to three upcoming strings.
+It requests more drafts as you work. Requests use the project's instructions, context, and quality
+checks, and count toward usage and the monthly token budget.
+
+A draft appears below each input. Click it, or press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd>,
+to replace the focused input. Use <kbd>Ctrl</kbd>+<kbd>Z</kbd> to undo. Nothing is accepted until you
+choose **Save**. These local drafts are separate from the pending proposals in **Suggestions**.
+
+Returning to a string in the same page session reuses its draft. A failed response leaves you free
+to type your own text; the request does not use a job's retry loop. After a short delay, revisiting
+that string can request it again. For many accepted machine translations at once, select strings
+and choose **Translate with the LLM** instead.
+
+In **Settings → AI translation**, administrators can choose **Model for editor suggestions**.
+**The project model** uses the normal model again. The suggestion request asks for as little model
+thinking as the provider supports; response time still depends on the model and provider.
+
+## Review queue and your contributions
+
+Managers use **Review queue** to work across strings. Filter by language, file, author, or status.
+Compare the source, current translation, proposed text, and current quality checks before approving.
+A rejection can include a comment. Select several entries to approve or reject them together;
+entries with conflicts or errors fail separately from successful entries.
+
+**My contributions** lists your own suggestions and their status. Withdraw a pending suggestion
+there, or follow a rejected suggestion's string link to revise and submit it again. Rejection does
+not change the accepted translation.
+
+## Auto-translate, jobs and usage
+
+Managers and administrators can start automatic translation for their permitted languages:
+
+1. Choose **Auto-translate** on **Overview**, a language page, or the editor.
+2. Select languages and files. Folder checkboxes select the files beneath them. The starting scope
+   follows the page you opened: all languages on **Overview**, one language on its page, or the
+   editor's current language and file or folder.
+3. Choose **Untranslated only** or **Also re-translate green translations**. **Update outdated
+   translations** is selected by default. It rewrites outdated green translations and proposes
+   updates for outdated blue translations.
+4. Review the estimated strings, source words, requests, and tokens. If needed, enter an instruction
+   or choose a model for this run. The estimate separates new translations, repeated translations,
+   updates, and proposals. The dialog also lists configured reference languages.
+5. Choose **Start translation**, then follow **View job** to check progress and failures.
+
+Blue translations are never overwritten by the LLM. Outdated blue translations receive suggestions
+for review. Starting a job closes the dialog. A progress panel follows active jobs across pages
+and reloads; it pauses checks while the browser tab is hidden.
+
+**Jobs** lists queued, running, paused, and finished work. Open a job for counts and failures. Cancel
+a job to stop remaining work, or retry failed items. Work already saved stays saved if another item
+fails or the job is cancelled. Provider errors or the monthly budget can pause a job; an
+administrator might need to change the key or budget before it can continue.
+
+**Usage** shows requests and input, output, and thinking tokens by day or month, language, and model.
+A token is a unit of text processed by the provider. These counts and the monthly token budget are
+not a cost estimate or an invoice. If no provider is configured, ask an administrator to set one up.
+
+### Reuse matching translations
+
+Administrators can enable **Reuse translations of identical source strings** in **Settings →
+AI translation**. This translation memory is off by default. It copies a current translation from
+the same language when the source text, string kind, and plural structure match. A copied value
+becomes green; a proofread original stays blue. When several matches exist, proofread matches are
+preferred. History records the source key, and job results count reused translations separately.
+A batch filled entirely from memory makes no translation or file-context request to the provider.
+
+The editor links other keys with the same source. Different translations of identical source text
+can produce consistency warnings. These warnings ask for review; they do not prove that context
+requires the same wording everywhere.
+
+### Check meaning and source clarity
+
+Managers can choose **Check meaning** for a string, file, language, or pending suggestion. Review
+the model's explanation in **Jobs** and the quality warnings. A meaning check does not change the
+accepted text, review state, or translation revision.
+
+Automatic checks are off by default. In **Settings → AI translation**, administrators choose whether
+to check on save or approval, which review states to check, the model, and whether checks count
+against the monthly token budget. Usage records every request, even when it does not count against
+that budget. Changed source text, translation text, or context makes an old finding invalid;
+results based on a version changed during the request are not applied.
+
+Translation jobs can also report that a source has more than one meaning. The editor shows these
+notes above the source. **Sources** marks current ambiguous text without context as **Needs a
+description**. Ask a developer to add a description in the source repository and upload it again to explain the
+intended meaning. See [file formats](file-formats.md) for repository descriptions.
+
+When meaning checks are enabled, a translation job can report a concern about a reference
+translation shown to the model. This adds a warning and job note without a separate comparison
+request. The reference must still match the value shown to the model.
+
+## Joining and managing the team
+
+Administrators use **Team** to approve volunteer requests, assign roles and language access, remove
+roles, and create or revoke invite links. Copy new invite or password-reset links when shown and
+share them privately. Quaso prevents removal of the final administrator.
+
+Use **Account** to change your name, email, or password, and link or unlink available GitHub and
+Discord sign-in methods. If your account has a password, changing its email or password requires
+that password. You cannot unlink your last way to sign in. Deleting your account removes its
+personal details and pending suggestions; accepted translations remain, attributed to **Deleted user**.
+
+In **Account → API keys**, name a key, choose its scope, and select **Create API key**. Copy the
+secret when shown; use **Revoke key** when it is no longer needed. A key is limited by both its
+scope and its creator's current role and languages. A `read` scope allows reads and downloads only
+if the creator can do them. An `upload` scope can also allow uploads, imports, translation jobs, and
+usage reads. It does not grant those rights to a role that lacks them.
+
+A person without a role or a contributor can use a key for public reads, but not downloads. A
+manager's upload key can start translation jobs in their assigned languages but cannot upload or
+download files. Use an administrator-created key for the full CLI upload and download workflow.
+Deleting an account disables its keys; role and language changes affect existing keys too.
+
+## Settings and administration
+
+Administrators select a section in **Settings**:
+
+| Section               | What it controls                                                                                                                                                 |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Project details       | Project name, description, logo, and links.                                                                                                                      |
+| Placeholders          | Default syntax, additional formats, and language exceptions. Match the game's syntax; changes trigger new quality checks.                                        |
+| Languages             | Target languages, language instructions, and plural-category overrides.                                                                                          |
+| Files & length limits | File context and maximum string lengths. Limits owned by the CLI configuration must be changed there and uploaded.                                               |
+| Language requests     | Community requests to add languages.                                                                                                                             |
+| AI translation        | Gemini key, automatic translation, models, reference languages, translation memory, meaning checks, and token budget. Save a new key before **Test Gemini key**. |
+| Email delivery        | Email provider, sender, credentials, and a test message.                                                                                                         |
+| API keys              | All users' keys and their creators. Create keys and revoke unused ones; scopes and creator permissions both apply.                                               |
+| Backups               | Download SQLite or JSON backups and check backup status. Keep copies private: they contain account data.                                                         |
+| History & retention   | How long to keep past published file versions and backups.                                                                                                       |
+
+Use the Settings sidebar, or **Settings section** on a narrow screen. In **Placeholders**,
+**Additional formats** adds syntax such as `{name}` alongside `{{count}}`. **Language exceptions**
+allows specific placeholders to be absent in selected languages. Explain these choices to
+translators, then choose **Save placeholder rules**.
+
+In **AI translation**, choose models from the provider's list. If that list is unavailable, the
+control accepts a model name. The automatic-upload options separately control new translations,
+updates to outdated green translations, and proposals for outdated proofread translations.
+**Auto-translate** asks which outdated work to handle for each run. Expand **Advanced: prompt and
+performance** for the prompt, batch size, nearby-string context, retries, and safety settings.
+
+Saved provider keys are not returned in full by the website. Resetting the prompt changes its draft;
+choose **Save AI settings** to apply it. Unknown prompt placeholders are rejected.
+
+**Instance** shows the release, storage mode, database version and revision, translator and job health,
+recent errors, and backup status. See [operations](operations.md) for backup and recovery procedures,
+and [Cloudflare recovery](deploy-cloudflare.md#backups-and-recovery) for D1 Time Travel.
+
+## Glossary, comments and language requests
+
+Anyone can browse **Glossary** and search terms by language. A term gives a preferred translation or
+says **Never translate**. Managers can maintain terms for their languages. Global terms require an
+administrator or a manager with access to all languages. Matching terms appear in the editor;
+glossary quality checks produce warnings, and enabled glossary context is included in LLM prompts.
+
+### Build a glossary and language style guide
+
+On **Glossary**, managers can choose **Suggest glossary terms**. The job finds repeated domain
+terms in source files and compares existing translations. Review the examples and counts in the
+report. Edit the proposed translation, accept it as a glossary entry, or dismiss it. By default,
+a candidate must appear in at least three strings across two files.
+
+Existing glossary terms also appear in consistency reports. After agreeing a term, use
+**Re-translate N green strings with the glossary** to update affected green translations.
+Proofread translations stay unchanged.
+
+On a language page, administrators can choose **Draft style guide**. The model uses current
+proofread translations to propose language instructions about tone, regional words, punctuation,
+and placeholder spacing. Review and edit the draft, then choose **Save language instructions**.
+Generating the draft alone changes no instructions or translations. **Jobs** lists terminology
+reports, style-guide drafts, and meaning checks alongside translation jobs.
+
+### Discuss source text and translations
+
+Use **Comments** to discuss a string. Contributors and managers can comment within their language
+access; a pending volunteer can also comment. **Problem in the English** reports a source issue
+shared across languages, even if the source language is not English. Developers fix the source in
+the game's repository and upload it again.
+
+Authors can resolve or delete their own comments. Managers can resolve comments in their languages
+and source issues; administrators can delete any comment. Managers open **Source issues** to find
+unresolved reports on the **Problems in the English** page.
+
+If language requests are enabled, signed-in users can choose **Request a language** from **Overview** or **Vote for this language**
+on a request. Each person gets one vote per language. Complete a human check if the instance asks
+for one. Administrators review these in **Settings → Language requests**. **Approve language** adds the language; **Reject language** closes the request. Add approved languages to the game's CLI
+configuration too, so downloads include them.
+
+## Keyboard shortcuts
+
+Press <kbd>?</kbd> in the editor, outside a text input, to open the shortcut list. On a Mac, use
+<kbd>⌘</kbd> for <kbd>Ctrl</kbd> and <kbd>⌥</kbd> for <kbd>Alt</kbd>, except when inserting placeholders.
+
+| Keys                                                                                                       | Action                                                                                              |
+| ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| <kbd>Ctrl</kbd>+<kbd>Enter</kbd>                                                                           | Save or suggest, then move to the next string to do. With no change, move to the next string to do. |
+| <kbd>Alt</kbd>+<kbd>↓</kbd> / <kbd>Alt</kbd>+<kbd>↑</kbd>                                                  | Open the next or previous string.                                                                   |
+| <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>↓</kbd> / <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>↑</kbd>                | Open the next or previous string still to do.                                                       |
+| <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd>                                                              | Replace the input with the source text. Use <kbd>Ctrl</kbd>+<kbd>Z</kbd> to undo.                   |
+| <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd>                                                          | Replace the focused input with its LLM suggestion. Use <kbd>Ctrl</kbd>+<kbd>Z</kbd> to undo.        |
+| <kbd>Alt</kbd>+<kbd>1</kbd>…<kbd>9</kbd>; on a Mac, <kbd>Control</kbd>+<kbd>1</kbd>…<kbd>9</kbd>           | Insert the numbered placeholder or reference chip.                                                  |
+| <kbd>↑</kbd> / <kbd>↓</kbd> / <kbd>Home</kbd> / <kbd>End</kbd> / <kbd>Page Up</kbd> / <kbd>Page Down</kbd> | Move through the string list.                                                                       |
+| <kbd>Enter</kbd>                                                                                           | Open the focused string.                                                                            |
+| <kbd>Space</kbd>                                                                                           | Select the focused string for a manager's batch action.                                             |
+| <kbd>Esc</kbd>                                                                                             | Close a dialog.                                                                                     |
+
+Clicking a chip also inserts it. Placeholder shortcuts use <kbd>Control</kbd> on a Mac because
+<kbd>⌥</kbd> with a digit can type characters needed in translations. The shortcuts leave search
+inputs to their normal keyboard behavior.
 
 ## Themes
 
-The website follows your system's light or dark setting. The theme menu in the header picks light or
-dark instead, for this browser.
+The website follows your system's light or dark setting. Use the theme menu in the header to choose
+**System theme**, **Light theme**, or **Dark theme** for this browser.
 
 ## Accessibility: the keyboard audit
 
-We aim for WCAG 2.2 AA. This checklist is the keyboard audit of Sprint 7; the browser tests
-(`deno task e2e`) check the items marked _(tested)_ on every run.
+Use **Skip to content** to reach the main page. File trees use arrow keys to move and expand folders;
+the string list uses the keys above. States include shapes and text, and inputs use the language's
+writing direction. The interface also includes styles for reduced-motion preferences.
 
-- [x] A **Skip to content** link is the first thing Tab reaches, on every page.
-- [x] Landmarks: a header with the main navigation, the main content, a footer; every page has one
-      `h1`, and headings follow in order.
-- [x] After every navigation, focus moves to the new page's main heading, so screen readers announce
-      it _(tested)_; back and forward restore the scroll position.
-- [x] Every input has a label, including the search boxes and each plural form's input ("Plural form
-      few, for 2–4, 22–24, …") _(tested)_.
-- [x] Focus is always visible: a 2-pixel ring in the focus colour, with at least 3:1 contrast.
-- [x] The dashboard: each language is one link; search and sort are a text box and a menu.
-- [x] The file tree follows the tree pattern: <kbd>↑</kbd> <kbd>↓</kbd> move, <kbd>→</kbd> opens a
-      folder, <kbd>←</kbd> closes it or goes to its parent, <kbd>Home</kbd>
-      <kbd>End</kbd> jump, <kbd>Enter</kbd> opens a file _(tested)_. One item is in the Tab order.
-- [x] The string list: one row is in the Tab order; <kbd>↑</kbd> <kbd>↓</kbd> <kbd>Home</kbd>
-      <kbd>End</kbd> <kbd>Page Up</kbd> <kbd>Page Down</kbd> move between rows, even to rows that
-      aren't rendered yet; <kbd>Enter</kbd> opens a string; <kbd>Space</kbd> selects it _(tested)_.
-      Rows say their position ("3 of 40") and state in words.
-- [x] The state filters are radio buttons: <kbd>←</kbd> <kbd>→</kbd> move between them.
-- [x] The editor's shortcuts work from the list and from the inputs, and <kbd>?</kbd> lists them
-      _(tested)_.
-- [x] Chips, the copy button and every action are buttons, reachable with Tab.
-- [x] The tabs follow the tabs pattern: <kbd>←</kbd> <kbd>→</kbd> <kbd>Home</kbd>
-      <kbd>End</kbd> switch tabs; Tab enters the panel.
-- [x] Dialogs trap focus, close with <kbd>Esc</kbd> and give focus back where it was, or to the
-      translation input when what opened them is gone (Delete) _(tested)_.
-- [x] Focus never drops to the page: a busy button stays focusable (`aria-disabled`, `aria-busy`),
-      and when an action removes its button (Approve, a bulk action, "Show older activity"), focus
-      moves to the translation input, the list or the new items _(tested)_.
-- [x] Focus is never hidden: scrolling to a focused element keeps it clear of the sticky header, and
-      on narrow screens the files overlay closes as soon as focus leaves it _(tested)_.
-- [x] Toasts wait while the pointer is over them or they have focus; errors stay until dismissed;
-      dismissing a focused toast gives focus back _(tested)_.
-- [x] Targets are at least 24×24 pixels, the string checkboxes included _(tested)_.
-- [x] The current page in the navigation is bold and underlined, not only a colour _(tested)_.
-- [x] Filtering languages, files or strings announces how many match (`role="status"`) _(tested)_.
-- [x] The account menu opens with <kbd>Enter</kbd> or <kbd>Space</kbd>, closes with
-      <kbd>Esc</kbd>, and returns focus to its button.
-- [x] Quality check messages and toasts are announced politely (`aria-live`); the live regions are
-      in the page before their first message, so it is announced _(tested)_; errors are announced at
-      once (`role="alert"`).
-- [x] Contrast: every text colour on every background is at least 4.5:1 in both themes, and icons,
-      focus rings and input borders at least 3:1 (a unit test computes every pair from the theme's
-      colours, and another checks that no stylesheet fades text with `opacity`).
-- [x] Colour blindness: the three state colours differ by more than ΔE 25 under simulated protanopia
-      and deuteranopia, and differ in lightness (unit test); shapes and labels carry the states too.
-- [x] Right-to-left languages get `dir="rtl"` and `lang` on their inputs and texts, the English
-      included when the source language is right to left _(tested)_.
-- [x] With reduced motion, nothing animates (the spinner stands still).
-- [x] Text zoom to 200% and narrow screens keep everything usable: the panes stack, and the file
-      tree moves behind a button.
-- [ ] A screen reader pass with NVDA and VoiceOver by a regular user, before release (Sprint 9).
-
-In Settings → LLM translation, **Reuse current translations of identical source strings** enables
-translation memory (off by default). New or changed sources matching another current translation
-in the same language and with the same kind and plural shape are copied as green. Proofread
-matches are preferred; their original stays proofread. History names the source key and job summaries
-count `reused` values separately. No translation or file-context request is made for a batch fully
-satisfied by memory. The editor links other keys with the same source; differing translations
-receive consistency warnings in the QA filter. Prompts include green matches marked as unproofread.
-
-Translation jobs may return a one-sentence ambiguity note explaining alternate readings of a source
-and which was chosen. Job results collect these notes, the editor warns on the source, and Sources
-shows **Needs a description** for current ambiguous sources with no description. Add context via a
-repository sidecar, a configured description suffix, or the editor to resolve the list entry.
-
-**Check meaning** runs a model comparison for a string, file or language and follows the job.
-Jobs lists progress and structured explanations; accepted text, colour and translation revision
-stay intact. Meaning warnings appear under fields and in the QA filter. Pending suggestions can
-be checked before approval. Settings → LLM translation controls automatic checks on saves and
-approvals, blue-only or every colour, the model, and monthly-budget accounting. Automatic checks
-are off by default; manual checks are available whenever translation is configured. Usage records
-every request, including checks excluded from the monthly budget. Source/value/context changes
-invalidate old warnings, and concurrent edits prevent stale model results from being applied.
-
-When meaning checks are enabled, translation jobs also accept notes about shown reference
-translations. These become warnings on the reference language and job notes, with no extra
-comparison request. Only a reference actually shown to the model and still matching its value
-can receive that warning.
-
-On Glossary, **Suggest glossary terms** starts a terminology job per language. The model finds
-recurring domain nouns and labels across source files (three strings and two files by default),
-with verified examples and the renderings already used in translations. The review table counts
-variants and prefills the majority rendering; edit it, accept the glossary entry, or dismiss the
-row. Existing glossary terms also appear in consistency reports. After agreeing a term,
-**Re-translate N green strings with the glossary** queues its affected green entries for translation;
-proofread entries remain protected.
-
-Language pages offer administrators **Draft style guide**. It samples current proofread
-translations, drafts register, regional vocabulary, punctuation and placeholder-spacing
-instructions, and presents an editable draft. **Save language instructions** applies the reviewed
-draft; generating it changes no instructions or translations. Jobs lists these analyses beside
-translation and meaning jobs.
+These features and automated checks are not a claim of full accessibility conformance. The
+[accessibility review procedure](contributing/testing.md#accessibility-review) covers keyboard,
+contrast, zoom, and screen-reader checks for contributors.

@@ -16,5 +16,7 @@ labels: bug
 **Setup**
 
 - Quaso version (shown on the admin page, or `quaso --version` for the CLI):
-- Setup: Docker Compose / Cloudflare / VM with Cloudflare storage / `deno task dev`
+- Setup: Docker Compose / Cloudflare / `deno task dev`
 - Browser, or Node/Deno version for the CLI:
+
+Remove API keys, passwords, and private account details from logs before attaching them.

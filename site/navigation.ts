@@ -12,25 +12,25 @@ export interface NavigationGroup {
 }
 
 export const NAVIGATION: NavigationGroup[] = [
-  { title: "Get started", sources: ["README.md"] },
-  {
-    title: "Host Quaso",
-    sources: ["deploy-docker.md", "deploy-cloudflare.md", "operations.md"],
-  },
+  { title: "Get started", sources: ["README.md", "concepts.md", "workflow.md"] },
   {
     title: "Translate your game",
     sources: [
       "add-to-your-game.md",
-      "workflow.md",
       "website.md",
       "migrate-from-crowdin.md",
       "move-from-crowdin.md",
     ],
   },
-  { title: "Reference", sources: ["cli.md", "configuration.md", "api.md"] },
+  {
+    title: "Host and maintain Quaso",
+    sources: ["deploy-docker.md", "deploy-cloudflare.md", "operations.md"],
+  },
+  { title: "Reference", sources: ["cli.md", "file-formats.md", "configuration.md", "api.md"] },
   {
     title: "Contribute",
     sources: [
+      "contributing/README.md",
       "contributing/architecture.md",
       "contributing/testing.md",
       "contributing/cloudflare.md",
