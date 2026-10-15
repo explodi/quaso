@@ -3,7 +3,8 @@
  * A small glob implementation (design §5.10): `**`, `*`, `?`, `{a,b}` and character classes
  * (`[abc]`, `[a-z]`, `[!abc]`), over paths with `/` separators, relative to a folder.
  * Walking skips `node_modules`, folders whose name starts with a dot, and symbolic links
- * to folders (which could loop). Results are sorted, so every machine sends the same order.
+ * to folders (which could loop). Links to files are listed, so that reading one is a clear
+ * error (`readProjectText`). Results are sorted, so every machine sends the same order.
  */
 import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
