@@ -141,6 +141,14 @@ Release candidates are for deployment and migration testing. The team decides wh
 - In Safari, the links in the header's menus (Team, Settings, Account and the others) work: the
   menu closed before the click reached them, because Safari doesn't focus a clicked link.
 
+### Security
+
+- The CLI refuses a symbolic link anywhere on the path of a file it reads, writes or deletes,
+  even one that stays inside the project (`unsafe_path`, exit code 2). A repository could commit
+  `locales/en/x.json -> ../../.env` and have `quaso upload` send the ignored `.env`, or link a
+  translation file to `.git/hooks/pre-commit` and have `quaso download` write it. Replace such
+  links with regular files or folders.
+
 ## [1.0.0-rc.2] - 2026-10-08
 
 ### Added
