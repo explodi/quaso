@@ -141,6 +141,12 @@ Release candidates are for deployment and migration testing. The team decides wh
 - In Safari, the links in the header's menus (Team, Settings, Account and the others) work: the
   menu closed before the click reached them, because Safari doesn't focus a clicked link.
 
+### Security
+
+- New password hashes use 600,000 PBKDF2-HMAC-SHA-256 iterations, OWASP's figure for SHA-256,
+  instead of 210,000 (its figure for SHA-512). A password stored with fewer iterations is rehashed
+  the next time its owner signs in with it.
+
 ## [1.0.0-rc.2] - 2026-10-08
 
 ### Added
