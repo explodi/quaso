@@ -368,6 +368,12 @@ function sqliteValue(value: unknown): SQLInputValue {
 
 const SQLITE_MAGIC = "SQLite format 3\0";
 
+/**
+ * The largest JSON document a restore reads, decompressed: JSON.parse takes it as one string,
+ * and V8 strings end at 512 MiB.
+ */
+const RESTORE_MAX_JSON_BYTES = 512 * 1024 * 1024;
+
 /** What a backup file is, from its first bytes. */
 export type BackupFileKind = "sqlite" | "json" | "gzip";
 
@@ -387,12 +393,13 @@ export async function backupFileKind(path: string): Promise<BackupFileKind> {
 /**
  * Restores a backup file into the (empty) instance behind `target`, as the system: a
  * SQLite file (a download, or a local snapshot), or a JSON document, compressed or not.
- * `tempDir` takes a copy of a SQLite file in WAL mode.
+ * `tempDir` takes a copy of a SQLite file in WAL mode. A JSON document larger than
+ * `maxJsonBytes` (by default `RESTORE_MAX_JSON_BYTES`) once decompressed is `payload_too_large`.
  */
 export async function restoreFile(
   target: RestoreTarget,
   path: string,
-  options: { tempDir?: string } = {},
+  options: { tempDir?: string; maxJsonBytes?: number } = {},
 ): Promise<RestoreResult> {
   const kind = await backupFileKind(path);
   if (kind === "sqlite") {
@@ -403,11 +410,16 @@ export async function restoreFile(
       await source.close();
     }
   }
-  return await restoreBackup(target, documentSource(await readJsonFile(path, kind === "gzip")));
+  const maxJsonBytes = options.maxJsonBytes ?? RESTORE_MAX_JSON_BYTES;
+  const document = await readJsonFile(path, kind === "gzip", maxJsonBytes);
+  return await restoreBackup(target, documentSource(document));
 }
 
-/** A JSON backup document from a file, gunzipped when needed. */
-async function readJsonFile(path: string, gzip: boolean): Promise<unknown> {
+/**
+ * A JSON backup document from a file, gunzipped when needed. Counts bytes as they arrive,
+ * so a small gzip that expands without end stops at `limit` instead of filling memory.
+ */
+async function readJsonFile(path: string, gzip: boolean, limit: number): Promise<unknown> {
   const file = await fs.open(path, "r");
   let stream: ReadableStream<Uint8Array> =
     file.readableWebStream() as unknown as ReadableStream<Uint8Array>;
@@ -419,10 +431,25 @@ async function readJsonFile(path: string, gzip: boolean): Promise<unknown> {
       readable: gunzip.readable,
     });
   }
+  let size = 0;
+  const tooLarge = new ServiceError(
+    "payload_too_large",
+    `The backup's JSON document is larger than ${Math.round(limit / 1024 / 1024)} MB.`,
+  );
+  stream = stream.pipeThrough(
+    new TransformStream<Uint8Array, Uint8Array>({
+      transform(chunk, controller) {
+        size += chunk.byteLength;
+        if (size > limit) throw tooLarge;
+        controller.enqueue(chunk);
+      },
+    }),
+  );
   let text: string;
   try {
     text = await new Response(stream).text();
   } catch (error) {
+    if (error === tooLarge) throw tooLarge;
     throw new ServiceError(
       "bad_request",
       `The backup file can't be read: ${(error as Error).message}`,

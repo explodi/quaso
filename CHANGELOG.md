@@ -151,6 +151,12 @@ Release candidates are for deployment and migration testing. The team decides wh
 - The CLI refuses plain `http://` addresses (`invalid_hostname`) except `localhost`,
   `127.0.0.0/8` and `[::1]`, so a key never crosses the network unencrypted. Development
   servers such as `http://localhost:8000` keep working.
+- A restore reads at most 512 MiB of JSON, counted as a gzip backup decompresses, and refuses a
+  larger document with 413 `payload_too_large`. A small gzip body could otherwise expand until the
+  server ran out of memory, including through `POST /restore` with the setup key.
+- New password hashes use 600,000 PBKDF2-HMAC-SHA-256 iterations, OWASP's figure for SHA-256,
+  instead of 210,000 (its figure for SHA-512). A password stored with fewer iterations is rehashed
+  the next time its owner signs in with it.
 - The CLI refuses a symbolic link anywhere on the path of a file it reads, writes or deletes,
   even one that stays inside the project (`unsafe_path`, exit code 2). A repository could commit
   `locales/en/x.json -> ../../.env` and have `quaso upload` send the ignored `.env`, or link a

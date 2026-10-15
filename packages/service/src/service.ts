@@ -76,7 +76,7 @@ export interface ServiceOptions {
   setup?: "local" | "cloudflare";
   /** A development instance (`deno task dev`): the developer account and its sign-in. */
   dev?: boolean;
-  /** PBKDF2 iterations for new password hashes. Default: 210,000 (`DEFAULT_ITERATIONS`). */
+  /** PBKDF2 iterations for new password hashes. Default: 600,000 (`DEFAULT_ITERATIONS`). */
   passwordIterations?: number;
   /** Internal default model override for tests and development tools. */
   defaultModel?: string;

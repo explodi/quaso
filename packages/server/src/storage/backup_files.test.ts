@@ -433,3 +433,21 @@ test("Beta 1 SQLite and JSON backups are rejected before the destination changes
     await fs.rm(dir, { recursive: true });
   }
 });
+
+test("a gzip backup that expands past the limit is refused as too large", async () => {
+  const dir = await tempDir();
+  const target = await memoryService();
+  try {
+    const path = join(dir, "bomb.json.gz");
+    await fs.writeFile(path, gzipSync(new Uint8Array(2 * 1024 * 1024)));
+    const error = await assertRejects(
+      () => restoreFile(target.service, path, { maxJsonBytes: 1024 * 1024 }),
+      ServiceError,
+    );
+    assertEquals(error.code, "payload_too_large");
+    assertEquals(error.message, "The backup's JSON document is larger than 1 MB.");
+  } finally {
+    target.close();
+    await fs.rm(dir, { recursive: true });
+  }
+});

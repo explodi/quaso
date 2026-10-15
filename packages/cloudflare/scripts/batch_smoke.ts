@@ -48,7 +48,7 @@ try {
   if (!bundle.success) throw new Error(new TextDecoder().decode(bundle.stderr));
   await writeFile(
     resolve(folder, "Dockerfile"),
-    'FROM denoland/deno:2.9.6\nWORKDIR /probe\nCOPY server.js .\nEXPOSE 8000\nENTRYPOINT ["deno", "run", "-A", "server.js"]\n',
+    'FROM denoland/deno:2.9.6@sha256:2014dc167ece617ef7e7ba40631ac2234c59e75ce693e7cc2dc2602b3c87859d\nWORKDIR /probe\nCOPY server.js .\nEXPOSE 8000\nENTRYPOINT ["deno", "run", "-A", "server.js"]\n',
   );
   await writeFile(
     configPath,
