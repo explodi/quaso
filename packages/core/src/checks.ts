@@ -7,6 +7,7 @@
  * pass the categories the service reports as the `pluralOverride`, and the service has the
  * last word.
  */
+import { normalizeDocument, paragraphCount } from "./documents.ts";
 import { canonicalValue } from "./hash.ts";
 import { glossaryMatches } from "./glossary.ts";
 import { categoriesFor, coversExactlyOne, type PluralOverride } from "./plurals.ts";
@@ -61,6 +62,8 @@ export const CHECKS = {
   tags_differ: "warning",
   /** Leading/trailing whitespace or the number of line breaks differs from the source. */
   whitespace: "error",
+  /** A document's number of paragraphs (blocks separated by blank lines) differs from the source. */
+  paragraphs: "error",
   /** Two spaces in a row inside the text. */
   double_space: "warning",
   /** Ends with a different question mark, exclamation mark, ellipsis or colon. */
@@ -106,6 +109,12 @@ export interface CheckInput {
   source: TextValue;
   /** The candidate translation, unmasked (references as `$t(…)`, not `⟦n⟧`). */
   translation: TextValue;
+  /**
+   * A document (a Markdown file translated whole): both texts are compared normalized
+   * (`normalizeDocument`), and the translation must keep the number of paragraphs rather
+   * than the number of line breaks.
+   */
+  document?: boolean;
   /** The target language. */
   language: string;
   /** The string's maximum length, if it has one. */
@@ -155,6 +164,9 @@ export interface CheckInput {
  * - Whitespace errors compare edges and line-break counts with the same source form
  *   (or `other`). CRLF and LF are equivalent. Typing warnings compare tags as multisets,
  *   double spaces, and final question marks, exclamation marks, ellipses and colons.
+ * - A `document` (a file translated whole) is compared normalized, and `paragraphs`
+ *   replaces the line-break count: the translation must have as many paragraphs (blocks
+ *   separated by blank lines) as the English.
  *
  * Messages show placeholders in the project's syntax; `value` holds the `placeholderKey`,
  * the reference's raw text or the number as written. For plural strings, an invalid
@@ -175,15 +187,17 @@ export function hasErrors(results: readonly CheckResult[]): boolean {
   return results.some((result) => result.severity === "error");
 }
 
-/** Checks a text string. */
+/** Checks a text string, or a document. */
 function checkText(input: CheckInput): CheckResult[] {
   if (typeof input.translation !== "string") {
     return [result("invalid_value", "Text is expected, not plural forms.")];
   }
   const syntax = input.syntax ?? DEFAULT_SYNTAX;
-  const english = analyze(englishText(input.source), syntax);
+  const document = input.document === true;
+  const normalize = (text: string) => (document ? normalizeDocument(text) : text);
+  const english = analyze(normalize(englishText(input.source)), syntax);
   const results: CheckResult[] = [];
-  checkValue(results, input.translation, {
+  checkValue(results, normalize(input.translation), {
     required: english,
     allowed: limitsOf([english]),
     counterpart: english,
@@ -192,6 +206,7 @@ function checkText(input: CheckInput): CheckResult[] {
     maxLength: input.maxLength,
     syntax,
     glossary: input.glossary,
+    document,
   });
   return results;
 }
@@ -285,6 +300,8 @@ interface Comparison {
   syntax: InterpolationSyntax;
   form?: PluralCategory;
   glossary?: CheckInput["glossary"];
+  /** A document: paragraphs are compared instead of line breaks. */
+  document?: boolean;
 }
 
 /**
@@ -495,11 +512,20 @@ function checkWhitespace(results: CheckResult[], value: string, comparison: Comp
     const message = mismatchMessage(edge === "start" ? "starts" : "ends", found, expected);
     results.push(result("whitespace", sentence(message, form), { form }));
   }
-  const foundBreaks = lineBreaks(value.trim());
-  const englishBreaks = lineBreaks(english.trim());
-  if (foundBreaks !== englishBreaks) {
-    const message = `The English has ${countOf(englishBreaks, "line break")} inside; the translation has ${foundBreaks}`;
-    results.push(result("whitespace", sentence(message, form), { form }));
+  if (comparison.document) {
+    const found = paragraphCount(value);
+    const expected = paragraphCount(english);
+    if (found !== expected) {
+      const message = `The English has ${countOf(expected, "paragraph")}; the translation has ${found}`;
+      results.push(result("paragraphs", sentence(message, form), { form }));
+    }
+  } else {
+    const foundBreaks = lineBreaks(value.trim());
+    const englishBreaks = lineBreaks(english.trim());
+    if (foundBreaks !== englishBreaks) {
+      const message = `The English has ${countOf(englishBreaks, "line break")} inside; the translation has ${foundBreaks}`;
+      results.push(result("whitespace", sentence(message, form), { form }));
+    }
   }
   const doubleSpace = DOUBLE_SPACE.test(value.trim());
   if (doubleSpace) {

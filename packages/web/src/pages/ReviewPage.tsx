@@ -24,7 +24,7 @@ import { listFiles, withdrawSuggestion } from "../lib/api.ts";
 import { useMutation, useQuery } from "../lib/data.ts";
 import { wordDiff } from "../lib/diff.ts";
 import { fieldError } from "../lib/forms.ts";
-import { count, formatDateTime } from "../lib/format.ts";
+import { count, documentName, formatDateTime } from "../lib/format.ts";
 import { useDebounced, useDocumentTitle, useProject } from "../lib/hooks.ts";
 import { listSuggestions, review } from "../lib/management-api.ts";
 import { Link } from "../lib/router.tsx";
@@ -318,7 +318,7 @@ function SuggestionsPage({ mine }: { mine: boolean }) {
                 session.can("review", suggestion.language) && (
                   <Label className="check-label">
                     <Checkbox
-                      aria-label={`Select ${suggestion.key}`}
+                      aria-label={`Select ${suggestion.key || suggestion.file}`}
                       checked={chosen.includes(suggestion.id)}
                       onChange={(e) =>
                         setSelected(
@@ -332,7 +332,7 @@ function SuggestionsPage({ mine }: { mine: boolean }) {
                 )}
               <H2 ui>
                 <Link to={editorHref(suggestion.language, { id: suggestion.stringId })}>
-                  {suggestion.key}
+                  {suggestion.key || documentName(suggestion.file)}
                 </Link>
               </H2>
               <span className={`status status-${suggestion.status}`}>{suggestion.status}</span>

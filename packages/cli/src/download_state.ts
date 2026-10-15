@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 /** Download baselines distinguish repository edits from later changes on the instance. */
-import { formatKeyPath, type KeyPath } from "@quaso/core";
+import { formatKeyPath, type FormatName, type KeyPath, normalizeDocument } from "@quaso/core";
 import type { Project } from "./config.ts";
 import { usageError } from "./errors.ts";
 import { absolutePath, type Sources } from "./files.ts";
@@ -38,12 +38,23 @@ export class DownloadState {
     }
   }
 
-  conflicts(path: string, local: Uint8Array, incoming: Uint8Array, source: string): string[] {
+  /**
+   * The keys whose local value is neither the incoming one nor the one last downloaded (or
+   * the source, before any download): edits made in the repository. A document (a Markdown
+   * file) is one value, compared whole.
+   */
+  conflicts(
+    path: string,
+    local: Uint8Array,
+    incoming: Uint8Array,
+    source: string,
+    format: FormatName = "json",
+  ): string[] {
     try {
-      const current = leafValues(decoder.decode(local));
-      const next = leafValues(decoder.decode(incoming));
+      const current = leafValues(decoder.decode(local), format);
+      const next = leafValues(decoder.decode(incoming), format);
       const previous = this.files[this.key(path)];
-      const known = leafValues(previous ?? source);
+      const known = leafValues(previous ?? source, format);
       const keys = new Set([...current.keys(), ...next.keys(), ...known.keys()]);
       const conflicts: string[] = [];
       for (const key of keys) {
@@ -51,7 +62,8 @@ export class DownloadState {
         const alreadyIncoming = value === next.get(key);
         const unchangedLocally = value === known.get(key);
         if (alreadyIncoming || unchangedLocally) continue;
-        conflicts.push(formatKeyPath(JSON.parse(key)) || "(root)");
+        const label = format === "markdown" ? "(whole file)" : "(root)";
+        conflicts.push(formatKeyPath(JSON.parse(key)) || label);
       }
       return conflicts;
     } catch {
@@ -80,8 +92,11 @@ export class DownloadState {
   }
 }
 
-function leafValues(text: string): Map<string, string> {
+function leafValues(text: string, format: FormatName): Map<string, string> {
   const values = new Map<string, string>();
+  if (format === "markdown") {
+    return values.set(JSON.stringify([]), JSON.stringify(normalizeDocument(text)));
+  }
   function visit(value: unknown, path: KeyPath) {
     if (value !== null && typeof value === "object" && Object.keys(value).length > 0) {
       for (const [key, child] of Object.entries(value))

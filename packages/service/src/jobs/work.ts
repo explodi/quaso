@@ -17,7 +17,12 @@
  * String and file lists go to SQLite as one JSON parameter (`json_each`), so any number of
  * them fits in one statement within the Durable Object limits.
  */
-import type { LlmSettings, TextValue, TranslatableKind } from "@quaso/core";
+import {
+  isDocumentKey,
+  type LlmSettings,
+  type TextValue,
+  type TranslatableKind,
+} from "@quaso/core";
 import type { Context } from "../context.ts";
 import { fromJson, toJson } from "../db.ts";
 import { TRANSLATABLE_SQL } from "../entries.ts";
@@ -37,6 +42,8 @@ export interface WorkItem {
   position: number;
   key: string;
   kind: TranslatableKind;
+  /** A whole file, such as a Markdown article (`isDocumentKey`). */
+  document: boolean;
   english: TextValue;
   sourceHash: string;
   maxLength: number | null;
@@ -117,6 +124,7 @@ type WorkRow = {
   file_id: number;
   path: string;
   position: number;
+  entry_key: string;
   display_key: string;
   kind: TranslatableKind;
   source: string;
@@ -194,7 +202,7 @@ export function workIn(
 function workSelection(scope: WorkScope, language: string, limit: number): Statement {
   const { where, params } = condition(scope, language);
   return {
-    sql: `SELECT s.id, s.file_id, f.path, s.position, s.display_key, s.kind, s.source, s.source_hash,
+    sql: `SELECT s.id, s.file_id, f.path, s.position, s.key AS entry_key, s.display_key, s.kind, s.source, s.source_hash,
             s.max_length, s.description, s.words, t.colour AS t_colour, t.source_hash AS t_hash,
             t.revision AS t_revision, t.value AS t_value
      FROM ${FROM} WHERE ${where} ORDER BY f.path, s.position LIMIT ?`,
@@ -217,6 +225,7 @@ function workItemsFromRows(rows: WorkRow[], scope: WorkScope, language: string):
       position: row.position,
       key: row.display_key,
       kind: row.kind,
+      document: isDocumentKey(row.entry_key),
       english: fromJson<TextValue>(row.source),
       sourceHash: row.source_hash,
       maxLength: row.max_length,

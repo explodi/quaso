@@ -69,7 +69,7 @@ test("translationPath: {lang} after languageMapping, {path} with its folders", a
   );
 });
 
-test("collectSources refuses two files with one server path, and non-JSON files", async () => {
+test("collectSources refuses two files with one server path, and files of other formats", async () => {
   await withProject(
     {
       "quaso.config.json": {
@@ -81,7 +81,7 @@ test("collectSources refuses two files with one server path, and non-JSON files"
       },
       "a/en/common.json": "{}",
       "b/en/common.json": "{}",
-      "b/en/readme.md": "",
+      "b/en/readme.txt": "",
     },
     async (dir) => {
       const error = await assertRejects(
@@ -93,7 +93,7 @@ test("collectSources refuses two files with one server path, and non-JSON files"
         error.details.map((detail) => detail.message),
         [
           "b/en/common.json and a/en/common.json would both be common.json on the server",
-          "b/en/readme.md isn't a .json file: narrow the glob, or add it to exclude",
+          "b/en/readme.txt isn't a .json, .md or .markdown file: narrow the glob, or add it to exclude",
         ],
       );
     },

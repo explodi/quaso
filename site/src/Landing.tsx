@@ -55,8 +55,8 @@ const FEATURES = [
   {
     art: "scroll",
     title: "Made for game strings.",
-    text: "i18next JSON with plural forms, placeholders, and quality checks built in. More of your game’s files are on the way.",
-    note: "Steam VDF + Markdown · coming soon",
+    text: "i18next JSON with plural forms, placeholders, and quality checks built in, and Markdown documents translated whole: news, articles, story text.",
+    note: "Steam VDF · coming soon",
   },
   {
     art: "sailboat",
@@ -276,7 +276,7 @@ export function Landing({ page, hasDoc, repositoryUrl }: LandingProps) {
               Steam VDF <span className="soon">coming soon</span>
             </span>
             <span>
-              Markdown <span className="soon">coming soon</span>
+              <CheckIcon /> Markdown
             </span>
           </div>
         </div>

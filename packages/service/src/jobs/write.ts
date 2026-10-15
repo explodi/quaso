@@ -57,7 +57,7 @@ function batchReadStatements(jobId: number, batch: Batch): Statement[] {
   return [
     { sql: `SELECT ${JOB_COLUMNS} FROM jobs WHERE id = ?`, params: [jobId] },
     {
-      sql: `SELECT s.id, f.path, s.display_key, s.kind, s.source, s.source_hash, s.max_length, s.active * f.active AS active
+      sql: `SELECT s.id, f.path, s.key, s.display_key, s.kind, s.source, s.source_hash, s.max_length, s.active * f.active AS active
       FROM strings s JOIN files f ON f.id = s.file_id WHERE s.id IN (SELECT value FROM json_each(?))`,
       params: [ids],
     },

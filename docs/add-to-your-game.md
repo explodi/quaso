@@ -71,6 +71,9 @@ or proofread text.
   name without `_one` or `_other`; ordinal groups use `place_ordinal`. A literal dotted key can use
   a JSON array key path encoded as a string. For ambiguous limits use `#text`, `#plural` or
   `#ordinal`.
+- Markdown documents: an entry such as `{ "source": "text/en/**/*.md", "translation":
+"text/{lang}/{path}" }` translates each `.md` or `.markdown` file whole, as one string that keeps
+  its paragraphs and Markdown syntax. See [the config file](cli.md#the-config-file).
 
 The CLI refuses paths outside the project, symlinks, and translation patterns that overlap source
 globs. It validates all output paths before writing any file. It never changes source files or runs

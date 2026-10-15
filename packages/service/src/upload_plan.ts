@@ -411,7 +411,13 @@ export function planUpload(
     )
     .map((row) => {
       const source = strings.get(row.string_id)!;
-      return { ...row, kind: source.kind, source: source.source, max_length: source.max_length };
+      return {
+        ...row,
+        key: source.key,
+        kind: source.kind,
+        source: source.source,
+        max_length: source.max_length,
+      };
     });
   statements.push(...planQa(qa, facts));
   const refs = (items: Touched[]) =>

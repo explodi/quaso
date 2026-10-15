@@ -12,6 +12,7 @@ const ROW: QaRow = {
   value: '"Hallo"',
   qa_errors: 0,
   qa_warnings: 0,
+  key: '["greeting"]',
   kind: "text",
   source: '"Hello"',
   max_length: null,

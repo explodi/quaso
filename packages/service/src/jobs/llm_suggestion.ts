@@ -9,6 +9,7 @@
  */
 import {
   canonicalLanguageTag,
+  isDocumentKey,
   type LlmSuggestion,
   type LlmSuggestionsRequest,
   type LlmSuggestionsResult,
@@ -55,6 +56,7 @@ type StringRow = {
   file_id: number;
   path: string;
   position: number;
+  key: string;
   display_key: string;
   kind: TranslatableKind;
   source: string;
@@ -81,7 +83,7 @@ export async function suggestWithLlm(
       { sql: "SELECT tag, instructions, plural_override, created_at FROM languages" },
       { sql: "SELECT * FROM glossary_terms" },
       {
-        sql: `SELECT s.id, s.file_id, f.path, s.position, s.display_key, s.kind, s.source,
+        sql: `SELECT s.id, s.file_id, f.path, s.position, s.key, s.display_key, s.kind, s.source,
                 s.source_hash, s.max_length, s.description, s.words
               FROM strings s JOIN files f ON f.id = s.file_id
               WHERE s.id IN (SELECT value FROM json_each(?)) AND s.active = 1 AND f.active = 1
@@ -178,6 +180,7 @@ function workItem(string: StringRow, language: string): WorkItem {
     position: string.position,
     key: string.display_key,
     kind: string.kind,
+    document: isDocumentKey(string.key),
     english: fromJson<TextValue>(string.source),
     sourceHash: string.source_hash,
     maxLength: string.max_length,

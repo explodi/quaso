@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { Button, Dialog, H2, Loading, Select, Label, Details, Summary } from "@quaso/design-system";
 import type { QualityJobInfo, QualityJobRequest } from "@quaso/core";
+import { stringName } from "../lib/format.ts";
 import { useEffect, useRef, useState } from "react";
 import { request } from "../lib/api.ts";
 import { useMutation, useQuery } from "../lib/data.ts";
@@ -136,7 +137,7 @@ export function QualityJobCard({ job }: { job: QualityJobInfo }) {
             {job.result.map((finding, index) => (
               <li key={index}>
                 <Link to={editorHref(finding.language, { id: finding.id, file: finding.file })}>
-                  {finding.file} › {finding.key} · {finding.language}
+                  {stringName(finding.file, finding.key)} · {finding.language}
                 </Link>
                 <ul>
                   {finding.checks.map((check, note) => (

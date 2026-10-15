@@ -7,7 +7,7 @@
  * the first file. `--prune` deletes translation files whose source file is gone.
  */
 import { DownloadState } from "../download_state.ts";
-import { PublicationTime, validate, type ExportResult } from "@quaso/core";
+import { formatForPath, PublicationTime, validate, type ExportResult } from "@quaso/core";
 import { flag, option, values } from "../args.ts";
 import { canonical, languageFolder, type Project } from "../config.ts";
 import type { Command, Context } from "../context.ts";
@@ -51,6 +51,11 @@ export interface DownloadResult {
   /** Written (or, in a dry run, to be written). */
   written: (DownloadedFile & { created: boolean })[];
   unchanged: DownloadedFile[];
+  /**
+   * Deleted (or, in a dry run, to be deleted), because the instance has nothing to write
+   * for them: a document that is untranslated, or outdated, with `omit` in the config.
+   */
+  removed: DownloadedFile[];
   /** Deleted by --prune (or, in a dry run, to be deleted). */
   pruned: { path: string; language: string }[];
   /** Files of the server that no local source file has. */
@@ -143,6 +148,7 @@ export const download: Command = {
       languages,
       written: [],
       unchanged: [],
+      removed: [],
       pruned: [],
       skipped: [],
       outdated: [],
@@ -257,6 +263,12 @@ export const download: Command = {
     for (const { target, bytes, sha256: expected } of planned) {
       const absolute = absolutePath(project, target.path);
       const local = await readBytes(absolute);
+      // Empty content is "no file": a document with nothing to write (see ExportFile).
+      const nothingToWrite = bytes.length === 0;
+      if (nothingToWrite && local === null) {
+        result.unchanged.push(target);
+        continue;
+      }
       if (local !== null && (await sha256(local)) === expected && sameBytes(local, bytes)) {
         result.unchanged.push(target);
         if (!dryRun) state.remember(target.path, bytes);
@@ -264,8 +276,16 @@ export const download: Command = {
       }
       if (local !== null && !overwriteLocal) {
         const source = sources.byServer.get(target.file)!;
+        const format = formatForPath(target.file) ?? "json";
         const sourceText = await readProjectText(project, source.local);
-        const conflicts = state.conflicts(target.path, local, bytes, sourceText ?? "{}");
+        const fallback = format === "markdown" ? "" : "{}";
+        const conflicts = state.conflicts(
+          target.path,
+          local,
+          bytes,
+          sourceText ?? fallback,
+          format,
+        );
         if (conflicts.length > 0) {
           result.localEdits.push(...conflicts.map((key) => ({ ...target, key })));
           continue;
@@ -277,10 +297,12 @@ export const download: Command = {
           local === null ? latest !== null : latest === null || !sameBytes(local, latest);
         if (changedMeanwhile)
           throw usageError(`${target.path} changed during download; run the command again.`);
-        await writeAtomic(absolute, bytes);
+        if (nothingToWrite) await removeFile(absolute);
+        else await writeAtomic(absolute, bytes);
         state.remember(target.path, bytes);
       }
-      result.written.push({ ...target, created: local === null });
+      if (nothingToWrite) result.removed.push(target);
+      else result.written.push({ ...target, created: local === null });
     }
     for (const file of prunable) {
       if (!dryRun) await removeFile(absolutePath(project, file.path));
@@ -347,7 +369,8 @@ export async function findPrunable(
         const match = pattern.exec(path);
         if (!match) continue;
         const server = match[1];
-        if (!server.endsWith(".json") || server.split("/").some((part) => part === "..")) continue;
+        const unsupported = formatForPath(server) === undefined;
+        if (unsupported || server.split("/").some((part) => part === "..")) continue;
         const sourcePath = base === "" ? server : `${base}/${server}`;
         if (!sourceMatch.test(sourcePath) || excludes.some((exclude) => exclude.test(sourcePath))) {
           continue;
@@ -378,6 +401,11 @@ function renderDownload(out: Output, result: DownloadResult): void {
         : "updated";
     out.print(`  ${green(verb.padEnd(12))} ${file.path}`);
   }
+  for (const file of result.removed) {
+    out.print(
+      `  ${red((result.dryRun ? "would delete" : "deleted").padEnd(12))} ${file.path}  ${dim("nothing to write: the game falls back to the source language")}`,
+    );
+  }
   for (const file of result.pruned) {
     out.print(`  ${red((result.dryRun ? "would delete" : "deleted").padEnd(12))} ${file.path}`);
   }
@@ -401,7 +429,12 @@ function renderDownload(out: Output, result: DownloadResult): void {
     out.warn(
       "Files with local edits were kept. Import them with quaso import --as blue, or pass --overwrite-local after reviewing the changes.",
     );
-  if (result.written.length === 0 && result.pruned.length === 0 && result.localEdits.length === 0) {
+  const nothingChanged =
+    result.written.length === 0 &&
+    result.removed.length === 0 &&
+    result.pruned.length === 0 &&
+    result.localEdits.length === 0;
+  if (nothingChanged) {
     out.print(`Everything is up to date (${count(result.unchanged.length, "file")}).`);
     return;
   }
@@ -409,9 +442,8 @@ function renderDownload(out: Output, result: DownloadResult): void {
     `${result.dryRun ? "Would write" : "Wrote"} ${count(result.written.length, "file")}`,
     `${result.unchanged.length} unchanged`,
   ];
-  if (result.pruned.length > 0) {
-    parts.push(`${result.dryRun ? "would delete" : "deleted"} ${result.pruned.length}`);
-  }
+  const deleted = result.removed.length + result.pruned.length;
+  if (deleted > 0) parts.push(`${result.dryRun ? "would delete" : "deleted"} ${deleted}`);
   if (result.localEdits.length > 0)
     parts.push(
       `${new Set(result.localEdits.map((edit) => edit.path)).size} files kept for local edits`,

@@ -3,10 +3,10 @@
  * The renderer (design §5.2 Writing, FMT-2, FMT-3): rebuilds a language's file from the
  * English entries and the translations.
  */
+import { DOCUMENT_KEY, type FileFormat, isMarkdownFormat, normalizeDocument } from "./documents.ts";
 import { type PluralEntry, pluralKeyName, type SourceEntry, SourceError } from "./entries.ts";
 import {
   type JsonArray,
-  type JsonFormat,
   type JsonNode,
   type JsonObject,
   parseJson,
@@ -26,7 +26,7 @@ export interface RenderOptions {
   /** The target language, for its plural categories. */
   language: string;
   /** The English file's format. The output always ends with a newline (FMT-3). */
-  format: JsonFormat;
+  format: FileFormat;
   pluralOverride?: PluralOverride;
   /**
    * What an untranslated entry becomes: the English (`source`, the default, FMT-2), or
@@ -69,12 +69,17 @@ export type Untranslated = "source" | "omit";
  * an object or array) throw a `SourceError` `key_conflict`; `readSource` never gives such
  * entries. Array elements missing from the entries are written as `null`, so the indices
  * of the others stay as they are.
+ *
+ * A Markdown document is written as its translation (or its English), normalized, with one
+ * final newline. When there is nothing to write (the document is untranslated with
+ * `untranslated: "omit"`, omitted, or blank), the result is the empty string: no file.
  */
 export function renderFile(
   entries: readonly SourceEntry[],
   translations: ReadonlyMap<string, TextValue>,
   options: RenderOptions,
 ): string {
+  if (isMarkdownFormat(options.format)) return renderDocument(entries, translations, options);
   const tree = new TreeBuilder();
   const categories = new CategoryCache(options);
   const omit = options.untranslated === "omit";
@@ -112,6 +117,20 @@ export function renderFile(
     }
   }
   return stringifyJson(tree.finish(), { ...options.format, finalNewline: true });
+}
+
+/** See `renderFile`: a document's file in one language, or `""` for no file. */
+function renderDocument(
+  entries: readonly SourceEntry[],
+  translations: ReadonlyMap<string, TextValue>,
+  options: RenderOptions,
+): string {
+  const document = entries.find((entry) => entryKey(entry.kind, entry.keyPath) === DOCUMENT_KEY);
+  if (document === undefined || document.kind !== "text") return "";
+  if (options.omitted?.has(DOCUMENT_KEY)) return "";
+  const translation = translations.get(DOCUMENT_KEY);
+  if (typeof translation === "string") return `${normalizeDocument(translation)}\n`;
+  return options.untranslated === "omit" ? "" : `${document.value}\n`;
 }
 
 /**

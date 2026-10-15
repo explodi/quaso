@@ -110,10 +110,10 @@ export const upload: Command = {
         if (content === null) {
           throw usageError(`${source.local} disappeared while the upload was being prepared.`);
         }
-        const descriptions = await readProjectText(
-          project,
-          source.local.replace(/\.json$/, ".descriptions.json"),
-        );
+        // Only JSON files have a `.descriptions.json` sidecar: a document is its own context.
+        const descriptions = source.local.endsWith(".json")
+          ? await readProjectText(project, source.local.replace(/\.json$/, ".descriptions.json"))
+          : null;
         files.push({
           path: source.server,
           repoPath: source.local,

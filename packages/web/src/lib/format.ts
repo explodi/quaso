@@ -84,3 +84,19 @@ export function sourcePreview(value: TextValue): string {
   if (typeof value === "string") return value;
   return value.other ?? Object.values(value).find((text) => text !== undefined) ?? "";
 }
+
+/** A document's name for lists and headings: its file name, such as `city_founded.md`. */
+export function documentName(file: string): string {
+  return file.slice(file.lastIndexOf("/") + 1);
+}
+
+/** `common.json › menu.play`, or the file alone for a document, whose key is empty. */
+export function stringName(file: string, key: string): string {
+  return key === "" ? file : `${file} › ${key}`;
+}
+
+/** The first line of a text, for one-line previews of documents. */
+export function firstLine(text: string): string {
+  const end = text.indexOf("\n");
+  return end === -1 ? text : text.slice(0, end);
+}

@@ -7,6 +7,7 @@
 export * from "./src/types.ts";
 export * from "./src/schema.ts";
 export * from "./src/json.ts";
+export * from "./src/documents.ts";
 export * from "./src/tokens.ts";
 export * from "./src/plurals.ts";
 export * from "./src/entries.ts";

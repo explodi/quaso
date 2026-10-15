@@ -135,7 +135,8 @@ function plain(text: string): Record<string, unknown> {
 test("renderFile reproduces every English golden file byte for byte", () => {
   for (const name of Object.keys(ENGLISH) as (keyof typeof ENGLISH)[]) {
     const { text } = ENGLISH[name];
-    const { entries, format } = english(name);
+    const { entries } = english(name);
+    const format = english(name).format as JsonFormat;
     const rendered = renderFile(entries, new Map(), { language: "en", format });
     const expected = format.finalNewline ? text : text + format.newline;
     assertStrictEquals(rendered, expected, name);
@@ -857,9 +858,10 @@ test("property: rendering English gives the same file and entries back, every ti
     const format = random.pick(FORMATS);
     const text = stringifyJson(generator.document(), format);
     const source = readSource(text);
-    const options = { language: "en", format: source.format };
+    const sourceFormat = source.format as JsonFormat;
+    const options = { language: "en", format: sourceFormat };
     const rendered = renderFile(source.entries, new Map(), options);
-    const expected = source.format.finalNewline ? text : text + source.format.newline;
+    const expected = sourceFormat.finalNewline ? text : text + sourceFormat.newline;
     assertStrictEquals(rendered, expected, `run ${run}`);
     assertStrictEquals(renderFile(source.entries, new Map(), options), rendered);
     assertEquals(readSource(rendered).entries, source.entries, `run ${run}`);

@@ -19,6 +19,8 @@ import {
   type ErrorDetail,
   errorsOf,
   type HistoryEvent,
+  isDocumentKey,
+  normalizeDocument,
   type TextValue,
   type TranslatableKind,
   type TranslationInfo,
@@ -35,6 +37,8 @@ import type { Statement, SyncSql } from "./ports.ts";
 export type TargetString = {
   id: number;
   path: string;
+  /** `entryKey()`: `[]` for a document, which is checked and stored as one (`isDocumentKey`). */
+  key: string;
   display_key: string;
   kind: string;
   source: string;
@@ -69,7 +73,7 @@ export const TRANSLATION_COLUMNS =
 /** An active string in an active file, or `undefined`. */
 export function loadString(sql: SyncSql, id: number): TargetString | undefined {
   return sql.query<TargetString>(
-    `SELECT s.id, f.path, s.display_key, s.kind, s.source, s.source_hash, s.max_length,
+    `SELECT s.id, f.path, s.key, s.display_key, s.kind, s.source, s.source_hash, s.max_length,
             s.active * f.active AS active
      FROM strings s JOIN files f ON f.id = s.file_id WHERE s.id = ?`,
     id,
@@ -248,7 +252,10 @@ export function planTranslationWrite(
 
   const colour = input.colour;
   if (colour !== "green" && colour !== "blue") throw new ServiceError("internal", "No colour");
-  const value = canonicalValue(input.value);
+  // A document is stored as downloads write it, so a final newline is never a change.
+  const document = isDocumentKey(string.key) && typeof input.value === "string";
+  const written = document ? normalizeDocument(input.value as string) : input.value;
+  const value = canonicalValue(written);
   const sourceHash = input.sourceHash ?? string.source_hash;
   if (
     existing?.value === value &&
@@ -261,7 +268,7 @@ export function planTranslationWrite(
       translation: existing ?? null,
     };
   }
-  const checks = checkValue(facts, string, language.tag, input.value);
+  const checks = checkValue(facts, string, language.tag, written);
   const errors = errorsOf(checks);
   if (errors.length > 0 && !input.allowQaErrors) throw qaFailed(string, language.tag, checks);
 
@@ -304,7 +311,7 @@ export function planTranslationWrite(
         checks.length - errors.length,
         existing?.created_at ?? now,
         now,
-        normalizeSearch(valueText(input.value)),
+        normalizeSearch(valueText(written)),
       ],
     },
     translationHistory({
@@ -396,17 +403,23 @@ export function historyParams(record: HistoryRecord): (string | number | null)[]
   ];
 }
 
-/** The quality checks of a value for a string, in a language (design §5.7). */
+/**
+ * The quality checks of a value for a string, in a language (design §5.7). A document is
+ * recognized by its `key`, or told apart with `document` where no key is at hand.
+ */
 export function checkValue(
   facts: CheckFacts,
-  string: Pick<TargetString, "kind" | "source" | "max_length">,
+  string: Pick<TargetString, "kind" | "source" | "max_length"> &
+    Partial<Pick<TargetString, "key">> & { document?: boolean },
   language: string,
   value: TextValue,
 ): CheckResult[] {
+  const document = string.document ?? (string.key !== undefined && isDocumentKey(string.key));
   return checkTranslation({
     kind: string.kind as TranslatableKind,
     source: fromJson<TextValue>(string.source),
     translation: value,
+    document,
     language,
     maxLength: string.max_length,
     syntax: facts.syntax,
@@ -460,8 +473,8 @@ export function recomputeQa(
   let updated = 0;
   for (let start = 0; start < ids.length; start += 500) {
     const rows = ctx.sql.query<QaRow>(
-      `SELECT t.string_id, t.language, t.value, t.qa_errors, t.qa_warnings, s.kind, s.source,
-              s.max_length
+      `SELECT t.string_id, t.language, t.value, t.qa_errors, t.qa_warnings, s.key, s.kind,
+              s.source, s.max_length
        FROM translations t JOIN strings s ON s.id = t.string_id
        WHERE t.string_id IN (${idList(ids.slice(start, start + 500))})
          AND s.kind IN (${TRANSLATABLE_SQL})`,
@@ -480,6 +493,7 @@ export type QaRow = {
   value: string;
   qa_errors: number;
   qa_warnings: number;
+  key: string;
   kind: string;
   source: string;
   max_length: number | null;

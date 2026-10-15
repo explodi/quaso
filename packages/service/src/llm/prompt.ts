@@ -133,6 +133,8 @@ export interface PromptString {
   english: TextValue;
   description: string;
   maxLength: number | null;
+  /** A whole file, such as a Markdown article: the prompt says so, and paragraphs must stay. */
+  document?: boolean;
   /** The current translation, when it is outdated: the answer updates it. */
   outdated?: TextValue | null;
   /** The previous answer and why it was refused, on a retry. */
@@ -366,6 +368,7 @@ function stringLine(
   context: PromptContext,
 ): Record<string, unknown> {
   const line: Record<string, unknown> = { id, key: string.key, english: mask.english };
+  if (string.document) line.document = true;
   if (mask.forms && string.kind !== "text" && typeof string.english !== "string") {
     line.forms = formExamples(
       context.targetLanguage,

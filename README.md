@@ -5,8 +5,8 @@
 # Quaso
 
 An open-source localization platform for games that use [i18next](https://www.i18next.com/)
-JSON files. **Ship every language today, proofread tomorrow:** translations never hold up a
-release.
+JSON files, and Markdown documents translated whole. **Ship every language today, proofread
+tomorrow:** translations never hold up a release.
 
 Developers write in one source language and upload the files with a CLI. An LLM translates new
 strings at once, and the CLI downloads them into the repository, so the next build ships in every

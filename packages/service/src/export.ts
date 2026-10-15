@@ -9,7 +9,7 @@ import {
   type ExportFile,
   type ExportQuery,
   type ExportResult,
-  type JsonFormat,
+  type FileFormat,
   renderFile,
   type Untranslated,
   SCHEMA_VERSION,
@@ -58,7 +58,7 @@ type StringRow = {
 /** A file's English entries, in order, with their IDs and keys. */
 interface FileEntries {
   file: FileRow;
-  format: JsonFormat;
+  format: FileFormat;
   entries: SourceEntry[];
   /** `entryKey()` of each entry, by string ID, for the translatable ones. */
   keys: Map<number, string>;
@@ -245,7 +245,7 @@ function entriesFromRows(files: FileRow[], rows: StringRow[]): FileEntries[] {
   for (const file of files) {
     byFile.set(file.id, {
       file,
-      format: fromJson<JsonFormat>(file.format),
+      format: fromJson<FileFormat>(file.format),
       entries: [],
       keys: new Map(),
     });
