@@ -1,9 +1,10 @@
-<!-- Reference the task ID from the sprint plan if there is one, such as S4.5. -->
+<!-- Link the related issue, if there is one. -->
 
 **What this changes**
 
 **How it was tested**
 
-- [ ] `deno task check` passes
+- [ ] Relevant checks pass; list the commands and results above (`deno task check` for code changes)
+- [ ] Documentation matches any changed behavior; `deno task site:build` passes for documentation changes
 - [ ] New dependencies (if any) are justified below: what they save, and why stock Deno or a small
       module won't do

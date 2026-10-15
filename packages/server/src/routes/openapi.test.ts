@@ -20,7 +20,8 @@ test("openapi: an OpenAPI 3.1 document for the instance", () => {
   assertEquals(doc.components.securitySchemes.apiKey, {
     type: "http",
     scheme: "bearer",
-    description: "An API key (qso_…), from the Settings page or `quaso token create`",
+    description:
+      "Personal API keys (qso_…) are created in Account → API keys and limited by scope and the creator's role. Server-created keys use their scope alone.",
   });
   assertEquals(doc.components.schemas.Error.properties.error.properties.code.enum, [
     ...ERROR_CODES,

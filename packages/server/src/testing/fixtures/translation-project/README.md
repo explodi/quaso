@@ -1,9 +1,10 @@
 # Translation fixture
 
 This small i18next project supplies the development seed, CLI and server integration tests,
-Cloudflare comparison fixture, website screenshots, and LLM evaluation. It has English sources,
+Cloudflare comparison fixture, LLM evaluation, and other development tools. It has English sources,
 complete German and Polish translations, partial French translations, and three empty target
-languages. Its plurals, references, placeholders and length limit exercise the translation workflow.
+languages. Its plural forms, references to other strings, placeholders, and length limit test the translation
+workflow. A placeholder is text, such as `{{count}}`, that the game fills in.
 
 `deno task dev` seeds this project, and `deno task cli` uses it when called from the repository root.
 Keeping the fixture stable lets tests compare exact translations and string counts.

@@ -3,15 +3,15 @@
 The normal test suite uses local data and a fake translator. Once Deno has cached dependencies, it
 needs no accounts, provider keys or Docker. Start with `deno task check` from the repository root.
 
-| Layer                                                     | Command                                    | What it checks                                                                                                               |
-| --------------------------------------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
-| Core, service, server, CLI, web helpers and build scripts | `deno task test`                           | JSON round trips, plurals, QA, transactions, state rules, permissions, routes, CLI safety and pure UI logic                  |
-| Full local checks                                         | `deno task check`                          | Formatting, ESLint, React state-rule lint, types, SPDX headers, dependency licenses, runtime portability and the tests above |
-| Browser                                                   | `deno task e2e`                            | Built React app, actual HTTP server and service, CSP, keyboard flow, forms and visible behavior                              |
-| Cloudflare                                                | `deno task cf:check`                       | Generated bindings, fixture, TypeScript, workerd tests and production Worker bundle                                          |
-| Container                                                 | `deno task docker:smoke`                   | Build the actual image, start it, upload, restart and verify persistence                                                     |
-| Project website                                           | `deno task site:build`                     | Render all documentation and reject broken internal links                                                                    |
-| Configuration docs                                        | `deno run -A scripts/check_config_docs.ts` | Every server variable appears in the environment template and reference                                                      |
+| Layer                                                                     | Command                  | What it checks                                                                                                                       |
+| ------------------------------------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Core, service, server, CLI, design system, web helpers, and build scripts | `deno task test`         | JSON read/write behavior, plural forms, quality checks, transactions, state rules, permissions, routes, CLI safety and pure UI logic |
+| Full local checks                                                         | `deno task check`        | Formatting, ESLint, React state-rule lint, types, SPDX headers, dependency licenses, runtime portability and the tests above         |
+| Browser                                                                   | `deno task e2e`          | Built React app, actual HTTP server and service, Content Security Policy (CSP), keyboard flow, forms, and visible behavior           |
+| Cloudflare                                                                | `deno task cf:check`     | Generated bindings, fixture, TypeScript, workerd tests and production Worker bundle                                                  |
+| Container                                                                 | `deno task docker:smoke` | Build the actual image, start it, upload, restart and verify persistence                                                             |
+| Project website                                                           | `deno task site:build`   | Render all documentation and reject broken internal links                                                                            |
+| Configuration documentation                                               | `deno task check:config` | Every server variable appears in the environment template and reference                                                              |
 
 Tests sit next to their code as `*.test.ts`. To focus a change:
 
@@ -29,10 +29,10 @@ source files, ten languages, nested paths and separate approved/full Crowdin exp
 queue order and Crowdin conversion. Its expected data is for the shared URL-driven
 workflow test; passing this fixture check does not prove Docker or Cloudflare execution.
 
-`deno test -A e2e/workflow.test.ts --timeout 180000` runs the full nine-step workflow against
-a disposable local instance, using the built CLI, public HTTP and Chromium. The harness
+`deno test -A e2e/workflow.test.ts` runs the full nine-step workflow against
+a disposable local instance, using the built CLI, public HTTP, and Chromium. The test runner
 captures the LLM stub's requests and checks proofread Spanish references in every prompt.
-Build the CLI first with `deno task build:cli`.
+Build the CLI first with `deno task build:cli`. The test defines its own three-minute timeout.
 
 For a dedicated empty instance with a deterministic LLM stub, run
 `deno task workflow --url http://127.0.0.1:8000`. A fresh instance needs
@@ -40,7 +40,7 @@ For a dedicated empty instance with a deterministic LLM stub, run
 `QUASO_ADMIN_PASSWORD`. The runner refuses an instance containing active source files.
 It revokes its API key and removes its browser page and temporary CLI workspace; the caller must tear
 down the disposable instance and its storage, which retain the fixture's account/data.
-This command does not configure an LLM stub or run CI. Deployment-specific harnesses must
+This command does not configure an LLM stub or run CI. Deployment test runners must
 also capture/check the provider prompts and supply the normal job/publication scheduler.
 
 `packages/service/src/llm/fake.ts` implements the translator port. It preserves placeholders and
@@ -49,33 +49,52 @@ errors without real calls. Use it to verify retries, cancellation, budgets and r
 response and a human approval. An LLM result must recheck the source and translation revision after
 awaiting the provider; no test should depend on an actual model's prose.
 
+## Check translation behavior
+
+Choose tests for the behavior your change affects. The newer features have focused entry points:
+
+| Behavior                                                      | Tests                                                                                                         |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Whole-file Markdown and paragraph checks                      | `packages/service/src/documents.test.ts`, `packages/core/src/documents.test.ts`                               |
+| User-owned API keys and current creator permissions           | `packages/service/src/tokens.test.ts`, `packages/service/src/permissions.test.ts`                             |
+| Editor LLM drafts, request batching, and saved preference     | `packages/service/src/llm_suggestion_async.test.ts`, `packages/web/src/pages/editor/useLlmSuggestion.test.ts` |
+| Identical-source reuse and stored warnings                    | `packages/service/src/jobs/memory.test.ts`, `packages/service/src/contextual_checks.test.ts`                  |
+| Repository descriptions and ambiguous source text             | `packages/service/src/source_context.test.ts`                                                                 |
+| Meaning checks, glossary proposals, and language style guides | `packages/service/src/quality_jobs.test.ts`, `packages/service/src/terminology_bootstrap.test.ts`             |
+
+Run a listed file with `deno test -A PATH`, replacing `PATH` with its repository path. For changes
+to shared database behavior, also run the corresponding D1 cases with `deno task cf:test`.
+The fake provider checks how requests and results are handled; it does not establish whether a
+model's translations or meaning judgments are correct.
+
 ## Browser tests
 
-[e2e/\_setup.ts](../../e2e/_setup.ts) starts an in-process server with in-memory SQLite and the real
+[browser test setup](../../e2e/_setup.ts) starts an in-process server with in-memory SQLite and the real
 security headers. It builds the website when stale. Install Chromium once with `deno task e2e:browser` (it needs Node: Puppeteer's installer stops before extracting under Deno); Puppeteer starts it for each test. Tests collect console errors, failed requests and CSP violations. Use real routes
-where possible; intercept only behavior that is hard to cause deterministically. Browser tests are
-separate from the fast unit suite because they start a browser and may need an initial download.
+where possible; intercept only behavior that is hard to cause with repeatable results. Browser tests are
+separate from the normal local suite because they start a browser and may need an initial download.
 
 Screenshots in the project website use Quaso Quest's actual French source files, with English
 translations, in light and dark themes. Install the game's dependencies with
-`npm ci --prefix examples/demo-game`, then regenerate them with `deno run -A site/screenshots.ts`.
+`npm ci --prefix examples/demo-game`, then generate them again with `deno run -A site/screenshots.ts`.
 The script uses disposable in-memory storage and a real signed-in account. It also captures the
 playable game using English files exported from Quaso, without changing the example's deliberately
-empty tracked translation files. Optimize the resulting PNGs without changing their content.
-Visual screenshots supplement assertions; they do not replace keyboard or permission tests.
-A human VoiceOver/NVDA pass is still part of release review.
+empty tracked translation files. Reduce the size of the resulting PNGs without changing their content.
+Visual screenshots add to test results; they do not replace keyboard or permission tests.
+Include the [accessibility review](#accessibility-review) in release checks.
 
 ## Cloudflare and upgrade fixtures
 
-The optional Cloudflare package runs Vitest in workerd through Deno. Docker is needed for `cf:dev`,
-not `cf:test`. Read [Cloudflare development](cloudflare.md) before changing adapters or alarms.
+The optional Cloudflare package runs Vitest in workerd through Deno. Its service tests use D1
+through the same handler and SQL adapter as the container. The old Durable Object storage service
+is no longer present. Docker is needed for `cf:dev`, not `cf:test`. Read [Cloudflare development](cloudflare.md) before changing adapters or alarms.
 
 `deno task cf:fixtures` generates the local-service scenario consumed by workerd tests. Commit its
 diff alongside a behavior or schema change. `deno task cf:fixtures --check` fails when it is stale.
 For historical schema fixtures, preserve already released inputs unchanged: add the next version's
 fixture and expected upgrade behavior. Validate actual rows and exported files after migration,
 including history, roles and blue translations, and test a newer schema is rejected by an old
-reader. The migration steps are in [CONTRIBUTING.md](../../CONTRIBUTING.md#adding-a-migration).
+reader. The migration steps are in [the migration procedure](README.md#adding-a-migration).
 
 ## Keep a database from every supported release
 
@@ -113,7 +132,7 @@ For each future supported schema:
 
 The `acceptance/` suite is separate from `deno task test`. It exercises the public HTTP API, the
 bundled CLI and Puppeteer against any reachable instance. Use a disposable development instance or
-staging: the suite creates uniquely named source files, translations and accounts. It revokes its
+a test instance: the suite creates uniquely named source files, translations and accounts. It revokes its
 API key and deletes temporary local files; synthetic source/history records remain on the instance.
 Never point it at production.
 
@@ -126,7 +145,7 @@ deno task acceptance --url http://localhost:8000
 
 Against a claimed staging instance, set `QUASO_ADMIN_EMAIL` and `QUASO_ADMIN_PASSWORD` as
 environment secrets. For first setup, also set `QUASO_SETUP_KEY` from the deployment configuration. The suite
-uses configured administrator credentials during setup, so later runs can sign in to the same
+uses configured administrator login details during setup, so later runs can sign in to the same
 account. Tokens may also be passed with `--setup-token`, but environment secrets avoid putting them
 on command lines.
 
@@ -151,36 +170,39 @@ docker compose down -v --remove-orphans
 
 Keep `COMPOSE_FILE` and `COMPOSE_PROJECT_NAME` exported: the suite's restart command must use the
 same stack. The override resets the operator `.env`, binds the port to loopback, and disables Caddy,
-development login and Gemini. Test 1 reports a skip without `--compose-dir`; test 3 reports a skip
+development login and Gemini. The persistence test reports a skip without `--compose-dir`; the automatic translation test reports a skip
 without an enabled translator. Human-check challenges may skip automated volunteer scenarios; use
 the independent browser fixture tests for those controls. The production Compose case intentionally
 has no fake-provider override. The development instance exercises the fake translator instead.
 
-`.github/workflows/acceptance.yml` runs the disposable Compose case on main and manually.
-Optional staging jobs activate only when the following configuration is present:
+`.github/workflows/acceptance.yml` runs the disposable Compose case on pushes to main or master
+and on manual requests. Its staging job runs only when these settings are present:
 
-| Configuration                                                      | Purpose                                                                                             |
-| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
-| Variable `STAGING_URL`                                             | Public HTTPS staging origin                                                                         |
-| Variable `STAGING_INSTANCE_CONFIG`                                 | Contents of the `quaso.cloudflare.jsonc` generated by `cf:setup`, including its staging environment |
-| Secret `DOCKERHUB_TOKEN`                                           | Enable publication of the commit image used for staging                                             |
-| Secrets `CLOUDFLARE_API_TOKEN`, optionally `CLOUDFLARE_ACCOUNT_ID` | Deploy the preconfigured staging Worker                                                             |
-| Secrets `STAGING_ADMIN_EMAIL`, `STAGING_ADMIN_PASSWORD`            | Dedicated administrator account for repeated acceptance runs                                        |
-| Secret `STAGING_SETUP_KEY`                                         | Initial claim only; must match the staging instance's setup key                                     |
+| Configuration                                                   | Purpose                                                                                 |
+| --------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Variable `STAGING_URL`                                          | Public HTTPS address of the staging instance.                                           |
+| Variable `STAGING_INSTANCE_CONFIG`                              | Contents of the instance's `quaso.cloudflare.jsonc`, including its staging environment. |
+| Secret `DOCKERHUB_TOKEN`                                        | Enables publication of the commit image used for staging.                               |
+| Secret `CLOUDFLARE_API_TOKEN`; optional `CLOUDFLARE_ACCOUNT_ID` | Deploys the configured staging Worker.                                                  |
+| Secrets `STAGING_ADMIN_EMAIL`, `STAGING_ADMIN_PASSWORD`         | Administrator account for repeated acceptance runs.                                     |
+| Secret `STAGING_SETUP_KEY`                                      | First setup only; must match the staging instance's key.                                |
 
-Configure the staging hostname, bucket and Worker secrets using the deployment guide before enabling
-those jobs. Acceptance restores the instance configuration in its clean checkout and waits for
-the image published by `docker.yml` as `sha-<seven-character commit>`. It uses `DOCKERHUB_IMAGE`
-when configured, or `<GitHub owner>/quaso`, and overrides the saved image for that deployment.
-The instance configuration contains resource identifiers, not API keys or passwords. The preflight
-exposes only enabled/disabled flags; it does not print configuration or secret values.
+Configure the staging hostname, bucket, and Worker secrets using the deployment guide first.
+Acceptance restores the instance configuration in its clean checkout and waits for the image
+published by `docker.yml` as `sha-<seven-character commit>`. It uses `DOCKERHUB_IMAGE` when set, or
+`<GitHub owner>/quaso`, and replaces the saved image choice for that deployment. The instance
+configuration contains resource identifiers, not API keys or passwords. The first check prints
+only whether the required settings exist, without printing their values.
 
-Nothing runs on a schedule. The large local stress case runs with `QUASO_SMOKE=1 deno task test`
-(below); the D1 performance case, in `deno task cf:test`, uses 3,000 strings in ten languages, with
-30,000 translations and 100 exported files; upload, export and browsing operations each have a
-30-second budget. To time staging requests, run `scripts/measure.ts` by hand: `--cold-starts 3`
-with `--sleep 660` adds three measurements, each after an eleven-minute idle period. Keep the
-container's sleep timeout below that interval.
+No GitHub Actions workflow runs on a schedule. Run the large local stress case with
+`QUASO_SMOKE=1 deno task test`. The D1 performance case runs in `deno task cf:test`: 3,000 strings
+in ten languages, 30,000 translations, and 100 exported files. Upload, export, and browsing each
+have a 30-second budget.
+
+To measure staging requests, run `scripts/measure.ts` by hand. Add `--cold-starts 3 --sleep 660`
+for three measurements, each after an eleven-minute idle period. Keep the container's sleep
+timeout below that interval. Other users or uptime checks can keep it awake; these measurements
+do not establish performance in every region.
 
 ## Optional external and large tests
 
@@ -190,9 +212,9 @@ deno task test:llm
 ```
 
 The first enables the 50,000-string / 30-language local stress case. The second needs
-`GEMINI_API_KEY`, makes real provider requests and may incur usage charges; it evaluates the sample
-corpus and writes results for review. Never make either a requirement for a small unrelated patch. A
-fake-provider timing result is not evidence of linguistic quality. Real staging deployments,
+`GEMINI_API_KEY`, makes real provider requests and may use paid tokens; it evaluates the sample
+texts and writes results for review. Never make either a requirement for a small unrelated patch. A
+test-provider timing result is not evidence of translation quality. Real staging deployments,
 regional latency, cold starts, D1 Time Travel and native-speaker evaluation remain separate release checks.
 
 ## Beta 2 workflow on the production image
@@ -208,3 +230,39 @@ fixture checks that every translation prompt includes proofread Spanish. Applica
 the production image have no test-provider switch. Containers, network, certificates and data
 are removed on success or failure. The Acceptance workflow runs this check, and release
 publication depends on the same check passing. Real Cloudflare execution remains separate.
+
+## Accessibility review
+
+Quaso aims to meet the Web Content Accessibility Guidelines (WCAG) 2.2 at level AA. The source and
+automated tests cover specific controls and states; they do not prove conformance across every
+page, browser, or assistive tool. Record the tested build and any unresolved problems in a release
+review instead of treating this list as completed evidence.
+
+Start with the checks relevant to your change:
+
+```sh
+deno test -A packages/design-system
+deno test -A e2e/accessibility.test.ts e2e/editor.test.ts e2e/design_system.test.ts
+```
+
+These tests cover defined theme contrast pairs, translation-state colours, keyboard behavior,
+focus after actions, dialogs, form labels, status announcements, and narrow layouts. The contrast
+tests check declared colour pairs; check the actual page too, including overlays and states
+introduced by the change.
+
+Then review the affected workflow by hand:
+
+1. Use only the keyboard. Reach **Skip to content**, navigation, inputs, actions, and dialogs. Check
+   that focus remains visible and returns to a useful place after closing a dialog or deleting an item.
+2. Check light and dark themes, 200% text zoom, narrow screens, and long text. Confirm that controls
+   and error messages remain readable and reachable.
+3. Check right-to-left source and target text, plural inputs, and placeholders. State shapes and
+   labels must explain status without relying on colour.
+4. Enable reduced motion and check animation behavior. Do not infer that every page respects the
+   preference from the presence of a shared stylesheet.
+5. Use VoiceOver and NVDA with someone who regularly uses a screen reader. Check headings, labels,
+   navigation, live messages, and the full translation and review tasks. Record the browser,
+   operating system, assistive tool, and findings.
+
+The old website guide's Sprint 7 checklist was a development record, not a current completed audit.
+A fresh review is still needed before making a release-wide accessibility claim.

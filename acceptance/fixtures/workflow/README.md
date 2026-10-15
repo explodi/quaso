@@ -1,7 +1,9 @@
 # Beta 2 workflow fixture
 
-This is fictional test data for B2.27, separate from the demo game and adopter content.
-Copy `project/` into a temporary workspace; do not mutate this fixture during a run.
+This fictional project tests uploads, imports, translation, review, and downloads. It is separate
+from the playable demo game.
+Copy `project/` into a temporary workspace; do not change this fixture during a run.
+The fixture contains these files and folders:
 
 - `project/`: five baseline English files, `quaso.config.json`, and matching Crowdin YAML.
 - `updated/`: the same five files with one new key each and a changed `menu.json:map`.
@@ -13,7 +15,7 @@ Copy `project/` into a temporary workspace; do not mutate this fixture during a 
 The ten languages are `de`, `es`, `fr`, `it`, `ja`, `ko`, `pl`, `pt-PT`, `tr` and
 `zh-Hans`; Portuguese retains folder `pt`, and Simplified Chinese retains `zh`.
 `tutorial/steps.json` exercises nested paths. Export values have a language prefix to
-make English fallbacks detectable; they are synthetic values, not language-quality samples.
+make English fallbacks detectable; they are test values, not examples of good translation.
 
 Initially there are ten strings and twenty source words. Import approved as blue, then
 full as green, without overwrite. Spanish is 100% translated and proofread; the other
@@ -29,15 +31,16 @@ For conversion, use `init --from-crowdin crowdin.yml --languages de,es,fr,it,ja,
 in a temporary copy without an existing Quaso config. The YAML mappings retain `pt` and
 `zh`. The separate exports are consumed with `import --from`, not copied over the project.
 
-Verify the fixture's import counts and queue preconditions with:
+Verify the fixture's import counts and queue starting conditions with:
 
 ```sh
-bun test acceptance/workflow_fixture.test.ts
+deno test -A acceptance/workflow_fixture.test.ts
 ```
 
 This check validates the data on the real SQLite service. The full browser/CLI workflow
-runs with `bun test e2e/workflow.test.ts --timeout 180000` after `bun run build:cli`.
-The same runner targets an instance URL through `bun run workflow --url URL`; see the
+runs with `deno test -A e2e/workflow.test.ts` after `deno task build:cli`.
+The same runner targets an instance URL through `deno task workflow --url URL`; see the
 [testing guide](../../../docs/contributing/testing.md#the-fake-translator) for credentials,
-stub requirements and cleanup. Docker execution, Cloudflare staging execution and the
-release gate remain separate B2.27 deliverables.
+stub requirements and cleanup. Replace `URL` with the address of a dedicated test instance. The Docker workflow runs with
+`deno task docker:workflow` and is required by release publication. Cloudflare execution remains a
+separate check.

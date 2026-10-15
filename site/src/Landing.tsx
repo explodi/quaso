@@ -31,53 +31,53 @@ const FEATURES = [
   {
     art: "treasure-chest",
     title: "Open source. All yours.",
-    text: "MIT licensed and self-hosted. No per-seat pricing, word limits, or language caps. Make yourself at home.",
-    note: "Free to use. Free to make your own.",
+    text: "MIT licensed and self-hosted. Run your own instance and change the source to fit your project.",
+    note: "You pay for hosting and external services.",
   },
   {
     art: "coin-stack",
-    title: "Small stack. Small bill.",
-    text: "One Quaso container and a SQLite database. Run it on your own VM with Docker Compose, or deploy on Cloudflare.",
+    title: "Host it your way.",
+    text: "One Quaso container and a SQLite database. Run it on your own virtual machine with Docker Compose, or deploy on Cloudflare.",
     note: "Your hosting. Your budget.",
   },
   {
     art: "magic-key",
     title: "Your LLM key. Your call.",
     text: "Bring your Gemini API key. Choose the model, write the instructions, set a monthly token budget, and pay your provider directly.",
-    note: "No markup. No middleman.",
+    note: "Pay the provider directly.",
   },
   {
     art: "campfire",
-    title: "Made for your whole party.",
-    text: "Your team proofreads directly. Volunteers from your community suggest fixes for a manager to approve. Anyone can read along, no account needed.",
+    title: "Built for your team.",
+    text: "Managers edit and proofread translations. Contributors suggest changes for review. Visitors can read source text and translations without an account.",
     note: "People give every language its voice.",
   },
   {
     art: "scroll",
     title: "Made for game strings.",
-    text: "i18next JSON with plural forms, placeholders, and quality checks built in, and Markdown documents translated whole: news, articles, story text.",
-    note: "Steam VDF · coming soon",
+    text: "i18next JSON with plural forms and placeholders, plus Markdown documents translated as whole files. Check structure and length before accepting a translation.",
+    note: "Supported formats: i18next JSON v4 and Markdown",
   },
   {
     art: "sailboat",
     title: "Ship files. Keep your freedom.",
-    text: "Translations come back as ordinary JSON files in your repository. Your game runs on its own, with no connection to Quaso.",
+    text: "Translations come back as ordinary files in your repository. Your game runs on its own, with no connection to Quaso.",
     note: "Fits your build. Works in CI.",
   },
 ];
 
-/** The same release, planned the usual way and with Quaso: when do players get their language? */
+/** Example release plans with proofreading before or after the first release. */
 const USUAL_RELEASE = [
   { when: "Week 1", text: "Freeze the strings and send them to translators." },
-  { when: "Weeks 2–4", text: "Wait. A late change to the text means waiting again." },
-  { when: "Week 5", text: "Ship every language, a month after the game was ready." },
+  { when: "Weeks 2–4", text: "Translate and proofread the text." },
+  { when: "Week 5", text: "Release the reviewed languages." },
 ];
 
 const QUASO_RELEASE = [
-  { when: "Monday", text: "Push the new strings. The LLM translates them in minutes." },
-  { when: "Monday", text: "Ship the build in every language." },
+  { when: "Monday", text: "Upload the new strings and run a translation job." },
+  { when: "Monday", text: "Check the results and release the completed languages." },
   { when: "All week", text: "Your team and community proofread, whenever suits them." },
-  { when: "Friday", text: "The next build ships their fixes. Nobody waited." },
+  { when: "Friday", text: "Download accepted fixes for the next build." },
 ];
 
 /** A static, selectable code example. No client-side syntax library is needed. */
@@ -195,9 +195,9 @@ export function Landing({ page, hasDoc, repositoryUrl }: LandingProps) {
                 tomorrow.
               </H1>
               <p className="lead">
-                Quaso is open-source localization for games. An LLM translates new strings as soon
-                as you upload them, so your next build speaks every language. Your team and
-                community proofread at their own pace, and each fix ships in the build after.
+                Quaso is an open-source tool for translating games. With a Gemini key, uploads can
+                queue machine translations for review. Download accepted translations into your next
+                build, then include your team's fixes in later builds.
               </p>
               <div className="actions">
                 <AnchorButton variant="primary" href={relativeHref(page, DOCS_HOME)}>
@@ -260,7 +260,7 @@ export function Landing({ page, hasDoc, repositoryUrl }: LandingProps) {
                     </li>
                   </ol>
                   <p className="translation-proof">
-                    <CheckIcon /> In players’ hands both times. Nobody waited.
+                    <CheckIcon /> Both translations appear in a game build.
                   </p>
                 </div>
               </div>
@@ -268,12 +268,9 @@ export function Landing({ page, hasDoc, repositoryUrl }: LandingProps) {
             </div>
           </div>
           <div className="format-strip">
-            <span className="eyebrow">LESS FRICTION. MORE PLAYERS.</span>
+            <span className="eyebrow">SUPPORTED FILE FORMATS</span>
             <span>
-              <CheckIcon /> i18next JSON
-            </span>
-            <span>
-              Steam VDF <span className="soon">coming soon</span>
+              <CheckIcon /> i18next JSON v4
             </span>
             <span>
               <CheckIcon /> Markdown
@@ -290,51 +287,52 @@ export function Landing({ page, hasDoc, repositoryUrl }: LandingProps) {
                 <span className="section-index">II</span> WHY QUASO
               </p>
               <H2 display id="why-title">
-                Nobody waits
+                Choose when
                 <br />
-                for anybody.
+                to release.
               </H2>
             </div>
             <p>
-              Done the usual way, a release waits for its slowest language. With Quaso, the LLM’s
-              translations ship with your next build, and people make them better while you keep
-              making the game.
+              Decide which languages need proofreading before release. You can include accepted
+              machine translations in a build and add reviewed changes in later builds.
             </p>
           </div>
           <div className="release-compare">
             <ReleaseLane
               className="release-usual"
-              title="The usual way"
+              title="A release after proofreading"
               steps={USUAL_RELEASE}
-              outcome="Players get their language in week five."
+              outcome="Example plan: finish proofreading before release."
             />
             <ReleaseLane
               className="release-quaso"
               title="With Quaso"
               steps={QUASO_RELEASE}
-              outcome="Players get their language on day one."
+              outcome="Example plan: release checked machine translations, then proofread."
             />
           </div>
-          <ul className="safeguards" aria-label="Why it is safe to ship before proofreading">
+          <ul className="safeguards" aria-label="Translation checks and review controls">
             <li>
-              <H3>Proofreading is never lost.</H3>
+              <H3>Keep proofread translations.</H3>
               <p>
-                The LLM never overwrites a person’s translation. When the source text changes, it
-                proposes an update for a manager to approve.
+                The LLM does not replace a proofread translation. With proposals enabled, a source
+                change can produce an update for a manager to review.
               </p>
             </li>
             <li>
-              <H3>Checked before it ships.</H3>
+              <H3>Check the text structure.</H3>
               <p>
-                LLM translations pass the same placeholder, plural and length checks as a person’s.
-                One that keeps failing stays untranslated, and the game shows the source text.
+                LLM results must pass placeholder, plural, and length checks before they are saved.
+                A failed result leaves the previous value in place. People still need to check
+                meaning and tone.
               </p>
             </li>
             <li>
               <H3>Strict where it counts.</H3>
               <p>
                 Want a language fully proofread before launch day? Add{" "}
-                <code>quaso status --fail-on green</code> to your release, and it waits until it is.
+                <code>quaso status --fail-on untranslated,outdated,green</code> to your build. A
+                matching state makes the command fail; review QA and pending counts separately.
               </p>
             </li>
           </ul>
@@ -350,17 +348,17 @@ export function Landing({ page, hasDoc, repositoryUrl }: LandingProps) {
           <div className="section-heading">
             <div>
               <p className="eyebrow">
-                <span className="section-index">III</span> FROM YOUR REPO TO THE WORLD
+                <span className="section-index">III</span> FROM YOUR REPOSITORY TO THE WORLD
               </p>
               <H2 display id="workflow-title">
                 Four steps.
                 <br />
-                No waiting.
+                From text to build.
               </H2>
             </div>
             <p>
-              Follow Quaso Quest from French to English. Its English ships before anyone proofreads
-              it, and gets better with every build.
+              Follow Quaso Quest from French to English. This example uses a machine translation
+              first, then adds a person's changes in a later build.
             </p>
           </div>
           <ol className="workflow-steps">
@@ -408,11 +406,11 @@ export function Landing({ page, hasDoc, repositoryUrl }: LandingProps) {
                 <span className="step-number" aria-hidden="true">
                   02
                 </span>
-                <H3>Upload. It’s translated.</H3>
+                <H3>Upload and translate.</H3>
                 <p>
                   Install the CLI in your game’s repository and upload your source files whenever
-                  the story grows. The LLM translates every new and changed string in minutes, and
-                  checks each one’s placeholders, plural forms and length.
+                  the story grows. With a Gemini key and automatic translation enabled, uploads
+                  queue work for new and changed strings. Check the job result before downloading.
                 </p>
                 <div className="file-route">
                   <code>src/locales/fr/*.json</code>
@@ -425,7 +423,7 @@ export function Landing({ page, hasDoc, repositoryUrl }: LandingProps) {
               </div>
               <Terminal title="your game / terminal">
                 <Command>
-                  npm i -D <span className="code-accent">@quaso-i18n/cli</span>
+                  npm i -D <span className="code-accent">@quaso-i18n/cli@main</span>
                 </Command>
                 {"\n\n"}
                 <span className="code-comment"># Connect to your instance</span>
@@ -454,11 +452,11 @@ export function Landing({ page, hasDoc, repositoryUrl }: LandingProps) {
                 <span className="step-number" aria-hidden="true">
                   03
                 </span>
-                <H3>Ship it in every language.</H3>
+                <H3>Download for your build.</H3>
                 <p>
-                  Download the translations into your game’s language folders and ship. The LLM’s
-                  translations go out with this build: nobody has to approve them first. Your game
-                  loads ordinary files, with no connection to Quaso.
+                  Download accepted translations into your game's language folders. Missing
+                  translations use source text by default; outdated translations remain included.
+                  Check the files in your game before release. The game needs no Quaso connection.
                 </p>
                 <Terminal title="back in your game">
                   <Command>npx quaso download</Command>
@@ -482,7 +480,7 @@ export function Landing({ page, hasDoc, repositoryUrl }: LandingProps) {
                 width={964}
                 height={624}
                 alt="Quaso Quest, a pixel-art game about a croissant cat collecting butter, running with the downloaded English translations"
-                caption="Same buttery adventure in English, before anyone proofread its dialogue."
+                caption="The example game running in English, before anyone proofread its dialogue."
               />
             </li>
             <li className="workflow-step step-translate">
@@ -494,20 +492,20 @@ export function Landing({ page, hasDoc, repositoryUrl }: LandingProps) {
                 <p>
                   Your team and your community proofread in the browser, with the source,
                   placeholders and plural forms right beside them. The LLM never overwrites their
-                  work, and your next download brings every fix into the game.
+                  proofread work. Your next download includes accepted fixes for your build.
                 </p>
                 <ul className="translation-states">
                   <li>
                     <ColourLabel colour="red">Untranslated</ColourLabel>
-                    <span>Players see the source text for now.</span>
+                    <span>Downloads use source text by default.</span>
                   </li>
                   <li>
-                    <ColourLabel colour="green">Translated by the LLM</ColourLabel>
-                    <span>Ships with your next build.</span>
+                    <ColourLabel colour="green">Translated</ColourLabel>
+                    <span>Accepted for download; not yet proofread.</span>
                   </li>
                   <li>
                     <ColourLabel colour="blue">Proofread</ColourLabel>
-                    <span>Checked by a person. Ships with the build after the fix.</span>
+                    <span>Checked by a person and accepted for download.</span>
                   </li>
                 </ul>
                 <div className="step-links">
@@ -575,7 +573,7 @@ export function Landing({ page, hasDoc, repositoryUrl }: LandingProps) {
               </H2>
             </div>
             <p>
-              Localization should feel like part of making your game. Here are six more ways Quaso
+              Translation should feel like part of making your game. Here are six more ways Quaso
               keeps it that way.
             </p>
           </div>
