@@ -4,7 +4,7 @@ import { assertEquals, assertStringIncludes } from "@std/assert";
 import type { LanguageProgress, StatusResult } from "@quaso/core";
 import { CONFIG, fakeFetch, jsonResponse, runCli, withProject } from "../test_helpers.ts";
 
-const ENV = { QUASO_HOSTNAME: "http://quaso.test", QUASO_API_KEY: "qso_read" };
+const ENV = { QUASO_HOSTNAME: "https://quaso.test", QUASO_API_KEY: "qso_read" };
 
 function language(
   tag: string,
@@ -65,7 +65,7 @@ async function status(args: string[], result: StatusResult = STATUS) {
 test("status prints a table of every language, marking those not in the config", async () => {
   const run = await status([]);
   assertEquals(run.code, 0, run.stderr);
-  assertEquals(run.url, "http://quaso.test/api/v1/status");
+  assertEquals(run.url, "https://quaso.test/api/v1/status");
   assertStringIncludes(run.stdout, "10 strings, 20 words (source language: en)");
   assertStringIncludes(
     run.stdout,
@@ -97,7 +97,7 @@ test("status --fail-on counts only the config's languages: exit code 7 when met"
 test("status --language narrows the table and the --fail-on count", async () => {
   const one = await status(["--language", "de", "--fail-on", "untranslated"]);
   assertEquals(one.code, 0, one.stderr);
-  assertEquals(one.url, "http://quaso.test/api/v1/status", "every language, then narrowed");
+  assertEquals(one.url, "https://quaso.test/api/v1/status", "every language, then narrowed");
   const ja = await status(["--language", "de,ja", "--fail-on", "untranslated"]);
   assertEquals(ja.code, 7);
   const unknown = await status(["--language", "de,xx"]);

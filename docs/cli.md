@@ -57,10 +57,10 @@ in a Deno project, use `deno install --min-dep-age 0`.
 
 Two environment variables connect the CLI to your team's Quaso instance:
 
-| Variable         | What it is                                                                                                                                                                       |
-| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `QUASO_HOSTNAME` | The instance, such as `translate.yourgame.com`. HTTPS is assumed; a full URL such as `http://localhost:8000` also works, for development.                                        |
-| `QUASO_API_KEY`  | A key created by an administrator: `read` permits `download` and `status`; `upload` also permits `upload`, `import`, and `translate`. Creator permissions also apply; see below. |
+| Variable         | What it is                                                                                                                                                                                                  |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `QUASO_HOSTNAME` | The instance, such as `translate.yourgame.com`. HTTPS is assumed; a full URL such as `http://localhost:8000` also works, for development. Plain `http://` is only for `localhost`, `127.0.0.1` and `[::1]`. |
+| `QUASO_API_KEY`  | A key created by an administrator: `read` permits `download` and `status`; `upload` also permits `upload`, `import`, and `translate`. Creator permissions also apply; see below.                            |
 
 ```sh
 export QUASO_HOSTNAME=translate.yourgame.com
@@ -74,8 +74,10 @@ languages, but cannot upload, import, download, or run `status`. The key stops w
 account is deleted.
 
 The key comes only from the environment: the CLI refuses a config file that contains one.
-A team that prefers to commit the hostname can put
-`"hostname"` in the config file instead; `QUASO_HOSTNAME` wins over it.
+With `QUASO_API_KEY` set, the instance must come from `QUASO_HOSTNAME`: the CLI refuses a
+`"hostname"` that only the config file names (`missing_hostname`, exit code 2), so the key only
+goes to a server you chose, not to one a repository you cloned chose. Without a key, the config's
+`"hostname"` is still read, and `QUASO_HOSTNAME` wins over it.
 
 The CLI never follows redirects, so your key only goes to the configured host. If the
 instance redirects (for example from `http://` to `https://`), the error says which address to use.
@@ -107,7 +109,7 @@ never writes outside it. `quaso init` writes a starter file.
 | Field                      | Meaning                                                                                                                                                                                                                                                                 |
 | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `$schema`                  | The JSON Schema of the file, which your instance publishes at `/schema/config-v1.json`, for completion and checks in editors. Optional.                                                                                                                                 |
-| `hostname`                 | The instance, when `QUASO_HOSTNAME` isn't set. Optional.                                                                                                                                                                                                                |
+| `hostname`                 | The instance, when `QUASO_HOSTNAME` isn't set and no API key is. With `QUASO_API_KEY` set, `QUASO_HOSTNAME` is required. Optional.                                                                                                                                      |
 | `sourceLanguage`           | The language of your source files, as a BCP 47 tag such as `en`.                                                                                                                                                                                                        |
 | `languages`                | The languages to translate into: what `download` writes and `status --fail-on` counts. `upload` adds any of them that the instance lacks. Languages that the instance has and the config doesn't list, such as one volunteers are just starting, are left alone.        |
 | `descriptionSuffix`        | A suffix for JSON keys that describe another source string, such as `@description`. These description keys are not translated. Optional.                                                                                                                                |
@@ -493,7 +495,7 @@ This example omits some language counts and per-file results.
   An error has this shape: `{ "code": "missing_key", "message": "…", "hint": "…", "details": [ … ] }`. `code` is the
   instance's error code (such as `invalid_source`, `unauthorized`, `validation_failed`) or one of
   the CLI's own, such as `usage`, `invalid_config`, `config_not_found`, `missing_key`,
-  `invalid_key`, `missing_hostname`, `network`, `timeout`, `unsafe_path`, `unknown_file`,
+  `invalid_key`, `missing_hostname`, `invalid_hostname`, `network`, `timeout`, `unsafe_path`, `unknown_file`,
   `unknown_language`, `redirect`, `bad_response`. Each detail names what applies of `file` (a local
   path), `key`, `language`, `line`, `column` and `check`.
 

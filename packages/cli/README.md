@@ -41,8 +41,10 @@ For Deno, replace `npx quaso` with `deno run -A npm:@quaso-i18n/cli@main`.
 ## Connecting
 
 `QUASO_HOSTNAME` accepts a hostname, which uses HTTPS, or a full URL such as
-`http://localhost:8000`. The config's optional `hostname` field is used when the environment
-variable is absent. The API key comes only from `QUASO_API_KEY`; never commit it.
+`http://localhost:8000`; plain `http://` is only for `localhost`, `127.0.0.1` and `[::1]`. The API
+key comes only from `QUASO_API_KEY`; never commit it. With a key set, the CLI only connects to
+`QUASO_HOSTNAME` and refuses a `hostname` that only the config file names, so a cloned repository
+can't send your key to its own server.
 
 For an administrator's key, the `read` scope permits download and status; `upload` also permits
 upload, import, and translation jobs. Each key follows its creator's current permissions. A

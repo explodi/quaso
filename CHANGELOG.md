@@ -141,6 +141,17 @@ Release candidates are for deployment and migration testing. The team decides wh
 - In Safari, the links in the header's menus (Team, Settings, Account and the others) work: the
   menu closed before the click reached them, because Safari doesn't focus a clicked link.
 
+### Security
+
+- The CLI sends an API key only to a server you chose: with `QUASO_API_KEY` set, the instance
+  must come from `QUASO_HOSTNAME`, and a `hostname` that only `quaso.config.json` names is
+  refused (`missing_hostname`, exit code 2). A cloned repository could otherwise point the CLI,
+  and your key, at its own server. **Breaking:** a team that commits `hostname` and runs the CLI
+  with a key must set `QUASO_HOSTNAME` too, in CI and on every machine.
+- The CLI refuses plain `http://` addresses (`invalid_hostname`) except `localhost`,
+  `127.0.0.0/8` and `[::1]`, so a key never crosses the network unencrypted. Development
+  servers such as `http://localhost:8000` keep working.
+
 ## [1.0.0-rc.2] - 2026-10-08
 
 ### Added
