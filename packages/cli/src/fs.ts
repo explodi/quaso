@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 /**
  * Reading and writing files for the commands, with the safety rules of design §5.10
- * (CLI-5): reads, writes and deletions check the real path (after symbolic links), so a
- * link can't lead outside the project, or a write onto a source file.
+ * (CLI-5): reads, writes and deletions refuse a project path with a symbolic link on it, so
+ * a committed link can't send an ignored file (`.env`) to the instance, or have a download
+ * write somewhere else (`.git/hooks`).
  */
-import { lstat, mkdir, readFile, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
-import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
+import { lstat, mkdir, readFile, realpath, rename, rm, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { describeFsError, type Project } from "./config.ts";
 import { CliError, EXIT, usageError } from "./errors.ts";
 import { absolutePath, projectPath, type Sources } from "./files.ts";
@@ -46,33 +47,56 @@ function projectRoot(project: Project): Promise<string> {
 
 /**
  * A project file (a project path) as UTF-8 text, or null when it doesn't exist. Refuses
- * (exit code 2) a file that a symbolic link leads outside the project folder: what the CLI
- * sends to the instance comes from the project only (CLI-5).
+ * (exit code 2) a path with a symbolic link on it, even a link that stays inside the
+ * project: what the CLI sends to the instance is what the repository holds as regular files.
  */
 export async function readProjectText(project: Project, path: string): Promise<string | null> {
-  const absolute = absolutePath(project, path);
-  let real: string;
-  try {
-    real = await realpath(absolute);
-  } catch (error) {
-    const code = (error as { code?: string }).code;
-    if (code === "ENOENT" || code === "ENOTDIR") return null;
-    throw new CliError(EXIT.unexpected, `Can't read ${path}: ${describeFsError(error)}.`, {
-      code: "io",
-    });
-  }
-  if (!inside(await projectRoot(project), real)) {
-    throw usageError(
-      `Refusing to read ${path}: a symbolic link leads outside the project folder.`,
-      {
-        code: "unsafe_path",
-        hint:
-          "The CLI only sends files that are inside the folder of " +
-          `${project.configName}. Copy the file into the project instead of linking it.`,
-      },
+  const refuse = (why: string, hint: string) =>
+    usageError(`Refusing to read ${path}: ${why}.`, { code: "unsafe_path", hint });
+  if (projectPath(project, absolutePath(project, path)) !== path) {
+    throw refuse(
+      "it is outside the project folder",
+      `The CLI only sends files inside the folder of ${project.configName}.`,
     );
   }
-  return await readText(absolute, path);
+  const obstacle = await firstObstacle(project, path);
+  if (obstacle?.kind === "file") return null;
+  if (obstacle?.kind === "link") {
+    throw refuse(
+      `${obstacle.path} is a symbolic link`,
+      `Replace ${obstacle.path} with a regular file or folder: the CLI doesn't follow ` +
+        "symbolic links in the project.",
+    );
+  }
+  return await readText(absolutePath(project, path), path);
+}
+
+/**
+ * What stands in the way on a project path, from the project folder down to the file: the
+ * first symbolic link, or the first file where a folder should be. Null when there is
+ * neither, also when the end of the path doesn't exist yet.
+ */
+async function firstObstacle(
+  project: Project,
+  path: string,
+): Promise<{ path: string; kind: "link" | "file" } | null> {
+  const segments = path.split("/");
+  for (let count = 1; count <= segments.length; count++) {
+    const partial = segments.slice(0, count).join("/");
+    let found;
+    try {
+      found = await lstat(absolutePath(project, partial));
+    } catch (error) {
+      if ((error as { code?: string }).code === "ENOENT") return null;
+      throw new CliError(EXIT.unexpected, `Can't read ${partial}: ${describeFsError(error)}.`, {
+        code: "io",
+      });
+    }
+    if (found.isSymbolicLink()) return { path: partial, kind: "link" };
+    const isFolderOnPath = count < segments.length;
+    if (isFolderOnPath && !found.isDirectory()) return { path: partial, kind: "file" };
+  }
+  return null;
 }
 
 /**
@@ -105,8 +129,8 @@ export function sameBytes(a: Uint8Array, b: Uint8Array): boolean {
 }
 
 /**
- * Checks the real location of files the CLI writes or deletes: inside the project folder
- * after following links, not a link itself, and not a source file under another name.
+ * Checks files the CLI writes or deletes: no symbolic link on their path, a file (or
+ * nothing yet) at its end, and not a source file under another name.
  */
 export class RealPathGuard {
   readonly #project: Project;
@@ -120,27 +144,27 @@ export class RealPathGuard {
 
   /** Throws a usage error (exit code 2) when `path` (a project path) isn't safe to change. */
   async check(path: string, language: string): Promise<void> {
-    const refuse = (why: string) =>
-      usageError(`Refusing to write ${path} (${language}): ${why}.`, { code: "unsafe_path" });
-    const root = await projectRoot(this.#project);
-    const target = absolutePath(this.#project, path);
-    const folder = await realExisting(dirname(target));
-    const real = join(folder.real, ...folder.missing, basename(target));
-    if (!inside(root, real)) throw refuse("a linked folder leads outside the project folder");
-    if (!(await stat(folder.real)).isDirectory()) {
-      const name = projectPath(this.#project, folder.path) ?? folder.path;
-      throw refuse(`${name} is a file, not a folder`);
+    const refuse = (why: string, hint?: string) =>
+      usageError(`Refusing to write ${path} (${language}): ${why}.`, { code: "unsafe_path", hint });
+    const obstacle = await firstObstacle(this.#project, path);
+    if (obstacle?.kind === "link") {
+      throw refuse(
+        `${obstacle.path} is a symbolic link`,
+        `Replace ${obstacle.path} with a regular file or folder: the CLI doesn't write ` +
+          "through symbolic links.",
+      );
     }
+    if (obstacle?.kind === "file") throw refuse(`${obstacle.path} is a file, not a folder`);
     try {
-      const found = await lstat(target);
-      if (found.isSymbolicLink()) throw refuse("it is a symbolic link");
+      const found = await lstat(absolutePath(this.#project, path));
       if (!found.isFile()) throw refuse("it isn't a file");
     } catch (error) {
       if (error instanceof CliError) throw error;
-      const code = (error as { code?: string }).code;
-      if (code === "ENOTDIR") throw refuse("a folder on its path is a file");
-      if (code !== "ENOENT") throw error;
+      if ((error as { code?: string }).code !== "ENOENT") throw error;
     }
+    // A source glob's base folder may be a link (only reading the source refuses it), and
+    // then this very file may be a source file.
+    const real = join(await projectRoot(this.#project), ...path.split("/"));
     if ((await this.#sourceRealPaths()).has(real.toLowerCase())) {
       throw refuse("a linked folder makes it a source file");
     }
@@ -160,34 +184,6 @@ export class RealPathGuard {
     }
     return this.#sourcePaths;
   }
-}
-
-/**
- * The nearest existing path at or above `path` (which may be a file, where a folder was
- * expected), its real path, and the missing folders below it.
- */
-async function realExisting(
-  path: string,
-): Promise<{ path: string; real: string; missing: string[] }> {
-  const missing: string[] = [];
-  let current = path;
-  while (true) {
-    try {
-      return { path: current, real: await realpath(current), missing };
-    } catch (error) {
-      const code = (error as { code?: string }).code;
-      if (code !== "ENOENT" && code !== "ENOTDIR") throw error;
-      const parent = dirname(current);
-      if (parent === current) throw error;
-      missing.unshift(basename(current));
-      current = parent;
-    }
-  }
-}
-
-function inside(root: string, path: string): boolean {
-  const rel = relative(root, path);
-  return rel !== "" && !isAbsolute(rel) && rel !== ".." && !rel.startsWith(`..${sep}`);
 }
 
 /**

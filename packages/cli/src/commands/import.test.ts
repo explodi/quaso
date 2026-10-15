@@ -122,7 +122,7 @@ test("import --from requires an existing directory before sending requests", asy
   });
 });
 
-test("import --from refuses symlinks outside the export before sending requests", async () => {
+test("import --from refuses symlinks in the export before sending requests", async () => {
   await withProject(PROJECT, async (dir) => {
     await withProject({ "src/locales/de/menus.json": "{}" }, async (exportDir) => {
       const path = join(exportDir, "src/locales/de/menus.json");
@@ -135,7 +135,7 @@ test("import --from refuses symlinks outside the export before sending requests"
         fetch,
       });
       assertEquals(run.code, 2);
-      assertStringIncludes(run.stderr, "symbolic link leads outside");
+      assertStringIncludes(run.stderr, "src/locales/de/menus.json is a symbolic link");
       assertEquals(fetch.requests.length, 0);
     });
   });
@@ -408,7 +408,7 @@ test("import refuses to read through a link that leads outside the project", asy
         assertEquals(run.code, 2);
         assertStringIncludes(
           run.stderr,
-          "Refusing to read src/locales/de/common.json: a symbolic link leads outside",
+          "Refusing to read src/locales/de/common.json: src/locales/de is a symbolic link",
         );
         assertEquals(fetch.requests.length, 0);
       },

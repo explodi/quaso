@@ -151,6 +151,11 @@ Release candidates are for deployment and migration testing. The team decides wh
 - The CLI refuses plain `http://` addresses (`invalid_hostname`) except `localhost`,
   `127.0.0.0/8` and `[::1]`, so a key never crosses the network unencrypted. Development
   servers such as `http://localhost:8000` keep working.
+- The CLI refuses a symbolic link anywhere on the path of a file it reads, writes or deletes,
+  even one that stays inside the project (`unsafe_path`, exit code 2). A repository could commit
+  `locales/en/x.json -> ../../.env` and have `quaso upload` send the ignored `.env`, or link a
+  translation file to `.git/hooks/pre-commit` and have `quaso download` write it. Replace such
+  links with regular files or folders.
 
 ## [1.0.0-rc.2] - 2026-10-08
 

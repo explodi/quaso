@@ -349,11 +349,10 @@ test("download refuses to write where a source glob would find the file", async 
   );
 });
 
-test("download refuses linked folders that lead outside or onto the source files", async () => {
+test("download refuses a linked folder that leads outside", async () => {
   if (process.platform === "win32") return;
   await withProject(PROJECT, async (dir) => {
     await withProject({ "x.json": "{}" }, async (outside) => {
-      await fs.mkdir(join(dir, "src", "locales"), { recursive: true });
       await fs.symlink(outside, join(dir, "src", "locales", "de"));
       const run = await runCli(["download", "--language", "de"], {
         cwd: dir,
@@ -361,22 +360,83 @@ test("download refuses linked folders that lead outside or onto the source files
         fetch: server(FILES.slice(0, 2)),
       });
       assertEquals(run.code, 2);
-      assertStringIncludes(run.stderr, "a linked folder leads outside the project folder");
+      assertStringIncludes(run.stderr, "src/locales/de is a symbolic link");
       assertEquals(await exists(outside, "common.json"), false);
     });
-    await fs.rm(join(dir, "src", "locales", "de"));
-    await fs.symlink(join(dir, "src", "locales", "en"), join(dir, "src", "locales", "de"));
-    const before = await read(dir, "src/locales/en/common.json");
-    const run = await runCli(["download", "--language", "de"], {
-      cwd: dir,
-      env: ENV,
-      fetch: server(FILES.slice(0, 2)),
-    });
-    assertEquals(run.code, 2);
-    assertStringIncludes(run.stderr, "a linked folder makes it a source file");
-    assertEquals(await read(dir, "src/locales/en/common.json"), before);
   });
 });
+
+// Regression (audit QUASO-F2): a committed link let the instance write a git hook.
+test(
+  "download refuses to write through a translation file that is a link inside the project",
+  { skip: process.platform === "win32" },
+  async () => {
+    await withProject(
+      {
+        ...PROJECT,
+        ".git/hooks/pre-commit": "#!/bin/sh\n",
+        "src/locales/de/menus/main.json": "{}",
+      },
+      async (dir) => {
+        await fs.symlink(
+          join("..", "..", "..", ".git", "hooks", "pre-commit"),
+          join(dir, "src", "locales", "de", "common.json"),
+        );
+        const run = await runCli(["download", "--language", "de", "--overwrite-local"], {
+          cwd: dir,
+          env: ENV,
+          fetch: server(FILES.slice(0, 2)),
+        });
+        assertEquals(run.code, 2);
+        assertStringIncludes(
+          run.stderr,
+          "Refusing to write src/locales/de/common.json (de): " +
+            "src/locales/de/common.json is a symbolic link",
+        );
+        assertEquals(await read(dir, ".git/hooks/pre-commit"), "#!/bin/sh\n");
+      },
+    );
+  },
+);
+
+test(
+  "download refuses to write through a linked folder inside the project",
+  { skip: process.platform === "win32" },
+  async () => {
+    await withProject({ ...PROJECT, ".git/hooks/README": "" }, async (dir) => {
+      await fs.symlink(join("..", "..", ".git", "hooks"), join(dir, "src", "locales", "de"));
+      const run = await runCli(["download", "--language", "de"], {
+        cwd: dir,
+        env: ENV,
+        fetch: server(FILES.slice(0, 2)),
+      });
+      assertEquals(run.code, 2);
+      assertStringIncludes(run.stderr, "src/locales/de is a symbolic link");
+      assertEquals(await exists(dir, ".git/hooks/common.json"), false);
+    });
+  },
+);
+
+test(
+  "download refuses to write a source file that a linked source folder leads to",
+  { skip: process.platform === "win32" },
+  async () => {
+    await withProject(
+      { "quaso.config.json": CONFIG, "src/locales/de/common.json": '{ "play": "Play" }\n' },
+      async (dir) => {
+        await fs.symlink(join(dir, "src", "locales", "de"), join(dir, "src", "locales", "en"));
+        const run = await runCli(["download", "--language", "de", "--overwrite-local"], {
+          cwd: dir,
+          env: ENV,
+          fetch: server(FILES.slice(0, 1)),
+        });
+        assertEquals(run.code, 2);
+        assertStringIncludes(run.stderr, "a linked folder makes it a source file");
+        assertEquals(await read(dir, "src/locales/de/common.json"), '{ "play": "Play" }\n');
+      },
+    );
+  },
+);
 
 test("download: a damaged file is exit code 4 and nothing is written", async () => {
   await withProject(PROJECT, async (dir) => {

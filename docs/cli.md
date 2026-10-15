@@ -611,11 +611,16 @@ stays the command's when a pipe closes early, as in `quaso status 2>&1 | head -1
   from the instance is only used to find the local source file it belongs to; an answer with a
   language or a file that wasn't asked for is refused.
 - It refuses to write a source file, the config file, the source language, a file a `source` glob
-  would find, or anything outside the project folder, including through a symbolic link, and it
-  checks every path before it writes the first file. `--prune` only deletes files the `translation`
-  pattern could have written for a source file that no longer exists.
+  would find, or anything outside the project folder, and it checks every path before it writes
+  the first file. `--prune` only deletes files the `translation` pattern could have written for a
+  source file that no longer exists.
 - Upload reads files inside the project folder. Import reads there by default, or inside the
-  folder selected with `--from`. Both refuse a symbolic link that leads outside their input folder.
+  folder selected with `--from`.
+- Symbolic links aren't followed. A file to read, write or delete with a link anywhere on its path
+  inside the project, the file itself or one of its folders, is refused with `unsafe_path` (exit
+  code 2), even when the link stays inside the project: a committed link could otherwise upload an
+  ignored file such as `.env`, or have a download write into `.git`. Replace the link with a
+  regular file or folder. A link to the project folder itself is fine.
 - Files are written through a temporary file and a rename, so none is ever half-written.
 - It never starts other programs and never runs git. The build fails if the bundle could start a
   process.
