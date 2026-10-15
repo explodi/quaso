@@ -34,7 +34,13 @@ import {
 } from "../../lib/api.ts";
 import { AutoTranslateButton } from "../../components/AutoTranslate.tsx";
 import { queryCache, useQuery } from "../../lib/data.ts";
-import { count, formatNumber, languageLabel, progressText } from "../../lib/format.ts";
+import {
+  count,
+  documentName,
+  formatNumber,
+  languageLabel,
+  progressText,
+} from "../../lib/format.ts";
 import { useDocumentTitle, useProject, useRememberLanguage } from "../../lib/hooks.ts";
 import { fillPattern, href, Link, Redirect, useRoute } from "../../lib/router.tsx";
 import { useSession } from "../../lib/session.tsx";
@@ -214,7 +220,7 @@ export function EditorPage() {
             await approveTranslation(s.id, tag, { baseRevision: s.translation!.revision });
             approved++;
           } catch (error) {
-            failures.push(`${s.key}: ${errorMessage(error)}`);
+            failures.push(`${s.key || documentName(s.file)}: ${errorMessage(error)}`);
           }
         }),
       );

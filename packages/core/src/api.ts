@@ -9,6 +9,7 @@
  */
 import type { CheckResult } from "./checks.ts";
 import { LanguageTag, LengthLimit, MAX_LENGTH_LIMIT, PluralExclusion } from "./config.ts";
+import { formatForPath } from "./documents.ts";
 import type { PluralOverride } from "./plurals.ts";
 import { type Infer, s } from "./schema.ts";
 import {
@@ -43,11 +44,12 @@ export const TextValueSchema = s
 
 /**
  * A file's path below the source folder, such as `common.json` or `menus/main.json`:
- * relative, with `/` separators, no `.` or `..` segments, ending in `.json`.
+ * relative, with `/` separators, no `.` or `..` segments, ending in `.json` (an i18next
+ * file) or `.md` or `.markdown` (a document, translated whole).
  */
 export const FilePath = s
   .refine(s.string({ minLength: 1, maxLength: 512 }), (path) => {
-    if (!path.endsWith(".json")) return "must end with .json";
+    if (formatForPath(path) === undefined) return "must end with .json, .md or .markdown";
     if (path.startsWith("/") || path.includes("\\")) return "must be relative, with / separators";
     if (path.split("/").some((part) => part === "" || part === "." || part === "..")) {
       return "must not contain empty, . or .. segments";
@@ -81,6 +83,7 @@ export interface ActorInfo {
 /** A key in a file, for lists of changes: `{ file: "common.json", key: "menu.play" }`. */
 export interface KeyRef {
   file: string;
+  /** The key path displayed with dots; empty for a document, whose file is the string. */
   key: string;
 }
 
@@ -299,9 +302,11 @@ export interface StringSummary {
   id: number;
   fileId: number;
   file: string;
-  /** The key path displayed with dots, such as `menu.play` or `hints.0`. */
+  /** The key path displayed with dots, such as `menu.play` or `hints.0`; empty for a document. */
   key: string;
   kind: TranslatableKind;
+  /** The string is a whole file, such as a Markdown article: its key is empty. */
+  document: boolean;
   source: TextValue;
   description: string;
   maxLength: number | null;
@@ -534,6 +539,11 @@ export interface ExportFile {
   /** The file's path below the source folder. The CLI maps it to a local path itself. */
   path: string;
   language: string;
+  /**
+   * The rendered file. Empty when there is nothing to write: a document (a Markdown file)
+   * that is untranslated or outdated with `omit`; the CLI then deletes the local file
+   * instead of writing an empty one. A JSON file is never empty.
+   */
   content: string;
   /** Older-source translations included in these bytes. Revision names the source file upload. */
   outdated?: { key: string; sourceRevision: number }[];

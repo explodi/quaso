@@ -8,7 +8,7 @@
  * written.
  */
 import { isAbsolute, relative, resolve, sep } from "node:path";
-import { isValidLanguageTag } from "@quaso/core";
+import { formatForPath, isValidLanguageTag } from "@quaso/core";
 import { canonical, languageFolder, type Project } from "./config.ts";
 import { usageError } from "./errors.ts";
 import { compareStrings, glob, globBase, globToRegExp } from "./glob.ts";
@@ -33,7 +33,8 @@ export interface Sources {
 
 /**
  * Finds the source files of every `files` entry. Fails (exit code 2) when a match isn't a
- * `.json` file, when two files would have the same server path, or when there are none.
+ * `.json` file or a `.md` or `.markdown` document, when two files would have the same server
+ * path, or when there are none.
  */
 export async function collectSources(project: Project): Promise<Sources> {
   const byServer = new Map<string, SourceFile>();
@@ -55,10 +56,10 @@ export async function collectSources(project: Project): Promise<Sources> {
       if (local.endsWith(".descriptions.json")) continue;
       const server = base === "" ? local : local.slice(base.length + 1);
       const key = `files[${index}].source`;
-      if (!server.endsWith(".json")) {
+      if (formatForPath(server) === undefined) {
         problems.push({
           key,
-          message: `${local} isn't a .json file: narrow the glob, or add it to exclude`,
+          message: `${local} isn't a .json, .md or .markdown file: narrow the glob, or add it to exclude`,
         });
         continue;
       }

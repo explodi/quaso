@@ -5,7 +5,7 @@ ships in every language. People proofread afterwards, and each download brings t
 
 This page takes you from nothing to a build that speaks every language, in four steps: host Quaso,
 connect your game, translate, and download. You need a game that uses
-[i18next](https://www.i18next.com/) JSON files, and somewhere to run Quaso.
+[i18next](https://www.i18next.com/) JSON files (and Markdown documents, if your game has them), and somewhere to run Quaso.
 
 > **Just looking?** [Quaso Quest](../examples/demo-game/README.md) is a small playable game that
 > runs its own Quaso on your computer with one command. No server, domain or key needed.

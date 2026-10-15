@@ -98,6 +98,11 @@ needs, each labelled with the numbers it is used for: Polish has _one_ (1), _few
 32–34, …), _many_ (0, 5–21, 25–31, …) and _other_ (1.5). The English of each form is shown above its
 input.
 
+A **document**, a Markdown file translated whole, shows its file name instead of a key, the whole
+file as the source, a taller input and a paragraph counter: the translation must keep the English's
+paragraphs (blocks separated by blank lines) and placeholders, while line breaks inside a paragraph
+and the Markdown syntax are up to you.
+
 As you type, the **quality checks** run: a missing or extra placeholder, a missing plural form, an
 empty translation, one longer than the maximum length, or whitespace at either edge or line-break
 counts that differ from the source are **errors**, and saving waits until they are fixed. A placeholder or reference chip above the input turns red, with a warning sign, while the

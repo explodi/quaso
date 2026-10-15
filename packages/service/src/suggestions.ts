@@ -91,6 +91,7 @@ const SUGGESTION_COLUMNS = `g.id, g.string_id, g.language, g.kind, g.value, g.so
 /** A suggestion with its string and the current translation (columns `t_…`). */
 type ListedRow = SuggestionRow & {
   path: string;
+  string_key: string;
   display_key: string;
   string_kind: string;
   source: string;
@@ -98,7 +99,7 @@ type ListedRow = SuggestionRow & {
   max_length: number | null;
 } & { [K in keyof TranslationRow as `t_${K & string}`]: TranslationRow[K] | null };
 
-const LISTED_COLUMNS = `${SUGGESTION_COLUMNS}, f.path, s.display_key, s.kind AS string_kind,
+const LISTED_COLUMNS = `${SUGGESTION_COLUMNS}, f.path, s.key AS string_key, s.display_key, s.kind AS string_kind,
   s.source, s.source_hash AS string_hash, s.max_length,
   ${TRANSLATION_COLUMNS.split(", ")
     .map((column) => `t.${column} AS t_${column}`)
@@ -142,6 +143,7 @@ function describeRows(rows: ListedRow[], facts: Facts, actors: ActorDirectory): 
     describeSuggestion(row, {
       string: {
         path: row.path,
+        key: row.string_key,
         display_key: row.display_key,
         kind: row.string_kind,
         source: row.source,
@@ -160,7 +162,7 @@ function describeSuggestion(
   context: {
     string: Pick<
       TargetString,
-      "path" | "display_key" | "kind" | "source" | "source_hash" | "max_length"
+      "path" | "key" | "display_key" | "kind" | "source" | "source_hash" | "max_length"
     >;
     current: TranslationRow | null;
     facts: Facts;
@@ -363,7 +365,7 @@ export async function suggestAsync(
           sql: "SELECT COALESCE((SELECT CAST(value AS INTEGER) FROM meta WHERE key = 'revision'), 0) AS revision",
         },
         {
-          sql: "SELECT s.id, f.path, s.display_key, s.kind, s.source, s.source_hash, s.max_length, s.active * f.active AS active FROM strings s JOIN files f ON f.id = s.file_id WHERE s.id = ?",
+          sql: "SELECT s.id, f.path, s.key, s.display_key, s.kind, s.source, s.source_hash, s.max_length, s.active * f.active AS active FROM strings s JOIN files f ON f.id = s.file_id WHERE s.id = ?",
           params: [input.id],
         },
         {
@@ -1038,6 +1040,7 @@ export async function reviewSuggestionsAsync(
             string: {
               id: row.string_id,
               path: row.path,
+              key: row.string_key,
               display_key: row.display_key,
               kind: row.string_kind,
               source: row.source,

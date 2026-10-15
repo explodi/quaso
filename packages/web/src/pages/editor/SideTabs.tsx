@@ -29,7 +29,7 @@ import { StateMarker } from "../../components/StateBadge.tsx";
 import { useToast } from "../../components/Toast.tsx";
 import { ApiError, getHistory, reviewSuggestions, withdrawSuggestion } from "../../lib/api.ts";
 import { useQuery } from "../../lib/data.ts";
-import { formatDateTime, formatRelative } from "../../lib/format.ts";
+import { formatDateTime, formatRelative, stringName } from "../../lib/format.ts";
 import { Link } from "../../lib/router.tsx";
 import { useSession } from "../../lib/session.tsx";
 import { CommentsPanel, GlossaryPanel } from "./CommunityTabs.tsx";
@@ -157,7 +157,7 @@ function HistoryItem({ entry, sourceLanguage }: { entry: HistoryEntry; sourceLan
     entry.event === "translation_reused" &&
     typeof entry.detail?.file === "string" &&
     typeof entry.detail?.key === "string"
-      ? `${entry.detail.file} › ${entry.detail.key}`
+      ? stringName(entry.detail.file, entry.detail.key)
       : null;
   const comment = typeof entry.detail?.comment === "string" ? entry.detail.comment : null;
   const colourChanged = entry.beforeColour !== entry.afterColour;

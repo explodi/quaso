@@ -162,9 +162,7 @@ export function Comment({
     <li className="community-record comment-record">
       {link && (
         <H3>
-          <Link to={link}>
-            {comment.file} · {comment.key}
-          </Link>
+          <Link to={link}>{comment.key ? `${comment.file} · ${comment.key}` : comment.file}</Link>
         </H3>
       )}
       <div className="community-record-head">

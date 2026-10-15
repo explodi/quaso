@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { Button, Details, Summary, Input, Label, Table, TextArea } from "@quaso/design-system";
 import type { QualityJobInfo, TerminologySuggestion, StyleGuideDraft } from "@quaso/core";
+import { stringName } from "../lib/format.ts";
 import { useState } from "react";
 import { request } from "../lib/api.ts";
 import { useMutation } from "../lib/data.ts";
@@ -102,7 +103,7 @@ function TermRow({
             {proposal.occurrences.map((entry) => (
               <li key={entry.id}>
                 <Link to={editorHref(entry.language, { id: entry.id, file: entry.file })}>
-                  {entry.file} › {entry.key}
+                  {stringName(entry.file, entry.key)}
                 </Link>
                 : {entry.rendering || "untranslated"}
               </li>

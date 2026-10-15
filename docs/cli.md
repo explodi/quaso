@@ -122,6 +122,16 @@ where its glob starts: with `src/locales/en/**/*.json`, the file `src/locales/en
 files can't have the same path on the instance. A single file works too:
 `"source": "locales/en.json"` with `"translation": "locales/{lang}.json"`.
 
+**Markdown documents.** A source file ending in `.md` or `.markdown` is a document: the whole
+file is one string, translated as one text, and the file is its identity, so its key is empty. Add
+a `files` entry for them beside the one for the JSON files, such as
+`"source": "text/en/**/*.md"` with `"translation": "text/{lang}/{path}"`. A translation must keep
+the document's placeholders and its paragraphs (blocks separated by blank lines): the quality
+checks compare the number of paragraphs instead of line breaks, and leave the Markdown syntax to
+the translator. Downloads write the translation with one final newline, so an editor's final
+newline never counts as a change. `limits`, `pluralExclusions` and `--rename` don't apply to
+documents.
+
 **Translations stay out of the source globs.** A `translation` pattern must not write where a
 `source` glob looks, or the next upload would send the German files as English ones. The CLI refuses
 such a config (`locales/**/*.json` with `locales/{lang}/{path}`, for example), and `download` checks
@@ -246,6 +256,11 @@ or review those keys on the website. Set `"outdated": "omit"` to leave their ent
 preserving current translations, literals and references; affected arrays are omitted whole.
 Historical `--at` downloads preserve the original bytes and refuse either omission option.
 
+A document (a Markdown file) with nothing to write, because it is untranslated with
+`"untranslated": "omit"` or outdated with `"outdated": "omit"`, is deleted from the repository
+instead of being written empty, and listed as deleted, so the app falls back to its source
+language. A document edited in the repository is kept, like any local edit.
+
 | Option              | Meaning                                                                                                                                                                                               |
 | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `--dry-run`         | List what would be written or deleted, without changing anything.                                                                                                                                     |
@@ -353,7 +368,7 @@ neither has is an error (exit code 2).
 
 Imports translation files you already have, such as those from Crowdin, from where the config's
 `translation` pattern points. Upload the English first: keys the English doesn't have are skipped
-and listed.
+and listed. A Markdown translation file is imported whole; a blank one is skipped.
 
 | Option              | Meaning                                                                                                                                          |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |

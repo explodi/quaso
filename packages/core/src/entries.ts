@@ -4,8 +4,17 @@
  *
  * An English file is flattened into entries, each identified by its key path. Plural
  * groups (`coins_one`, `coins_other`) become one entry. `readTranslation` reads a
- * translation file (for `quaso import`) against the English entries.
+ * translation file (for `quaso import`) against the English entries. A Markdown document
+ * is one entry with an empty key path (see `documents.ts`).
  */
+import {
+  DOCUMENT_KEY,
+  type FileFormat,
+  type FormatName,
+  formatForPath,
+  MARKDOWN_FORMAT,
+  normalizeDocument,
+} from "./documents.ts";
 import {
   type JsonFormat,
   type JsonMember,
@@ -68,14 +77,16 @@ export type SourceEntry = TextEntry | PluralEntry | ReferenceEntry | LiteralEntr
 
 /** An English file, read. */
 export interface SourceFile {
-  format: JsonFormat;
+  format: FileFormat;
   /** Entries in file order; a plural group sits at the position of its first key. */
   entries: SourceEntry[];
 }
 
 export interface ReadOptions {
-  /** The file's path, for error messages. */
+  /** The file's path, for error messages, and for its format when `format` isn't given. */
   file?: string;
+  /** The file's format. Default: what the path's extension implies, or JSON. */
+  format?: FormatName;
   syntax?: InterpolationSyntax;
   /**
    * Groups that only look like plurals: their keys stay plain entries. Each is the key path
@@ -138,13 +149,33 @@ export { JsonSyntaxError };
  *   have their own key), a `SourceError` `key_conflict` is thrown.
  *
  * JSON errors throw `JsonSyntaxError` with the file, line and column.
+ *
+ * A Markdown document (`format: "markdown"`, or a `.md` or `.markdown` file) is one `text`
+ * entry with an empty key path, holding the whole file (`normalizeDocument`); a blank
+ * document is a `literal`, copied rather than translated.
  */
 export function readSource(text: string, options: ReadOptions = {}): SourceFile {
+  if (formatOf(options) === "markdown") return readDocument(text);
   const { root, format } = parseJson(text, { file: options.file });
   if (root.type !== "object") throw notAnObject(root, options.file);
   const reader = new SourceReader(options);
   reader.readObject(root, []);
   return { format, entries: reader.entries };
+}
+
+/** The format the options name, or the one the file's extension implies; JSON otherwise. */
+function formatOf(options: { file?: string; format?: FormatName }): FormatName {
+  if (options.format !== undefined) return options.format;
+  return (options.file === undefined ? undefined : formatForPath(options.file)) ?? "json";
+}
+
+function readDocument(text: string): SourceFile {
+  const value = normalizeDocument(text);
+  const entry: SourceEntry =
+    value.trim() === ""
+      ? { kind: "literal", keyPath: [], raw: quoteJsonString(value), line: 1 }
+      : { kind: "text", keyPath: [], value, line: 1 };
+  return { format: MARKDOWN_FORMAT, entries: [entry] };
 }
 
 /** The translatable value of a text or plural entry; `undefined` for other kinds. */
@@ -158,6 +189,8 @@ export interface ReadTranslationOptions {
   /** The translation's language, for its plural keys. */
   language: string;
   file?: string;
+  /** The file's format. Default: what the path's extension implies, or JSON. */
+  format?: FormatName;
   pluralOverride?: PluralOverride;
 }
 
@@ -188,17 +221,33 @@ export interface ReadTranslationResult {
  * English has an empty one. Plural keys of a group English copies instead of translating
  * (such as `label_few` when English has `label_one` and `label_other` made only of
  * references) aren't reported.
+ *
+ * A Markdown document's translation is the whole file (`normalizeDocument`), matched with
+ * the English document's entry; a blank file gives a blank value, which imports skip.
  */
 export function readTranslation(
   text: string,
   english: readonly SourceEntry[],
   options: ReadTranslationOptions,
 ): ReadTranslationResult {
+  if (formatOf(options) === "markdown") return readDocumentTranslation(text, english);
   const { root } = parseJson(text, { file: options.file });
   if (root.type !== "object") throw notAnObject(root, options.file);
   const reader = new TranslationReader(english);
   reader.readObject(root, []);
   return { values: reader.values(english), unknownKeys: reader.unknownKeys };
+}
+
+function readDocumentTranslation(
+  text: string,
+  english: readonly SourceEntry[],
+): ReadTranslationResult {
+  const values = new Map<string, TextValue>();
+  const document = english.find(
+    (entry) => entry.kind === "text" && entryKey(entry.kind, entry.keyPath) === DOCUMENT_KEY,
+  );
+  if (document !== undefined) values.set(DOCUMENT_KEY, normalizeDocument(text));
+  return { values, unknownKeys: [] };
 }
 
 /** The parts of a plural key: `place_ordinal_two` is `place`, `ordinal`, `two`. */

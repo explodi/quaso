@@ -1287,6 +1287,7 @@ test("results: every check id is reachable, with the severity from CHECKS", () =
     meaningWarnings([{ kind: "omission", explanation: "The second sentence is missing." }]),
     text("<b>Quit?</b>", "<i>Beenden</i>"),
     text("Quit?", " Beenden\n  jetzt"),
+    text("Headline\n\nBody.", "Titel\n\nText.\n\nMehr.", { document: true }),
   ];
   for (const results of all) {
     for (const result of results) {
@@ -1449,4 +1450,61 @@ test("duplicate translations compare case and edge whitespace within one file an
     ]).size,
     0,
   );
+});
+
+// Documents
+
+const ARTICLE = [
+  "The moment has arrived: {{cityName}} is founded",
+  "",
+  "What was once a patch of dirt is now a patch of dirt with a name: {{cityName}}.",
+  "",
+  "Some managed to hold it. Others will have a story to tell.",
+].join("\n");
+
+test("documents: a translation with the same paragraphs passes, whatever its line endings", () => {
+  const translation = [
+    "Der Moment ist gekommen: {{cityName}} ist gegründet",
+    "",
+    "Was einst ein Stück Erde war, ist nun ein Stück Erde mit Namen: {{cityName}}.",
+    "",
+    "",
+    "Manche hielten durch. Andere haben nun etwas zu erzählen.",
+    "",
+  ].join("\r\n");
+  assertEquals(text(ARTICLE, translation, { document: true }), []);
+  assertEquals(text(`${ARTICLE}\n`, translation, { document: true }), []);
+});
+
+test("documents: paragraphs replace line breaks, so an extra blank line isn't an error", () => {
+  const extraBlankLine = ARTICLE.replace("\n\nSome", "\n\n\nSome");
+  assertEquals(text(ARTICLE, extraBlankLine, { document: true }), []);
+  assertEquals(summary(text(ARTICLE, extraBlankLine)), ["whitespace"]);
+});
+
+test("documents: a merged or split paragraph is an error", () => {
+  const merged = ARTICLE.replace("\n\nSome", " Some");
+  assertEquals(text(ARTICLE, merged, { document: true }), [
+    {
+      check: "paragraphs",
+      severity: "error",
+      message: "The English has 3 paragraphs; the translation has 2.",
+    },
+  ]);
+  const split = ARTICLE.replace(": {{cityName}}.", ".\n\n{{cityName}}.");
+  assertEquals(messages(text(ARTICLE, split, { document: true })), [
+    "The English has 3 paragraphs; the translation has 4.",
+  ]);
+});
+
+test("documents: placeholders are checked across the whole file", () => {
+  const missing = ARTICLE.replace("name: {{cityName}}.", "name.");
+  assertEquals(summary(text(ARTICLE, missing, { document: true })), ["placeholder_missing"]);
+});
+
+test("documents: whitespace at the end never counts, at the start it does", () => {
+  assertEquals(text(ARTICLE, `${ARTICLE}\n\n  `, { document: true }), [
+    { check: "identical", severity: "warning", message: "Identical to the English." },
+  ]);
+  assertEquals(summary(text(ARTICLE, `\n${ARTICLE}`, { document: true })), ["whitespace"]);
 });

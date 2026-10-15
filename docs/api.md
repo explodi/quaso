@@ -27,6 +27,12 @@ translations, including projects that have no target languages:
 `path` is the server identity below the source glob's base. `repoPath` is the display path relative
 to `quaso.config.json`. Uploads require both; downloads and imports use `path`.
 
+A path ends in `.json`, an i18next file, or in `.md` or `.markdown`, a Markdown document: one
+string with an empty `key`, translated whole, which `GET /strings` marks with `document: true`. In
+`GET /export`, a document with nothing to write (untranslated or outdated, with `omit`) has an
+empty `content`: the CLI deletes the local file instead of writing an empty one. A JSON file is
+never empty.
+
 `strings` counts active translatable entries, and `words` counts their source words. Empty files
 remain listed with zero counts. `updatedAt` is a Unix timestamp in milliseconds, and `revision` is
 the project revision of the upload that last changed that file. Repeat uploads, previews,

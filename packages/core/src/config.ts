@@ -20,7 +20,7 @@ export const FileMapping = s.object({
   source: s
     .string({ minLength: 1 })
     .describe(
-      "Glob of the source-language files, relative to the config file, such as src/locales/en/**/*.json",
+      "Glob of the source-language files, relative to the config file, such as src/locales/en/**/*.json; .md and .markdown files are documents, translated whole",
     ),
   translation: s
     .refine(s.string({ minLength: 1 }), (pattern) =>

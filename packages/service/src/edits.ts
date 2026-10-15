@@ -154,7 +154,7 @@ export async function editTranslationAsync(
           sql: "SELECT COALESCE((SELECT CAST(value AS INTEGER) FROM meta WHERE key = 'revision'), 0) AS revision",
         },
         {
-          sql: "SELECT s.id, f.path, s.display_key, s.kind, s.source, s.source_hash, s.max_length, s.active * f.active AS active FROM strings s JOIN files f ON f.id = s.file_id WHERE s.id = ?",
+          sql: "SELECT s.id, f.path, s.key, s.display_key, s.kind, s.source, s.source_hash, s.max_length, s.active * f.active AS active FROM strings s JOIN files f ON f.id = s.file_id WHERE s.id = ?",
           params: [input.id],
         },
         {

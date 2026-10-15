@@ -30,13 +30,14 @@ import {
   STATE_FILTERS,
   type StateFilter,
   textDirection,
+  type TextValue,
 } from "@quaso/core";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { ErrorMessage } from "../../components/ErrorMessage.tsx";
 import { SourceText } from "../../components/SourceText.tsx";
 import { StateMarker } from "../../components/StateBadge.tsx";
 import { VirtualList } from "../../components/VirtualList.tsx";
-import { count, formatNumber, sourcePreview } from "../../lib/format.ts";
+import { count, documentName, firstLine, formatNumber, sourcePreview } from "../../lib/format.ts";
 import { useDebounced } from "../../lib/hooks.ts";
 import { Link } from "../../lib/router.tsx";
 import { FILTER_LABELS, filterCount } from "../../lib/states.ts";
@@ -186,6 +187,9 @@ export function StringList(props: StringListProps) {
     if (!summary) return null;
     const current = summary.id === props.selectedId;
     const checked = selection.has(summary.id);
+    // A document's first line (its heading, usually) stands for it in the list.
+    const preview = (value: TextValue) =>
+      summary.document ? firstLine(sourcePreview(value)) : sourcePreview(value);
     return (
       <div className={`string-row${current ? " is-current" : ""}${checked ? " is-checked" : ""}`}>
         {canBulk && (
@@ -196,7 +200,7 @@ export function StringList(props: StringListProps) {
               className="row-check"
               checked={checked}
               tabIndex={isActive ? 0 : -1}
-              aria-label={`Select ${summary.key}`}
+              aria-label={`Select ${summary.key || summary.file}`}
               onChange={() => {}}
               onClick={(event) => toggle(index, event.currentTarget.checked, event.shiftKey)}
             />
@@ -222,7 +226,7 @@ export function StringList(props: StringListProps) {
           <StateMarker summary={summary} />
           <span className="row-text">
             <span className="row-source" lang={props.sourceLanguage} dir={sourceDirection}>
-              <SourceText text={sourcePreview(summary.source)} syntax={props.syntax} />
+              <SourceText text={preview(summary.source)} syntax={props.syntax} />
             </span>
             <span
               className="row-translation muted"
@@ -230,7 +234,7 @@ export function StringList(props: StringListProps) {
               dir={textDirection(props.language)}
             >
               {summary.translation ? (
-                <SourceText text={sourcePreview(summary.translation.value)} syntax={props.syntax} />
+                <SourceText text={preview(summary.translation.value)} syntax={props.syntax} />
               ) : (
                 <span lang="en" dir="ltr">
                   Not translated yet
@@ -238,7 +242,8 @@ export function StringList(props: StringListProps) {
               )}
             </span>
             <span className="row-key">
-              <code>{summary.key}</code>
+              <code>{summary.document ? documentName(summary.file) : summary.key}</code>
+              {summary.document && <span className="row-kind">document</span>}
               {summary.kind !== "text" && <span className="row-kind">{summary.kind}</span>}
               {!props.file && <span className="row-file">{summary.file}</span>}
             </span>

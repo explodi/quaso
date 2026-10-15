@@ -32,6 +32,7 @@ Rules:
 - Never translate keys or IDs.
 - For a plural string, give exactly the forms listed in its "forms", no more and no fewer, each one grammatical in %targetLanguage% for the example numbers given.
 - Respect "maxLength": the translation, placeholders and tokens included, must have at most that many characters. Shorten or rephrase if needed.
+- A string marked "document": true is a whole file, such as a Markdown article, not a short string. Translate it as one text: keep its paragraphs (the same number, in the same order, separated by blank lines), its headings and any Markdown syntax as written, and give the whole translated file as "text".
 - Follow the instructions below, and keep terms consistent with the other translations shown.
 - When source wording has several plausible meanings, include an optional "ambiguous" sentence naming the interpretations and your choice, especially when no description resolves it.
 - Answer only with JSON in the given schema: for each string, its "id" and its "text", or its "forms" for a plural string.
@@ -65,7 +66,7 @@ Current %targetLanguage% translations of the same English elsewhere in the proje
 The strings around them in the file, with their current %targetLanguage% translations, for context:
 %neighbours%
 
-The strings to translate, one JSON object per line: "id", "key", "english", the plural "forms" to give with their example numbers, "description", "maxLength", "placeholders" (to keep exactly as written), "optionalPlaceholders" (placeholders you may leave out), "references" (what each locked token stands for), "outdatedTranslation" (the current translation, made for an older English: update it) and "refused" (why your previous answer was refused: correct it).
+The strings to translate, one JSON object per line: "id", "key", "english", "document" (a whole file: keep its paragraphs), the plural "forms" to give with their example numbers, "description", "maxLength", "placeholders" (to keep exactly as written), "optionalPlaceholders" (placeholders you may leave out), "references" (what each locked token stands for), "outdatedTranslation" (the current translation, made for an older English: update it) and "refused" (why your previous answer was refused: correct it).
 %strings%
 
 An instruction for this run, which comes before the others:
@@ -82,6 +83,8 @@ const FORMER_DEFAULT_TEMPLATES: ReadonlySet<string> = new Set([
   "7f85ce5e9898d75b85dc312ae5e1be3dd152fd183dbeda8cf2ade919a9e3fbcd",
   // Before optional placeholders.
   "7fb7e2700f9568166df8aa662c9406ae329273a391a1077aa080066b3fb0bca4",
+  // Before documents (Markdown files translated whole).
+  "80f3c60f7ed2cffbef6543391208d37fd9b6e71061a805fddb59a8e40bda054c",
 ]);
 
 /** The settings of a new instance. */

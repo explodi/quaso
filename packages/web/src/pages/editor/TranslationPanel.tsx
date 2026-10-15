@@ -29,6 +29,7 @@ import {
   checkTranslation,
   graphemeLength,
   type LanguageProgress,
+  paragraphCount,
   placeholderKey,
   type ProjectInfo,
   type StringDetail,
@@ -65,7 +66,14 @@ import {
   unapproveTranslation,
 } from "../../lib/api.ts";
 import { useQuery } from "../../lib/data.ts";
-import { formatDateTime, formatRelative, languageLabel, valueText } from "../../lib/format.ts";
+import {
+  documentName,
+  formatDateTime,
+  formatRelative,
+  languageLabel,
+  stringName,
+  valueText,
+} from "../../lib/format.ts";
 import { useDebounced } from "../../lib/hooks.ts";
 import {
   type Draft,
@@ -255,6 +263,7 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
         kind: detail.kind,
         source: detail.source,
         translation: value,
+        document: detail.document,
         language: tag,
         maxLength: detail.maxLength,
         syntax,
@@ -269,6 +278,7 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
     current,
     detail.kind,
     detail.source,
+    detail.document,
     value,
     tag,
     detail.maxLength,
@@ -549,10 +559,12 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
     <div className="panel" ref={root}>
       <div className="panel-head">
         <H2 ui id="panel-heading" className="panel-key" tabIndex={-1}>
-          <span className="sr-only">String</span> <code>{detail.key}</code>
+          <span className="sr-only">String</span>{" "}
+          <code>{detail.document ? documentName(detail.file) : detail.key}</code>
         </H2>
         <p className="panel-file muted">
           {detail.file}
+          {detail.document && " · a whole file, translated as one text"}
           {detail.kind !== "text" && (
             <>
               {" · "}
@@ -620,9 +632,7 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
               <span key={peer.id}>
                 {index > 0 && ", "}
                 <Link to={`/translate/${tag}?id=${peer.id}`}>
-                  <code>
-                    {peer.file} › {peer.key}
-                  </code>
+                  <code>{stringName(peer.file, peer.key)}</code>
                 </Link>
               </span>
             ))}
@@ -800,7 +810,7 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
                   dir={direction}
                   data-translation-input=""
                   value={text}
-                  minRows={form === "text" ? 3 : 2}
+                  minRows={form !== "text" ? 2 : detail.document ? 8 : 3}
                   spellCheck
                   aria-invalid={invalid || undefined}
                   aria-describedby={`${inputId}-checks${
@@ -817,6 +827,9 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
                     }
                   }}
                 />
+                {detail.document && typeof detail.source === "string" && (
+                  <ParagraphCounter english={detail.source} text={text} />
+                )}
                 {detail.maxLength !== null && (
                   <p
                     id={`${inputId}-length`}
@@ -999,8 +1012,10 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
         }
       >
         <p>
-          The {language.name} translation of <code>{detail.key}</code> goes, and the app shows the{" "}
-          {project.sourceLanguageName} until someone translates it again. Its history stays.
+          The {language.name} translation of{" "}
+          <code>{detail.document ? documentName(detail.file) : detail.key}</code> goes, and the app
+          shows the {project.sourceLanguageName} until someone translates it again. Its history
+          stays.
         </p>
       </Dialog>
     </div>
@@ -1222,5 +1237,18 @@ function ReadOnly({
         </p>
       )}
     </section>
+  );
+}
+
+/** A document's paragraphs typed so far against the English's, beside the input. */
+function ParagraphCounter({ english, text }: { english: string; text: string }) {
+  const expected = paragraphCount(english);
+  const found = paragraphCount(text);
+  const differs = text.trim() !== "" && found !== expected;
+  return (
+    <p className={`length${differs ? " length-over" : ""}`}>
+      {differs && <WarningIcon />}
+      {found} / {expected} paragraphs
+    </p>
   );
 }

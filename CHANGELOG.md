@@ -7,6 +7,17 @@ Release candidates are for deployment and migration testing. The team decides wh
 
 ### Added
 
+- Markdown documents: a source file ending in `.md` or `.markdown` is translated whole, as one
+  string whose key is empty and whose file is its identity. Point a `files` entry of
+  `quaso.config.json` at them (`text/en/**/*.md` with `text/{lang}/{path}`), beside the JSON
+  files. Uploads, the editor (the file name as the title, a taller input and a paragraph counter),
+  imports, translation jobs (one request per document, marked as a whole file in the prompt) and
+  downloads (the translation with one final newline) work as for JSON strings; a document with
+  nothing to write, untranslated or outdated with `omit`, is deleted from the repository so the
+  app falls back to its source language. A new `paragraphs` check replaces the line-break count
+  for documents: a translation keeps the number of paragraphs. Instances on the default prompt
+  get its document rule on the next request.
+
 - LLM suggestions in the editor: managers who translate by hand turn on the **LLM suggestions**
   switch and see the LLM's translation under the input, while they type their own. The editor asks
   about the open string and the next three to do in one request, and keeps asking ahead as they

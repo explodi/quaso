@@ -35,7 +35,12 @@ export function memoryMatches(
       const value = fromJson<TextValue>(row.value);
       const checks = checkValue(
         facts,
-        { kind: item.kind, source: JSON.stringify(item.english), max_length: item.maxLength },
+        {
+          kind: item.kind,
+          source: JSON.stringify(item.english),
+          max_length: item.maxLength,
+          document: item.document,
+        },
         item.language,
         value,
       );

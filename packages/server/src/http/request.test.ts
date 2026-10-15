@@ -70,7 +70,7 @@ test("validateInput: 400 validation_failed with a detail per problem", () => {
   assertEquals(error.status, 400);
   assertEquals(error.details, [
     { path: "files[0].path", message: "must not contain empty, . or .. segments" },
-    { path: "files[1].path", message: "must end with .json" },
+    { path: "files[1].path", message: "must end with .json, .md or .markdown" },
     { path: "files[1].content", message: "is required" },
     { path: "extra", message: "is not a known property" },
   ]);

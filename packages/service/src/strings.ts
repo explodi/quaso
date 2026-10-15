@@ -5,6 +5,7 @@
  */
 import {
   type CheckResult,
+  isDocumentKey,
   languageName,
   type ReferenceHint,
   referencesOf,
@@ -47,6 +48,7 @@ type SummaryRow = {
   id: number;
   file_id: number;
   path: string;
+  key: string;
   display_key: string;
   kind: TranslatableKind;
   source: string;
@@ -71,7 +73,7 @@ type SummaryRow = {
   t_updated_at: number | null;
 };
 
-const SUMMARY_COLUMNS = `s.id, s.file_id, f.path, s.display_key, s.kind, s.source,
+const SUMMARY_COLUMNS = `s.id, s.file_id, f.path, s.key, s.display_key, s.kind, s.source,
   s.source_hash, s.description, s.max_length, s.max_length_locked, s.words,
   (SELECT COUNT(*) FROM suggestions g
    WHERE g.string_id = s.id AND g.language = ? AND g.status = 'pending') AS pending,
@@ -299,6 +301,7 @@ function summaryOf(
     file: row.path,
     key: row.display_key,
     kind: row.kind,
+    document: isDocumentKey(row.key),
     source: fromJson<TextValue>(row.source),
     description: row.description,
     maxLength: row.max_length,
