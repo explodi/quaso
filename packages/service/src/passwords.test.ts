@@ -65,8 +65,16 @@ test("passwords: a hash stores the scheme, the iterations and a random salt", as
   assertEquals(parseHash(first)?.iterations, 1000);
   assertEquals((await verifyPassword("correct horse battery", first, options)).ok, true);
   assertEquals((await verifyPassword("correct horse batter", first, options)).ok, false);
-  assertEquals(DEFAULT_ITERATIONS, 210_000);
-  assertMatch(await hashPassword("x".repeat(10), {}), /^pbkdf2-sha256\$210000\$/);
+  assertEquals(DEFAULT_ITERATIONS, 600_000);
+  assertMatch(await hashPassword("x".repeat(10), {}), /^pbkdf2-sha256\$600000\$/);
+});
+
+test("passwords: a hash with 210,000 iterations verifies and asks for a rehash at the default", async () => {
+  const old = await hashPassword("correct horse battery", { iterations: 210_000 });
+  assertEquals(await verifyPassword("correct horse battery", old, {}), {
+    ok: true,
+    needsRehash: true,
+  });
 });
 
 test("passwords: stored hashes match standard PBKDF2 without an instance secret", async () => {

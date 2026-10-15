@@ -16,8 +16,8 @@
 
 import { sha256Hex } from "@quaso/core";
 
-/** The iteration count for new hashes (OWASP's advice for PBKDF2 at the time of writing). */
-export const DEFAULT_ITERATIONS = 210_000;
+/** The iteration count for new hashes: OWASP's figure for PBKDF2-HMAC-SHA-256. */
+export const DEFAULT_ITERATIONS = 600_000;
 
 const SCHEME = "pbkdf2-sha256";
 const SALT_BYTES = 16;
