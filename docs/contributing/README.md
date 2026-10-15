@@ -9,6 +9,11 @@ Install [Deno](https://deno.com/) at the version recorded in `.dvmrc` and Git.
 Browser tests also need Node.js to install Chromium; Docker and Cloudflare tools are needed only
 for the checks described in [testing](testing.md).
 
+The Deno version in `.dvmrc` is also the `denoland/deno` image tag in `deploy/Dockerfile` and the
+Cloudflare and Docker test scripts (`git grep denoland/deno:`), where images are pinned by digest.
+When you change the version, update each tag together with the digest that
+`docker buildx imagetools inspect denoland/deno:<tag>` prints first (the multi-platform index).
+
 ```sh
 git clone https://github.com/explodi/quaso.git
 cd quaso
