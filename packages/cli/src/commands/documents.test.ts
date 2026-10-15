@@ -10,7 +10,7 @@ import { collectSources } from "../files.ts";
 import { loadProject } from "../config.ts";
 import { CONFIG, fakeFetch, jsonResponse, runCli, withProject } from "../test_helpers.ts";
 
-const ENV = { QUASO_HOSTNAME: "http://quaso.test", QUASO_API_KEY: "qso_key" };
+const ENV = { QUASO_HOSTNAME: "https://quaso.test", QUASO_API_KEY: "qso_key" };
 
 const ARTICLE = "The moment has arrived\n\nWhat was once dirt now has a name.\n";
 const GERMAN = "Der Moment ist gekommen\n\nWas einst Erde war, hat nun einen Namen.\n";
@@ -178,7 +178,7 @@ test("the download baseline compares a document whole, whatever its final newlin
   await withProject(PROJECT, async (dir) => {
     const project = await loadProject(dir);
     const sources = await collectSources(project);
-    const state = await DownloadState.load(project, sources, "http://quaso.test");
+    const state = await DownloadState.load(project, sources, "https://quaso.test");
     const bytes = (text: string) => new TextEncoder().encode(text);
     const path = "text/de/news/city_founded.md";
     const noBaseline = state.conflicts(path, bytes(GERMAN), bytes(GERMAN), ARTICLE, "markdown");

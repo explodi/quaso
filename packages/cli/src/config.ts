@@ -2,8 +2,8 @@
 /**
  * Connecting and the config file (design §5.10, CLI-2, S4.2): `quaso.config.json` in the
  * current folder or the nearest parent, checked with the core schema and a few rules of
- * our own; `QUASO_HOSTNAME` (which wins over `hostname` in the config) and `QUASO_API_KEY`
- * (only ever from the environment).
+ * our own; `QUASO_HOSTNAME` (which wins over `hostname` in the config, and is required with
+ * a key) and `QUASO_API_KEY` (only ever from the environment).
  */
 import { readFile, stat } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
@@ -304,18 +304,29 @@ export function normalizePattern(pattern: string): string | { problem: string } 
 
 /**
  * The instance's base URL, from `QUASO_HOSTNAME` or else the config's `hostname`:
- * `https://` + a hostname, or a full URL such as `http://localhost:8000`.
+ * `https://` + a hostname, or a full URL such as `http://localhost:8000`. With an API key,
+ * only `QUASO_HOSTNAME` counts, so the key goes to a server the user chose, not the repository.
  */
 export function serverUrl(env: Env, project?: Project | null): string {
   const fromEnv = env.QUASO_HOSTNAME?.trim();
   if (fromEnv) return parseServerUrl(fromEnv, "QUASO_HOSTNAME");
   const fromConfig = project?.config.hostname?.trim();
+  const hasKey = Boolean(env.QUASO_API_KEY?.trim());
+  if (fromConfig && hasKey) {
+    throw usageError(
+      `QUASO_HOSTNAME isn't set, and the API key isn't sent to "hostname" in ${CONFIG_FILE}.`,
+      {
+        code: "missing_hostname",
+        hint:
+          "Set QUASO_HOSTNAME to your instance, such as translate.yourgame.com: the key only " +
+          "goes to a server you chose, not to one the repository names.",
+      },
+    );
+  }
   if (fromConfig) return parseServerUrl(fromConfig, `hostname in ${CONFIG_FILE}`);
   throw usageError("Which Quaso instance? QUASO_HOSTNAME isn't set.", {
     code: "missing_hostname",
-    hint:
-      `Set QUASO_HOSTNAME to the instance's hostname, such as translate.yourgame.com, ` +
-      `or add "hostname" to ${CONFIG_FILE}.`,
+    hint: "Set QUASO_HOSTNAME to the instance's hostname, such as translate.yourgame.com.",
   });
 }
 
@@ -333,6 +344,16 @@ export function parseServerUrl(value: string, source: string): string {
   if (url.protocol !== "https:" && url.protocol !== "http:") {
     throw usageError(`${source} must be an http:// or https:// address, not "${value}".`, {
       code: "invalid_hostname",
+    });
+  }
+  const isLoopback =
+    url.hostname === "localhost" ||
+    url.hostname === "[::1]" ||
+    /^127\.\d+\.\d+\.\d+$/.test(url.hostname);
+  if (url.protocol === "http:" && !isLoopback) {
+    throw usageError(`${source} must use https:// for "${url.hostname}": "${value}".`, {
+      code: "invalid_hostname",
+      hint: "Plain http:// would send the API key unencrypted; it is for localhost only.",
     });
   }
   if (url.username !== "" || url.password !== "") {

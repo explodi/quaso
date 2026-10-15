@@ -27,8 +27,9 @@ export function generalHelp(commands: readonly Command[]): string {
     "Connecting:",
     ...wrap(
       "QUASO_HOSTNAME is the instance, such as translate.yourgame.com (https is assumed) or " +
-        'http://localhost:8000; "hostname" in quaso.config.json is the fallback. ' +
-        "QUASO_API_KEY is an API key of the instance, only ever from the environment.",
+        "http://localhost:8000 (plain http is for localhost only). " +
+        "QUASO_API_KEY is an API key of the instance, only ever from the environment; " +
+        'the key is only sent to QUASO_HOSTNAME, never to "hostname" in quaso.config.json.',
       "  ",
     ),
     "",
@@ -113,7 +114,8 @@ export function helpJson(commands: readonly Command[], only?: Command) {
     commands: (only ? [only] : commands).map(describe),
     globalOptions: GLOBAL_OPTIONS.map(optionJson),
     environment: {
-      QUASO_HOSTNAME: "The instance: a hostname (https is assumed) or a full URL",
+      QUASO_HOSTNAME:
+        "The instance: a hostname (https is assumed) or a full URL; required with an API key",
       QUASO_API_KEY: "An API key of the instance (read or upload scope)",
       NO_COLOR: "Any value turns colours off",
     },

@@ -51,7 +51,7 @@ test("Crowdin init and download retain nested exported paths and infer languages
       );
       const downloaded = await runCli(["download", "--language", "pt-PT", "--json"], {
         cwd: dir,
-        env: { QUASO_HOSTNAME: "http://quaso.test", QUASO_API_KEY: "qso_test" },
+        env: { QUASO_HOSTNAME: "https://quaso.test", QUASO_API_KEY: "qso_test" },
         fetch,
       });
       assertEquals(downloaded.code, 6, downloaded.stderr);
@@ -63,7 +63,7 @@ test("Crowdin init and download retain nested exported paths and infer languages
         ["download", "--language", "pt-PT", "--overwrite-local", "--json"],
         {
           cwd: dir,
-          env: { QUASO_HOSTNAME: "http://quaso.test", QUASO_API_KEY: "qso_test" },
+          env: { QUASO_HOSTNAME: "https://quaso.test", QUASO_API_KEY: "qso_test" },
           fetch,
         },
       );

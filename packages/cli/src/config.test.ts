@@ -264,6 +264,40 @@ test("serverUrl: QUASO_HOSTNAME wins over the config's hostname", async () => {
   assertEquals(error.code, "missing_hostname");
 });
 
+test("serverUrl: with an API key, a hostname only in the config is refused", async () => {
+  await withProject(
+    { "quaso.config.json": { ...CONFIG, hostname: "attacker.example" } },
+    async (dir) => {
+      const project = await loadProject(dir);
+      const error = assertThrows(() => serverUrl({ QUASO_API_KEY: "qso_abc" }, project), CliError);
+      assertEquals(error.exitCode, 2);
+      assertEquals(error.code, "missing_hostname");
+      assertEquals(error.hint?.includes("Set QUASO_HOSTNAME"), true);
+    },
+  );
+});
+
+test("serverUrl: with an API key, QUASO_HOSTNAME wins over the config's hostname", async () => {
+  await withProject(
+    { "quaso.config.json": { ...CONFIG, hostname: "attacker.example" } },
+    async (dir) => {
+      const project = await loadProject(dir);
+      const env = { QUASO_API_KEY: "qso_abc", QUASO_HOSTNAME: "env.example" };
+      assertEquals(serverUrl(env, project), "https://env.example");
+    },
+  );
+});
+
+test("serverUrl: without an API key, the config's hostname is used", async () => {
+  await withProject(
+    { "quaso.config.json": { ...CONFIG, hostname: "config.example" } },
+    async (dir) => {
+      const project = await loadProject(dir);
+      assertEquals(serverUrl({ QUASO_API_KEY: " " }, project), "https://config.example");
+    },
+  );
+});
+
 test("parseServerUrl: a hostname means https; full URLs keep their scheme and path", () => {
   assertEquals(parseServerUrl("translate.game.com", "x"), "https://translate.game.com");
   assertEquals(parseServerUrl("localhost:8000", "x"), "https://localhost:8000");
@@ -272,6 +306,29 @@ test("parseServerUrl: a hostname means https; full URLs keep their scheme and pa
   for (const bad of ["ftp://game.com", "https://user:pw@game.com", "game.com/?a=1", "http://"]) {
     assertEquals(assertThrows(() => parseServerUrl(bad, "x"), CliError).exitCode, 2, bad);
   }
+});
+
+test("parseServerUrl: plain http to a host other than loopback is refused", () => {
+  const error = assertThrows(() => parseServerUrl("http://example.com", "x"), CliError);
+  assertEquals(error.exitCode, 2);
+  assertEquals(error.code, "invalid_hostname");
+});
+
+test("parseServerUrl: plain http to a name that only starts with localhost is refused", () => {
+  const error = assertThrows(() => parseServerUrl("http://localhost.example.com", "x"), CliError);
+  assertEquals(error.code, "invalid_hostname");
+});
+
+test("parseServerUrl: plain http to localhost is accepted", () => {
+  assertEquals(parseServerUrl("http://localhost:8000", "x"), "http://localhost:8000");
+});
+
+test("parseServerUrl: plain http to 127.0.0.1 is accepted", () => {
+  assertEquals(parseServerUrl("http://127.0.0.1:8000", "x"), "http://127.0.0.1:8000");
+});
+
+test("parseServerUrl: plain http to [::1] is accepted", () => {
+  assertEquals(parseServerUrl("http://[::1]:8123", "x"), "http://[::1]:8123");
 });
 
 test("apiKey only comes from QUASO_API_KEY; missing is exit code 3", () => {

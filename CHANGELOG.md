@@ -143,6 +143,14 @@ Release candidates are for deployment and migration testing. The team decides wh
 
 ### Security
 
+- The CLI sends an API key only to a server you chose: with `QUASO_API_KEY` set, the instance
+  must come from `QUASO_HOSTNAME`, and a `hostname` that only `quaso.config.json` names is
+  refused (`missing_hostname`, exit code 2). A cloned repository could otherwise point the CLI,
+  and your key, at its own server. **Breaking:** a team that commits `hostname` and runs the CLI
+  with a key must set `QUASO_HOSTNAME` too, in CI and on every machine.
+- The CLI refuses plain `http://` addresses (`invalid_hostname`) except `localhost`,
+  `127.0.0.0/8` and `[::1]`, so a key never crosses the network unencrypted. Development
+  servers such as `http://localhost:8000` keep working.
 - A restore reads at most 512 MiB of JSON, counted as a gzip backup decompresses, and refuses a
   larger document with 413 `payload_too_large`. A small gzip body could otherwise expand until the
   server ran out of memory, including through `POST /restore` with the setup key.

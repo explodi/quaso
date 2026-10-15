@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { type ExportFile, type ExportResult, sha256Hex } from "@quaso/core";
 import { CONFIG, fakeFetch, jsonResponse, runCli, withProject } from "../test_helpers.ts";
 
-const ENV = { QUASO_HOSTNAME: "http://quaso.test", QUASO_API_KEY: "qso_key" };
+const ENV = { QUASO_HOSTNAME: "https://quaso.test", QUASO_API_KEY: "qso_key" };
 
 const PROJECT = {
   "quaso.config.json": CONFIG,
