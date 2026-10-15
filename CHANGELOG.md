@@ -146,6 +146,11 @@ Release candidates are for deployment and migration testing. The team decides wh
 - New password hashes use 600,000 PBKDF2-HMAC-SHA-256 iterations, OWASP's figure for SHA-256,
   instead of 210,000 (its figure for SHA-512). A password stored with fewer iterations is rehashed
   the next time its owner signs in with it.
+- The CLI refuses a symbolic link anywhere on the path of a file it reads, writes or deletes,
+  even one that stays inside the project (`unsafe_path`, exit code 2). A repository could commit
+  `locales/en/x.json -> ../../.env` and have `quaso upload` send the ignored `.env`, or link a
+  translation file to `.git/hooks/pre-commit` and have `quaso download` write it. Replace such
+  links with regular files or folders.
 
 ## [1.0.0-rc.2] - 2026-10-08
 

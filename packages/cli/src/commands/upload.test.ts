@@ -216,18 +216,54 @@ test("upload refuses to read a source file through a link that leads outside", a
       assertEquals(run.code, 2);
       assertStringIncludes(
         run.stderr,
-        "Refusing to read src/locales/en/creds.json: a symbolic link leads outside",
+        "Refusing to read src/locales/en/creds.json: src/locales/en/creds.json is a symbolic link",
       );
       assertEquals(fetch.requests.length, 0);
-      // A link inside the project is fine.
-      await fs.rm(join(dir, "src", "locales", "en", "creds.json"));
-      await fs.writeFile(join(dir, "shared.json"), '{ "ok": "OK" }');
-      await fs.symlink(join(dir, "shared.json"), join(dir, "src", "locales", "en", "shared.json"));
-      const inside = await runCli(["upload", "--dry-run"], { cwd: dir, env: ENV, fetch });
-      assertEquals(inside.code, 0, inside.stderr);
     });
   });
 });
+
+// Regression (audit QUASO-F2): a committed link to the ignored .env sent it as English.
+test(
+  "upload refuses a source file that links to another file of the project",
+  { skip: process.platform === "win32" },
+  async () => {
+    await withProject({ ...PROJECT, ".env": "TOKEN=SECRET-123\n" }, async (dir) => {
+      await fs.symlink(join("..", "..", "..", ".env"), join(dir, "src", "locales", "en", "x.json"));
+      const fetch = fakeFetch(() => jsonResponse(result()));
+      const run = await runCli(["upload"], { cwd: dir, env: ENV, fetch });
+      assertEquals(run.code, 2);
+      assertStringIncludes(
+        run.stderr,
+        "Refusing to read src/locales/en/x.json: src/locales/en/x.json is a symbolic link",
+      );
+      assertStringIncludes(run.stderr, "Replace src/locales/en/x.json with a regular file");
+      assertEquals(fetch.requests.length, 0);
+    });
+  },
+);
+
+test(
+  "upload refuses source files in a linked folder",
+  { skip: process.platform === "win32" },
+  async () => {
+    await withProject(
+      { "quaso.config.json": CONFIG, "shared/en/common.json": '{ "play": "Play" }\n' },
+      async (dir) => {
+        await fs.mkdir(join(dir, "src", "locales"), { recursive: true });
+        await fs.symlink(join(dir, "shared", "en"), join(dir, "src", "locales", "en"));
+        const fetch = fakeFetch(() => jsonResponse(result()));
+        const run = await runCli(["upload"], { cwd: dir, env: ENV, fetch });
+        assertEquals(run.code, 2);
+        assertStringIncludes(
+          run.stderr,
+          "Refusing to read src/locales/en/common.json: src/locales/en is a symbolic link",
+        );
+        assertEquals(fetch.requests.length, 0);
+      },
+    );
+  },
+);
 
 test("upload sends every source file unchanged, with the config's settings", async () => {
   await withProject(PROJECT, async (dir) => {
