@@ -65,6 +65,10 @@ Run a drill on a separate hostname and empty storage. Never practice on producti
 7. Record backup age, restored version, elapsed recovery time, comparisons and any failure. Stop the
    drill instance after checking it. Repeat after schema or backup configuration changes.
 
+`POST /restore` (and so `cf:restore --file`) takes backup files up to 1 GiB. Any restore reads at
+most 512 MiB of JSON, after decompressing a gzip backup: the largest string the server can parse.
+A bigger document is refused with 413 `payload_too_large`; use a SQLite backup instead.
+
 A restore rejects a destination with strings or assigned roles. An interrupted restore may be
 retried before anything else writes there. If the destination was used meanwhile, start with another
 empty instance. A backup from a newer schema requires a newer Quaso release.
