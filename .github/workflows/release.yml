@@ -27,6 +27,11 @@ jobs:
       version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # Every publishing job needs this one: a pushed tag must not publish an unmerged commit.
+      - name: The commit is on main
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
       - uses: denoland/setup-deno@v2
         with:
           deno-version-file: .dvmrc
