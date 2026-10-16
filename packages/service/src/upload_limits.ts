@@ -37,7 +37,9 @@ export function planUploadLimits(
     const where = `${limit.file} › ${limit.key}`;
     const rows = files.get(limit.file)?.find(parseKeySelector(limit.key)) ?? [];
     if (rows.length === 0) {
-      warnings.push(`The limit for ${where} names a string the server doesn't have`);
+      warnings.push(
+        `The limit for ${where} names a string the server doesn't have, so it does nothing: remove it, or correct its file and key`,
+      );
       continue;
     }
     if (rows.length > 1) {

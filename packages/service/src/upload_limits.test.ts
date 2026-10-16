@@ -59,7 +59,7 @@ test("upload limit plan warns about missing keys without writing", () => {
   assertEquals(plan.statements, []);
   assertEquals(plan.recheck, []);
   assertEquals(plan.warnings, [
-    "The limit for menu.json › missing names a string the server doesn't have",
+    "The limit for menu.json › missing names a string the server doesn't have, so it does nothing: remove it, or correct its file and key",
   ]);
 });
 
