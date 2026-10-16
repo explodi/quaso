@@ -19,15 +19,15 @@ an edit. Crowdin, Weblate and po4a split documents into segments for the same re
 
 A block is one of the following. Each becomes one `text` entry:
 
-| Markdown                               | Entry                                       |
-| -------------------------------------- | ------------------------------------------- |
-| Paragraph                              | one entry; soft line breaks become spaces   |
-| ATX or setext heading                  | one entry, without the `#` markers          |
-| List item (its first paragraph)        | one entry; nested blocks are their own      |
-| Block quote paragraph                  | one entry, without the `>` markers          |
-| GFM table cell                         | one entry per non-empty cell                |
-| Front matter value named in the config | one entry (`title`, `description`)          |
-| Image alt text and link titles         | part of their paragraph's entry             |
+| Markdown                               | Entry                                     |
+| -------------------------------------- | ----------------------------------------- |
+| Paragraph                              | one entry; soft line breaks become spaces |
+| ATX or setext heading                  | one entry, without the `#` markers        |
+| List item (its first paragraph)        | one entry; nested blocks are their own    |
+| Block quote paragraph                  | one entry, without the `>` markers        |
+| GFM table cell                         | one entry per non-empty cell              |
+| Front matter value named in the config | one entry (`title`, `description`)        |
+| Image alt text and link titles         | part of their paragraph's entry           |
 
 Some blocks are copied as they are, as `literal` entries that translators never see: fenced
 and indented code, HTML blocks, thematic breaks, link reference definitions, table delimiter
