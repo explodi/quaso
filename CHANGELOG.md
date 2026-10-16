@@ -17,6 +17,19 @@ Release candidates are for deployment and migration testing. The team decides wh
   app falls back to its source language. A new `paragraphs` check replaces the line-break count
   for documents: a translation keeps the number of paragraphs. Instances on the default prompt
   get its document rule on the next request.
+- Markdown checks for documents: `markdown_verbatim` (an error when code, a link or image URL or a
+  front matter key isn't kept as in the English), `markdown_structure` (an error when a paragraph
+  becomes another kind of block, such as a heading of another level) and `heading_anchor` (a
+  warning when a link to a heading of the file leads nowhere after the heading was translated).
+- Updates of outdated translations send the LLM the English the translation was made for
+  (`outdatedEnglish` in the prompt), so it changes only what the English change requires. For a
+  document, paragraphs whose English didn't change keep their translation exactly. Instances on
+  the default prompt get the new rules on the next request.
+- A document may have at most 6,000 words for the LLM: upload warns about a longer one, and jobs
+  skip it with an error instead of sending a request that would time out.
+- The editor shows a document in three tabs: the whole file, side by side by paragraph, and a
+  rendered preview. An outdated document's notice and the review queue's LLM proposals show only
+  the changed paragraphs.
 
 - LLM suggestions in the editor: managers who translate by hand turn on the **LLM suggestions**
   switch and see the LLM's translation under the input, while they type their own. The editor asks

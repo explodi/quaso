@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: MIT
 /** Provider requests and retries are shared by the synchronous and async runners. */
-import type { ProjectSettings, TextValue } from "@quaso/core";
+import {
+  keepUntouchedParagraphs,
+  MAX_DOCUMENT_WORDS,
+  type ProjectSettings,
+  type TextValue,
+} from "@quaso/core";
 import type { Facts } from "../facts.ts";
 import {
   NO_USAGE,
@@ -20,7 +25,7 @@ import { checkValue } from "../translations.ts";
 import type { Clock } from "../ports.ts";
 import { promptString } from "./prompts.ts";
 import type { RequestRecord } from "./usage.ts";
-import type { Batch } from "./work.ts";
+import type { Batch, WorkItem } from "./work.ts";
 import type { BatchSuccess } from "./write.ts";
 
 export async function translateBatch(input: {
@@ -55,7 +60,7 @@ export async function translateBatch(input: {
         document: string.document === true,
       },
       batch.language,
-      value,
+      kept(items.get(string.id)!, value),
     );
 
   /** Retries strings that failed as a whole, in two halves (a smaller request may pass). */
@@ -146,7 +151,7 @@ export async function translateBatch(input: {
           })
         : undefined;
       successes.set(id, {
-        value: passed.value,
+        value: kept(items.get(id)!, passed.value),
         requestId,
         model,
         ...(passed.ambiguous ? { ambiguous: passed.ambiguous } : {}),
@@ -166,6 +171,37 @@ export async function translateBatch(input: {
     for (const [id, failed] of checked.failed) failures.set(id, failed.reasons.join(" "));
   };
 
-  await attempt(batch.items.map(promptString), 0);
+  // A document too long for one answer would time out or be cut off, on every paid retry.
+  const tooLong = (item: WorkItem) => item.document && item.words > MAX_DOCUMENT_WORDS;
+  for (const item of batch.items.filter(tooLong)) {
+    failures.set(item.stringId, TOO_LONG);
+  }
+  const requested = batch.items.filter((item) => !tooLong(item));
+  await attempt(requested.map(promptString), 0);
   return { successes, failures };
+}
+
+export const TOO_LONG =
+  `The document has more than ${MAX_DOCUMENT_WORDS.toLocaleString("en")} words, ` +
+  "too many to translate in one answer: split the file, or translate it in the editor.";
+
+/**
+ * An update of a document with the paragraphs whose English didn't change put back as they
+ * were translated (`keepUntouchedParagraphs`); any other value as it is.
+ */
+function kept(item: WorkItem, value: TextValue): TextValue {
+  const { current, outdatedEnglish, english } = item;
+  const documentUpdate =
+    item.document &&
+    typeof value === "string" &&
+    typeof current === "string" &&
+    typeof outdatedEnglish === "string" &&
+    typeof english === "string";
+  if (!documentUpdate) return value;
+  return keepUntouchedParagraphs({
+    oldEnglish: outdatedEnglish,
+    newEnglish: english,
+    oldTranslation: current,
+    newTranslation: value,
+  });
 }

@@ -20,6 +20,7 @@ import {
   Loading,
   SpinnerIcon,
   Switch,
+  Tabs,
   TextArea,
 } from "@quaso/design-system";
 
@@ -53,7 +54,9 @@ import { SourceText } from "../../components/SourceText.tsx";
 import { StateBadge } from "../../components/StateBadge.tsx";
 import { useToast } from "../../components/Toast.tsx";
 import { JobProgress } from "../../components/JobProgress.tsx";
+import { DocumentParagraphs } from "./DocumentParagraphs.tsx";
 import { OutdatedNotice } from "./OutdatedNotice.tsx";
+import { MarkdownPreview } from "../../lib/markdown.tsx";
 import {
   ApiError,
   approveTranslation,
@@ -181,6 +184,15 @@ export function TranslationPanel(props: TranslationPanelProps) {
   );
 }
 
+/** How a document's translation is shown: the whole file, side by side by paragraph, or rendered. */
+type DocumentView = "file" | "paragraphs" | "preview";
+
+const DOCUMENT_VIEWS: { id: DocumentView; label: string }[] = [
+  { id: "file", label: "Whole file" },
+  { id: "paragraphs", label: "Side by side" },
+  { id: "preview", label: "Preview" },
+];
+
 /** Drafts left without saving, by language and string, while the page stays open. */
 const drafts = new Map<string, { draft: Draft; baseRevision: number }>();
 
@@ -231,6 +243,7 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
   const [busy, setBusy] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [jobId, setJobId] = useState<number | null>(null);
+  const [documentView, setDocumentView] = useState<DocumentView>("file");
   const inputs = useRef(new Map<FormKey, HTMLTextAreaElement>());
   const lastFocused = useRef<FormKey>(forms[0]);
   const root = useRef<HTMLDivElement>(null);
@@ -770,6 +783,35 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
             const length = detail.maxLength !== null ? graphemeLength(unmask(text)) : 0;
             const formChecks = checksFor(form);
             const invalid = errors.some((e) => forms.length === 1 || e.form === form);
+            const input = (
+              <TextArea
+                id={inputId}
+                ref={(element) => {
+                  if (element) inputs.current.set(form, element);
+                  else inputs.current.delete(form);
+                }}
+                lang={tag}
+                dir={direction}
+                data-translation-input=""
+                value={text}
+                minRows={form !== "text" ? 2 : detail.document ? 8 : 3}
+                spellCheck
+                aria-invalid={invalid || undefined}
+                aria-describedby={`${inputId}-checks${
+                  detail.maxLength !== null ? ` ${inputId}-length` : ""
+                }`}
+                onFocus={() => (lastFocused.current = form)}
+                onChange={(event) => setForm(form, event.target.value)}
+                onKeyDown={(event) => {
+                  const composing = event.nativeEvent.isComposing;
+                  const saveShortcut = event.ctrlKey || event.metaKey;
+                  const singleLine = !/[\r\n]/.test(englishFor(detail.source, form));
+                  if (event.key === "Enter" && singleLine && !composing && !saveShortcut) {
+                    event.preventDefault();
+                  }
+                }}
+              />
+            );
             return (
               <div key={form} className="form-input">
                 <Label htmlFor={inputId} className="input-label">
@@ -800,33 +842,37 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
                     />
                   </p>
                 )}
-                <TextArea
-                  id={inputId}
-                  ref={(element) => {
-                    if (element) inputs.current.set(form, element);
-                    else inputs.current.delete(form);
-                  }}
-                  lang={tag}
-                  dir={direction}
-                  data-translation-input=""
-                  value={text}
-                  minRows={form !== "text" ? 2 : detail.document ? 8 : 3}
-                  spellCheck
-                  aria-invalid={invalid || undefined}
-                  aria-describedby={`${inputId}-checks${
-                    detail.maxLength !== null ? ` ${inputId}-length` : ""
-                  }`}
-                  onFocus={() => (lastFocused.current = form)}
-                  onChange={(event) => setForm(form, event.target.value)}
-                  onKeyDown={(event) => {
-                    const composing = event.nativeEvent.isComposing;
-                    const saveShortcut = event.ctrlKey || event.metaKey;
-                    const singleLine = !/[\r\n]/.test(englishFor(detail.source, form));
-                    if (event.key === "Enter" && singleLine && !composing && !saveShortcut) {
-                      event.preventDefault();
-                    }
-                  }}
-                />
+                {detail.document && typeof detail.source === "string" ? (
+                  <Tabs
+                    label="How to show the document"
+                    tabs={DOCUMENT_VIEWS}
+                    selected={documentView}
+                    onSelect={(id) => setDocumentView(id as DocumentView)}
+                  >
+                    {documentView === "file" && input}
+                    {documentView === "paragraphs" && (
+                      <DocumentParagraphs
+                        english={detail.source}
+                        text={text}
+                        onChange={(next) => setForm(form, next)}
+                        onFocusInput={(element) => {
+                          inputs.current.set(form, element);
+                          lastFocused.current = form;
+                        }}
+                        language={tag}
+                        languageName={language.name}
+                        direction={direction}
+                        sourceLanguage={project.sourceLanguage}
+                        sourceDirection={sourceDirection}
+                      />
+                    )}
+                    {documentView === "preview" && (
+                      <MarkdownPreview text={text} lang={tag} dir={direction} />
+                    )}
+                  </Tabs>
+                ) : (
+                  input
+                )}
                 {detail.document && typeof detail.source === "string" && (
                   <ParagraphCounter english={detail.source} text={text} />
                 )}

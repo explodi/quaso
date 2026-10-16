@@ -115,8 +115,8 @@ replaced by `languageMapping` where set: Simplified Chinese uses the folder `zh-
 language tag remains `zh-Hans`.
 
 To translate Markdown documents, add another file rule, such as `"source": "text/en/**/*.md"`
-with `"translation": "text/{lang}/{path}"`. Each file is translated as one text. See
-[File formats](file-formats.md) for the document rules.
+with `"translation": "text/{lang}/{path}"`. Each file is translated as one text, of at most 6,000
+words for the LLM. See [File formats](file-formats.md) for the document rules.
 
 Keep source and translation folders separate. The CLI checks output paths before writing any
 file and refuses writes outside the project or over source files. A second download writes only

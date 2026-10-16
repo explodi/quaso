@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
 /** A text-only word diff; bounded memory even for very long translation proposals. */
+import { paragraphsOf } from "@quaso/core";
+
 export interface DiffPart {
   text: string;
   kind: "same" | "added" | "removed";
@@ -54,4 +56,27 @@ export function wordDiff(before: string, after: string): DiffPart[] {
     else append(b[j++], "added");
   }
   return result;
+}
+
+/** A paragraph of a document that changed: its number, from 1, and its word diff. */
+export interface ParagraphChange {
+  number: number;
+  diff: DiffPart[];
+}
+
+/**
+ * The paragraphs of a document that differ, by position, each as a word diff, so a reviewer
+ * of a long document reads only those. Null when the paragraph counts differ: paragraphs then
+ * don't pair up, and a diff of the whole text says more.
+ */
+export function changedParagraphs(before: string, after: string): ParagraphChange[] | null {
+  const old = paragraphsOf(before);
+  const current = paragraphsOf(after);
+  if (old.length !== current.length) return null;
+  const changes: ParagraphChange[] = [];
+  for (let index = 0; index < current.length; index++) {
+    if (old[index] === current[index]) continue;
+    changes.push({ number: index + 1, diff: wordDiff(old[index], current[index]) });
+  }
+  return changes;
 }

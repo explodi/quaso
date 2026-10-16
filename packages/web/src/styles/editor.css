@@ -997,3 +997,126 @@
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
+
+/* A document, side by side: each English paragraph beside the input for its translation. */
+.document-paragraphs {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.document-paragraph {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+}
+.document-paragraph-english {
+  margin: 0;
+  padding: var(--space-2);
+  border: 1px solid var(--border);
+  background: var(--surface-alt);
+  font-size: var(--text-sm);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 40rem) {
+  .document-paragraph {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* A document's translation, rendered. */
+.markdown-preview {
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+.markdown-preview > :first-child {
+  margin-top: 0;
+}
+.markdown-preview > :last-child {
+  margin-bottom: 0;
+}
+.markdown-preview p,
+.markdown-preview ul,
+.markdown-preview ol,
+.markdown-preview blockquote,
+.markdown-preview pre {
+  margin: 0 0 var(--space-3);
+}
+.markdown-preview p {
+  white-space: pre-line;
+}
+.markdown-heading {
+  font-weight: 650;
+}
+.markdown-heading-1 {
+  font-size: 1.5rem;
+}
+.markdown-heading-2 {
+  font-size: 1.25rem;
+}
+.markdown-heading-3 {
+  font-size: var(--text-lg);
+}
+.markdown-preview blockquote {
+  padding-left: var(--space-3);
+  border-left: 3px solid var(--border-strong);
+  color: var(--fg-muted);
+}
+.markdown-preview code,
+.markdown-code,
+.markdown-front-matter {
+  font-family: var(--mono);
+  font-size: var(--text-sm);
+}
+.markdown-code,
+.markdown-front-matter {
+  padding: var(--space-2);
+  background: var(--surface-alt);
+  overflow-x: auto;
+}
+.markdown-front-matter {
+  color: var(--fg-muted);
+}
+.markdown-image {
+  padding: 0 var(--space-1);
+  border: 1px dashed var(--border-strong);
+  color: var(--fg-muted);
+}
+.markdown-link {
+  text-decoration: underline dotted;
+}
+.markdown-table {
+  margin-bottom: var(--space-3);
+  overflow-x: auto;
+}
+.markdown-table th,
+.markdown-table td {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border);
+  text-align: left;
+}
+
+/* A document's changed paragraphs, each under its number. */
+.paragraph-changes {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.paragraph-number {
+  font-size: var(--text-xs);
+}
+.paragraph-changes ins {
+  color: var(--success);
+  background: var(--success-bg);
+  text-decoration: underline;
+}
+.paragraph-changes del {
+  color: var(--danger);
+  background: var(--danger-bg);
+}

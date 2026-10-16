@@ -18,6 +18,7 @@
  * them fits in one statement within the Durable Object limits.
  */
 import {
+  hashValue,
   isDocumentKey,
   type LlmSettings,
   type TextValue,
@@ -54,6 +55,8 @@ export interface WorkItem {
   revision: number;
   /** The current translation, for updates and proposals. */
   current: TextValue | null;
+  /** The English the current translation was made for, when the history has it. */
+  outdatedEnglish: TextValue | null;
 }
 
 /** The scope, resolved: languages, file IDs, and what counts as work. */
@@ -136,6 +139,7 @@ type WorkRow = {
   t_hash: string | null;
   t_revision: number | null;
   t_value: string | null;
+  t_english: string | null;
 };
 
 /** The SQL condition and parameters of the work in one language (after `?` for the language). */
@@ -204,11 +208,22 @@ function workSelection(scope: WorkScope, language: string, limit: number): State
   return {
     sql: `SELECT s.id, s.file_id, f.path, s.position, s.key AS entry_key, s.display_key, s.kind, s.source, s.source_hash,
             s.max_length, s.description, s.words, t.colour AS t_colour, t.source_hash AS t_hash,
-            t.revision AS t_revision, t.value AS t_value
+            t.revision AS t_revision, t.value AS t_value, ${ENGLISH_WHEN_TRANSLATED} AS t_english
      FROM ${FROM} WHERE ${where} ORDER BY f.path, s.position LIMIT ?`,
     params: [language, ...params, limit],
   };
 }
+
+/**
+ * The English an outdated translation was made for: the "before" of the first change to the
+ * English since the translation was written. `workItemsFromRows` keeps it only when its hash
+ * is the translation's, as the timestamps alone can't prove it.
+ */
+const ENGLISH_WHEN_TRANSLATED = `CASE WHEN t.source_hash <> s.source_hash THEN (
+    SELECT h.before_value FROM history h
+    WHERE h.string_id = s.id AND h.language IS NULL AND h.before_value IS NOT NULL
+      AND h.event IN ('source_changed', 'source_restored') AND h.created_at >= t.updated_at
+    ORDER BY h.id LIMIT 1) END`;
 
 function workItemsFromRows(rows: WorkRow[], scope: WorkScope, language: string): WorkItem[] {
   return rows.map((row) => {
@@ -217,6 +232,10 @@ function workItemsFromRows(rows: WorkRow[], scope: WorkScope, language: string):
     else if (row.t_colour === "green" && row.t_hash !== row.source_hash && scope.updateGreen) {
       action = "update";
     }
+    const current =
+      action === "translate" || row.t_value === null ? null : fromJson<TextValue>(row.t_value);
+    const english = row.t_english === null ? null : fromJson<TextValue>(row.t_english);
+    const madeForIt = english !== null && hashValue(english) === row.t_hash;
     return {
       stringId: row.id,
       language,
@@ -233,7 +252,8 @@ function workItemsFromRows(rows: WorkRow[], scope: WorkScope, language: string):
       words: row.words,
       action,
       revision: row.t_revision ?? 0,
-      current: action === "translate" || row.t_value === null ? null : fromJson(row.t_value),
+      current,
+      outdatedEnglish: current !== null && madeForIt ? english : null,
     };
   });
 }

@@ -8,7 +8,7 @@ import { ClockIcon, Notice } from "@quaso/design-system";
 import type { HistoryEntry, HistoryResult, StringDetail, TextValue } from "@quaso/core";
 import { getHistory } from "../../lib/api.ts";
 import { useQuery } from "../../lib/data.ts";
-import { wordDiff } from "../../lib/diff.ts";
+import { ParagraphChanges } from "../../components/ParagraphChanges.tsx";
 import { outdatedExplanation } from "../../lib/states.ts";
 
 export function OutdatedNotice({
@@ -48,6 +48,7 @@ export function OutdatedNotice({
         <EnglishChange
           before={madeFor}
           after={detail.source}
+          document={detail.document === true}
           lang={sourceLanguage}
           sourceLanguageName={sourceLanguageName}
         />
@@ -63,11 +64,13 @@ export function OutdatedNotice({
 function EnglishChange({
   before,
   after,
+  document,
   lang,
   sourceLanguageName,
 }: {
   before: TextValue;
   after: TextValue;
+  document: boolean;
   lang: string;
   sourceLanguageName: string;
 }) {
@@ -75,18 +78,16 @@ function EnglishChange({
     <div className="outdated-change">
       <p className="outdated-change-label">What changed in the {sourceLanguageName}</p>
       {formsOf(before, after).map(([form, old, current]) => (
-        <p key={form} className="outdated-change-text" lang={lang} dir="auto">
+        <div key={form}>
           {form !== "text" && <span className="form-name">{form} </span>}
-          {wordDiff(old, current).map((part, index) =>
-            part.kind === "added" ? (
-              <ins key={index}>{part.text}</ins>
-            ) : part.kind === "removed" ? (
-              <del key={index}>{part.text}</del>
-            ) : (
-              <span key={index}>{part.text}</span>
-            ),
-          )}
-        </p>
+          <ParagraphChanges
+            before={old}
+            after={current}
+            document={document}
+            lang={lang}
+            className="outdated-change-text"
+          />
+        </div>
       ))}
     </div>
   );

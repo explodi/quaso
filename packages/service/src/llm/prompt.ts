@@ -137,6 +137,8 @@ export interface PromptString {
   document?: boolean;
   /** The current translation, when it is outdated: the answer updates it. */
   outdated?: TextValue | null;
+  /** The English the outdated translation was made for, when known: what the update follows. */
+  outdatedEnglish?: TextValue;
   /** The previous answer and why it was refused, on a retry. */
   refused?: { answer: TextValue | null; reasons: string[] };
 }
@@ -390,6 +392,9 @@ function stringLine(
   }
   if (string.outdated !== undefined && string.outdated !== null) {
     line.outdatedTranslation = maskLike(string.outdated, mask, context.syntax);
+    if (string.outdatedEnglish !== undefined) {
+      line.outdatedEnglish = maskLike(string.outdatedEnglish, mask, context.syntax);
+    }
   }
   if (string.refused) {
     line.refused = {

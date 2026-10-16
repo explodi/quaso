@@ -2,10 +2,11 @@
 /** Markdown documents through the service: one string per file, translated whole. */
 import { test } from "node:test";
 import { assert, assertEquals, assertStringIncludes, assertThrows } from "@std/assert";
-import { sha256Hex } from "@quaso/core";
+import { MAX_DOCUMENT_WORDS, sha256Hex } from "@quaso/core";
 import { SYSTEM } from "./api.ts";
 import { ServiceError } from "./errors.ts";
-import { drain, scriptedProvider } from "./jobs/testing.ts";
+import { TOO_LONG } from "./jobs/batch_runner.ts";
+import { answered, drain, scriptedProvider } from "./jobs/testing.ts";
 import { loadSettings, saveSettings } from "./settings.ts";
 import { startTestService, type TestInstance, uploadJson, write } from "./test_helpers.ts";
 
@@ -222,4 +223,68 @@ test("a translation job translates a document as one text, marked as such in the
   const value = translation.value as string;
   assertEquals(value.split("\n\n").length, 3, "the paragraphs survive the fake translator");
   assertStringIncludes(value, "{{cityName}}");
+});
+
+test("an update of a document sends the English it was made for, and keeps untouched paragraphs", async () => {
+  const reworded = [
+    "Der Augenblick ist da: {{cityName}} ist gegründet",
+    "",
+    "Ein Fleck Erde trägt nun einen Namen: {{cityName}}.",
+    "",
+    "Einige hielten sie.",
+  ].join("\n");
+  const provider = scriptedProvider((request) =>
+    answered({ translations: [{ id: request.batch!.strings[0].id, text: reworded }] }),
+  );
+  using instance = await startTestService({ provider });
+  const settings = loadSettings(instance.ctx);
+  settings.llm.autoTranslate = false;
+  saveSettings(instance.ctx, settings);
+  await instance.service.upload(SYSTEM, {
+    files: [document(PATH, `${ARTICLE}\n`)],
+    languages: ["de"],
+  });
+  write(instance, PATH, "", "de", GERMAN);
+  const changed = ARTICLE.replace("Some managed to hold it.", "Some held it.");
+  await instance.service.upload(SYSTEM, { files: [document(PATH, `${changed}\n`)] });
+  await instance.service.createJob(SYSTEM, { languages: ["de"] });
+  await drain(instance);
+
+  assertEquals(provider.requests.length, 1);
+  const line = provider.requests[0].prompt.split("\n").find((text) => text.startsWith('{"id"'))!;
+  assertStringIncludes(line, `"outdatedEnglish":${JSON.stringify(ARTICLE)}`);
+  assertStringIncludes(line, `"outdatedTranslation":${JSON.stringify(GERMAN)}`);
+  const strings = await instance.service.listStrings(SYSTEM, { language: "de", file: PATH });
+  const expected = [
+    "Der Moment ist gekommen: {{cityName}} ist gegründet",
+    "",
+    "Was einst ein Stück Erde war, ist nun ein Stück Erde mit Namen: {{cityName}}.",
+    "",
+    "Einige hielten sie.",
+  ].join("\n");
+  assertEquals(strings.strings[0].translation?.value, expected);
+});
+
+test("a document longer than the limit is a warning on upload, and fails in a job without a request", async () => {
+  const provider = scriptedProvider();
+  using instance = await startTestService({ provider });
+  const settings = loadSettings(instance.ctx);
+  settings.llm.autoTranslate = false;
+  saveSettings(instance.ctx, settings);
+  const long = "Word ".repeat(MAX_DOCUMENT_WORDS + 1).trim();
+  const upload = await instance.service.upload(SYSTEM, {
+    files: [document("long.md", `${long}\n`)],
+    languages: ["de"],
+  });
+  assertEquals(upload.warnings, [
+    `long.md has ${(MAX_DOCUMENT_WORDS + 1).toLocaleString("en")} words, more than the ${MAX_DOCUMENT_WORDS.toLocaleString("en")} the LLM translates in one answer: split it, or translate it in the editor`,
+  ]);
+  const { job } = await instance.service.createJob(SYSTEM, { languages: ["de"] });
+  await drain(instance);
+  assertEquals(provider.requests.length, 0);
+  const done = await instance.service.getJob(SYSTEM, { id: job!.id });
+  assertEquals(
+    done.failures.map((failure) => failure.reason),
+    [TOO_LONG],
+  );
 });

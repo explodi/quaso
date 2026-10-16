@@ -49,9 +49,32 @@ into keys or paragraphs: the file is one string with an empty key. Add a file ma
 and a paragraph count. Translation jobs send one document per model request.
 
 Keep the same number of paragraphs, in the same order, and preserve headings, links, and Markdown
-syntax. Quaso counts paragraphs as blocks separated by blank lines; this is not a full Markdown
-structure check. It checks paragraph count instead of the number of line breaks within paragraphs.
-Placeholders, nesting references, and any length limit still apply.
+syntax. Quaso counts paragraphs as blocks separated by blank lines, instead of the line breaks
+within paragraphs. Placeholders, nesting references, and any length limit still apply. Three more
+checks run on documents:
+
+- `markdown_verbatim` (error): code blocks, inline code, the URLs of links and images, autolinks
+  and front matter keys must stay exactly as in the English. Front matter values, link text and
+  image alt text are translated. Links to a heading of the same file (`#…`) are an exception: see
+  `heading_anchor`.
+- `markdown_structure` (error): each paragraph stays the same kind of block as in the English: a
+  heading of the same level, a list, a numbered list, a quote, a table, a code block, front matter
+  or a plain paragraph.
+- `heading_anchor` (warning): a link to a heading of the same file, such as `(#installation)`,
+  leads to no heading of the translation. A translated heading gets a new anchor (`## Installation`
+  becomes `#instalación`), so rewrite the link to it, or give the heading an explicit anchor
+  (`## Instalación {#installation}`) if your Markdown renderer supports one.
+
+When the English of a translated document changes, the LLM gets the English the translation was
+made for along with the new English, and is asked to change only what the English change
+requires. Paragraphs whose English didn't change keep their translation exactly, even if the model
+reworded them.
+
+The LLM translates a document in one answer, so a document may have at most 6,000 words. Upload
+warns about a longer one, and translation jobs skip it with an error. Split such a file, or
+translate it in the editor. Measured with `gemini-flash-latest`: 1,600 words took 26 seconds,
+6,200 words 78 seconds and 9,200 words 104 seconds, against a limit of 180 seconds per request.
+The 6,000-word limit leaves room for slower models.
 
 Quaso removes a byte order mark, converts line endings to line feeds, and removes whitespace at
 the end before storing and comparing a document. Downloads add one final newline. Markdown files

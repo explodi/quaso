@@ -7,6 +7,7 @@
  */
 import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import type { Page } from "puppeteer";
+import { SYSTEM } from "@quaso/service";
 import {
   browserTest,
   emulateMac,
@@ -386,5 +387,56 @@ browserTest(
     assertStringIncludes(await text(page, "dialog[open]"), "Control+1…9");
     assertEquals(tab.problems, []);
     assertEquals(editor.problems, []);
+  },
+);
+
+browserTest(
+  "a document: side by side by paragraph, the whole file and a preview",
+  {
+    session: MANAGER_SESSION,
+    async prepare(service) {
+      await service.upload(SYSTEM, {
+        files: [
+          {
+            path: "news/festival.md",
+            repoPath: "text/en/news/festival.md",
+            content: "# The festival\n\nThe valley wakes up early.\n\n- Bring wheat.\n",
+          },
+        ],
+        languages: ["de"],
+      });
+    },
+  },
+  async ({ server, browser }) => {
+    const { page } = await openTab(browser, server, "/translate/de");
+    await waitForPanel(page, "festival.md");
+    const tab = (label: string) =>
+      page.evaluate((label: string) => {
+        const tabs = [...document.querySelectorAll<HTMLElement>('[role="tab"]')];
+        tabs.find((element) => element.textContent === label)!.click();
+      }, label);
+
+    await tab("Side by side");
+    await waitFor(
+      page,
+      () => document.querySelectorAll(".document-paragraph textarea").length === 3,
+    );
+    const paragraphs = await page.$$(".document-paragraph textarea");
+    await paragraphs[0].type("# Das Fest");
+    await paragraphs[1].type("Das Tal erwacht früh.");
+    await paragraphs[2].type("- Bring Weizen mit.");
+    assertStringIncludes(await text(page, ".panel-edit"), "3 / 3 paragraphs");
+
+    await tab("Whole file");
+    await waitFor(page, () => document.querySelector("#translation-text") !== null);
+    assertEquals(
+      await page.$eval("#translation-text", (element) => (element as HTMLTextAreaElement).value),
+      "# Das Fest\n\nDas Tal erwacht früh.\n\n- Bring Weizen mit.",
+    );
+
+    await tab("Preview");
+    await waitFor(page, () => document.querySelector(".markdown-preview") !== null);
+    assertEquals(await text(page, ".markdown-preview .markdown-heading-1"), "Das Fest");
+    assertEquals(await text(page, ".markdown-preview li"), "Bring Weizen mit.");
   },
 );

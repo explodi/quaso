@@ -140,9 +140,19 @@ Length limits count visible characters, including placeholder text, rather than 
 See [file formats and quality checks](file-formats.md) for the full rules and exceptions.
 
 A Markdown **document** is translated as one text. Its file name replaces the key, and the editor
-shows the full source, a taller input, and a paragraph counter. Keep the number of paragraphs
-(blocks separated by blank lines) and placeholders. Line breaks within paragraphs and Markdown
-formatting can change. The checks ignore final whitespace when comparing documents.
+shows the full source and a paragraph counter. Three tabs show the translation:
+
+- **Whole file**: one input for the whole document.
+- **Side by side**: each English paragraph beside an input for its translation. It needs the
+  translation to have as many paragraphs as the English, or to be empty.
+- **Preview**: the translation rendered, with headings, lists, links, tables and code. Images show
+  their alt text.
+
+Keep the number of paragraphs (blocks separated by blank lines), the kind of each block,
+placeholders, code, link URLs and front matter keys. Line breaks within paragraphs can change. The
+checks ignore final whitespace when comparing documents. For an outdated document, the notice shows
+only the paragraphs whose English changed. The review queue shows only the paragraphs an LLM
+proposal changes.
 
 For a language written from right to left, the input uses that direction. Source text also uses the
 source language's direction.
