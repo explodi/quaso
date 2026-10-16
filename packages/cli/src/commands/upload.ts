@@ -238,12 +238,11 @@ export const upload: Command = {
       },
       render: (out) => {
         renderUpload(out, result, sources, wait);
-        for (const report of localTranslations) {
-          out.print(
-            `${count(report.strings, "new or changed string")} already ${report.strings === 1 ? "has" : "have"} ${report.language} in repository files.`,
-          );
-          if (!importLanguages.has(report.language)) out.print(`Import them: ${report.command}`);
-        }
+        renderLocalTranslations(
+          out,
+          localTranslations.filter((report) => !importLanguages.has(report.language)),
+          project.languages,
+        );
         for (const imported of imports) {
           if ("imported" in imported) {
             out.print(
@@ -587,39 +586,109 @@ async function repositoryTranslations(
   }
   return files;
 }
+type LocalTranslations = {
+  language: string;
+  /** New or restored strings: their local values are fresh translations. */
+  new: number;
+  newFiles: string[];
+  /** Strings whose source text changed: their local values translate the previous text. */
+  changed: number;
+  changedFiles: string[];
+};
+
 function localTranslationReport(files: RepositoryFile[], upload: UploadResult) {
-  const affected = new Set(
-    [...upload.added, ...upload.changed, ...upload.restored].map((ref) =>
-      JSON.stringify([ref.file, ref.key]),
-    ),
+  const refKey = (file: string, key: string) => JSON.stringify([file, key]);
+  const fresh = new Set(
+    [...upload.added, ...upload.restored].map((ref) => refKey(ref.file, ref.key)),
   );
-  const reports = new Map<
-    string,
-    { language: string; strings: number; files: string[]; command: string }
-  >();
+  const changed = new Set(upload.changed.map((ref) => refKey(ref.file, ref.key)));
+  const reports = new Map<string, LocalTranslations>();
   for (const file of files) {
-    const strings = file.keys.filter((key) =>
-      affected.has(JSON.stringify([file.path, key])),
-    ).length;
-    if (strings === 0) continue;
+    const freshCount = file.keys.filter((key) => fresh.has(refKey(file.path, key))).length;
+    const changedCount = file.keys.filter((key) => changed.has(refKey(file.path, key))).length;
+    if (freshCount === 0 && changedCount === 0) continue;
     const report = reports.get(file.language) ?? {
       language: file.language,
-      strings: 0,
-      files: [],
-      command: "",
+      new: 0,
+      newFiles: [],
+      changed: 0,
+      changedFiles: [],
     };
-    report.strings += strings;
-    report.files.push(file.path);
-    report.command = commandLine([
-      "quaso",
-      "import",
-      "--as",
-      "blue",
-      "--language",
-      file.language,
-      ...report.files.flatMap((path) => ["--file", path]),
-    ]);
+    report.new += freshCount;
+    report.changed += changedCount;
+    if (freshCount > 0) report.newFiles.push(file.path);
+    if (changedCount > 0) report.changedFiles.push(file.path);
     reports.set(file.language, report);
   }
   return [...reports.values()];
+}
+
+/**
+ * Explain local translations of uploaded strings, one line per group of languages with the same
+ * count. A changed string's local value still translates its previous source text, so it is
+ * worded as a warning instead of an invitation to import.
+ */
+function renderLocalTranslations(
+  out: Output,
+  reports: LocalTranslations[],
+  projectLanguages: string[],
+) {
+  const fresh = reports.filter((report) => report.new > 0);
+  if (fresh.length > 0) {
+    for (const [strings, languages] of groupByCount(fresh, (report) => report.new))
+      out.print(
+        `${count(strings, "new string")} already ${strings === 1 ? "has" : "have"} translations in repository files (${languages.join(", ")}).`,
+      );
+    out.print(
+      `Import them: ${importCommand(fresh, (report) => report.newFiles, projectLanguages)}`,
+    );
+  }
+  const stale = reports.filter((report) => report.changed > 0);
+  if (stale.length > 0) {
+    for (const [strings, languages] of groupByCount(stale, (report) => report.changed))
+      out.print(
+        `${count(strings, "changed string")} still ${strings === 1 ? "has its" : "have their"} previous translations in repository files (${languages.join(", ")}).`,
+      );
+    out.print(
+      "Those translate the old source text, so they weren't imported: the strings need translating again.",
+    );
+    out.print(
+      `If you updated them along with the source, import them: ${importCommand(stale, (report) => report.changedFiles, projectLanguages)}`,
+    );
+  }
+}
+
+function groupByCount(
+  reports: LocalTranslations[],
+  strings: (report: LocalTranslations) => number,
+): Map<number, string[]> {
+  const groups = new Map<number, string[]>();
+  for (const report of reports) {
+    const languages = groups.get(strings(report)) ?? [];
+    languages.push(report.language);
+    groups.set(strings(report), languages);
+  }
+  return groups;
+}
+
+function importCommand(
+  reports: LocalTranslations[],
+  files: (report: LocalTranslations) => string[],
+  projectLanguages: string[],
+): string {
+  const languages = reports.map((report) => report.language);
+  // Without --language, import takes every configured language.
+  const everyLanguage = projectLanguages.every((language) => languages.includes(language));
+  const languageArgs = everyLanguage
+    ? []
+    : languages.flatMap((language) => ["--language", language]);
+  const paths = [...new Set(reports.flatMap(files))];
+  return commandLine([
+    "quaso",
+    "import",
+    "--as",
+    "blue",
+    ...languageArgs,
+    ...paths.flatMap((path) => ["--file", path]),
+  ]);
 }

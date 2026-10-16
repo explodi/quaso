@@ -409,7 +409,7 @@ test("limits set locked maximum lengths, recheck translations, and clear old one
   assertEquals(limited.warnings.length, 3);
   assertEquals(
     limited.warnings[0],
-    "The limit for common.json › missing names a string the server doesn't have",
+    "The limit for common.json › missing names a string the server doesn't have, so it does nothing: remove it, or correct its file and key",
   );
   const limits = () =>
     instance.sql.query(
