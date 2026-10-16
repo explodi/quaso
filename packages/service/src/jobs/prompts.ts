@@ -31,7 +31,10 @@ export function promptString(item: WorkItem): PromptString {
     maxLength: item.maxLength,
   };
   if (item.document) string.document = true;
-  if (item.action !== "translate" && item.current !== null) string.outdated = item.current;
+  if (item.action !== "translate" && item.current !== null) {
+    string.outdated = item.current;
+    if (item.outdatedEnglish !== null) string.outdatedEnglish = item.outdatedEnglish;
+  }
   return string;
 }
 

@@ -1288,6 +1288,8 @@ test("results: every check id is reachable, with the severity from CHECKS", () =
     text("<b>Quit?</b>", "<i>Beenden</i>"),
     text("Quit?", " Beenden\n  jetzt"),
     text("Headline\n\nBody.", "Titel\n\nText.\n\nMehr.", { document: true }),
+    text("# Run `init`\n\n[Top](#run-init)", "Führe `init` aus\n\n[Oben](#x)", { document: true }),
+    text("Run `init`", "Führe `start` aus", { document: true }),
   ];
   for (const results of all) {
     for (const result of results) {
@@ -1507,4 +1509,141 @@ test("documents: whitespace at the end never counts, at the start it does", () =
     { check: "identical", severity: "warning", message: "Identical to the English." },
   ]);
   assertEquals(summary(text(ARTICLE, `\n${ARTICLE}`, { document: true })), ["whitespace"]);
+});
+
+const GUIDE = [
+  "---",
+  "title: Getting started",
+  "---",
+  "",
+  "## Installation",
+  "",
+  "Run `quaso init`, then read [the guide](https://example.com/guide).",
+  "",
+  "```sh",
+  "quaso upload",
+  "```",
+  "",
+  "- [Back to installation](#installation)",
+].join("\n");
+
+const GUIDE_DE = [
+  "---",
+  "title: Erste Schritte",
+  "---",
+  "",
+  "## Installation",
+  "",
+  "Führe `quaso init` aus und lies dann [die Anleitung](https://example.com/guide).",
+  "",
+  "```sh",
+  "quaso upload",
+  "```",
+  "",
+  "- [Zurück zur Installation](#installation)",
+].join("\n");
+
+test("documents: a Markdown translation that keeps code, links and structure passes", () => {
+  assertEquals(text(GUIDE, GUIDE_DE, { document: true }), []);
+});
+
+test("documents: translated inline code is an error", () => {
+  const translated = GUIDE_DE.replace("`quaso init`", "`quaso initialisieren`");
+  assertEquals(text(GUIDE, translated, { document: true }), [
+    {
+      check: "markdown_verbatim",
+      severity: "error",
+      message: "“`quaso init`” must stay as in the English: it is missing or changed.",
+      value: "`quaso init`",
+    },
+  ]);
+});
+
+test("documents: a translated code block is an error, named by its first line", () => {
+  const translated = GUIDE_DE.replace("quaso upload", "quaso hochladen");
+  assertEquals(messages(text(GUIDE, translated, { document: true })), [
+    "The code block starting “```sh” must stay as in the English: it is missing or changed.",
+  ]);
+});
+
+test("documents: a localised URL is an error", () => {
+  const translated = GUIDE_DE.replace("example.com/guide", "example.com/de/guide");
+  assertEquals(messages(text(GUIDE, translated, { document: true })), [
+    "“https://example.com/guide” must stay as in the English: it is missing or changed.",
+  ]);
+});
+
+test("documents: a translated front matter key is an error", () => {
+  const translated = GUIDE_DE.replace("title:", "titel:");
+  assertEquals(messages(text(GUIDE, translated, { document: true })), [
+    "“title:” must stay as in the English: it is missing or changed.",
+  ]);
+});
+
+test("documents: an added link destination is an error", () => {
+  const translated = GUIDE_DE.replace("dann", "dann [mehr](https://example.com/more)");
+  assertEquals(messages(text(GUIDE, translated, { document: true })), [
+    "“https://example.com/more” isn't in the English, or is repeated.",
+  ]);
+});
+
+test("documents: a heading turned into a paragraph is an error", () => {
+  const translated = GUIDE_DE.replace("## Installation", "Installation");
+  assertEquals(text(GUIDE, translated, { document: true }), [
+    {
+      check: "markdown_structure",
+      severity: "error",
+      message:
+        "Paragraph 2 is a level-2 heading in the English, but a paragraph in the translation.",
+    },
+    {
+      check: "heading_anchor",
+      severity: "warning",
+      message:
+        "The link to #installation leads to no heading of the translation: use the translated heading's anchor.",
+      value: "#installation",
+    },
+  ]);
+});
+
+test("documents: a changed heading level is an error", () => {
+  const translated = GUIDE_DE.replace("## Installation", "### Installation");
+  assertEquals(messages(text(GUIDE, translated, { document: true })), [
+    "Paragraph 2 is a level-2 heading in the English, but a level-3 heading in the translation.",
+  ]);
+});
+
+test("documents: a list turned into a quote is an error", () => {
+  const translated = GUIDE_DE.replace("- [Zurück", "> [Zurück");
+  assertEquals(summary(text(GUIDE, translated, { document: true })), ["markdown_structure"]);
+});
+
+test("documents: a translated heading breaks the link to it: a warning", () => {
+  const translated = GUIDE_DE.replace("## Installation", "## Einrichtung");
+  assertEquals(text(GUIDE, translated, { document: true }), [
+    {
+      check: "heading_anchor",
+      severity: "warning",
+      message:
+        "The link to #installation leads to no heading of the translation: use the translated heading's anchor.",
+      value: "#installation",
+    },
+  ]);
+});
+
+test("documents: a link rewritten to the translated heading's anchor passes", () => {
+  const translated = GUIDE_DE.replace("## Installation", "## Einrichtung").replace(
+    "(#installation)",
+    "(#einrichtung)",
+  );
+  assertEquals(text(GUIDE, translated, { document: true }), []);
+});
+
+test("documents: a link to an anchor outside the headings, kept as in the English, passes", () => {
+  const english = "Intro.\n\n[Top](#top)";
+  assertEquals(text(english, "Einleitung.\n\n[Nach oben](#top)", { document: true }), []);
+});
+
+test("documents: the Markdown checks don't run on strings that aren't documents", () => {
+  assertEquals(text("Run `init`", "Führe `initialisieren` aus"), []);
 });

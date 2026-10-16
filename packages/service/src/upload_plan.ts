@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
 import {
+  isDocumentKey,
+  MAX_DOCUMENT_WORDS,
   canonicalLanguageTag,
   hasPluralRules,
   type UploadFileResult,
@@ -133,6 +135,16 @@ export function planUpload(
       );
   }
   for (const file of parsed) {
+    const longDocument = file.entries.find(
+      (entry) => isDocumentKey(entry.key) && entry.words > MAX_DOCUMENT_WORDS,
+    );
+    if (longDocument !== undefined) {
+      result.warnings.push(
+        `${file.path} has ${longDocument.words.toLocaleString("en")} words, more than the ` +
+          `${MAX_DOCUMENT_WORDS.toLocaleString("en")} the LLM translates in one answer: ` +
+          "split it, or translate it in the editor",
+      );
+    }
     let row = files.get(file.path);
     let status: UploadFileResult["status"] = "unchanged";
     const metadataChanged = row?.format !== file.format || row?.repo_path !== file.repoPath;

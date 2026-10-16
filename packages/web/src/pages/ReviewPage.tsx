@@ -22,6 +22,7 @@ import { Access, ConfirmButton, SelectField, TextField } from "../components/Man
 import { useToast } from "../components/Toast.tsx";
 import { listFiles, withdrawSuggestion } from "../lib/api.ts";
 import { useMutation, useQuery } from "../lib/data.ts";
+import { ParagraphChanges } from "../components/ParagraphChanges.tsx";
 import { wordDiff } from "../lib/diff.ts";
 import { fieldError } from "../lib/forms.ts";
 import { count, documentName, formatDateTime } from "../lib/format.ts";
@@ -51,6 +52,25 @@ function Proposal({
 }) {
   const current = valueText(suggestion.current?.value ?? null);
   const proposal = suggestion.value === null ? current : valueText(suggestion.value);
+  // A document's key is empty; its paragraphs, not its whole text, are what changed.
+  const document = suggestion.key === "";
+  if (document && current !== "") {
+    return (
+      <div className="review-proposal">
+        <H3 ui>Proposal: the changed paragraphs</H3>
+        <ParagraphChanges
+          before={current}
+          after={proposal}
+          document
+          lang={suggestion.language}
+          className="value-text"
+        />
+        {suggestion.kind === "approval" && (
+          <p className="muted">The current translation looks good.</p>
+        )}
+      </div>
+    );
+  }
   return (
     <div className="review-diff">
       <div className="review-source">

@@ -120,7 +120,11 @@ keeps repeated downloads from causing changes in Git.
 Markdown files use a different path: the entire document is one value. The core removes a byte
 order mark, normalizes line endings, and removes final whitespace. Downloads add one final
 newline. Quality checks preserve the number of paragraphs, separated by blank lines, rather than
-each internal line break. The source parser does not split Markdown into headings or sentences.
+each internal line break. The source parser does not split Markdown into headings or sentences;
+`documents.ts` reads only what the checks need: each paragraph's kind of block, the parts kept
+verbatim, and heading anchors. An LLM update of a document puts back the paragraphs whose English
+didn't change (`keepUntouchedParagraphs`), using the English the translation was made for, from
+the string's history.
 
 Repository descriptions can accompany source strings in sidecar files or fields with a configured
 suffix. They supply translation context without becoming translatable strings. Stored source

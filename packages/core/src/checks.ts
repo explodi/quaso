@@ -7,7 +7,15 @@
  * pass the categories the service reports as the `pluralOverride`, and the service has the
  * last word.
  */
-import { normalizeDocument, paragraphCount } from "./documents.ts";
+import {
+  anchorLinks,
+  blockKind,
+  headingAnchors,
+  normalizeDocument,
+  paragraphCount,
+  paragraphsOf,
+  verbatimParts,
+} from "./documents.ts";
 import { canonicalValue } from "./hash.ts";
 import { glossaryMatches } from "./glossary.ts";
 import { categoriesFor, coversExactlyOne, type PluralOverride } from "./plurals.ts";
@@ -64,6 +72,10 @@ export const CHECKS = {
   whitespace: "error",
   /** A document's number of paragraphs (blocks separated by blank lines) differs from the source. */
   paragraphs: "error",
+  /** A document's code, link destination or front matter key is missing, changed or extra. */
+  markdown_verbatim: "error",
+  /** A document's paragraph is another kind of block than in the source, such as a list. */
+  markdown_structure: "error",
   /** Two spaces in a row inside the text. */
   double_space: "warning",
   /** Ends with a different question mark, exclamation mark, ellipsis or colon. */
@@ -74,6 +86,8 @@ export const CHECKS = {
   duplicate_translation: "warning",
   /** Identical source strings have different translations in a language. */
   consistency: "warning",
+  /** A document's link to one of its own headings (`#…`) leads nowhere. */
+  heading_anchor: "warning",
   /** Model-reported changes in meaning, omissions or grammar. */
   meaning: "warning",
 } as const satisfies Record<string, Severity>;
@@ -166,7 +180,11 @@ export interface CheckInput {
  *   double spaces, and final question marks, exclamation marks, ellipses and colons.
  * - A `document` (a file translated whole) is compared normalized, and `paragraphs`
  *   replaces the line-break count: the translation must have as many paragraphs (blocks
- *   separated by blank lines) as the English.
+ *   separated by blank lines) as the English. It is Markdown, so `markdown_verbatim`
+ *   compares the parts kept as written (`verbatimParts`) as multisets, `markdown_structure`
+ *   compares each paragraph's `blockKind` with the English one when the counts match, and
+ *   `heading_anchor` reports links to a heading of the file (`#…`) that no heading of the
+ *   translation has, when the English link led to a heading or isn't in the English.
  *
  * Messages show placeholders in the project's syntax; `value` holds the `placeholderKey`,
  * the reference's raw text or the number as written. For plural strings, an invalid
@@ -333,6 +351,7 @@ function checkValue(results: CheckResult[], value: string, comparison: Compariso
   checkTags(results, value, comparison);
   checkWhitespace(results, value, comparison);
   checkEndPunctuation(results, value, comparison);
+  if (comparison.document) checkMarkdown(results, value, comparison.counterpart.text);
   for (const entry of comparison.glossary ?? []) {
     if (glossaryMatches(comparison.counterpart.text, entry.term, entry.caseSensitive).length === 0)
       continue;
@@ -565,6 +584,53 @@ const LEADING_WHITESPACE = /^\s+/;
 const TRAILING_WHITESPACE = /\s+$/;
 const LINE_BREAK = /\r\n|\r|\n/g;
 const DOUBLE_SPACE = / {2}/;
+
+/** The Markdown checks of a document: verbatim parts, block structure and heading anchors. */
+function checkMarkdown(results: CheckResult[], value: string, english: string): void {
+  const expected = verbatimParts(english);
+  const found = verbatimParts(value);
+  const missing = firstUnmatched(expected, found);
+  const extra = missing === undefined ? firstUnmatched(found, expected) : undefined;
+  if (missing !== undefined) {
+    const message = `${quoted(missing)} must stay as in the English: it is missing or changed.`;
+    results.push(result("markdown_verbatim", message, { value: missing }));
+  } else if (extra !== undefined) {
+    const message = `${quoted(extra)} isn't in the English, or is repeated.`;
+    results.push(result("markdown_verbatim", message, { value: extra }));
+  }
+
+  const englishParagraphs = paragraphsOf(english);
+  const paragraphs = paragraphsOf(value);
+  if (paragraphs.length === englishParagraphs.length) {
+    for (let index = 0; index < paragraphs.length; index++) {
+      const expectedKind = blockKind(englishParagraphs[index], index === 0);
+      const foundKind = blockKind(paragraphs[index], index === 0);
+      if (expectedKind === foundKind) continue;
+      const message = `Paragraph ${index + 1} is ${expectedKind} in the English, but ${foundKind} in the translation.`;
+      results.push(result("markdown_structure", message));
+      break;
+    }
+  }
+
+  const englishAnchors = headingAnchors(english);
+  const englishLinks = new Set(anchorLinks(english));
+  const anchors = headingAnchors(value);
+  for (const anchor of new Set(anchorLinks(value))) {
+    if (anchors.has(anchor)) continue;
+    const ledToHeading = englishAnchors.has(anchor);
+    const invented = !englishLinks.has(anchor);
+    if (!ledToHeading && !invented) continue;
+    const message = `The link to #${anchor} leads to no heading of the translation: use the translated heading's anchor.`;
+    results.push(result("heading_anchor", message, { value: `#${anchor}` }));
+  }
+}
+
+/** A verbatim part for a message: short ones whole, long ones (code blocks) by their start. */
+function quoted(part: string): string {
+  const firstLine = part.split("\n")[0];
+  const short = firstLine.length > 60 ? `${firstLine.slice(0, 60)}…` : firstLine;
+  return part.includes("\n") ? `The code block starting “${short}”` : `“${short}”`;
+}
 
 /** Warns when the English and the translation end with different punctuation. */
 function checkEndPunctuation(results: CheckResult[], value: string, comparison: Comparison) {

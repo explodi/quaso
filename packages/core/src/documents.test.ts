@@ -3,14 +3,19 @@ import { test } from "node:test";
 import { assertEquals, assertStrictEquals } from "@std/assert";
 import { FilePath } from "./api.ts";
 import {
+  anchorLinks,
+  blockKind,
   DOCUMENT_KEY,
   formatForPath,
+  headingAnchors,
   isDocumentKey,
   isMarkdownFormat,
+  keepUntouchedParagraphs,
   MARKDOWN_FORMAT,
   normalizeDocument,
   paragraphCount,
   paragraphsOf,
+  verbatimParts,
 } from "./documents.ts";
 import { readSource, readTranslation } from "./entries.ts";
 import { renderFile } from "./render.ts";
@@ -141,4 +146,132 @@ test("renderFile: an untranslated document is the English, or nothing with omit"
   );
   const blank = readSource("", { format: "markdown" });
   assertStrictEquals(renderFile(blank.entries, new Map(), { language: "de", format }), "");
+});
+
+test("keepUntouchedParagraphs puts back the paragraphs whose English didn't change", () => {
+  const kept = keepUntouchedParagraphs({
+    oldEnglish: "Title\n\nOld second.\n\nThird.",
+    newEnglish: "Title\n\nNew second.\n\nThird.",
+    oldTranslation: "Titel\n\nAlter zweiter.\n\nDritter.",
+    newTranslation: "Überschrift\n\nNeuer zweiter.\n\nDer dritte.\n",
+  });
+  assertStrictEquals(kept, "Titel\n\nNeuer zweiter.\n\nDritter.");
+});
+
+test("keepUntouchedParagraphs keeps the update's blank lines between paragraphs", () => {
+  const kept = keepUntouchedParagraphs({
+    oldEnglish: "A\n\nB",
+    newEnglish: "A\n\nB2",
+    oldTranslation: "Ä\n\nBe",
+    newTranslation: "Ah\n\n\nBe zwei",
+  });
+  assertStrictEquals(kept, "Ä\n\n\nBe zwei");
+});
+
+test("keepUntouchedParagraphs returns the update when the paragraphs don't pair up", () => {
+  const kept = keepUntouchedParagraphs({
+    oldEnglish: "A\n\nB",
+    newEnglish: "A\n\nB\n\nC",
+    oldTranslation: "Ä\n\nBe",
+    newTranslation: "Ah\n\nBe\n\nZe\r\n",
+  });
+  assertStrictEquals(kept, "Ah\n\nBe\n\nZe");
+});
+
+test("blockKind names a paragraph by its first lines", () => {
+  assertStrictEquals(blockKind("## Getting started", false), "a level-2 heading");
+  assertStrictEquals(blockKind("Title\n=====", false), "a level-1 heading");
+  assertStrictEquals(blockKind("Title\n-----", false), "a level-2 heading");
+  assertStrictEquals(blockKind("- one\n- two", false), "a list");
+  assertStrictEquals(blockKind("* one", false), "a list");
+  assertStrictEquals(blockKind("1. one\n2. two", false), "a numbered list");
+  assertStrictEquals(blockKind("> Quoted", false), "a quote");
+  assertStrictEquals(blockKind("| a | b |\n|---|---|", false), "a table");
+  assertStrictEquals(blockKind("a | b\n--- | ---", false), "a table");
+  assertStrictEquals(blockKind("```js\ncode\n```", false), "a code block");
+  assertStrictEquals(blockKind("---\ntitle: News\n---", true), "front matter");
+  assertStrictEquals(blockKind("---", false), "a horizontal rule");
+  assertStrictEquals(blockKind("<details>", false), "HTML");
+  assertStrictEquals(blockKind("    indented", false), "an indented block");
+  assertStrictEquals(blockKind("Just text.\nOn two lines.", false), "a paragraph");
+  assertStrictEquals(blockKind("#hashtag", false), "a paragraph", "a heading needs a space");
+});
+
+test("verbatimParts: fenced code blocks, whole", () => {
+  assertEquals(verbatimParts("Run it:\n\n```sh\nquaso init\n\nquaso upload\n```\n\nDone."), [
+    "```sh\nquaso init\n\nquaso upload\n```",
+  ]);
+});
+
+test("verbatimParts: inline code", () => {
+  assertEquals(verbatimParts("Type `quaso init`, then ``a ` b``."), ["`quaso init`", "``a ` b``"]);
+});
+
+test("verbatimParts: link and image destinations, but not their text or title", () => {
+  assertEquals(verbatimParts('[Download](https://example.com/dl "The file") ![Map](map.png)'), [
+    "https://example.com/dl",
+    "map.png",
+  ]);
+});
+
+test("verbatimParts: reference definitions and autolinks", () => {
+  assertEquals(verbatimParts("See [the wiki][w] or <https://example.com>.\n\n[w]: https://wiki"), [
+    "https://wiki",
+    "https://example.com",
+  ]);
+});
+
+test("verbatimParts: front matter keys, not their values", () => {
+  assertEquals(verbatimParts("---\ntitle: City founded\ndate: 2026-10-15\n---\n\nText."), [
+    "title:",
+    "date:",
+  ]);
+});
+
+test("verbatimParts: links to the file's own headings follow the translation", () => {
+  assertEquals(verbatimParts("[See below](#installation)"), []);
+});
+
+test("verbatimParts: a link inside inline code is code", () => {
+  assertEquals(verbatimParts("Write `[a](b)` for a link."), ["`[a](b)`"]);
+});
+
+test("headingAnchors: GitHub's anchors, numbered when repeated, and explicit ones", () => {
+  const text = [
+    "# Getting started",
+    "",
+    "## Install **Quaso** on Windows!",
+    "",
+    "## Getting started",
+    "",
+    "## Instalación {#install}",
+    "",
+    "Setext",
+    "------",
+    "",
+    '<a id="custom"></a>',
+    "",
+    "```",
+    "# not a heading",
+    "```",
+  ].join("\n");
+  assertEquals(
+    headingAnchors(text),
+    new Set([
+      "getting-started",
+      "install-quaso-on-windows",
+      "getting-started-1",
+      "install",
+      "setext",
+      "custom",
+    ]),
+  );
+  assertEquals(headingAnchors("## Über die Stadt"), new Set(["über-die-stadt"]));
+});
+
+test("anchorLinks: the anchors of links to the file itself, decoded", () => {
+  assertEquals(anchorLinks("[a](#one) [b](https://x#two) [c](#instalaci%C3%B3n) `[d](#code)`"), [
+    "one",
+    "instalación",
+  ]);
 });

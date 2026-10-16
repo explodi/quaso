@@ -189,5 +189,6 @@ function workItem(string: StringRow, language: string): WorkItem {
     action: "translate",
     revision: 0,
     current: null,
+    outdatedEnglish: null,
   };
 }
