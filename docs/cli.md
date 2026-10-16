@@ -230,8 +230,11 @@ new and changed strings. Automatic translation is enabled by default. Separate s
 updates to outdated green translations and proposals for outdated blue translations; both are on
 by default. Use `--wait` to wait for the job.
 
-Local translations for new, changed, or restored keys appear in upload output with an import
-`quaso import --as blue --language <tag> --file <file>` command. Use
+Local translations of new or restored keys appear in upload output with a
+`quaso import --as blue --language <tag> --file <file>` command to import them. Local translations of
+changed keys are reported apart, as a warning: they translate the previous source text, so import
+them only if you updated them along with the source. In `--json`, each language of
+`localTranslations` counts `new` and `changed` strings and lists their `newFiles` and `changedFiles`. Use
 `quaso upload --import-translations es:blue` (or `es:green`) to import selected local files in the
 same run. Explicit imports preserve existing blue translations. For a language maintained in your repository,
 set `"translationsInRepository": ["es"]`; uploads import its selected files as blue every time,

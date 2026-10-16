@@ -103,6 +103,13 @@ Release candidates are for deployment and migration testing. The team decides wh
 
 ### Changed
 
+- Upload tells local translations of new strings from those of changed strings. A changed string's
+  local translation still translates the previous source text, so upload warns about it and offers
+  the import command only for when it was updated along with the source. Languages with the same
+  count share one line, and the import command leaves out `--language` when it covers every
+  language. In `--json`, `localTranslations` reports `new`, `changed`, `newFiles` and
+  `changedFiles` in place of `strings` and `command`.
+- A limit that names a string the server doesn't have says it does nothing and how to fix it.
 - Auto-translate and `quaso translate` give outdated proofread translations a proposal whenever
   their scope includes outdated work, whatever the upload setting "Propose updates for outdated
   proofread translations" says. The two outdated settings apply to uploads only.

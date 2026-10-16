@@ -49,9 +49,46 @@ test("upload notices new local translations and prints an import command without
       );
       const run = await runCli(["upload"], { cwd: dir, env: ENV, fetch });
       assertEquals(run.code, 0, run.stderr);
-      assertStringIncludes(run.stdout, "1 new or changed string already has de");
-      assertStringIncludes(run.stdout, "quaso import --as blue --language de --file common.json");
+      assertStringIncludes(
+        run.stdout,
+        "1 new string already has translations in repository files (de).",
+      );
+      assertStringIncludes(
+        run.stdout,
+        "Import them: quaso import --as blue --language de --file common.json",
+      );
       assertEquals(fetch.requests.length, 1);
+    },
+  );
+});
+
+test("upload warns that local translations of changed strings translate the previous source text", async () => {
+  await withProject(
+    {
+      ...PROJECT,
+      "quaso.config.json": { ...PROJECT["quaso.config.json"], languages: ["de", "fr", "ja"] },
+      "src/locales/de/common.json": '{"title":"Abenteuer"}',
+      "src/locales/fr/common.json": '{"title":"Aventure"}',
+    },
+    async (dir) => {
+      const fetch = fakeFetch(() =>
+        jsonResponse(result({ changed: [{ file: "common.json", key: "title" }] })),
+      );
+      const run = await runCli(["upload"], { cwd: dir, env: ENV, fetch });
+      assertEquals(run.code, 0, run.stderr);
+      assertStringIncludes(
+        run.stdout,
+        "1 changed string still has its previous translations in repository files (de, fr).",
+      );
+      assertStringIncludes(
+        run.stdout,
+        "Those translate the old source text, so they weren't imported",
+      );
+      assertStringIncludes(
+        run.stdout,
+        "If you updated them along with the source, import them: quaso import --as blue --language de --language fr --file common.json",
+      );
+      assertEquals(run.stdout.includes("Import them:"), false);
     },
   );
 });
