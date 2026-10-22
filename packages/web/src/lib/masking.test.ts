@@ -107,3 +107,18 @@ test("the checks see the unmasked value", () => {
     [],
   );
 });
+
+test("chips, ICU: the arguments and # of every case, each once; no chips for block syntax", () => {
+  const masking = editorMasking(
+    "{n, plural, one {# coin for {name}} other {# coins for {name}}}",
+    [],
+    { ...DEFAULT_SYNTAX, icu: true },
+  );
+  assertEquals(
+    masking.chips.map((chip) => [chip.kind, chip.insert, chip.key]),
+    [
+      ["placeholder", "#", "#"],
+      ["placeholder", "{name}", "{name}"],
+    ],
+  );
+});

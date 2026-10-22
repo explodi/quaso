@@ -6,6 +6,7 @@ import { DEFAULT_PROMPT_TEMPLATE } from "../settings.ts";
 import {
   DEFAULT_SYSTEM,
   expectedOutputTokens,
+  ICU_RULES,
   maskString,
   type PromptContext,
   type PromptString,
@@ -313,4 +314,15 @@ test("prompt: the answer's schema requires the plural forms every plural string 
     ["one", "other"],
   );
   assertEquals(responseSchemaFor([text]), RESPONSE_SCHEMA);
+});
+
+test("prompt: ICU projects get the ICU rules; others don't", () => {
+  const icu = renderPrompt(
+    DEFAULT_PROMPT_TEMPLATE,
+    [COINS],
+    context({ syntax: { ...DEFAULT_SYNTAX, icu: true } }),
+  );
+  assertStringIncludes(icu.system, ICU_RULES);
+  const plain = renderPrompt(DEFAULT_PROMPT_TEMPLATE, [COINS], context());
+  assertFalse(plain.system.includes(ICU_RULES));
 });

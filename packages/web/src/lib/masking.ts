@@ -15,6 +15,7 @@ import {
   type InterpolationSyntax,
   MASK_OPEN,
   maskToken,
+  placeholderKey,
   PLURAL_CATEGORIES,
   type PluralCategory,
   type PluralForms,
@@ -32,6 +33,8 @@ export interface Chip {
   insert: string;
   /** The text in the English: `{{count}}`, `$t(common:back)`. */
   raw: string;
+  /** What the checks call it: the `placeholderKey`, or the reference's raw text. */
+  key: string;
   /** For references: the English text it refers to, when known. */
   english: string | null;
 }
@@ -79,16 +82,24 @@ export function editorMasking(
   const seen = new Set<string>();
   for (const text of sourceTexts(source)) {
     for (const token of tokenize(text, syntax)) {
-      if (token.type === "text" || seen.has(`${token.type}:${token.raw}`)) continue;
+      const chipped = token.type === "placeholder" || token.type === "reference";
+      if (!chipped || seen.has(`${token.type}:${token.raw}`)) continue;
       seen.add(`${token.type}:${token.raw}`);
       if (token.type === "placeholder") {
-        chips.push({ kind: "placeholder", insert: token.raw, raw: token.raw, english: null });
+        chips.push({
+          kind: "placeholder",
+          insert: token.raw,
+          raw: token.raw,
+          key: placeholderKey(token),
+          english: null,
+        });
       } else {
         references.push(token.raw);
         chips.push({
           kind: "reference",
           insert: enabled ? maskToken(references.length) : token.raw,
           raw: token.raw,
+          key: token.raw,
           english: english.get(token.raw) ?? null,
         });
       }

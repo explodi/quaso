@@ -31,12 +31,10 @@ import {
   graphemeLength,
   type LanguageProgress,
   paragraphCount,
-  placeholderKey,
   type ProjectInfo,
   type StringDetail,
   type StringSummary,
   textDirection,
-  tokenize,
   type TranslationInfo,
 } from "@quaso/core";
 import {
@@ -605,11 +603,7 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
       )
       .map((check) => check.value),
   );
-  const chipMissing = (chip: (typeof masking.chips)[number]) => {
-    if (chip.kind === "reference") return missing.has(chip.raw);
-    const [token] = tokenize(chip.raw, syntax);
-    return token?.type === "placeholder" && missing.has(placeholderKey(token));
-  };
+  const chipMissing = (chip: (typeof masking.chips)[number]) => missing.has(chip.key);
 
   return (
     <div className="panel" ref={root}>

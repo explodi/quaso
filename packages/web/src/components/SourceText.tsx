@@ -50,6 +50,13 @@ export function SourceText({
             </mark>
           );
         }
+        if (token.type === "syntax") {
+          return (
+            <span key={index} className="icu-syntax">
+              {token.raw}
+            </span>
+          );
+        }
         const n = masking?.references.indexOf(token.raw) ?? -1;
         if (!masking?.enabled || n < 0) {
           return (

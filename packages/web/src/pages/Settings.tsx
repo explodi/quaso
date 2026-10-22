@@ -390,6 +390,23 @@ function Placeholders({ data }: { data: SettingsResult }) {
       }
     >
       <SettingsGroup
+        title="Message format"
+        description="How your app fills in placeholders and chooses between texts."
+      >
+        <Check
+          label="ICU MessageFormat"
+          hint={
+            <>
+              As with i18next-icu: placeholders such as <code>{"{name}"}</code>, and blocks such as{" "}
+              <code>{"{count, plural, one {# item} other {# items}}"}</code>, in JSON strings and
+              Markdown documents. Instead of <code>{"{{name}}"}</code> and <code>$t(…)</code>.
+            </>
+          }
+          checked={syntax.icu === true}
+          change={(icu) => setSyntax({ ...syntax, icu })}
+        />
+      </SettingsGroup>
+      <SettingsGroup
         title="Default format"
         description="Match the opening and closing characters used by your app."
       >

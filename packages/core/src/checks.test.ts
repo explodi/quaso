@@ -1290,6 +1290,9 @@ test("results: every check id is reachable, with the severity from CHECKS", () =
     text("Headline\n\nBody.", "Titel\n\nText.\n\nMehr.", { document: true }),
     text("# Run `init`\n\n[Top](#run-init)", "Führe `init` aus\n\n[Oben](#x)", { document: true }),
     text("Run `init`", "Führe `start` aus", { document: true }),
+    text("{a, select, x {X} other {O}}", "{a, select, y {Y} other {O}}", {
+      syntax: { prefix: "{{", suffix: "}}", icu: true },
+    }),
   ];
   for (const results of all) {
     for (const result of results) {
@@ -1646,4 +1649,101 @@ test("documents: a link to an anchor outside the headings, kept as in the Englis
 
 test("documents: the Markdown checks don't run on strings that aren't documents", () => {
   assertEquals(text("Run `init`", "Führe `initialisieren` aus"), []);
+});
+
+// --- ICU MessageFormat.
+
+const ICU = { prefix: "{{", suffix: "}}", icu: true };
+
+const MAYOR = `{style, select,
+  masculine {Mayor {name} has started a new term.}
+  feminine {Mayor {name} has started a new term.}
+  other {{name} has started a new term.}
+}`;
+
+const ALCALDE = `{style, select,
+  masculine {El alcalde {name} ha comenzado su nuevo mandato.}
+  feminine {La alcaldesa {name} ha comenzado su nuevo mandato.}
+  other {Ha comenzado el nuevo mandato de {name}.}
+}`;
+
+test("checks, ICU: a select block translated case by case passes", () => {
+  assertEquals(text(MAYOR, ALCALDE, { language: "es", syntax: ICU }), []);
+});
+
+test("checks, ICU: a placeholder missing from a case says which case", () => {
+  const translation = ALCALDE.replace("La alcaldesa {name}", "La alcaldesa");
+  assertEquals(messages(text(MAYOR, translation, { language: "es", syntax: ICU })), [
+    "Placeholder {name} is missing in the feminine case of {style, select}.",
+  ]);
+});
+
+test("checks, ICU: a missing or extra select case is an error", () => {
+  const translation = `{style, select,
+  male {El alcalde {name} ha comenzado su nuevo mandato.}
+  feminine {La alcaldesa {name} ha comenzado su nuevo mandato.}
+  other {Ha comenzado el nuevo mandato de {name}.}
+}`;
+  assertEquals(messages(text(MAYOR, translation, { language: "es", syntax: ICU })), [
+    "The masculine case of {style, select} is missing.",
+    "The male case of {style, select} isn't in the English.",
+  ]);
+});
+
+test("checks, ICU: a broken block is reported missing", () => {
+  const translation = ALCALDE.slice(0, -1);
+  const results = text(MAYOR, translation, { language: "es", syntax: ICU });
+  assert(summary(results).includes("icu_structure"));
+});
+
+test("checks, ICU: plural cases follow the language's categories", () => {
+  const source = "{n, plural, one {# coin} other {# coins}}";
+  const polish = "{n, plural, one {# moneta} few {# monety} many {# monet} other {# monety}}";
+  assertEquals(text(source, polish, { language: "pl", syntax: ICU }), []);
+  assertEquals(
+    messages(
+      text(source, "{n, plural, one {# moneta} other {# monety}}", { language: "pl", syntax: ICU }),
+    ),
+    ["The few case of {n, plural} is missing.", "The many case of {n, plural} is missing."],
+  );
+  assertEquals(
+    messages(text(source, "{n, plural, one {# 枚} other {# 枚}}", { language: "ja", syntax: ICU })),
+    ["The one case of {n, plural} isn't used in Japanese."],
+  );
+});
+
+test("checks, ICU: a case that covers one number may leave out #", () => {
+  const source = "{n, plural, one {# coin} other {# coins}}";
+  assertEquals(
+    text(source, "{n, plural, one {eine Münze} other {# Münzen}}", { language: "de", syntax: ICU }),
+    [],
+  );
+  assertEquals(
+    messages(
+      text(source, "{n, plural, one {# Münze} other {Münzen}}", { language: "de", syntax: ICU }),
+    ),
+    ["Placeholder # is missing in the other case of {n, plural}."],
+  );
+});
+
+test("checks, ICU: keywords and exact cases are neither text nor numbers", () => {
+  const source = "{n, plural, =0 {No coins} other {# coins}}";
+  assertEquals(
+    text(source, "{n, plural, =0 {Keine Münzen} one {# Münze} other {# Münzen}}", {
+      language: "de",
+      syntax: ICU,
+    }),
+    [],
+  );
+});
+
+test("checks, ICU: a block inside a Markdown document is checked like a string's", () => {
+  const source = `# The town hall\n\n${MAYOR}\n\nSee \`{ "a": 1 }\` and [the term](#the-town-hall).`;
+  const good = `# El ayuntamiento\n\n${ALCALDE}\n\nVer \`{ "a": 1 }\` y [el mandato](#el-ayuntamiento).`;
+  assertEquals(text(source, good, { language: "es", syntax: ICU, document: true }), []);
+  const broken = good.replace("feminine {", "femenino {");
+  assertEquals(messages(text(source, broken, { language: "es", syntax: ICU, document: true })), [
+    "The feminine case of {style, select} is missing.",
+    "The femenino case of {style, select} isn't in the English.",
+  ]);
 });

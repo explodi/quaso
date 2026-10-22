@@ -295,7 +295,7 @@ export function isReferenceOnly(
   let references = 0;
   for (const token of tokenize(value, syntax)) {
     if (token.type === "reference") references++;
-    else if (token.type === "placeholder" || token.text.trim() !== "") return false;
+    else if (token.type !== "text" || token.text.trim() !== "") return false;
   }
   return references > 0;
 }

@@ -276,6 +276,10 @@ export function formExamples(
   );
 }
 
+/** How to translate ICU MessageFormat, for projects that use it; part of `%pluralForms%`. */
+export const ICU_RULES =
+  "The strings use ICU MessageFormat. In a block such as {style, select, masculine {…} other {…}} or {count, plural, one {# item} other {# items}}, keep the argument, the block type and the case keys as written, and translate only the text inside each case. A select block keeps exactly the English's cases. A plural or selectordinal block has one case for each of the plural or ordinal forms above, plus the English's exact cases such as =0; # stands for the number. Write a literal brace as '{' or '}'.";
+
 /** `%pluralForms%`: the language's categories, with example numbers. */
 export function pluralFormsText(language: string, override?: PluralOverride): string {
   const line = (ordinal: boolean) =>
@@ -319,7 +323,12 @@ export function renderPrompt(
     languageInstructions: context.languageInstructions,
     fileName: context.fileName,
     fileContext: context.fileContext,
-    pluralForms: pluralFormsText(context.targetLanguage, context.pluralOverride),
+    pluralForms: [
+      pluralFormsText(context.targetLanguage, context.pluralOverride),
+      context.syntax.icu ? ICU_RULES : "",
+    ]
+      .filter((paragraph) => paragraph !== "")
+      .join("\n\n"),
     otherLanguages: context.otherLanguages
       .map((item) =>
         JSON.stringify({
