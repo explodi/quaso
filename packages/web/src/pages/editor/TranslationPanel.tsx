@@ -413,8 +413,10 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
   const after = async (message: string, next: boolean) => {
     drafts.delete(draftKey);
     toast.show(message);
-    await props.onChanged([detail.id]);
+    // The next string opens while the refresh runs, so a save waits for one round trip only.
+    const refreshed = props.onChanged([detail.id]);
     if (next) props.onNext();
+    await refreshed;
   };
 
   const submit = async (revision = baseRevision) => {
