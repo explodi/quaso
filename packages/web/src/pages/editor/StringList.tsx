@@ -41,6 +41,7 @@ import { count, documentName, firstLine, formatNumber, sourcePreview } from "../
 import { useDebounced } from "../../lib/hooks.ts";
 import { Link } from "../../lib/router.tsx";
 import { FILTER_LABELS, filterCount } from "../../lib/states.ts";
+import { useSaveState } from "./backgroundSaves.ts";
 import type { StringList as List } from "./useStringList.ts";
 
 const ROW_HEIGHT = 92;
@@ -245,6 +246,7 @@ export function StringList(props: StringListProps) {
               <code>{summary.document ? documentName(summary.file) : summary.key}</code>
               {summary.document && <span className="row-kind">document</span>}
               {summary.kind !== "text" && <span className="row-kind">{summary.kind}</span>}
+              <SaveStatus language={props.language} id={summary.id} />
               {!props.file && <span className="row-file">{summary.file}</span>}
             </span>
           </span>
@@ -441,4 +443,12 @@ export function StringList(props: StringListProps) {
       )}
     </div>
   );
+}
+
+/** Whether the string's background save is running, or failed and waits to be tried again. */
+function SaveStatus(props: { language: string; id: number }) {
+  const state = useSaveState(`${props.language}:${props.id}`);
+  if (state === "saving") return <span className="row-kind">Saving…</span>;
+  if (state === "failed") return <span className="row-kind row-not-saved">Not saved</span>;
+  return null;
 }
