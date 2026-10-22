@@ -688,3 +688,78 @@ test("extra delimiters: many prefixes without a suffix stay linear", () => {
   assertEquals(describe(tokenize(text, BRACES)), [`text:${text}`]);
   assert(performance.now() - started < 2000);
 });
+
+// --- ICU MessageFormat.
+
+const ICU = { prefix: "{{", suffix: "}}", icu: true };
+
+const MAYOR = `{style, select,
+  masculine {El alcalde {name} ha comenzado su nuevo mandato.}
+  other {Ha comenzado el nuevo mandato de {name}.}
+}`;
+
+test("tokenize, ICU: arguments are placeholders, with their format", () => {
+  const tokens = tokenize("Hi {name}, you have {n, number} points", ICU);
+  assertCovers("Hi {name}, you have {n, number} points", tokens);
+  assertEquals(describe(tokens), [
+    "text:Hi ",
+    "placeholder:{name}",
+    "text:, you have ",
+    "placeholder:{n, number}",
+    "text: points",
+  ]);
+  assertEquals(placeholdersOf("{n,number}", ICU).map(placeholderKey), ["{n, number}"]);
+});
+
+test("tokenize, ICU: a select block's syntax is apart from the text of its cases", () => {
+  const tokens = tokenize(MAYOR, ICU);
+  assertCovers(MAYOR, tokens);
+  assertEquals(describe(tokens), [
+    "syntax:{style, select,\n  masculine {",
+    "text:El alcalde ",
+    "placeholder:{name}",
+    "text: ha comenzado su nuevo mandato.",
+    "syntax:}\n  other {",
+    "text:Ha comenzado el nuevo mandato de ",
+    "placeholder:{name}",
+    "text:.",
+    "syntax:}\n}",
+  ]);
+});
+
+test("tokenize, ICU: # is a placeholder in plural cases only", () => {
+  assertEquals(describe(tokenize("{n, plural, offset:1 =0 {none} other {# items}}", ICU)), [
+    "syntax:{n, plural, offset:1 =0 {",
+    "text:none",
+    "syntax:} other {",
+    "placeholder:#",
+    "text: items",
+    "syntax:}}",
+  ]);
+  assertEquals(describe(tokenize("Step #1 of {n}", ICU)), ["text:Step #1 of ", "placeholder:{n}"]);
+});
+
+test("tokenize, ICU: a brace that starts no argument is text, and the rest is still read", () => {
+  const text = "Code: `{ a: 1 }`, {#anchor}, {name}";
+  assertEquals(describe(tokenize(text, ICU)), [
+    "text:Code: `{ a: 1 }`, {#anchor}, ",
+    "placeholder:{name}",
+  ]);
+});
+
+test("tokenize, ICU: a broken block is text", () => {
+  assertEquals(describe(tokenize("{n, plural, one {# item} other {# items}", ICU)), [
+    "text:{n, plural, one {# item} other {# items}",
+  ]);
+});
+
+test("tokenize, ICU: quoted braces are text; a lone apostrophe is an apostrophe", () => {
+  assertEquals(describe(tokenize("'{name}' l'alcalde {name}", ICU)), [
+    "text:'{name}' l'alcalde ",
+    "placeholder:{name}",
+  ]);
+});
+
+test("tokenize, ICU: i18next nesting is text", () => {
+  assertEquals(describe(tokenize("$t(key)", ICU)), ["text:$t(key)"]);
+});

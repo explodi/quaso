@@ -119,6 +119,36 @@ Plural forms have a special rule for `count`: a form that refers to exactly one 
 that placeholder. Do not assume every language's `one` category means only the number 1. Use the
 examples and checks shown for that language.
 
+## ICU MessageFormat
+
+If your app uses i18next-icu or another ICU MessageFormat library, turn on **ICU MessageFormat** in
+**Settings → Placeholders**. Quaso then reads ICU in JSON strings and in Markdown documents instead
+of `{{name}}` and `$t(…)`:
+
+```
+{style, select,
+  masculine {Mayor {name} has started a new term.}
+  feminine {Mayor {name} has started a new term.}
+  other {{name} has started a new term.}
+}
+```
+
+Arguments such as `{name}`, `{n, number}` and `#` in a plural case are placeholders. Translate
+only the text inside each case. Keep each block's argument, its type (`select`, `plural` or
+`selectordinal`) and its case keys as written. The checks compare each case with the English case
+of the same key:
+
+- `icu_structure` (error): a block is missing, broken or not in the English, a select block's
+  cases differ from the English's, or an exact case such as `=0` is missing.
+- `plural_form_missing` and `plural_form_unexpected` (errors): a plural block needs one case for
+  each plural category of the target language, such as `one`, `few`, `many` and `other` in Polish,
+  and no others. Exact cases such as `=0` may be added.
+- `placeholder_missing` and `placeholder_extra` (errors) name the case they are about. A plural
+  case that covers exactly one number, such as `one` in German or `=1`, may leave out `#`.
+
+A `{` that starts no argument, such as one in a code block of a Markdown document, is plain text.
+Write a literal brace in a translation as `'{'`, as ICU does.
+
 ## Errors and warnings
 
 The editor, translation jobs, and imports use the same core checks. The server makes the final

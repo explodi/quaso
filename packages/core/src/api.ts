@@ -1248,6 +1248,12 @@ export const ProjectSettings = s.object({
       )
       .optional()
       .describe("Placeholders some languages may leave out, such as {article}"),
+    icu: s
+      .boolean()
+      .optional()
+      .describe(
+        "ICU MessageFormat ({name}, {n, plural, …}) instead of i18next's {{name}} and $t()",
+      ),
   }),
   logoUrl: s.string({ maxLength: 2000 }).nullable(),
   links: s.array(

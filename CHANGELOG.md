@@ -7,6 +7,13 @@ Release candidates are for deployment and migration testing. The team decides wh
 
 ### Added
 
+- ICU MessageFormat: with **ICU MessageFormat** on in Settings → Placeholders, as for
+  i18next-icu, JSON strings and Markdown documents are read as ICU. Arguments (`{name}`,
+  `{n, number}`) and `#` are placeholders, and blocks such as `{style, select, …}` and
+  `{n, plural, …}` are checked case by case: a new `icu_structure` error for a missing, broken or
+  changed block or select case, plural cases by the target language's categories, and
+  placeholders compared with the English case of the same key. The editor shows a block's syntax
+  apart from its text, and the LLM is told how to translate ICU.
 - Markdown documents: a source file ending in `.md` or `.markdown` is translated whole, as one
   string whose key is empty and whose file is its identity. Point a `files` entry of
   `quaso.config.json` at them (`text/en/**/*.md` with `text/{lang}/{path}`), beside the JSON

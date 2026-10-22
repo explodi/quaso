@@ -7,7 +7,12 @@
  * (`{name}`), and nesting references (`$t(key)`,
  * `$t(ns:key)`, `$t(key, {"count": {{n}}})`). A placeholder inside a reference's options
  * belongs to the reference, not to the text.
+ *
+ * With `syntax.icu`, it finds ICU MessageFormat instead (see `icu.ts`): arguments and `#`
+ * are placeholders, and a block's own syntax (`{n, plural, one {`, `} other {`, `}}`) is
+ * a syntax token, while the text of its cases is tokenized as usual.
  */
+import { type IcuNode, parseIcu } from "./icu.ts";
 import { DEFAULT_SYNTAX, type Delimiters, type InterpolationSyntax } from "./types.ts";
 
 export interface TextToken {
@@ -52,7 +57,15 @@ export interface ReferenceToken {
   end: number;
 }
 
-export type Token = TextToken | PlaceholderToken | ReferenceToken;
+/** Part of an ICU block that isn't text to translate: `{n, plural, one {`, `} other {`, `}}`. */
+export interface SyntaxToken {
+  type: "syntax";
+  raw: string;
+  start: number;
+  end: number;
+}
+
+export type Token = TextToken | PlaceholderToken | ReferenceToken | SyntaxToken;
 
 /** Opens a masked reference in the editor and in LLM prompts: `⟦1⟧`. */
 export const MASK_OPEN = "⟦";
@@ -84,6 +97,7 @@ export const NESTING_SUFFIX = ")";
  *   when `{` and `}` are extra delimiters.
  */
 export function tokenize(text: string, syntax: InterpolationSyntax = DEFAULT_SYNTAX): Token[] {
+  if (syntax.icu) return icuTokens(text, parseIcu(text));
   let tokens: Token[] = [];
   const references = new ReferenceFinder(text);
   const placeholders = new PlaceholderFinder(text, syntax);
@@ -110,6 +124,55 @@ export function tokenize(text: string, syntax: InterpolationSyntax = DEFAULT_SYN
     tokens = tokens.flatMap((token) =>
       token.type === "text" ? extraPlaceholders(token, delimiters) : [token],
     );
+  }
+  return tokens;
+}
+
+/** ICU braces around an argument. */
+const ICU_DELIMITERS: Delimiters = { prefix: "{", suffix: "}" };
+/** `#` stands alone, without delimiters. */
+const POUND_DELIMITERS: Delimiters = { prefix: "", suffix: "" };
+
+/** The tokens of parsed ICU nodes, in order. */
+function icuTokens(text: string, nodes: IcuNode[]): Token[] {
+  const tokens: Token[] = [];
+  const syntaxToken = (start: number, end: number) => {
+    tokens.push({ type: "syntax", raw: text.slice(start, end), start, end });
+  };
+  for (const node of nodes) {
+    if (node.type === "text") {
+      tokens.push(textToken(text, node.start, node.end));
+    } else if (node.type === "argument") {
+      const token: PlaceholderToken = {
+        type: "placeholder",
+        raw: text.slice(node.start, node.end),
+        name: node.name,
+        unescaped: false,
+        delimiters: ICU_DELIMITERS,
+        start: node.start,
+        end: node.end,
+      };
+      if (node.format !== undefined) token.format = node.format;
+      tokens.push(token);
+    } else if (node.type === "pound") {
+      tokens.push({
+        type: "placeholder",
+        raw: "#",
+        name: "#",
+        unescaped: false,
+        delimiters: POUND_DELIMITERS,
+        start: node.start,
+        end: node.end,
+      });
+    } else {
+      let at = node.start;
+      for (const icuCase of node.cases) {
+        syntaxToken(at, icuCase.messageStart);
+        tokens.push(...icuTokens(text, icuCase.message));
+        at = icuCase.messageEnd;
+      }
+      syntaxToken(at, node.end);
+    }
   }
   return tokens;
 }
@@ -413,7 +476,11 @@ export function normalizedPlaceholder(
   syntax: InterpolationSyntax = DEFAULT_SYNTAX,
 ): string {
   // The app's own placeholders keep their delimiters: `{name}` and `{{name}}` differ.
-  if (token.delimiters) return `${token.delimiters.prefix}${token.name}${token.delimiters.suffix}`;
+  if (token.delimiters) {
+    const { prefix, suffix } = token.delimiters;
+    const format = token.format === undefined ? "" : `, ${token.format}`;
+    return `${prefix}${token.name}${format}${suffix}`;
+  }
   const dash = token.unescaped ? "- " : token.name.startsWith("-") ? " " : "";
   const format = token.format === undefined ? "" : normalizeFormat(token.format);
   const formatted = format === "" ? "" : `, ${format}`;

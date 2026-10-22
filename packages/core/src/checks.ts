@@ -18,6 +18,7 @@ import {
 } from "./documents.ts";
 import { canonicalValue } from "./hash.ts";
 import { glossaryMatches } from "./glossary.ts";
+import { blockLabel, type IcuBlock, type IcuNode, parseIcu } from "./icu.ts";
 import { categoriesFor, coversExactlyOne, type PluralOverride } from "./plurals.ts";
 import { graphemeLength, languageName } from "./text.ts";
 import {
@@ -56,6 +57,8 @@ export const CHECKS = {
   plural_form_missing: "error",
   /** A plural form the language doesn't use. */
   plural_form_unexpected: "error",
+  /** An ICU block or case of the English is missing, broken or changed, or one isn't in the English. */
+  icu_structure: "error",
   /** A nesting reference of the English is missing, or appears fewer times. */
   reference_missing: "error",
   /** A nesting reference that isn't in the English (changed), or appears more times (repeated). */
@@ -223,6 +226,8 @@ function checkText(input: CheckInput): CheckResult[] {
     optional: optionalPlaceholders(syntax, input.language),
     maxLength: input.maxLength,
     syntax,
+    language: input.language,
+    pluralOverride: input.pluralOverride,
     glossary: input.glossary,
     document,
   });
@@ -264,6 +269,8 @@ function checkForms(input: CheckInput, kind: "plural" | "ordinal"): CheckResult[
         optional: optionalPlaceholders(syntax, language),
         maxLength: input.maxLength,
         syntax,
+        language,
+        pluralOverride: input.pluralOverride,
         form: category,
         glossary: input.glossary,
       });
@@ -316,6 +323,9 @@ interface Comparison {
   optional: ReadonlySet<string>;
   maxLength?: number | null;
   syntax: InterpolationSyntax;
+  /** The target language and its plural rules, for the cases of ICU plural blocks. */
+  language: string;
+  pluralOverride?: PluralOverride;
   form?: PluralCategory;
   glossary?: CheckInput["glossary"];
   /** A document: paragraphs are compared instead of line breaks. */
@@ -343,7 +353,8 @@ function checkValue(results: CheckResult[], value: string, comparison: Compariso
     return;
   }
   const translation = analyze(value, comparison.syntax);
-  compareTokens(results, "placeholders", translation, comparison);
+  if (comparison.syntax.icu) compareIcu(results, value, comparison);
+  else compareTokens(results, "placeholders", translation, comparison);
   compareTokens(results, "references", translation, comparison);
   checkLength(results, value, comparison);
   checkIdentical(results, translation, comparison);
@@ -398,6 +409,160 @@ function compareTokens(
     const message = extraMessage(kind, occurrences.label, allowed, form);
     results.push(result(extra, message, { form, value: key }));
   }
+}
+
+/**
+ * Compares an ICU message with the English (the text, or `other`), level by level. Blocks
+ * pair up by name and type. A select block's cases must have the English's keys; a plural
+ * block's must be the language's categories, plus the English's exact cases (`=0`).
+ * Placeholders are compared as multisets in each case with the English case of the same key,
+ * or `other`, so a language with more plural cases repeats them freely. A case that covers
+ * exactly one number (`one` in Polish, `=1`) may leave out `#` and the block's argument.
+ */
+function compareIcu(results: CheckResult[], value: string, comparison: Comparison): void {
+  const english = comparison.required.text;
+  const level: IcuLevel = { where: "", omittable: new Set() };
+  compareIcuLevel(results, parseIcu(english), parseIcu(value), comparison, level);
+}
+
+/** Where in a message a level is, for messages, and the placeholders it may leave out. */
+interface IcuLevel {
+  /** ` in the feminine case of {style, select}`, or "" at the top. */
+  where: string;
+  omittable: ReadonlySet<string>;
+}
+
+function compareIcuLevel(
+  results: CheckResult[],
+  englishNodes: IcuNode[],
+  nodes: IcuNode[],
+  comparison: Comparison,
+  level: IcuLevel,
+): void {
+  const { form } = comparison;
+  const required = icuPlaceholders(englishNodes);
+  const found = icuPlaceholders(nodes);
+  for (const [key, english] of required) {
+    const count = found.get(key)?.count ?? 0;
+    if (count >= english.count) continue;
+    if (comparison.countOptional && english.name === "count") continue;
+    const omittable = level.omittable.has(key) || comparison.optional.has(key);
+    if (count === 0 && omittable) continue;
+    const problem = count > 0 ? "appears less often than in the English" : "is missing";
+    const message = sentence(`Placeholder ${key} ${problem}${level.where}`, form);
+    results.push(result("placeholder_missing", message, { form, value: key }));
+  }
+  for (const [key, occurrences] of found) {
+    const allowed = required.get(key)?.count ?? 0;
+    if (occurrences.count <= allowed) continue;
+    const problem =
+      allowed === 0 ? "isn't in the English" : "appears more often than in the English";
+    const message = sentence(`Placeholder ${key} ${problem}${level.where}`, form);
+    results.push(result("placeholder_extra", message, { form, value: key }));
+  }
+
+  const unmatched = nodes.filter((node): node is IcuBlock => node.type === "block");
+  for (const englishBlock of englishNodes) {
+    if (englishBlock.type !== "block") continue;
+    const index = unmatched.findIndex(
+      (block) => block.name === englishBlock.name && block.blockType === englishBlock.blockType,
+    );
+    if (index === -1) {
+      const label = blockLabel(englishBlock);
+      const message = sentence(`The ${label} block is missing or broken${level.where}`, form);
+      results.push(result("icu_structure", message, { form, value: label }));
+      continue;
+    }
+    const [block] = unmatched.splice(index, 1);
+    compareIcuCases(results, englishBlock, block, comparison, level);
+  }
+  for (const block of unmatched) {
+    const label = blockLabel(block);
+    const message = sentence(`The ${label} block isn't in the English${level.where}`, form);
+    results.push(result("icu_structure", message, { form, value: label }));
+  }
+}
+
+/** Compares a block's cases with the English block's, then each case's message. */
+function compareIcuCases(
+  results: CheckResult[],
+  englishBlock: IcuBlock,
+  block: IcuBlock,
+  comparison: Comparison,
+  level: IcuLevel,
+): void {
+  const { form } = comparison;
+  const label = blockLabel(block);
+  const report = (check: CheckId, problem: string, key: string) => {
+    const message = sentence(`The ${key} case of ${label} ${problem}${level.where}`, form);
+    results.push(result(check, message, { form, value: key }));
+  };
+  const englishKeys = englishBlock.cases.map((icuCase) => icuCase.key);
+  const keys = new Set(block.cases.map((icuCase) => icuCase.key));
+  const ordinal = block.blockType === "selectordinal";
+  if (block.blockType === "select") {
+    for (const key of englishKeys) if (!keys.has(key)) report("icu_structure", "is missing", key);
+    for (const key of keys) {
+      if (!englishKeys.includes(key)) report("icu_structure", "isn't in the English", key);
+    }
+  } else {
+    const englishForms: PluralForms = {};
+    for (const key of englishKeys) if (isCategory(key)) englishForms[key] = "";
+    const kind = ordinal ? "ordinal" : "plural";
+    const expected = categoriesFor(
+      comparison.language,
+      kind,
+      englishForms,
+      comparison.pluralOverride,
+    );
+    for (const category of expected) {
+      if (!keys.has(category)) report("plural_form_missing", "is missing", category);
+    }
+    for (const key of englishKeys) {
+      if (key.startsWith("=") && !keys.has(key)) report("icu_structure", "is missing", key);
+    }
+    const language = languageName(comparison.language);
+    for (const key of keys) {
+      if (key.startsWith("=") || expected.includes(key as PluralCategory)) continue;
+      if (isCategory(key)) report("plural_form_unexpected", `isn't used in ${language}`, key);
+      else report("icu_structure", "isn't a plural category", key);
+    }
+  }
+
+  const coverage = { ordinal, zero: !ordinal && englishKeys.includes("zero") };
+  for (const icuCase of block.cases) {
+    const englishCase =
+      englishBlock.cases.find((other) => other.key === icuCase.key) ??
+      englishBlock.cases.find((other) => other.key === "other");
+    if (englishCase === undefined) continue;
+    const exactlyOne =
+      icuCase.key.startsWith("=") ||
+      (isCategory(icuCase.key) && coversExactlyOne(comparison.language, icuCase.key, coverage));
+    const omittable = block.blockType !== "select" && exactlyOne;
+    compareIcuLevel(results, englishCase.message, icuCase.message, comparison, {
+      where: ` in the ${icuCase.key} case of ${label}`,
+      omittable: omittable ? new Set(["#", `{${block.name}}`]) : new Set(),
+    });
+  }
+}
+
+/** The placeholders of one level of an ICU message (not inside its blocks), by key. */
+function icuPlaceholders(nodes: IcuNode[]): Map<string, { count: number; name: string }> {
+  const placeholders = new Map<string, { count: number; name: string }>();
+  for (const node of nodes) {
+    if (node.type !== "argument" && node.type !== "pound") continue;
+    const name = node.type === "pound" ? "#" : node.name;
+    const key = node.type === "pound" ? "#" : icuArgumentKey(node.name, node.format);
+    const occurrences = placeholders.get(key);
+    if (occurrences) occurrences.count++;
+    else placeholders.set(key, { count: 1, name });
+  }
+  return placeholders;
+}
+
+/** An ICU argument as `placeholderKey` writes it: `{name}`, `{n, number}`. */
+function icuArgumentKey(name: string, format: string | undefined): string {
+  return format === undefined ? `{${name}}` : `{${name}, ${format}}`;
 }
 
 function missingMessage(
@@ -546,10 +711,20 @@ function checkWhitespace(results: CheckResult[], value: string, comparison: Comp
       results.push(result("whitespace", sentence(message, form), { form }));
     }
   }
-  const doubleSpace = DOUBLE_SPACE.test(value.trim());
+  const doubleSpace = DOUBLE_SPACE.test(withoutIcuSyntax(value, comparison.syntax).trim());
   if (doubleSpace) {
     results.push(result("double_space", sentence("Two spaces in a row", form), { form }));
   }
+}
+
+/** The text with each ICU block's syntax, which may be indented, as a line break. */
+function withoutIcuSyntax(text: string, syntax: InterpolationSyntax): string {
+  if (!syntax.icu) return text;
+  return tokenize(text, syntax)
+    .map((token) =>
+      token.type === "syntax" ? "\n" : token.type === "text" ? token.text : token.raw,
+    )
+    .join("");
 }
 
 /** The whitespace before the first visible character, or after the last one. */
@@ -751,7 +926,7 @@ function analyze(text: string, syntax: InterpolationSyntax): Analysis {
       );
     } else if (token.type === "reference") {
       addOccurrence(analysis.references, token.raw, token.raw, () => token.raw);
-    } else {
+    } else if (token.type === "text") {
       addText(analysis, token.text);
     }
   }

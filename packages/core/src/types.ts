@@ -61,6 +61,11 @@ export interface InterpolationSyntax {
    * `{article}`, in languages without articles. Elsewhere they are required as usual.
    */
   optional?: OptionalPlaceholder[];
+  /**
+   * ICU MessageFormat, as with i18next-icu: arguments such as `{name}` and blocks such as
+   * `{n, plural, one {# item} other {# items}}` replace i18next's placeholders and nesting.
+   */
+  icu?: boolean;
 }
 
 /** A placeholder as written in the English (`{article}`), and the languages that may omit it. */
