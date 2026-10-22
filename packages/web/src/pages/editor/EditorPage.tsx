@@ -49,6 +49,7 @@ import { buildTree } from "../../lib/tree.ts";
 import { NotFound } from "../NotFound.tsx";
 import { ShortcutsDialog } from "./ShortcutsDialog.tsx";
 import { type SideTab, SideTabs } from "./SideTabs.tsx";
+import { hasRunningSaves, saveState } from "./backgroundSaves.ts";
 import { StringList } from "./StringList.tsx";
 import { type PanelHandle, stringKey, TranslationPanel } from "./TranslationPanel.tsx";
 import { LOOKAHEAD } from "./useLlmSuggestion.ts";
@@ -112,6 +113,15 @@ export function EditorPage() {
 
   // The selection belongs to what the list shows: another file, filter or search clears it,
   // so bulk actions never act on strings that aren't listed.
+
+  // Closing or reloading the page while saves run would lose them: the browser asks first.
+  useEffect(() => {
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (hasRunningSaves()) event.preventDefault();
+    };
+    addEventListener("beforeunload", onBeforeUnload);
+    return () => removeEventListener("beforeunload", onBeforeUnload);
+  }, []);
 
   // Another string starts at the top of the panel.
   useEffect(() => {
@@ -189,7 +199,11 @@ export function EditorPage() {
   };
 
   const goToDo = async (delta: 1 | -1, focus: boolean) => {
-    const target = await list.findToDo(id, delta);
+    let target = await list.findToDo(id, delta);
+    // A string being saved is done, though its row doesn't say so until the save ends.
+    while (target !== null && saveState(`${tag}:${target}`) === "saving") {
+      target = await list.findToDo(target, delta);
+    }
     if (target !== null) open(target, focus);
     else toast.show(delta > 0 ? "No more strings to do." : "No earlier strings to do.", "info");
   };

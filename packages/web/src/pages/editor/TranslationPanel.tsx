@@ -66,7 +66,7 @@ import {
   suggest,
   unapproveTranslation,
 } from "../../lib/api.ts";
-import { useQuery } from "../../lib/data.ts";
+import { queryCache, useQuery } from "../../lib/data.ts";
 import {
   documentName,
   formatDateTime,
@@ -97,6 +97,7 @@ import {
   useLlmSuggestion,
   useLlmSuggestionsPreference,
 } from "./useLlmSuggestion.ts";
+import { keepUnsavedEdit, saveInBackground, unsavedEdit, useSaveState } from "./backgroundSaves.ts";
 
 /** What the editor page asks of the panel, for the keyboard shortcuts. */
 export interface PanelHandle {
@@ -149,6 +150,8 @@ export function TranslationPanel(props: TranslationPanelProps) {
     ({ fresh }) => getString(id, language.tag, { fresh }),
     { staleTime: 5_000 },
   );
+  const saveState = useSaveState(`${language.tag}:${id}`);
+  if (saveState === "saving") return <Loading label="Saving the translation…" />;
   const data: StringDetail | undefined =
     detail.data ??
     (props.summary && {
@@ -191,9 +194,6 @@ const DOCUMENT_VIEWS: { id: DocumentView; label: string }[] = [
   { id: "preview", label: "Preview" },
 ];
 
-/** Drafts left without saving, by language and string, while the page stays open. */
-const drafts = new Map<string, { draft: Draft; baseRevision: number }>();
-
 function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: boolean }) {
   const { detail, language, project } = props;
   const tag = language.tag;
@@ -223,12 +223,16 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
   const serverRevision = current?.revision ?? 0;
   const [edit, setEdit] = useState<{ draft: Draft; pristine: Draft; baseRevision: number } | null>(
     () => {
-      const kept = drafts.get(draftKey);
-      return kept && kept.baseRevision === serverRevision
-        ? { ...kept, pristine: serverDraft }
+      const kept = unsavedEdit(draftKey);
+      // A failed save's edit comes back even if the translation changed: saving asks then.
+      const keep = kept && (kept.baseRevision === serverRevision || kept.error !== undefined);
+      return keep
+        ? { draft: kept.draft, pristine: serverDraft, baseRevision: kept.baseRevision }
         : null;
     },
   );
+  /** Why this edit's background save failed, if it did. */
+  const [failure] = useState(() => unsavedEdit(draftKey)?.error);
   // Pristine editors follow server data directly; unsaved edits retain their original revision.
   const localDirty = edit !== null && !sameDraft(edit.draft, edit.pristine, forms);
   const retain = edit !== null && (localDirty || edit.baseRevision === serverRevision);
@@ -236,8 +240,14 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
   const pristine = retain ? edit.pristine : serverDraft;
   const baseRevision = retain ? edit.baseRevision : serverRevision;
   const dirty = !sameDraft(draft, pristine, forms);
-  const [conflict, setConflict] = useState<Conflict | undefined>(undefined);
-  const [actionError, setActionError] = useState<unknown>(undefined);
+  const [conflict, setConflict] = useState<Conflict | undefined>(() =>
+    isApiError(failure, "conflict") && failure.current !== undefined
+      ? { operation: "save", current: failure.current }
+      : undefined,
+  );
+  const [actionError, setActionError] = useState<unknown>(() =>
+    isApiError(failure, "conflict") ? undefined : failure,
+  );
   const [busy, setBusy] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [jobId, setJobId] = useState<number | null>(null);
@@ -249,16 +259,13 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
   // Keep an unsaved draft when moving to another string; forget it once saved.
   const latest = useRef({ draft, dirty, baseRevision });
   latest.current = { draft, dirty, baseRevision };
+  const sentInBackground = useRef(false);
   useEffect(
     () => () => {
-      if (latest.current.dirty) {
-        drafts.set(draftKey, {
-          draft: latest.current.draft,
-          baseRevision: latest.current.baseRevision,
-        });
-      } else {
-        drafts.delete(draftKey);
-      }
+      // The background save keeps the edit itself, if it fails.
+      if (sentInBackground.current) return;
+      const { draft, dirty, baseRevision } = latest.current;
+      keepUnsavedEdit(draftKey, dirty ? { draft, baseRevision, error: failure } : null);
     },
     [draftKey],
   );
@@ -409,7 +416,7 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
   };
 
   const after = async (message: string, next: boolean) => {
-    drafts.delete(draftKey);
+    keepUnsavedEdit(draftKey, null);
     toast.show(message);
     // The next string opens while the refresh runs, so a save waits for one round trip only.
     const refreshed = props.onChanged([detail.id]);
@@ -426,19 +433,17 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
       (inputs.current.get(form) ?? inputs.current.get(forms[0]))?.focus();
       return;
     }
+    // A string that changed meanwhile, or whose save failed, saves here: the answer needs reading.
+    const needsAttention = changedMeanwhile || conflict !== undefined || failure !== undefined;
+    if (!needsAttention) {
+      sendAndContinue(revision);
+      return;
+    }
     const hadFocus = focusInPanel();
     setBusy("save");
     setActionError(undefined);
     try {
-      if (canEdit) {
-        await saveTranslation(detail.id, tag, { value, baseRevision: revision });
-      } else {
-        await suggest(detail.id, tag, {
-          kind: current ? "correction" : "translation",
-          value,
-          baseRevision: revision,
-        });
-      }
+      await send(revision);
       setEdit({ draft, pristine: draft, baseRevision: revision });
       setConflict(undefined);
       await after(
@@ -454,6 +459,42 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
       setBusy(null);
       keepFocus(hadFocus);
     }
+  };
+
+  const send = (revision: number) =>
+    canEdit
+      ? saveTranslation(detail.id, tag, { value, baseRevision: revision })
+      : suggest(detail.id, tag, {
+          kind: current ? "correction" : "translation",
+          value,
+          baseRevision: revision,
+        });
+
+  /** Opens the next string while the save runs; a failed save keeps the edit for later. */
+  const sendAndContinue = (revision: number) => {
+    const name = stringName(detail.file, detail.key);
+    sentInBackground.current = true;
+    saveInBackground(
+      draftKey,
+      { draft, baseRevision: revision },
+      () => send(revision),
+      async () => {
+        const key = stringKey(detail.id, tag);
+        await Promise.all([
+          queryCache.fetch(key, () => getString(detail.id, tag, { fresh: true }), { force: true }),
+          props.onChanged([detail.id]),
+        ]);
+      },
+    ).then(
+      () =>
+        toast.show(
+          canEdit
+            ? `Saved ${name}: proofread (blue) now.`
+            : `Suggestion for ${name} sent. A manager will review it.`,
+        ),
+      () => toast.show(`${name} wasn't saved. Open it to try again.`, "error"),
+    );
+    props.onNext();
   };
 
   const saveAndNext = () => {

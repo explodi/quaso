@@ -265,7 +265,7 @@ browserTest(
 );
 
 browserTest(
-  "Ctrl+Enter saves; when the server refuses the save, the page says why and the text stays",
+  "Ctrl+Enter opens the next string while the save runs; a refused save keeps its text",
   { seed: true, session: MANAGER_SESSION },
   async ({ server, browser }) => {
     const { strings } = await getStrings(server, "fr", "&state=untranslated");
@@ -278,8 +278,21 @@ browserTest(
     );
     await page.keyboard.type("Bonjour");
     await press(page, "Enter", ["Control"]);
+    await waitFor(page, (id) => new URLSearchParams(location.search).get("id") !== id, [
+      String(target.id),
+    ]);
     // The stand-in manager session exists only in the browser: the server has no session
-    // cookie, so it refuses the save, and the page says so.
+    // cookie, so it refuses the save, and the string's row says so.
+    const notSaved = await waitFor(
+      page,
+      () => document.querySelector(".row-link:has(.row-not-saved) .row-key code")?.textContent,
+    );
+    assertEquals(notSaved, target.key);
+
+    // Opening it again shows why, with the text as it was typed.
+    await page.evaluate(() =>
+      document.querySelector<HTMLElement>(".row-link:has(.row-not-saved)")!.click(),
+    );
     await waitFor(page, () =>
       document
         .querySelector('.pane-panel [role="alert"]')
