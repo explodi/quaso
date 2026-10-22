@@ -246,6 +246,11 @@ browserTest(
     );
     await page.keyboard.type("Bonjour");
     await press(page, "Enter", ["Control"]);
+    // The save runs in the background: its string's row says it failed, and opening it says why.
+    await waitFor(page, () => document.querySelector(".row-not-saved") !== null);
+    await page.evaluate(() =>
+      document.querySelector<HTMLElement>(".row-link:has(.row-not-saved)")!.click(),
+    );
     await waitFor(
       page,
       () => document.querySelector('.pane-panel [role="alert"] a')?.textContent === "Sign in",
@@ -256,7 +261,9 @@ browserTest(
         .querySelector<HTMLAnchorElement>('.pane-panel [role="alert"] a')!
         .getAttribute("href"),
     );
-    assertEquals(signIn, `/signin?next=${encodeURIComponent(`/translate/fr?id=${target.id}`)}`);
+    const here = await page.evaluate(() => location.pathname + location.search);
+    assertEquals(new URLSearchParams(here.split("?")[1]).get("id"), String(target.id));
+    assertEquals(signIn, `/signin?next=${encodeURIComponent(here)}`);
     const after = await counts();
     assertEquals(after.saves, before.saves + 1);
     assert(after.sessions > before.sessions, "the session wasn't fetched again");
