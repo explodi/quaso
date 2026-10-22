@@ -512,6 +512,11 @@
   border-radius: 0;
 }
 
+.row-not-saved {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
 /* --- The translation panel. */
 
 .panel {

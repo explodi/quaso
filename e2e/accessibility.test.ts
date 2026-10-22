@@ -198,15 +198,25 @@ browserTest(
     await page.keyboard.type("Bonjour");
     await focusButton(page, "Save", ".panel-actions");
     await press(page, "Enter");
+    // The save fails in the background; trying again on the string saves in the foreground.
+    await waitFor(page, () => document.querySelector(".row-not-saved") !== null);
+    await page.evaluate(() =>
+      document.querySelector<HTMLElement>(".row-link:has(.row-not-saved)")!.click(),
+    );
+    await waitFor(page, () => document.querySelector('.pane-panel [role="alert"]') !== null);
+    await focusButton(page, "Save", ".panel-actions");
+    await press(page, "Enter");
     // Busy: announced as busy, still focused, and a second press does nothing.
     await waitFor(page, () => document.activeElement?.getAttribute("aria-busy") === "true");
     assertEquals(await focused(page), "BUTTON:Save");
     await waitFor(
       page,
       () =>
-        document
+        document.activeElement?.getAttribute("aria-busy") !== "true" &&
+        (document
           .querySelector('.pane-panel [role="alert"]')
-          ?.textContent?.includes("The disk is full.") ?? false,
+          ?.textContent?.includes("The disk is full.") ??
+          false),
     );
     assertEquals(await focused(page), "BUTTON:Save");
     assertEquals(
