@@ -6,7 +6,7 @@ Start with the [quick start](README.md) if you need an overview. Follow this gui
 [the migration guide](migrate-from-crowdin.md), then return here.
 
 You need an instance with an administrator account, Node 22 or later with npm, and
-[i18next JSON v4 source files](file-formats.md) in your repository. The examples use English sources in
+[JSON source files using i18next or ICU MessageFormat](file-formats.md) in your repository. The examples use English sources in
 `src/locales/en/`, Spanish and French targets, and `translate.example.com`. Replace the
 hostname and language tags with yours. An administrator must save a Gemini API key in **Settings → AI translation** before the
 automatic translation step. A large language model (LLM) then produces translations for review.
@@ -62,6 +62,10 @@ Check that `quaso.config.json` exists. For this example, its source pattern must
 `es/menus/play.json`. For existing folder names such as `zh` for Simplified Chinese, use
 `--languages es,fr,zh-Hans --language-mapping zh-Hans=zh` when initializing. If a config
 already exists, review it instead; `init` does not overwrite it.
+
+Before uploading, [choose your message format](file-formats.md#choose-your-message-format) in
+**Settings → Placeholders**. Leave **ICU MessageFormat** off for i18next JSON v4; turn it on for
+ICU messages, including i18next-icu. The following workflow is the same for both.
 
 ## 2. Upload and check the files
 

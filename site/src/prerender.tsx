@@ -14,12 +14,12 @@ import { GFM_CSS, HOME, SITE_CSS } from "./paths.ts";
 export const TITLE = "Quaso — translate and review your game's text";
 
 const DESCRIPTION =
-  "Translate i18next game files and Markdown documents with Gemini or your team, review changes, and download " +
+  "Translate i18next or ICU MessageFormat in JSON and Markdown with Gemini or your team, review changes, and download " +
   "accepted translations into your builds. Self-hosted and open source.";
 
 const DOCS_DESCRIPTION =
   "Documentation for Quaso, an open-source localization platform for " +
-  "apps and games that use i18next.";
+  "apps and games that use i18next or ICU MessageFormat.";
 
 function toHtml(element: ReactElement): string {
   return `<!doctype html>\n${renderToStaticMarkup(element)}\n`;

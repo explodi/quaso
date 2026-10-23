@@ -43,6 +43,15 @@ this guide uses English. Keep the setup key out of Git.
 Quaso's website is public. Visitors can read uploaded source text and translations without an
 account. Upload only text intended for that audience.
 
+Before uploading, choose the message format your game reads in **Settings → Placeholders**:
+
+- **i18next JSON v4** (`{{name}}`, separate plural keys): leave **ICU MessageFormat** off.
+- **ICU MessageFormat** (`{name}`, plural or select blocks inside strings): turn **ICU MessageFormat** on.
+  This includes games using i18next-icu or another ICU MessageFormat library.
+
+This setting applies to the whole project, including Markdown. It does not convert your strings.
+See [the comparison and examples](file-formats.md#choose-your-message-format) if you are unsure.
+
 ## 2. Connect your game and upload
 
 While signed in as an administrator, open **Account → API keys** and create a key with the **upload** scope.

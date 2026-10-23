@@ -1,7 +1,58 @@
 # Supported files and translation checks
 
-Quaso reads and writes i18next JSON v4 files and Markdown documents. Use this reference to prepare source files, understand
-plural forms and placeholders, and resolve translation checks.
+Quaso supports **i18next JSON v4** and **ICU MessageFormat** projects. It reads and writes JSON
+files and Markdown documents. Use this reference to choose a message format, prepare source
+files, and resolve translation checks.
+
+## Choose your message format
+
+The **file format** determines how text is stored: JSON holds keyed strings, while Markdown is
+translated as a whole document. The **message format** determines how your game reads the text
+inside those files: how it fills in names and numbers, and chooses plural or select cases.
+
+Choose the message format your game already uses. An administrator sets it in
+**Settings → Placeholders → ICU MessageFormat** before the first upload:
+
+| Your game's message format               | ICU MessageFormat setting | Placeholder example | Plural example                                              |
+| ---------------------------------------- | ------------------------- | ------------------- | ----------------------------------------------------------- |
+| i18next JSON v4                          | Off (default)             | `{{name}}`          | Separate keys: `coins_one`, `coins_other`                   |
+| ICU MessageFormat, including i18next-icu | On                        | `{name}`            | One string: `{count, plural, one {# coin} other {# coins}}` |
+
+The setting applies to every JSON string and Markdown document in the project. Quaso does not
+auto-detect a format per file or convert between formats. With ICU enabled, `{{name}}` and `$t(…)`
+are not treated as i18next placeholders or references. Custom placeholder delimiters are also
+ignored; changing delimiters to `{` and `}` alone does not enable ICU blocks.
+
+### The same messages in each format
+
+An **i18next JSON v4** source file uses double braces for placeholders and separate plural keys:
+
+```json
+{
+  "welcome": "Welcome, {{name}}",
+  "coins_one": "{{count}} coin",
+  "coins_other": "{{count}} coins"
+}
+```
+
+An **ICU MessageFormat** source file stores the plural cases inside one JSON string:
+
+```json
+{
+  "welcome": "Welcome, {name}",
+  "coins": "{count, plural, one {# coin} other {# coins}}"
+}
+```
+
+In the ICU example, `count` chooses a case and `#` inserts the number. A translator changes
+`coin` and `coins`, keeps the argument and block syntax, and supplies the plural categories
+needed by the target language. ICU also supports `select` and `selectordinal` blocks, formatted
+arguments, and nested blocks; see [ICU MessageFormat](#icu-messageformat).
+
+Both projects use the same CLI commands and file mappings. Downloads keep the project's message
+syntax for your existing runtime library; the game needs no connection to Quaso. ICU mode still
+groups sibling keys such as `coins_one` and `coins_other`; if those are unrelated literal keys,
+use [plural exclusions](#plural-and-ordinal-forms).
 
 ## Source file structure
 
@@ -9,7 +60,7 @@ A JSON source file must contain an object. Quaso reads nested objects and arrays
 key order. It rejects invalid JSON and duplicate keys. JSON comments and trailing commas are not
 supported.
 
-This is a valid source file:
+This is a valid source file using the default i18next message format:
 
 ```json
 {

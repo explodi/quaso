@@ -4,9 +4,23 @@
 
 # Quaso
 
-Quaso is a self-hosted tool for translating games that use i18next JSON files and Markdown documents. Upload source text,
+Quaso is a self-hosted tool for translating games that use **i18next or ICU MessageFormat**, with
+source text in JSON files or Markdown documents. Upload source text,
 translate it with Gemini or your team, and download the translations into your game. Your game
 loads those files without a connection to Quaso.
+
+## Supported message formats
+
+- **i18next JSON v4** (default): `{{name}}` placeholders, `$t(…)` nesting references, and
+  plural keys such as `coins_one` and `coins_other`.
+- **ICU MessageFormat**: `{name}` arguments and `plural`, `select`, and `selectordinal` blocks
+  inside strings. Use it with i18next-icu or another ICU MessageFormat library. Enable
+  **ICU MessageFormat** in **Settings → Placeholders** before the first upload.
+
+The message format applies to the whole project, including Markdown documents. Both use the
+same upload, translation, and download workflow. See the
+[comparison and JSON examples](docs/file-formats.md#choose-your-message-format) to choose the
+setting that matches your game.
 
 ## Quick start
 
