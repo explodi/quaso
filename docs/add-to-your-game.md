@@ -128,7 +128,10 @@ on the instance. Review import refusals before proceeding. For a one-time import
 existing proofread values, use `upload --import-translations es:blue` instead.
 
 See [the CLI config reference](cli.md#the-config-file) for all fields, patterns, and path rules.
-See [File formats](file-formats.md) for placeholders, plural groups, and length limits.
+See [File formats](file-formats.md) for placeholders, plural groups, and length limits. If your
+game reads strings as ICU MessageFormat, as with i18next-icu, turn on **ICU MessageFormat** in
+**Settings → Placeholders** before the first upload; refer to
+[ICU MessageFormat](file-formats.md#icu-messageformat).
 
 ## CI
 

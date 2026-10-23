@@ -127,6 +127,12 @@ Hover over a reference chip to see its source text. Keep each reference where it
 translation. Saving restores the original reference syntax. If this numbered notation would
 conflict with the string's text, the editor keeps the original references visible.
 
+In a project that uses ICU MessageFormat, placeholders look like `{name}` or `#`, and a string can
+hold blocks such as `{n, plural, one {# coin} other {# coins}}`. The source shows a block's syntax
+in grey monospace. Translate the text inside each case and keep the rest. A plural block needs one
+case per plural category of your language. To write a literal `{` or `'` in your translation, refer
+to [braces and apostrophes](file-formats.md#braces-and-apostrophes).
+
 The editor checks for missing or extra placeholders and references, missing plural forms, empty
 translations, and length limits as you type. A missing placeholder or reference turns its chip red.
 For JSON strings, leading and trailing whitespace and the number of line breaks must match the

@@ -115,15 +115,28 @@ In **Settings → Placeholders**, an administrator can change the main placehold
 add extra delimiter pairs, and mark particular placeholders optional for selected languages.
 These settings affect Quaso's checks; configure your game to interpret the same syntax.
 
-Plural forms have a special rule for `count`: a form that refers to exactly one number can omit
+Plural groups have a special rule for `count`: a form that refers to exactly one number can omit
 that placeholder. Do not assume every language's `one` category means only the number 1. Use the
-examples and checks shown for that language.
+examples and checks shown for that language. ICU plural blocks have the same rule for `#`; refer
+to [ICU MessageFormat](#icu-messageformat).
 
 ## ICU MessageFormat
 
 If your app uses i18next-icu or another ICU MessageFormat library, turn on **ICU MessageFormat** in
-**Settings → Placeholders**. Quaso then reads ICU in JSON strings and in Markdown documents instead
-of `{{name}}` and `$t(…)`:
+**Settings → Placeholders**. Quaso then reads ICU in JSON strings and in Markdown documents.
+
+The setting applies to the whole project. With it on, `{{name}}` and `$t(…)` are no longer
+placeholders or references, and the prefix, suffix and extra delimiters described above are not
+used. Turn it on only if your app reads every string as ICU.
+
+Quaso still groups sibling keys such as `coins_one` and `coins_other` into plural strings, and
+checks the ICU in each form. If your app uses ICU plural blocks only and some keys merely look like
+plural groups, add those keys to `pluralExclusions`.
+
+### Arguments and blocks
+
+Arguments such as `{name}`, `{price, number}` and `{day, date, short}` are placeholders. So is `#`
+in a plural case: it stands for the number. A **block** chooses one of its cases by an argument:
 
 ```
 {style, select,
@@ -133,31 +146,73 @@ of `{{name}}` and `$t(…)`:
 }
 ```
 
-Arguments such as `{name}`, `{n, number}` and `#` in a plural case are placeholders. Translate
-only the text inside each case. Keep each block's argument, its type (`select`, `plural` or
-`selectordinal`) and its case keys as written. The checks compare each case with the English case
-of the same key:
+Translate only the text inside each case. Keep each block's argument, its type (`select`, `plural`
+or `selectordinal`), any `offset:` and, in a select block, its case keys as written. Quaso does not
+check `offset:`. Blocks can sit inside the cases of other blocks; the checks compare each level of
+nesting in turn.
+
+The editor shows a block's syntax, such as `{n, plural, one {`, in grey monospace in the source
+text. Chips above the input insert the arguments of every case.
+
+### Plural blocks
+
+A `plural` block has one case per plural category of the language, not of the English. The English
+
+```
+{n, plural, one {# coin} other {# coins}}
+```
+
+becomes, in Polish, which has four categories:
+
+```
+{n, plural, one {# moneta} few {# monety} many {# monet} other {# monety}}
+```
+
+The editor shows each language's categories, with example numbers, for plural strings. A
+`selectordinal` block works the same way with ordinal categories: English has `one`, `two`, `few`
+and `other` (1st, 2nd, 3rd, 4th), while German only has `other`. A language's plural override
+applies to its blocks too.
+
+An exact case such as `=0 {No coins}` covers one number in every language. Keep each exact case of
+the English; you may add exact cases the English doesn't have.
+
+Each case is compared with the English case of the same key, or with the English `other` case when
+the English has no such key. Polish `few` and `many` therefore need the same placeholders as the
+English `other`. A case that covers exactly one number, such as `one` in German or `=1`, may leave
+out `#` and the block's argument.
+
+### Checks
 
 - `icu_structure` (error): a block is missing, broken or not in the English, a select block's
-  cases differ from the English's, or an exact case such as `=0` is missing.
-- `plural_form_missing` and `plural_form_unexpected` (errors): a plural block needs one case for
-  each plural category of the target language, such as `one`, `few`, `many` and `other` in Polish,
-  and no others. Exact cases such as `=0` may be added.
-- `placeholder_missing` and `placeholder_extra` (errors) name the case they are about. A plural
-  case that covers exactly one number, such as `one` in German or `=1`, may leave out `#`.
+  cases differ from the English's, a plural block has a case that isn't a plural category, or an
+  exact case such as `=0` is missing. A block with a broken case, such as an unclosed `{`, counts
+  as missing.
+- `plural_form_missing` and `plural_form_unexpected` (errors): a plural block lacks a case for one
+  of the target language's categories, or has a case for a category the language doesn't use.
+- `placeholder_missing` and `placeholder_extra` (errors) name the case they are about, such as "in
+  the few case of {n, plural}".
+
+### Braces and apostrophes
 
 A `{` that starts no argument, such as one in a code block of a Markdown document, is plain text.
-Write a literal brace in a translation as `'{'`, as ICU does.
+To write a brace that does start one as text, quote it with apostrophes, as ICU does:
+
+- `'{'` and `'}'` are literal braces, and `'#'` is a literal `#` in a plural case.
+- `''` is one apostrophe.
+- An apostrophe before any other character is just an apostrophe: `l'alcalde` needs no change.
+- An apostrophe right before `{` starts quoted text, so `l'{name}` shows `{name}` literally and the
+  check reports the placeholder missing. Write `l''{name}`.
+- Quoted text that isn't closed with another apostrophe runs to the end of the message.
 
 ## Errors and warnings
 
 The editor, translation jobs, and imports use the same core checks. The server makes the final
 decision using its language rules.
 
-| Result  | Examples                                                                                                                                                                                                                | Effect                                     |
-| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
-| Error   | Missing or extra placeholders, changed nesting references, missing plural forms, text over a length limit, changed edge whitespace or line-break counts, a changed document paragraph count, or an invalid value shape. | Normal saves and LLM results are rejected. |
-| Warning | Text identical to the source, changed numbers or tags, repeated spaces, changed final punctuation, or a missing glossary term.                                                                                          | The value can be saved, but needs review.  |
+| Result  | Examples                                                                                                                                                                                                                                                | Effect                                     |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| Error   | Missing or extra placeholders, changed nesting references, missing plural forms, a missing or changed ICU block, text over a length limit, changed edge whitespace or line-break counts, a changed document paragraph count, or an invalid value shape. | Normal saves and LLM results are rejected. |
+| Warning | Text identical to the source, changed numbers or tags, repeated spaces, changed final punctuation, or a missing glossary term.                                                                                                                          | The value can be saved, but needs review.  |
 
 Blank translations are normally errors. A form can remain blank if its matching source form
 is also blank and its whitespace matches after line endings are normalized. An import with `--allow-qa-errors` can retain values with quality errors; this is an explicit
