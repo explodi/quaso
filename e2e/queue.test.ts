@@ -88,7 +88,9 @@ browserTest(
     await press(page, "ArrowUp", ["Alt", "Shift"]);
     await panel("k04");
 
-    await page.reload({ waitUntil: "networkidle0" });
+    // Save-and-next advances before writes finish; wait until the unload guard allows reload.
+    await waitFor(page, () => dispatchEvent(new Event("beforeunload", { cancelable: true })));
+    await page.reload({ waitUntil: "domcontentloaded" });
     await panel("k04");
     await waitFor(page, () =>
       document.querySelector('[data-index="0"] .row-key')?.textContent?.includes("k04"),
