@@ -35,6 +35,7 @@ import type {
   AddLanguageResult,
   AdminInfo,
   FileSettings,
+  FolderSettings,
   LanguageSettings,
   RenameRequest,
   RenameResult,
@@ -45,6 +46,7 @@ import type {
   SecretStatus,
   SecretsResult,
   LlmTestResult,
+  UpdateFolderRequest,
   UpdateLanguageRequest,
   UpdateSettingsRequest,
   UpdateStringRequest,
@@ -171,6 +173,8 @@ export interface ServiceApi extends AccountsApi, LlmMethods, LaterApi, LaterApi 
   removeLanguage(actor: Actor, input: { tag: string }): Promise<{ ok: true }>;
   /** Managers and administrators: the file's context for the LLM. */
   updateFile(actor: Actor, input: { id: number; context?: string }): Promise<FileSettings>;
+  /** Managers and administrators: the context of every file beneath a folder; blank removes it. */
+  updateFolder(actor: Actor, input: UpdateFolderRequest): Promise<FolderSettings>;
   /** Administrators: the description and a length limit not set by the CLI config. */
   updateString(
     actor: Actor,

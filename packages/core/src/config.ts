@@ -16,6 +16,17 @@ export const LanguageTag = s
   )
   .describe("A BCP 47 language tag, such as de, pt-BR or zh-Hans");
 
+/** A folder below the project's root on the server, such as `text` or `text/menus`. */
+export const FolderPath = s
+  .refine(s.string({ minLength: 1, maxLength: 512 }), (path) => {
+    if (path.startsWith("/") || path.includes("\\")) return "must be relative, with / separators";
+    if (path.split("/").some((part) => part === "" || part === "." || part === "..")) {
+      return "must not contain empty, . or .. segments, or end with /";
+    }
+    return undefined;
+  })
+  .describe("A folder on the server, such as text or text/menus");
+
 export const FileMapping = s.object({
   source: s
     .string({ minLength: 1 })
@@ -33,13 +44,16 @@ export const FileMapping = s.object({
     .array(s.string({ minLength: 1 }))
     .optional()
     .describe("Globs of source files to leave out"),
+  folder: FolderPath.optional().describe(
+    "A folder the server keeps these files in, such as text: text/menus/main.json instead of menus/main.json. Translations still go to {path} without it",
+  ),
 });
 
 export const LengthLimit = s.object({
   file: s
     .string({ minLength: 1 })
     .describe(
-      "The file's path as the server knows it: below the folder where the glob starts, such as store.json",
+      "The file's path as the server knows it: below the folder where the glob starts, inside the mapping's folder, such as store.json",
     ),
   key: s
     .string({ minLength: 1 })

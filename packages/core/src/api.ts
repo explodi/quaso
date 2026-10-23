@@ -8,7 +8,13 @@
  * HTTP API, the direct call to the service and the internal API with Cloudflare storage.
  */
 import type { CheckResult } from "./checks.ts";
-import { LanguageTag, LengthLimit, MAX_LENGTH_LIMIT, PluralExclusion } from "./config.ts";
+import {
+  FolderPath,
+  LanguageTag,
+  LengthLimit,
+  MAX_LENGTH_LIMIT,
+  PluralExclusion,
+} from "./config.ts";
 import { formatForPath } from "./documents.ts";
 import type { PluralOverride } from "./plurals.ts";
 import { type Infer, s } from "./schema.ts";
@@ -1325,6 +1331,8 @@ export interface SettingsResult {
   defaultPromptTemplate: string;
   languages: LanguageSettings[];
   files: { id: number; path: string; context: string; generatedContext: string | null }[];
+  /** Every folder that holds an active file, outermost first, with the context a person wrote. */
+  folders: { path: string; context: string }[];
   /** Models the provider offers, for the model picker; empty without a provider. */
   models: string[];
   llmAvailable: boolean;
@@ -1362,6 +1370,13 @@ export const UpdateFileRequest = s.object({
 });
 export type UpdateFileRequest = Infer<typeof UpdateFileRequest>;
 
+/** `PATCH /folders`: the context of every file beneath a folder, at any depth. */
+export const UpdateFolderRequest = s.object({
+  path: FolderPath,
+  context: s.string({ maxLength: 20_000 }),
+});
+export type UpdateFolderRequest = Infer<typeof UpdateFolderRequest>;
+
 /** `POST /languages`: the new language, and warnings such as missing plural rules. */
 export interface AddLanguageResult {
   language: LanguageSettings;
@@ -1370,6 +1385,7 @@ export interface AddLanguageResult {
 
 /** `PATCH /files/{id}`: the file as the Settings page shows it. */
 export type FileSettings = SettingsResult["files"][number];
+export type FolderSettings = SettingsResult["folders"][number];
 
 /** `PATCH /strings/{id}` */
 export interface UpdateStringResult {

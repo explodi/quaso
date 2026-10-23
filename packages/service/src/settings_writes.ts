@@ -27,6 +27,7 @@ import {
   type SettingsExtras,
 } from "./settings_api.ts";
 import { planQa, type QaRow } from "./translations.ts";
+import { FOLDER_ROWS, type FolderRow } from "./folders.ts";
 import { withRetries } from "./write.ts";
 
 export interface SettingsWriteOptions {
@@ -50,6 +51,7 @@ export async function updateSettingsAsync(
         stored,
         languages,
         files,
+        folders,
         strings,
         glossary,
         translations,
@@ -65,6 +67,7 @@ export async function updateSettingsAsync(
         {
           sql: "SELECT id, path, context, generated_context FROM files WHERE active = 1 ORDER BY path",
         },
+        FOLDER_ROWS,
         { sql: "SELECT 1 AS found FROM strings LIMIT 1" },
         { sql: "SELECT term, language, kind, translation, case_sensitive FROM glossary_terms" },
         {
@@ -78,6 +81,7 @@ export async function updateSettingsAsync(
           stored: (stored[0]?.data as string | undefined) ?? null,
           languages: (languages as LanguageRow[]).map(toLanguage),
           files: (files as FileRow[]).map(fileSettings),
+          folders: folders as FolderRow[],
           hasStrings: strings.length > 0,
           glossary,
           translations: translations as QaRow[],
@@ -127,7 +131,10 @@ export async function updateSettingsAsync(
       }
       return {
         statements,
-        result: { saved: settingsResult(next, languages, state.files, extras), changed },
+        result: {
+          saved: settingsResult(next, languages, state.files, state.folders, extras),
+          changed,
+        },
       };
     },
   );

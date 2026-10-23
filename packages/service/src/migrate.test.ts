@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { assertEquals, assertRejects } from "@std/assert";
 import { openNodeSqlite } from "./adapters/node_sqlite.ts";
 import { migrate, schemaVersion } from "./migrate.ts";
-import { DATABASE_VERSION, type Migration } from "./migrations.ts";
+import { DATABASE_VERSION, MIGRATIONS, type Migration } from "./migrations.ts";
 
 const FAKE: Migration[] = [
   {
@@ -125,5 +125,25 @@ test(
     for (const table of ["meta", "settings", "strings", "translations", "history", "api_tokens"]) {
       assertEquals(tables.includes(table), true, table);
     }
+  }),
+);
+
+test(
+  "migration 6 keeps a version 5 project's files and adds folder context",
+  withDatabase(async (sql) => {
+    await migrate(sql, { migrations: MIGRATIONS.slice(0, 5) });
+    sql.run(
+      `INSERT INTO files (path, repo_path, format, context, created_at, updated_at)
+       VALUES ('text/menus.json', 'text/menus.json', '{}', 'Menus', 100, 100)`,
+    );
+    const result = await migrate(sql, { migrations: MIGRATIONS.slice(0, 6) });
+    assertEquals(result, { from: 5, to: 6, created: false });
+    assertEquals(sql.query("SELECT path, context FROM files"), [
+      { path: "text/menus.json", context: "Menus" },
+    ]);
+    sql.run("INSERT INTO folders (path, context, updated_at) VALUES ('text', 'Game text', 200)");
+    assertEquals(sql.query("SELECT path, context FROM folders"), [
+      { path: "text", context: "Game text" },
+    ]);
   }),
 );

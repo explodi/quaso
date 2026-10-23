@@ -13,6 +13,7 @@ import {
   UpdateLanguageRequest,
   UpdateSettingsRequest,
   UpdateFileRequest,
+  UpdateFolderRequest,
   UpdateStringRequest,
   CreateLanguageRequestRequest,
   ReviewLanguageRequestRequest,
@@ -72,6 +73,7 @@ import { ModelList, SettingsModels } from "./jobs/models.ts";
 import { withdrawSuggestionAsync, suggestAsync, reviewSuggestionsAsync } from "./suggestions.ts";
 import type { TranslationProvider } from "./llm/provider.ts";
 import type { LlmConfiguration } from "./llm/configuration.ts";
+import { updateFolderAsync } from "./folders.ts";
 import { updateFileAsync, updateStringAsync } from "./metadata_writes.ts";
 import { requestLanguageAsync, reviewLanguageRequestAsync } from "./language_requests.ts";
 import { resolveSessionAsync, deleteSessionAsync } from "./sessions.ts";
@@ -123,6 +125,7 @@ export type AsyncWriteMethods = Pick<
   | "removeLanguage"
   | "updateSettings"
   | "updateFile"
+  | "updateFolder"
   | "updateString"
   | "requestLanguage"
   | "reviewLanguageRequest"
@@ -686,6 +689,10 @@ export function asyncWriteMethods(options: {
         UpdateFileRequest.extend({ id: Id }),
         input,
         ({ id, ...request }, actor) => updateFileAsync(options.sql, actor, id, request, clock()),
+      ),
+    updateFolder: (caller, input) =>
+      call(caller, "context", UpdateFolderRequest, input, (request, actor) =>
+        updateFolderAsync(options.sql, actor, request, clock()),
       ),
     updateString: (caller, input) =>
       call(

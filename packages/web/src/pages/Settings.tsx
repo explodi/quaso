@@ -45,6 +45,7 @@ import {
   type StringsPage,
   type StringSummary,
   UpdateFileRequest,
+  UpdateFolderRequest,
   UpdateLanguageRequest,
   UpdateSettingsRequest,
   UpdateStringRequest,
@@ -592,7 +593,7 @@ const PLACEHOLDER_HELP: Record<(typeof PROMPT_PLACEHOLDERS)[number], string> = {
   "%projectInstructions%": "Project instructions",
   "%languageInstructions%": "Target language instructions",
   "%fileName%": "Source file path",
-  "%fileContext%": "Written or generated file context",
+  "%fileContext%": "Folder contexts, then the written or generated file context",
   "%pluralForms%": "Required plural categories and example numbers",
   "%otherLanguages%": "Translations in the selected reference languages",
   "%identicalStrings%": "Proofread translations of matching source text",
@@ -1007,6 +1008,33 @@ function FileContext({ file }: { file: SettingsResult["files"][number] }) {
         />
       </Field>
       <p>Generated context: {file.generatedContext || "None yet."}</p>
+    </SaveForm>
+  );
+}
+function FolderContext({ folder }: { folder: SettingsResult["folders"][number] }) {
+  const [context, setContext] = useState(folder.context);
+  return (
+    <SaveForm
+      title={`${folder.path}/`}
+      save={() =>
+        request("/folders", {
+          method: "PATCH",
+          body: validated(UpdateFolderRequest, { path: folder.path, context }),
+        })
+      }
+    >
+      <Field
+        label="Folder context"
+        path="context"
+        hint="The model reads this with every file in this folder and its subfolders, before the file's own context."
+      >
+        <TextArea
+          autoGrow={false}
+          rows={3}
+          value={context}
+          onChange={(e) => setContext(e.target.value)}
+        />
+      </Field>
     </SaveForm>
   );
 }
@@ -1547,6 +1575,9 @@ function SettingsContent() {
                   {query.data.files.length === 0 && (
                     <p>Upload your source files to add file context and length limits.</p>
                   )}
+                  {query.data.folders.map((folder) => (
+                    <FolderContext key={folder.path} folder={folder} />
+                  ))}
                   {query.data.files.map((f) => (
                     <FileContext key={f.id} file={f} />
                   ))}

@@ -167,6 +167,25 @@ test("parseConfig checks and normalizes the patterns", () => {
   );
 });
 
+test("parseConfig refuses a folder that isn't a relative path of whole segments", () => {
+  const mapping = { source: "text/en/*.md", translation: "text/{lang}/{path}" };
+  const { problems } = parseConfig(
+    text({
+      ...CONFIG,
+      files: [
+        { ...mapping, folder: "paper/news" },
+        { ...mapping, folder: "/paper" },
+        { ...mapping, folder: "paper/" },
+        { ...mapping, folder: "a/../b" },
+      ],
+    }),
+  );
+  assertEquals(
+    problems.map((problem) => problem.key),
+    ["files[1].folder", "files[2].folder", "files[3].folder"],
+  );
+});
+
 // Regression: an invalid glob in init was exit code 1, "a bug in quaso".
 test("parseConfig refuses globs that can't be compiled", () => {
   const { problems } = parseConfig(

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 /**
  * A batch's prompt context (design §5.6, LLM-5): the project's and the language's
- * instructions, the file and its context, the neighbours with their current translations,
+ * instructions, the file and its context after its folders' contexts, the neighbours with their current translations,
  * the same strings in other languages, current green and proofread translations of identical English, and
  * what each reference stands for. The reads finish before the provider request.
  */
@@ -14,6 +14,7 @@ import { ActorDirectory } from "../actors.ts";
 import type { Sql, SqlRow, Statement } from "../ports.ts";
 import { glossaryText } from "../llm/prompt.ts";
 import type { Facts } from "../facts.ts";
+import { folderContextsOf, foldersOf, type FolderRow } from "../folders.ts";
 import type { PromptContext, PromptString, ReferenceHint } from "../llm/prompt.ts";
 import type { Batch, WorkItem } from "./work.ts";
 
@@ -97,6 +98,10 @@ function promptContextPlan(
     sql: "SELECT context, generated_context FROM files WHERE id = ?",
     params: [batch.fileId],
   });
+  const folders = select({
+    sql: "SELECT path, context FROM folders WHERE path IN (SELECT value FROM json_each(?))",
+    params: [JSON.stringify(foldersOf(batch.path))],
+  });
   const otherTags = settings.llm.context.otherLanguages.filter(
     (tag) => tag !== batch.language && facts.languages.has(tag),
   );
@@ -170,12 +175,18 @@ function promptContextPlan(
     build(rows: SqlRow[][]): PromptContext {
       const fileRow = rows[file][0];
       const writtenContext = String(fileRow?.context ?? "");
-      const fileContext =
+      const ownContext =
         writtenContext.trim() !== ""
           ? writtenContext
           : settings.llm.context.fileContext
             ? String(fileRow?.generated_context ?? "")
             : "";
+      const fileContext = [
+        ...folderContextsOf(batch.path, rows[folders] as FolderRow[]),
+        ownContext,
+      ]
+        .filter((context) => context.trim() !== "")
+        .join("\n\n");
       const identicalStrings: PromptContext["identicalStrings"] = [];
       const seen = new Set<string>();
       for (const index of identical) {

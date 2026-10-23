@@ -119,7 +119,8 @@ never writes outside it. `quaso init` writes a starter file.
 | `files[].source`           | A glob of the source files, such as `src/locales/en/**/*.json`.                                                                                                                                                                                                         |
 | `files[].translation`      | Where translations go, with `{lang}` (the language as your game names it, after `languageMapping`) and `{path}` (the source file's path below the folder where the glob starts).                                                                                        |
 | `files[].exclude`          | Globs of source files to leave out, relative to the project folder. Optional.                                                                                                                                                                                           |
-| `limits`                   | Maximum lengths, such as for app store fields, in user-perceived characters. `file` is the file's path as the instance knows it (below the folder where the glob starts). They win over limits set on the website. Optional.                                            |
+| `files[].folder`           | A folder the instance keeps these files in, such as `game`: `game/menus/main.json` instead of `menus/main.json`. It doesn't change where translations go. Optional.                                                                                                     |
+| `limits`                   | Maximum lengths, such as for app store fields, in user-perceived characters. `file` is the file's path as the instance knows it (below the folder where the glob starts, inside the entry's `folder`). They win over limits set on the website. Optional.               |
 | `pluralExclusions`         | Groups of keys that only look like plurals (`menu.power_one`, `menu.power_other`), named without the category. Optional.                                                                                                                                                |
 | `outdated`                 | What `download` writes for translations of an older source: `"write"` (default), or `"omit"` so the app falls back to its source language.                                                                                                                              |
 | `untranslated`             | What `download` writes for a string that isn't translated: `"source"` (the default), its source text, so every file has every key; or `"omit"`, nothing, for apps that fall back to the source language themselves (for example, i18next with `fallbackLng`). Optional. |
@@ -130,7 +131,10 @@ set. Folders named `node_modules` or starting with a dot are skipped.
 
 **Paths on the instance.** Each source file is known to the instance by its path below the folder
 where its glob starts: with `src/locales/en/**/*.json`, the file `src/locales/en/menus/main.json` is
-`menus/main.json`, and its German translation goes to `src/locales/de/menus/main.json`. Two source
+`menus/main.json`, and its German translation goes to `src/locales/de/menus/main.json`. With
+`"folder": "game"` on the entry, the instance knows it as `game/menus/main.json`, while `{path}`
+stays `menus/main.json`: the folder groups the entry's files on the instance, where a
+[folder context](concepts.md#context-reuse-and-meaning-checks) can describe them all. Two source
 files can't have the same path on the instance. A single file works too:
 `"source": "locales/en.json"` with `"translation": "locales/{lang}.json"`.
 

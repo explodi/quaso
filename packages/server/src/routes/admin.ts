@@ -17,6 +17,7 @@ import {
   RenameRequest,
   s,
   UpdateFileRequest,
+  UpdateFolderRequest,
   UpdateLanguageRequest,
   UpdateSettingsRequest,
   UpdateStringRequest,
@@ -191,6 +192,16 @@ export const ADMIN_ROUTES: ApiRoute[] = [
     body: UpdateFileRequest,
     handle: ({ service, actor, params, body }) =>
       service.updateFile(actor, { ...body, id: params.id }),
+  }),
+  route({
+    method: "PATCH",
+    path: "/folders",
+    operationId: "updateFolder",
+    summary: "A folder's context for the LLM, read with every file beneath it",
+    tag: "Settings",
+    access: "manager",
+    body: UpdateFolderRequest,
+    handle: ({ service, actor, body }) => service.updateFolder(actor, body),
   }),
   route({
     method: "PATCH",

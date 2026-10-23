@@ -95,7 +95,7 @@
     "start": {
       "schemaVersion": {
         "from": 0,
-        "to": 5
+        "to": 6
       },
       "created": true
     },
@@ -3117,7 +3117,7 @@
     },
     "health": {
       "ok": true,
-      "schemaVersion": 5,
+      "schemaVersion": 6,
       "revision": 8,
       "busy": false,
       "nextWakeUp": null
@@ -3240,10 +3240,11 @@
     "backup": {
       "format": "quaso-backup",
       "version": 1,
-      "schemaVersion": 5,
+      "schemaVersion": 6,
       "createdAt": 1790251200000,
       "revision": 8,
       "tables": {
+        "folders": [],
         "quality_jobs": [],
         "source_warnings": [],
         "job_items": [],
@@ -8006,7 +8007,7 @@
           },
           {
             "key": "schema_version",
-            "value": "5"
+            "value": "6"
           },
           {
             "key": "revision",
@@ -8116,6 +8117,7 @@
           "updated_at": 1790251200000
         }
       ],
+      "folders": [],
       "glossary_terms": [
         {
           "id": 1,
@@ -10243,7 +10245,7 @@
         },
         {
           "key": "schema_version",
-          "value": "5"
+          "value": "6"
         },
         {
           "key": "revision",

@@ -174,6 +174,26 @@ test("download --prune deletes a document whose source is gone, never other kind
   );
 });
 
+test("a folder mapping downloads its server paths to {path}, and prunes only what's gone", async () => {
+  await withProject(
+    {
+      "quaso.config.json": {
+        ...CONFIG,
+        files: [{ source: "text/en/**/*.md", translation: "text/{lang}/{path}", folder: "paper" }],
+      },
+      "text/en/news/city_founded.md": ARTICLE,
+      "text/de/news/old_story.md": "Alt\n",
+    },
+    async (dir) => {
+      const fetch = server([file("paper/news/city_founded.md", "de", GERMAN)]);
+      const run = await runCli(["download", "--prune"], { cwd: dir, env: ENV, fetch });
+      assertEquals(run.code, 0, run.stderr);
+      assertEquals(await read(dir, "text/de/news/city_founded.md"), GERMAN);
+      assertEquals(await exists(dir, "text/de/news/old_story.md"), false);
+    },
+  );
+});
+
 test("the download baseline compares a document whole, whatever its final newline", async () => {
   await withProject(PROJECT, async (dir) => {
     const project = await loadProject(dir);

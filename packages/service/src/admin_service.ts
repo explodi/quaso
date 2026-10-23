@@ -16,6 +16,7 @@ import {
   s,
   type Schema,
   UpdateFileRequest,
+  UpdateFolderRequest,
   UpdateLanguageRequest,
   UpdateSettingsRequest,
   UpdateStringRequest,
@@ -40,6 +41,7 @@ import type { LlmConfiguration } from "./llm/configuration.ts";
 import { forbidden, badRequest } from "./errors.ts";
 import type { Action } from "./permissions.ts";
 import type { Scheduler } from "./ports.ts";
+import { updateFolder } from "./folders.ts";
 import { renameKey } from "./rename.ts";
 import {
   addProjectLanguage,
@@ -67,6 +69,7 @@ export type AdminMethods = Pick<
   | "updateLanguage"
   | "removeLanguage"
   | "updateFile"
+  | "updateFolder"
   | "updateString"
   | "renameKey"
   | "backupInfo"
@@ -244,6 +247,8 @@ export function adminMethods(ctx: Context, options: AdminOptions, call: Call): A
       call(actor, "context", UpdateFileRequest.extend({ id: Id }), input, ({ id, ...request }) =>
         updateFile(ctx, id, request),
       ),
+    updateFolder: (actor, input) =>
+      call(actor, "context", UpdateFolderRequest, input, (request) => updateFolder(ctx, request)),
     updateString: (actor, input) =>
       call(actor, "settings", UpdateStringRequest.extend({ id: Id }), input, ({ id, ...request }) =>
         updateString(ctx, id, request),
