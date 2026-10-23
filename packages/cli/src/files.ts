@@ -2,8 +2,8 @@
 /**
  * Local files and the server's paths (design §5.5, §5.10, CLI-5). A source file's server
  * path is its path below the folder where its glob starts (`common.json`,
- * `menus/main.json`); a translation's local path comes from the config's `translation`
- * pattern. The CLI computes every local path itself: a path from the server is only a key
+ * `menus/main.json`), inside its mapping's `folder` when it has one; a translation's local
+ * path comes from the config's `translation` pattern. The CLI computes every local path itself: a path from the server is only a key
  * to find the local source file, and every output path is checked before anything is
  * written.
  */
@@ -16,8 +16,10 @@ import { compareStrings, glob, globBase, globToRegExp } from "./glob.ts";
 export interface SourceFile {
   /** The local path, relative to the project folder, with `/` separators. */
   local: string;
-  /** The server's path: below the folder where its glob starts, with `/` separators. */
+  /** The server's path: `path`, inside the mapping's `folder` when it has one. */
   server: string;
+  /** Its path below the folder where its glob starts, with `/` separators: `{path}`. */
+  path: string;
   /** The index of its entry in the config's `files`. */
   mapping: number;
 }
@@ -54,7 +56,8 @@ export async function collectSources(project: Project): Promise<Sources> {
     }
     for (const local of matches) {
       if (local.endsWith(".descriptions.json")) continue;
-      const server = base === "" ? local : local.slice(base.length + 1);
+      const path = base === "" ? local : local.slice(base.length + 1);
+      const server = serverPath(mapping, path);
       const key = `files[${index}].source`;
       if (formatForPath(server) === undefined) {
         problems.push({
@@ -83,7 +86,7 @@ export async function collectSources(project: Project): Promise<Sources> {
         });
         continue;
       }
-      const file = { local, server, mapping: index };
+      const file = { local, server, path, mapping: index };
       byServer.set(server, file);
       byLocal.set(local, file);
     }
@@ -114,7 +117,12 @@ export function translationPath(project: Project, source: SourceFile, language: 
   const pattern = project.config.files[source.mapping].translation;
   return pattern
     .replaceAll("{lang}", languageFolder(project, language))
-    .replaceAll("{path}", source.server);
+    .replaceAll("{path}", source.path);
+}
+
+/** The server's path of a file at `path` below the folder where its mapping's glob starts. */
+export function serverPath(mapping: { folder?: string }, path: string): string {
+  return mapping.folder === undefined ? path : `${mapping.folder}/${path}`;
 }
 
 /** A path relative to the project folder with `/` separators, or null when it's outside. */

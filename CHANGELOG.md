@@ -7,6 +7,12 @@ Release candidates are for deployment and migration testing. The team decides wh
 
 ### Added
 
+- Folder context: managers write a context for a folder in Settings → Files & length limits, and
+  the LLM reads it with every file in the folder and its subfolders: the folders' contexts,
+  outermost first, then the file's own, in `%fileContext%`. `PATCH /folders` writes one; a blank
+  context removes it. A `folder` on a `files` entry of `quaso.config.json` keeps the entry's files
+  in a folder of their own on the instance (`game/menus/main.json`) without changing where
+  translations go. Schema version 6 adds the `folders` table.
 - ICU MessageFormat: with **ICU MessageFormat** on in Settings → Placeholders, as for
   i18next-icu, JSON strings and Markdown documents are read as ICU. Arguments (`{name}`,
   `{n, number}`) and `#` are placeholders, and blocks such as `{style, select, …}` and

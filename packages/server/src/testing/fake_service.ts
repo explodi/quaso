@@ -284,6 +284,7 @@ export class FakeService implements ServiceApi {
   updateLanguage = notFaked("updateLanguage");
   removeLanguage = notFaked("removeLanguage");
   updateFile = notFaked("updateFile");
+  updateFolder = notFaked("updateFolder");
   updateString = notFaked("updateString");
   renameKey = notFaked("renameKey");
   backupInfo = notFaked("backupInfo");

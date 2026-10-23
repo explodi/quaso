@@ -16,6 +16,7 @@ import {
   absolutePath,
   checkOutputPath,
   selectTranslations,
+  serverPath,
   type Sources,
   translationPath,
 } from "../files.ts";
@@ -368,14 +369,15 @@ export async function findPrunable(
       for (const path of candidates) {
         const match = pattern.exec(path);
         if (!match) continue;
-        const server = match[1];
-        const unsupported = formatForPath(server) === undefined;
-        if (unsupported || server.split("/").some((part) => part === "..")) continue;
-        const sourcePath = base === "" ? server : `${base}/${server}`;
+        const below = match[1];
+        const unsupported = formatForPath(below) === undefined;
+        if (unsupported || below.split("/").some((part) => part === "..")) continue;
+        const sourcePath = base === "" ? below : `${base}/${below}`;
         if (!sourceMatch.test(sourcePath) || excludes.some((exclude) => exclude.test(sourcePath))) {
           continue;
         }
-        if (sources.byServer.has(server) || keep.has(path.toLowerCase())) continue;
+        const known = sources.byServer.has(serverPath(mapping, below));
+        if (known || keep.has(path.toLowerCase())) continue;
         checkOutputPath(project, sources, path, language);
         found.set(path, { path, language });
       }

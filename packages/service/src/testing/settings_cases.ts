@@ -2,12 +2,15 @@
 import { ANONYMOUS, SYSTEM, type Actor } from "../api.ts";
 import { ServiceError } from "../errors.ts";
 import type { Sql } from "../ports.ts";
+import { updateFolderAsync } from "../folders.ts";
 import { getSettingsAsync } from "../settings_api.ts";
 import { DEFAULT_PROMPT_TEMPLATE, defaultSettings } from "../settings.ts";
 import { check, checkEqual } from "./assert.ts";
 import { seedStringReads } from "./strings_cases.ts";
 
 const ADMIN: Actor = { type: "user", userId: 1 };
+const MANAGER: Actor = { type: "user", userId: 2 };
+const CONTRIBUTOR: Actor = { type: "user", userId: 3 };
 const EXTRAS = { models: ["model-a", "model-b"], llmAvailable: true };
 
 async function seed(sql: Sql): Promise<void> {
@@ -53,6 +56,7 @@ export const SETTINGS_CASES: { name: string; run(sql: Sql): Promise<void> }[] = 
         defaultPromptTemplate: DEFAULT_PROMPT_TEMPLATE,
         languages: [],
         files: [],
+        folders: [],
         models: ["model-a", "model-b"],
         llmAvailable: true,
       });
@@ -146,4 +150,68 @@ export const SETTINGS_CASES: { name: string; run(sql: Sql): Promise<void> }[] = 
       await rejected(() => getSettingsAsync(sql, ANONYMOUS, "test", EXTRAS), "unauthorized");
     },
   },
+  {
+    name: "settings list every folder of an active file, outermost first, with its context",
+    async run(sql) {
+      await seedFolders(sql);
+      const result = await getSettingsAsync(sql, ADMIN, "test", EXTRAS);
+      checkEqual(result.folders, [
+        { path: "text", context: "Game text" },
+        { path: "text/menus", context: "" },
+      ]);
+    },
+  },
+  {
+    name: "a manager writes a folder's context, and a blank context removes it",
+    async run(sql) {
+      await seedFolders(sql);
+      const written = await updateFolderAsync(
+        sql,
+        MANAGER,
+        { path: "text/menus", context: "Menus" },
+        200,
+      );
+      checkEqual(written, { path: "text/menus", context: "Menus" });
+      const removed = await updateFolderAsync(sql, MANAGER, { path: "text", context: " " }, 300);
+      checkEqual(removed, { path: "text", context: "" });
+      const result = await getSettingsAsync(sql, ADMIN, "test", EXTRAS);
+      checkEqual(result.folders, [
+        { path: "text", context: "" },
+        { path: "text/menus", context: "Menus" },
+      ]);
+    },
+  },
+  {
+    name: "a folder without an active file is not found, and contributors can't write one",
+    async run(sql) {
+      await seedFolders(sql);
+      const write = (actor: Actor, path: string) => () =>
+        updateFolderAsync(sql, actor, { path, context: "x" }, 200);
+      await rejected(write(MANAGER, "old"), "not_found");
+      await rejected(write(MANAGER, "te_t"), "not_found");
+      await rejected(write(MANAGER, "text/menus/main.json"), "not_found");
+      await rejected(write(CONTRIBUTOR, "text"), "forbidden");
+      await rejected(write(ANONYMOUS, "text"), "unauthorized");
+    },
+  },
 ];
+
+/** Active files in text/ and text/menus/, a hidden one in old/, and contexts on text and old. */
+async function seedFolders(sql: Sql): Promise<void> {
+  await seed(sql);
+  await sql.commit(3, [
+    {
+      sql: `INSERT INTO files (path, repo_path, format, active, created_at, updated_at) VALUES
+        ('text/title.json', 'text/title.json', '{}', 1, 100, 100),
+        ('text/menus/main.json', 'text/menus/main.json', '{}', 1, 100, 100),
+        ('old/gone.json', 'old/gone.json', '{}', 0, 100, 100)`,
+    },
+    {
+      sql: `INSERT INTO folders (path, context, updated_at) VALUES
+        ('text', 'Game text', 100), ('old', 'Removed', 100)`,
+    },
+    {
+      sql: "INSERT INTO users (id, display_name, role, created_at) VALUES (3, 'Helper', 'contributor', 100)",
+    },
+  ]);
+}

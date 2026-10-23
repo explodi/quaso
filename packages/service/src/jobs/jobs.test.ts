@@ -4,7 +4,7 @@ import { test } from "node:test";
  * The whole LLM flow with the fake translator (S5.8): uploads queue jobs, the alarm runs
  * them, and the results follow the state rules of design §5.4.
  */
-import { assert, assertEquals, assertRejects } from "@std/assert";
+import { assert, assertEquals, assertRejects, assertStringIncludes } from "@std/assert";
 import type { PluralForms } from "@quaso/core";
 import { ANONYMOUS, SYSTEM } from "../api.ts";
 import { ServiceError } from "../errors.ts";
@@ -493,6 +493,38 @@ test("a file's context is generated once, and a person's context wins", async ()
   const last = provider.requests[provider.requests.length - 1];
   assert(last.prompt.includes("Words shown on the title screen."));
   assert(!last.prompt.includes(file.generated_context!));
+});
+
+test("a file's prompt has its folders' contexts, outermost first, then its own", async () => {
+  const provider = heldProvider();
+  provider.release();
+  using instance = await startTestService({ provider });
+  const settings = loadSettings(instance.ctx);
+  saveSettings(instance.ctx, {
+    ...settings,
+    llm: {
+      ...settings.llm,
+      autoTranslate: false,
+      context: { ...settings.llm.context, fileContext: false },
+    },
+  });
+  await uploadJson(
+    instance.service,
+    { "text/menus/main.json": { play: "Play" } },
+    { languages: ["de"] },
+  );
+  await instance.service.updateFolder(SYSTEM, {
+    path: "text",
+    context: "Words of a sailing game.",
+  });
+  await instance.service.updateFolder(SYSTEM, { path: "text/menus", context: "Menu buttons." });
+  instance.sql.run("UPDATE files SET context = 'The main menu.'");
+  await instance.service.createJob(SYSTEM, { languages: ["de"] });
+  await drain(instance);
+  assertStringIncludes(
+    provider.requests[0].prompt,
+    "About this file:\nWords of a sailing game.\n\nMenu buttons.\n\nThe main menu.\n",
+  );
 });
 
 test("the upload key's usage, the custom instruction and the model reach the request", async () => {

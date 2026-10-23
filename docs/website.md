@@ -335,7 +335,7 @@ Administrators select a section in **Settings**:
 | Project details       | Project name, description, logo, and links.                                                                                                                      |
 | Placeholders          | Default syntax, additional formats, and language exceptions. Match the game's syntax; changes trigger new quality checks.                                        |
 | Languages             | Target languages, language instructions, and plural-category overrides.                                                                                          |
-| Files & length limits | File context and maximum string lengths. Limits owned by the CLI configuration must be changed there and uploaded.                                               |
+| Files & length limits | Folder and file context and maximum string lengths. Limits owned by the CLI configuration must be changed there and uploaded.                                    |
 | Language requests     | Community requests to add languages.                                                                                                                             |
 | AI translation        | Gemini key, automatic translation, models, reference languages, translation memory, meaning checks, and token budget. Save a new key before **Test Gemini key**. |
 | Email delivery        | Email provider, sender, credentials, and a test message.                                                                                                         |

@@ -69,6 +69,33 @@ test("translationPath: {lang} after languageMapping, {path} with its folders", a
   );
 });
 
+test("a mapping's folder: the server path is inside it, and {path} is not", async () => {
+  await withProject(
+    {
+      "quaso.config.json": {
+        ...CONFIG,
+        files: [
+          { source: "src/locales/en/**/*.json", translation: "src/locales/{lang}/{path}" },
+          { source: "text/en/**/*.md", translation: "text/{lang}/{path}", folder: "text" },
+        ],
+      },
+      ...ENGLISH,
+      "text/en/news/storm.md": "Storm\n",
+    },
+    async (dir) => {
+      const project = await loadProject(dir);
+      const sources = await collectSources(project);
+      const storm = sources.byServer.get("text/news/storm.md")!;
+      assertEquals([storm.local, storm.path], ["text/en/news/storm.md", "news/storm.md"]);
+      assertEquals(translationPath(project, storm, "de"), "text/de/news/storm.md");
+      assertEquals(
+        sources.byServer.get("menus/main.json")?.local,
+        "src/locales/en/menus/main.json",
+      );
+    },
+  );
+});
+
 test("collectSources refuses two files with one server path, and files of other formats", async () => {
   await withProject(
     {

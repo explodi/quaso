@@ -26,6 +26,7 @@ import { type Author, authorFor } from "./actors.ts";
 import type { Actor } from "./api.ts";
 import type { Context } from "./context.ts";
 import { bumpRevision, toJson } from "./db.ts";
+import { FOLDER_ROWS, type FolderRow, folderSettings } from "./folders.ts";
 import { TRANSLATABLE_SQL } from "./entries.ts";
 import { badRequest, conflict, notFound } from "./errors.ts";
 import {
@@ -57,7 +58,14 @@ export interface SettingsExtras {
 
 /** `GET /settings` */
 export function getSettings(ctx: Context, extras: SettingsExtras): SettingsResult {
-  return settingsResult(loadSettings(ctx), loadLanguages(ctx.sql), loadFileSettings(ctx), extras);
+  const folders = ctx.sql.query<FolderRow>(FOLDER_ROWS.sql);
+  return settingsResult(
+    loadSettings(ctx),
+    loadLanguages(ctx.sql),
+    loadFileSettings(ctx),
+    folders,
+    extras,
+  );
 }
 
 /** Settings data and administrative access are captured in the same read batch. */
@@ -67,12 +75,13 @@ export async function getSettingsAsync(
   model: string,
   extras: SettingsExtras,
 ): Promise<SettingsResult> {
-  const [stored, languages, files, ...permissionRows] = await sql.read([
+  const [stored, languages, files, folders, ...permissionRows] = await sql.read([
     { sql: "SELECT data FROM settings WHERE id = 1" },
     { sql: "SELECT tag, instructions, plural_override, created_at FROM languages ORDER BY tag" },
     {
       sql: "SELECT id, path, context, generated_context FROM files WHERE active = 1 ORDER BY path",
     },
+    FOLDER_ROWS,
     ...permissionReadStatements(actor),
   ]);
   permissionsFromRows(actor, permissionRows).require("settings");
@@ -80,6 +89,7 @@ export async function getSettingsAsync(
     settingsFromData((stored[0]?.data as string | undefined) ?? null, model),
     (languages as LanguageRow[]).map(toLanguage),
     (files as FileRow[]).map(fileSettings),
+    folders as FolderRow[],
     extras,
   );
 }
@@ -88,6 +98,7 @@ export function settingsResult(
   settings: ProjectSettings,
   languages: Language[],
   files: FileSettings[],
+  folders: FolderRow[],
   extras: SettingsExtras,
 ): SettingsResult {
   return {
@@ -95,6 +106,10 @@ export function settingsResult(
     defaultPromptTemplate: DEFAULT_PROMPT_TEMPLATE,
     languages: languages.map(languageSettings),
     files,
+    folders: folderSettings(
+      files.map((file) => file.path),
+      folders,
+    ),
     models: extras.models,
     llmAvailable: extras.llmAvailable,
   };
