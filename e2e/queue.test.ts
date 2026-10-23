@@ -88,7 +88,8 @@ browserTest(
     await press(page, "ArrowUp", ["Alt", "Shift"]);
     await panel("k04");
 
-    await page.reload({ waitUntil: "networkidle0" });
+    // The editor's state below signals readiness independently of background requests.
+    await page.reload({ waitUntil: "domcontentloaded" });
     await panel("k04");
     await waitFor(page, () =>
       document.querySelector('[data-index="0"] .row-key')?.textContent?.includes("k04"),
