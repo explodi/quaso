@@ -1,7 +1,7 @@
 # Add Quaso to your game
 
 Connect your game repository to Quaso, choose where translations go, and add checks before a
-release. Quaso reads [i18next JSON v4 files and Markdown documents](file-formats.md). The downloaded files become ordinary
+release. Quaso supports [i18next and ICU MessageFormat in JSON files and Markdown documents](file-formats.md). The downloaded files become ordinary
 game assets; the game needs no connection to Quaso at runtime.
 
 ## Before you start
@@ -18,6 +18,16 @@ to your instance.
 The examples use English source files in `src/locales/en/` and German, French, and Polish as target
 languages. Replace the example hostname, key, paths, and language tags with your own values. For
 an existing Crowdin project, use [Migrate from Crowdin](migrate-from-crowdin.md) instead.
+
+## Choose the message format
+
+Before the first upload, open **Settings → Placeholders** as an administrator. Leave
+**ICU MessageFormat** off for i18next JSON v4 (`{{name}}` and separate plural keys). Turn it on
+for ICU MessageFormat (`{name}` and plural or select blocks inside strings), including i18next-icu.
+The setting applies to all JSON strings and Markdown documents in the project.
+
+The CLI commands and file mappings below work for both. See the
+[comparison and source examples](file-formats.md#choose-your-message-format) for the differences.
 
 ## Connect and upload
 
@@ -128,10 +138,7 @@ on the instance. Review import refusals before proceeding. For a one-time import
 existing proofread values, use `upload --import-translations es:blue` instead.
 
 See [the CLI config reference](cli.md#the-config-file) for all fields, patterns, and path rules.
-See [File formats](file-formats.md) for placeholders, plural groups, and length limits. If your
-game reads strings as ICU MessageFormat, as with i18next-icu, turn on **ICU MessageFormat** in
-**Settings → Placeholders** before the first upload; refer to
-[ICU MessageFormat](file-formats.md#icu-messageformat).
+See [File formats](file-formats.md) for placeholders, plural groups, ICU blocks, and length limits.
 
 ## CI
 

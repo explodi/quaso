@@ -1,9 +1,13 @@
 # @quaso-i18n/cli
 
-Quaso's command-line interface (CLI) uploads i18next JSON v4 and Markdown source files, downloads translations,
+Quaso's command-line interface (CLI) uploads JSON and Markdown source files for **i18next and ICU MessageFormat** projects, downloads translations,
 starts translation jobs, checks progress, and imports existing translations. Commands do not
 prompt for input. JSON output and exit codes support scripts, continuous integration (CI), and AI
 agents.
+
+For ICU projects, enable **ICU MessageFormat** in the instance's **Settings → Placeholders** before
+uploading. Leave it off for i18next JSON v4. Both use the same CLI commands and file mappings;
+see the [message format guide](../../docs/file-formats.md#choose-your-message-format).
 
 ## Quick start
 
