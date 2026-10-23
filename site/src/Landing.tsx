@@ -55,8 +55,8 @@ const FEATURES = [
   {
     art: "scroll",
     title: "Made for game strings.",
-    text: "i18next JSON with plural forms and placeholders, plus Markdown documents translated as whole files. Check structure and length before accepting a translation.",
-    note: "Supported formats: i18next JSON v4 and Markdown",
+    text: "i18next and ICU MessageFormat, with placeholders and plural forms in JSON strings or whole Markdown documents. Choose your project’s message format in Settings → Placeholders. Check structure and length before accepting a translation.",
+    note: "JSON and Markdown · i18next or ICU MessageFormat",
   },
   {
     art: "sailboat",
@@ -268,9 +268,12 @@ export function Landing({ page, hasDoc, repositoryUrl }: LandingProps) {
             </div>
           </div>
           <div className="format-strip">
-            <span className="eyebrow">SUPPORTED FILE FORMATS</span>
+            <span className="eyebrow">SUPPORTED FORMATS</span>
             <span>
               <CheckIcon /> i18next JSON v4
+            </span>
+            <span>
+              <CheckIcon /> ICU MessageFormat
             </span>
             <span>
               <CheckIcon /> Markdown
