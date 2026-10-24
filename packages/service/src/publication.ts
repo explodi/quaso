@@ -109,6 +109,25 @@ export function createPublication(
     });
     return publishing;
   }
+  /**
+   * Arms the next wake-up without publishing: a host that starts on a request must answer it
+   * soon, and a due publication runs from the alarm instead.
+   */
+  async function start() {
+    await withRetries(sql, state, (current) => ({
+      statements:
+        current.sweep === null
+          ? [
+              {
+                sql: "INSERT INTO meta (key, value) VALUES (?, ?)",
+                params: [FILE_SWEEP, String(options.clock() + DAY_MS)],
+              },
+            ]
+          : [],
+      result: null,
+    }));
+    await rearm();
+  }
   const tracked: Sql = {
     ...sql,
     async commit(revision, statements) {
@@ -161,7 +180,12 @@ export function createPublication(
     get busy() {
       return publishing !== null;
     },
-    start: reconcile,
+    start,
+    /** A restored database can name objects this store never held. */
+    async afterRestore() {
+      await publisher.restoreMissingVersions();
+      await reconcile();
+    },
     async alarm() {
       const current = (await state()).state;
       const publishDue = current.pending !== null && current.pending.due <= options.clock();

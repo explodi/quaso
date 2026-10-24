@@ -167,7 +167,7 @@ Each service has a separate role:
 - **D1** is the database (Cloudflare's hosted SQLite): accounts, project settings, strings,
   translations, history and settings. [Time Travel](#backups-and-recovery) provides database
   recovery.
-- **R2** holds published files, retained file versions and the nightly backups.
+- **R2** holds the published file versions and the nightly backups.
 
 A small Durable Object, `QuasoContainer`, starts and stops the container. It holds no project data.
 

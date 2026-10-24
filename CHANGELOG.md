@@ -164,8 +164,18 @@ Release candidates are for deployment and migration testing. The team decides wh
 - The server's remote-storage mode (`SERVICES_URL`, `SERVICE_TOKEN`) and its `LOCATION_HINT`
   setting. The Cloudflare Worker no longer serves the internal API that mode called; a Cloudflare
   deployment keeps its data in D1 and R2 (`deno task cf:setup`).
+- The `published/<language>/<file>` copy of each file's latest version in the object store.
+  Downloads have always read the immutable `versions/` objects, so nothing read these copies.
+  Existing ones can be deleted.
 
 ### Fixed
+
+- A server with many files starts in seconds. It used to publish before it answered, reading
+  every file's stored objects one by one: with a few thousand files on Cloudflare, a start took
+  over an hour and every request got 502. Starting now only schedules the next wake-up, and a
+  pending publication runs in the background. A publication writes only the files that changed,
+  eight at a time, and reads nothing from the store; a restore checks the store once with a
+  listing and rewrites the current versions it lacks.
 
 - On Cloudflare, a deploy reaches the server too: the container a previous deploy started is
   restarted on the new image once it isn't busy. Cloudflare gives a new image only to the next
