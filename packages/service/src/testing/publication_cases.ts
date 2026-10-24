@@ -5,7 +5,6 @@ import { createFakeTranslator } from "../llm/fake.ts";
 import { scriptedProvider } from "../jobs/testing.ts";
 import { LLM_ALARM, PUBLISH_PENDING } from "../publication.ts";
 import { DAY_MS } from "../file_retention.ts";
-import { publishedKey } from "../publisher.ts";
 import type { Sql, Store, Scheduler } from "../ports.ts";
 import { createAsyncService, type AsyncServiceOptions } from "../service_async.ts";
 import { backupJsonStream, documentSource, restoreBackup } from "../backup.ts";
@@ -48,6 +47,12 @@ async function pending(sql: Sql) {
         due: number;
         revision: number;
       });
+}
+async function currentObject(sql: Sql, store: Store) {
+  const [rows] = await sql.read([
+    { sql: "SELECT store_key FROM file_versions WHERE replaced_at IS NULL AND language = 'de'" },
+  ]);
+  return rows.length === 0 ? null : await store.read(String(rows[0].store_key));
 }
 async function versionCount(sql: Sql) {
   const [rows] = await sql.read([{ sql: "SELECT COUNT(*) AS n FROM file_versions" }]);
@@ -163,14 +168,15 @@ export const PUBLICATION_CASES: { name: string; run(sql: Sql): Promise<void> }[]
       await source.api.upload(SYSTEM, { files: [FILE], languages: ["de"] });
       source.time.now = 5100;
       await source.api.alarm();
-      const content = await source.store.read(publishedKey("de", FILE.path));
+      const content = await currentObject(sql, source.store);
       const document = await new Response(backupJsonStream(source.api, SYSTEM)).json();
       await resetUploadSql(sql);
       const target = setup(sql);
       await target.api.start();
       await restoreBackup(target.api, documentSource(document), SYSTEM);
       checkEqual(await versionCount(sql), 1);
-      checkEqual(await target.store.read(publishedKey("de", FILE.path)), content);
+      check(content !== null);
+      checkEqual(await currentObject(sql, target.store), content);
       checkEqual(await pending(sql), null);
     },
   },
@@ -211,7 +217,7 @@ export const PUBLICATION_CASES: { name: string; run(sql: Sql): Promise<void> }[]
       checkEqual(await versionCount(sql), 1);
       checkEqual(await pending(sql), null);
       checkEqual((await api.getHealth(SYSTEM, {})).nextWakeUp, 100 + DAY_MS);
-      check((await store.read(publishedKey("de", FILE.path))) !== null);
+      check((await currentObject(sql, store)) !== null);
     },
   },
   {
@@ -251,7 +257,7 @@ export const PUBLICATION_CASES: { name: string; run(sql: Sql): Promise<void> }[]
     },
   },
   {
-    name: "translation edits publish a new version and language removal retires the old latest copy",
+    name: "translation edits publish a new version and language removal retires the current one",
     async run(sql) {
       const { api, time, store } = setup(sql);
       await api.start();
@@ -270,18 +276,22 @@ export const PUBLICATION_CASES: { name: string; run(sql: Sql): Promise<void> }[]
       await api.removeLanguage(SYSTEM, { tag: "de" });
       time.now = 15100;
       await api.alarm();
-      checkEqual(await store.read(publishedKey("de", FILE.path)), null);
+      checkEqual(await currentObject(sql, store), null);
       checkEqual(await versionCount(sql), 2);
     },
   },
   {
-    name: "a restart publishes immediately from persisted dirty state without waiting for the old deadline",
+    name: "a restart re-arms the persisted publication deadline instead of publishing before it answers",
     async run(sql) {
       const first = setup(sql);
       await first.api.start();
       await first.api.upload(SYSTEM, { files: [FILE], languages: ["de"] });
       const restarted = createAsyncService(first.options);
       await restarted.start();
+      checkEqual(await versionCount(sql), 0);
+      checkEqual(first.calls.at(-1), 5100);
+      first.time.now = 5100;
+      await restarted.alarm();
       checkEqual(await versionCount(sql), 1);
       checkEqual(await pending(sql), null);
       checkEqual((await restarted.getHealth(SYSTEM, {})).nextWakeUp, 100 + DAY_MS);
@@ -303,7 +313,7 @@ export const PUBLICATION_CASES: { name: string; run(sql: Sql): Promise<void> }[]
       time.now = 5100;
       await api.alarm();
       checkEqual(provider.requests.length, 0);
-      check((await store.read(publishedKey("de", FILE.path))) !== null);
+      check((await currentObject(sql, store)) !== null);
       checkEqual((await api.getHealth(SYSTEM, {})).nextWakeUp, 20100);
       time.now = 20100;
       await api.alarm();
@@ -386,6 +396,8 @@ export const PUBLICATION_CASES: { name: string; run(sql: Sql): Promise<void> }[]
         scheduler: { schedule() {}, cancel() {} },
       });
       await restarted.start();
+      first.time.now = 5100;
+      await restarted.alarm();
       checkEqual(await versionCount(sql), 1);
       checkEqual(await pending(sql), null);
     },

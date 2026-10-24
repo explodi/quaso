@@ -30,6 +30,12 @@ async function privateFetch(input: RequestInfo | URL, init?: RequestInit) {
   throw new Error(`Unexpected public request: ${request.url}`);
 }
 const sql = createD1Sql({ fetch: privateFetch });
+async function currentGerman() {
+  const [rows] = await sql.read([
+    { sql: "SELECT store_key FROM file_versions WHERE language = 'de' AND replaced_at IS NULL" },
+  ]);
+  return (await bindings.BACKUPS.get(String(rows[0]?.store_key)))?.text();
+}
 const options = {
   secretKey: "s".repeat(32),
   logger: silentLogger,
@@ -72,9 +78,7 @@ describe("the container's async Cloudflare host", () => {
       await host.service.upload(SYSTEM, { files: [FILE], languages: ["de"] });
       now += 5000;
       await host.alarm();
-      expect(await (await bindings.BACKUPS.get("published/de/menu.json"))?.text()).toBe(
-        '{"hello":"Hello"}\n',
-      );
+      expect(await currentGerman()).toBe('{"hello":"Hello"}\n');
       const key = await host.snapshot();
       const object = await bindings.BACKUPS.get(key);
       expect(object).not.toBeNull();
@@ -104,14 +108,11 @@ describe("the container's async Cloudflare host", () => {
       source.close();
     }
     await resetUploadSql(sql);
-    await bindings.BACKUPS.delete("published/de/menu.json");
     const target = await startCloudflareService({ ...options, backups: true });
     try {
       const result = await restoreBackup(target.service, documentSource(document));
       expect(result.tables.strings).toBe(1);
-      expect(await (await bindings.BACKUPS.get("published/de/menu.json"))?.text()).toBe(
-        '{"hello":"Hello"}\n',
-      );
+      expect(await currentGerman()).toBe('{"hello":"Hello"}\n');
       expect((await target.service.getHealth(SYSTEM, {})).nextWakeUp).toBe(Date.UTC(2026, 9, 4, 3));
     } finally {
       target.close();
@@ -176,9 +177,7 @@ describe("the container's async Cloudflare host", () => {
       expect((await host.service.getHealth(SYSTEM, {})).busy).toBe(true);
       now += 5000;
       await host.alarm();
-      expect(await (await bindings.BACKUPS.get("published/de/menu.json"))?.text()).toBe(
-        '{"hello":"Hello"}\n',
-      );
+      expect(await currentGerman()).toBe('{"hello":"Hello"}\n');
       provider.release();
       await work;
       expect((await host.service.getHealth(SYSTEM, {})).busy).toBe(false);

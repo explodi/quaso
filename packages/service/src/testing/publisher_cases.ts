@@ -2,7 +2,7 @@
 import { createMemoryStore } from "../adapters/memory_store.ts";
 import { SYSTEM } from "../api.ts";
 import type { Sql, Store } from "../ports.ts";
-import { createPublisher, publishedKey } from "../publisher.ts";
+import { createPublisher } from "../publisher.ts";
 import { createAsyncService } from "../service_async.ts";
 import { check, checkEqual } from "./assert.ts";
 
@@ -46,56 +46,18 @@ async function fails(run: () => Promise<unknown>) {
 
 export const PUBLISHER_CASES: { name: string; run(sql: Sql): Promise<void> }[] = [
   {
-    name: "a source change during latest-copy writes is reconciled before shared callers finish",
-    async run(sql) {
-      const api = await seed(sql);
-      const memory = createMemoryStore();
-      let change = true;
-      const store: Store = {
-        ...memory,
-        async write(key, bytes, options) {
-          const result = await memory.write(key, bytes, options);
-          if (change && key.startsWith("published/")) {
-            change = false;
-            await api.upload(SYSTEM, {
-              files: [
-                {
-                  path: "nested/menu.json",
-                  repoPath: "nested/menu.json",
-                  content: '{"hello":"Later source"}',
-                },
-              ],
-            });
-          }
-          return result;
-        },
-      };
-      checkEqual(await createPublisher(sql, store, { clock: () => 200, model: "test" }).publish(), {
-        published: 4,
-      });
-      const rendered = await api.exportFiles(SYSTEM, {});
-      checkEqual(
-        new TextDecoder().decode(
-          (await store.read(publishedKey("de", "nested/menu.json"))) ?? undefined,
-        ),
-        rendered.files[0].content,
-      );
-      checkEqual(
-        await sql.read([
-          { sql: "SELECT COUNT(*) AS n FROM file_versions WHERE replaced_at IS NULL" },
-        ]),
-        [[{ n: 2 }]],
-      );
-    },
-  },
-  {
-    name: "initial publication records both languages and an unchanged run writes nothing",
+    name: "initial publication records both languages and an unchanged run touches no object",
     async run(sql) {
       const api = await seed(sql);
       const memory = createMemoryStore();
       const writes: string[] = [];
+      const reads: string[] = [];
       const store: Store = {
         ...memory,
+        async read(key) {
+          reads.push(key);
+          return memory.read(key);
+        },
         async write(key, bytes, options) {
           writes.push(key);
           return memory.write(key, bytes, options);
@@ -104,7 +66,7 @@ export const PUBLISHER_CASES: { name: string; run(sql: Sql): Promise<void> }[] =
       const publisher = createPublisher(sql, store, { clock: () => 200, model: "test" });
       const before = await revision(sql);
       checkEqual(await publisher.publish(), { published: 2 });
-      checkEqual(writes.length, 4);
+      checkEqual(writes.length, 2);
       const [rows] = await sql.read([
         {
           sql: "SELECT language, file, revision, published_at, replaced_at FROM file_versions ORDER BY language",
@@ -128,13 +90,15 @@ export const PUBLISHER_CASES: { name: string; run(sql: Sql): Promise<void> }[] =
       ]);
       const after = await revision(sql);
       checkEqual(await publisher.publish(), { published: 0 });
-      checkEqual(writes.length, 4);
+      checkEqual(writes.length, 2);
+      checkEqual(reads, []);
       checkEqual(await revision(sql), after);
+      const [current] = await sql.read([
+        { sql: "SELECT store_key FROM file_versions WHERE language = 'de'" },
+      ]);
       const rendered = await api.exportFiles(SYSTEM, {});
       checkEqual(
-        new TextDecoder().decode(
-          (await store.read(publishedKey("de", "nested/menu.json"))) ?? undefined,
-        ),
+        new TextDecoder().decode((await memory.read(String(current[0].store_key))) ?? undefined),
         rendered.files[0].content,
       );
     },
@@ -169,7 +133,7 @@ export const PUBLISHER_CASES: { name: string; run(sql: Sql): Promise<void> }[] =
         ],
       );
       checkEqual(await store.read(before[0].store_key as string), original);
-      checkEqual((await keys(store)).length, 5);
+      checkEqual((await keys(store)).length, 3);
     },
   },
   {
@@ -186,15 +150,14 @@ export const PUBLISHER_CASES: { name: string; run(sql: Sql): Promise<void> }[] =
       await fails(() => createPublisher(failing, store, { clock: () => 200 }).publish());
       checkEqual(await sql.read([{ sql: "SELECT id FROM file_versions" }]), [[]]);
       checkEqual((await keys(store)).length, 2);
-      checkEqual(await store.read(publishedKey("de", "nested/menu.json")), null);
       checkEqual(await createPublisher(sql, store, { clock: () => 200 }).publish(), {
         published: 2,
       });
-      checkEqual((await keys(store)).length, 4);
+      checkEqual((await keys(store)).length, 2);
     },
   },
   {
-    name: "failed version writes cannot commit history or overwrite a published file",
+    name: "failed version writes cannot commit history",
     async run(sql) {
       await seed(sql);
       const memory = createMemoryStore();
@@ -207,30 +170,6 @@ export const PUBLISHER_CASES: { name: string; run(sql: Sql): Promise<void> }[] =
       await fails(() => createPublisher(sql, store).publish());
       checkEqual(await sql.read([{ sql: "SELECT id FROM file_versions" }]), [[]]);
       checkEqual(await keys(memory), []);
-    },
-  },
-  {
-    name: "a crash after row commit repairs the latest copy without adding another version",
-    async run(sql) {
-      await seed(sql);
-      const memory = createMemoryStore();
-      const failing: Store = {
-        ...memory,
-        async write(key, bytes, options) {
-          if (key.startsWith("published/")) throw new Error("crash after row");
-          return memory.write(key, bytes, options);
-        },
-      };
-      const publisher = createPublisher(sql, failing, { clock: () => 200 });
-      await fails(() => publisher.publish());
-      checkEqual(publisher.busy, false);
-      checkEqual(await sql.read([{ sql: "SELECT COUNT(*) AS n FROM file_versions" }]), [
-        [{ n: 2 }],
-      ]);
-      const before = await revision(sql);
-      checkEqual(await createPublisher(sql, memory).publish(), { published: 0 });
-      checkEqual(await revision(sql), before);
-      checkEqual((await keys(memory)).length, 4);
     },
   },
   {
@@ -264,18 +203,11 @@ export const PUBLISHER_CASES: { name: string; run(sql: Sql): Promise<void> }[] =
       checkEqual(await sql.read([{ sql: "SELECT COUNT(*) AS n FROM file_versions" }]), [
         [{ n: 2 }],
       ]);
-      checkEqual((await keys(store)).length, 6);
-      const rendered = await api.exportFiles(SYSTEM, {});
-      checkEqual(
-        new TextDecoder().decode(
-          (await store.read(publishedKey("de", "nested/menu.json"))) ?? undefined,
-        ),
-        rendered.files[0].content,
-      );
+      checkEqual((await keys(store)).length, 4);
     },
   },
   {
-    name: "removal retires current rows and removes latest copies while retaining history",
+    name: "removal retires current rows while retaining history",
     async run(sql) {
       const api = await seed(sql);
       const store = createMemoryStore();
@@ -283,7 +215,6 @@ export const PUBLISHER_CASES: { name: string; run(sql: Sql): Promise<void> }[] =
       await publisher.publish();
       await api.removeLanguage(SYSTEM, { tag: "de" });
       checkEqual(await publisher.publish(), { published: 0 });
-      checkEqual(await store.read(publishedKey("de", "nested/menu.json")), null);
       checkEqual(
         await sql.read([
           { sql: "SELECT language, replaced_at FROM file_versions ORDER BY language" },
@@ -303,15 +234,18 @@ export const PUBLISHER_CASES: { name: string; run(sql: Sql): Promise<void> }[] =
     },
   },
   {
-    name: "restored history can rebuild missing immutable and latest objects without new rows",
+    name: "restored history rebuilds missing version objects without new rows",
     async run(sql) {
       await seed(sql);
       const first = createMemoryStore();
       await createPublisher(sql, first, { clock: () => 200 }).publish();
       const fresh = createMemoryStore();
       const before = await revision(sql);
-      checkEqual(await createPublisher(sql, fresh).publish(), { published: 0 });
-      checkEqual((await keys(fresh)).length, 4);
+      const publisher = createPublisher(sql, fresh);
+      checkEqual(await publisher.restoreMissingVersions(), { restored: 2 });
+      checkEqual(await keys(fresh), await keys(first));
+      checkEqual(await publisher.restoreMissingVersions(), { restored: 0 });
+      checkEqual(await publisher.publish(), { published: 0 });
       checkEqual(await revision(sql), before);
     },
   },

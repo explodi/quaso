@@ -87,15 +87,15 @@ export const NIGHTLY_BACKUP_CASES: { name: string; run(sql: Sql, store: Store): 
         checkEqual(key, "backups/quaso-20261003T120000Z.json.gz");
         const saved = await document(store, key);
         checkEqual(saved.tables.strings.length, 1);
-        await store.delete(["published/de/menu.json"]);
         await resetUploadSql(sql);
         const restored = setup(sql, store).api;
         await restored.start();
         const result = await restoreBackup(restored, documentSource(saved));
         checkEqual(result.tables.strings, 1);
         checkEqual((await restored.exportFiles(SYSTEM, {})).files, original.files);
+        const [published] = await sql.read([{ sql: "SELECT store_key FROM file_versions" }]);
         checkEqual(
-          new TextDecoder().decode((await store.read("published/de/menu.json")) ?? undefined),
+          new TextDecoder().decode((await store.read(String(published[0].store_key))) ?? undefined),
           '{"hello":"Hello"}\n',
         );
       },

@@ -65,7 +65,10 @@ export function createAsyncService(options: AsyncServiceOptions): Service {
       await llm.start();
       await quality.start();
     },
-    afterRestore: () => resume(),
+    afterRestore: async () => {
+      await resume();
+      await publication?.afterRestore();
+    },
   });
   const resume = async () => {
     if ((await unfinishedRestoreAsync(sql))?.resumable) return;

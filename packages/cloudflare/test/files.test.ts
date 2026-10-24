@@ -172,9 +172,8 @@ describe("published downloads through the Worker", () => {
     expect((await call("/files/de/menus%2F..%2Fprivate.json")).status).toBe(400);
     expect((await call("/files/de/menus%FF.json")).status).toBe(400);
   });
-  it("reads the current immutable version even when the latest alias was not repaired", async () => {
+  it("serves the current immutable version from cache until it is replaced", async () => {
     const url = path();
-    await env.BACKUPS.put(`published/de/${FILE}`, "wrong alias");
     expect((await call(url)).text).toBe(CONTENT);
     expect((await call(url)).headers.get("X-Quaso-Cache")).toBe("hit");
     await sql.migrate([{ sql: "UPDATE file_versions SET replaced_at = 10 WHERE language = 'de'" }]);
