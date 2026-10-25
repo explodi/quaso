@@ -21,11 +21,12 @@ import {
   hashValue,
   isDocumentKey,
   type LlmSettings,
+  type StringArgument,
   type TextValue,
   type TranslatableKind,
 } from "@quaso/core";
 import type { Context } from "../context.ts";
-import { fromJson, toJson } from "../db.ts";
+import { fromJson, fromJsonOrNull, toJson } from "../db.ts";
 import { TRANSLATABLE_SQL } from "../entries.ts";
 import { loadLanguages } from "../languages.ts";
 import { ServiceError } from "../errors.ts";
@@ -48,6 +49,8 @@ export interface WorkItem {
   english: TextValue;
   sourceHash: string;
   maxLength: number | null;
+  /** The declared arguments the string receives (`arguments` in the CLI config). */
+  arguments: StringArgument[];
   description: string;
   words: number;
   action: WorkAction;
@@ -133,6 +136,7 @@ type WorkRow = {
   source: string;
   source_hash: string;
   max_length: number | null;
+  arguments: string | null;
   description: string;
   words: number;
   t_colour: string | null;
@@ -207,7 +211,7 @@ function workSelection(scope: WorkScope, language: string, limit: number): State
   const { where, params } = condition(scope, language);
   return {
     sql: `SELECT s.id, s.file_id, f.path, s.position, s.key AS entry_key, s.display_key, s.kind, s.source, s.source_hash,
-            s.max_length, s.description, s.words, t.colour AS t_colour, t.source_hash AS t_hash,
+            s.max_length, s.arguments, s.description, s.words, t.colour AS t_colour, t.source_hash AS t_hash,
             t.revision AS t_revision, t.value AS t_value, ${ENGLISH_WHEN_TRANSLATED} AS t_english
      FROM ${FROM} WHERE ${where} ORDER BY f.path, s.position LIMIT ?`,
     params: [language, ...params, limit],
@@ -248,6 +252,7 @@ function workItemsFromRows(rows: WorkRow[], scope: WorkScope, language: string):
       english: fromJson<TextValue>(row.source),
       sourceHash: row.source_hash,
       maxLength: row.max_length,
+      arguments: fromJsonOrNull<StringArgument[]>(row.arguments) ?? [],
       description: row.description,
       words: row.words,
       action,

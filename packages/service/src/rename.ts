@@ -329,6 +329,7 @@ type RenameSource = RenameEnd & {
   source: string;
   source_hash: string;
   max_length: number | null;
+  arguments: string | null;
 };
 type RenameTranslation = TranslationRow & { people: number };
 
@@ -364,7 +365,7 @@ export async function renameKeyAsync(
           sql: "SELECT COALESCE((SELECT CAST(value AS INTEGER) FROM meta WHERE key = 'revision'), 0) AS revision",
         },
         {
-          sql: `SELECT s.id, f.path, s.key, s.display_key, s.key_path, s.kind, s.active, s.source, s.source_hash, s.max_length FROM strings s JOIN files f ON f.id = s.file_id WHERE s.id IN (${selected}) ORDER BY s.position`,
+          sql: `SELECT s.id, f.path, s.key, s.display_key, s.key_path, s.kind, s.active, s.source, s.source_hash, s.max_length, s.arguments FROM strings s JOIN files f ON f.id = s.file_id WHERE s.id IN (${selected}) ORDER BY s.position`,
           params: [request.file],
         },
         {
@@ -440,6 +441,7 @@ export async function renameKeyAsync(
         kind: target.kind,
         source: target.source,
         max_length: target.max_length,
+        arguments: target.arguments,
       }));
       return {
         statements: [

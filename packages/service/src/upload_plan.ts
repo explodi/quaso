@@ -18,6 +18,7 @@ import type { Statement } from "./ports.ts";
 import { planRenameMove, resolveRenameRows } from "./rename.ts";
 import { diffSourceStrings } from "./source_diff.ts";
 import { historyParams, type HistoryRecord, planQa } from "./translations.ts";
+import { planUploadArguments } from "./upload_arguments.ts";
 import { planUploadLimits } from "./upload_limits.ts";
 import { readUploadFiles } from "./upload_parse.ts";
 import { type RenameCandidate, suggestUploadRenames } from "./upload_renames.ts";
@@ -195,6 +196,7 @@ export function planUpload(
           active: 1,
           max_length: null,
           max_length_locked: 0,
+          arguments: null,
         };
         strings.set(source.id, source);
         inserted.push({ row: source, searchText: entry.searchText });
@@ -353,6 +355,17 @@ export function planUpload(
     row.max_length_locked = change.maxLength === null ? 0 : 1;
     recheck.add(change.id);
   }
+  const argumentPlan = planUploadArguments(
+    request.arguments ?? [],
+    limitTargets.filter((row) => uploadedIds.has(row.file_id)),
+    { icu: settings.syntax.icu === true, partial: request.partial === true, at },
+  );
+  statements.push(...argumentPlan.statements);
+  result.warnings.push(...argumentPlan.warnings);
+  for (const change of argumentPlan.changes) {
+    strings.get(change.id)!.arguments = change.arguments;
+    recheck.add(change.id);
+  }
   const renamedIds = new Set<number>();
   const renameRows = sourceRows.filter(
     (row) => activeFileIds.has(row.file_id) && isTranslatableKind(row.kind),
@@ -429,6 +442,7 @@ export function planUpload(
         kind: source.kind,
         source: source.source,
         max_length: source.max_length,
+        arguments: source.arguments,
       };
     });
   statements.push(...planQa(qa, facts));

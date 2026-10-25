@@ -26,6 +26,7 @@ export async function demoInput(dir = demoDir()): Promise<ScenarioInput> {
       languages: config.languages,
       limits: config.limits,
       pluralExclusions: config.pluralExclusions,
+      arguments: config.arguments,
     },
     imports: DEMO_IMPORTS.flatMap(({ language, as }) => {
       const files = translations.get(language);

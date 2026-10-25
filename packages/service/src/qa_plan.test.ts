@@ -16,6 +16,7 @@ const ROW: QaRow = {
   kind: "text",
   source: '"Hello"',
   max_length: null,
+  arguments: null,
 };
 
 test("QA plan leaves unchanged counts alone", () => {
@@ -43,6 +44,21 @@ test("QA plan uses the project's interpolation syntax", () => {
   const facts = { ...FACTS, syntax: { prefix: "%", suffix: "%" } };
   const row = { ...ROW, source: '"Hello %name%"' };
   assertEquals(planQa([row], facts)[0].params, [1, 0, 1, "de"]);
+});
+
+test("QA plan applies the arguments a string receives, with ICU MessageFormat", () => {
+  const facts = { ...FACTS, syntax: { ...DEFAULT_SYNTAX, icu: true } };
+  const row = {
+    ...ROW,
+    language: "es",
+    source: JSON.stringify("Excited to join {company}!"),
+    value: JSON.stringify(
+      "{authorGender, select, female {¡Emocionada de unirme a {company}!} other {¡Con ganas de unirme a {company}!}}",
+    ),
+    arguments: JSON.stringify([{ name: "authorGender", cases: ["female"], description: "" }]),
+    qa_errors: 1,
+  };
+  assertEquals(planQa([row], facts)[0].params, [0, 0, 1, "es"]);
 });
 
 test("QA plan uses language plural overrides", () => {

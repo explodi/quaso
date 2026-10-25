@@ -67,7 +67,7 @@ function importReadStatements(request: ImportRequest): Statement[] {
       params: [paths],
     },
     {
-      sql: `SELECT s.id, s.file_id, f.path, s.key, s.key_path, s.display_key, s.kind, s.source, s.source_hash, s.max_length, s.active FROM strings s JOIN files f ON f.id = s.file_id WHERE s.active = 1 AND s.file_id IN (${files}) ORDER BY s.file_id, s.position`,
+      sql: `SELECT s.id, s.file_id, f.path, s.key, s.key_path, s.display_key, s.kind, s.source, s.source_hash, s.max_length, s.arguments, s.active FROM strings s JOIN files f ON f.id = s.file_id WHERE s.active = 1 AND s.file_id IN (${files}) ORDER BY s.file_id, s.position`,
       params: [paths],
     },
     {

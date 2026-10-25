@@ -14,6 +14,7 @@ import {
   type StringsQuery,
   type StringsQueueQuery,
   type StringsQueue,
+  type StringArgument,
   type StringSummary,
   type SuggestionInfo,
   type TextValue,
@@ -55,6 +56,8 @@ type SummaryRow = {
   source_hash: string;
   description: string;
   max_length: number | null;
+  /** JSON `StringArgument[]`, or null. */
+  arguments: string | null;
   max_length_locked: number;
   words: number;
   pending: number;
@@ -74,7 +77,7 @@ type SummaryRow = {
 };
 
 const SUMMARY_COLUMNS = `s.id, s.file_id, f.path, s.key, s.display_key, s.kind, s.source,
-  s.source_hash, s.description, s.max_length, s.max_length_locked, s.words,
+  s.source_hash, s.description, s.max_length, s.arguments, s.max_length_locked, s.words,
   (SELECT COUNT(*) FROM suggestions g
    WHERE g.string_id = s.id AND g.language = ? AND g.status = 'pending') AS pending,
   t.value AS t_value, t.colour AS t_colour, t.source_hash AS t_source_hash,
@@ -633,6 +636,8 @@ function stringDetail(
       tag,
       typeof source === "string" ? [source] : Object.values(source),
     ),
+    // Only ICU MessageFormat has select blocks to vary a translation with.
+    arguments: facts.syntax.icu ? (fromJsonOrNull<StringArgument[]>(row.arguments) ?? []) : [],
   };
 }
 

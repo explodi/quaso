@@ -261,8 +261,19 @@ function nextOf(text: string, at: number, chars: string): number {
 
 const NAME = /^[\p{L}\p{N}_$]+$/u;
 const BLOCK_TYPES = new Set<string>(["select", "plural", "selectordinal"]);
+const SELECT_KEY = /^[\p{L}\p{N}_-]+$/u;
 const CASE_KEY = /^(=-?[0-9]+(\.[0-9]+)?|[\p{L}\p{N}_-]+)$/u;
 const OFFSET = /^offset:\s*[0-9]+/;
+
+/** Whether a name can be an argument's, such as `authorGender`: letters, digits, `_` and `$`. */
+export function isArgumentName(name: string): boolean {
+  return NAME.test(name);
+}
+
+/** Whether a key can be a select block's case, such as `female`: letters, digits, `_` and `-`. */
+export function isSelectKey(key: string): boolean {
+  return SELECT_KEY.test(key);
+}
 
 /** The argument or block whose `{` is at `start`, or null if none starts there. */
 function parseArgument(text: string, start: number): IcuNode | null {

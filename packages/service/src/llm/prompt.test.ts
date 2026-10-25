@@ -4,6 +4,7 @@ import { assert, assertEquals, assertFalse, assertStringIncludes } from "@std/as
 import { DEFAULT_SYNTAX, PROMPT_PLACEHOLDERS } from "@quaso/core";
 import { DEFAULT_PROMPT_TEMPLATE } from "../settings.ts";
 import {
+  argumentRules,
   DEFAULT_SYSTEM,
   expectedOutputTokens,
   ICU_RULES,
@@ -325,4 +326,65 @@ test("prompt: ICU projects get the ICU rules; others don't", () => {
   assertStringIncludes(icu.system, ICU_RULES);
   const plain = renderPrompt(DEFAULT_PROMPT_TEMPLATE, [COINS], context());
   assertFalse(plain.system.includes(ICU_RULES));
+});
+
+const ICU_SYNTAX = { ...DEFAULT_SYNTAX, icu: true };
+
+const JOINED: PromptString = {
+  id: 14,
+  key: "posts.joined",
+  kind: "text",
+  english: "Excited to join {company}!",
+  description: "",
+  maxLength: null,
+  arguments: [
+    {
+      name: "authorGender",
+      cases: ["female", "male"],
+      description: "The gender of the person who wrote the post. other: nonbinary, or not known.",
+    },
+  ],
+};
+
+test("prompt: a string's line lists its arguments, with the other case", () => {
+  const rendered = renderPrompt(
+    DEFAULT_PROMPT_TEMPLATE,
+    [JOINED],
+    context({ targetLanguage: "es", syntax: ICU_SYNTAX }),
+  );
+  assertEquals(stringLines(rendered.prompt)[0].arguments, [
+    {
+      name: "authorGender",
+      cases: ["female", "male", "other"],
+      description: "The gender of the person who wrote the post. other: nonbinary, or not known.",
+    },
+  ]);
+});
+
+test("prompt: a batch with arguments gets the rules for them", () => {
+  const rendered = renderPrompt(
+    DEFAULT_PROMPT_TEMPLATE,
+    [JOINED],
+    context({ targetLanguage: "es", syntax: ICU_SYNTAX }),
+  );
+  assertStringIncludes(rendered.system, argumentRules("es"));
+});
+
+test("prompt: a batch without arguments doesn't get their rules", () => {
+  const rendered = renderPrompt(
+    DEFAULT_PROMPT_TEMPLATE,
+    [COINS],
+    context({ targetLanguage: "es", syntax: ICU_SYNTAX }),
+  );
+  assertFalse(rendered.system.includes(argumentRules("es")));
+});
+
+test("prompt: without ICU MessageFormat, arguments are neither listed nor explained", () => {
+  const rendered = renderPrompt(
+    DEFAULT_PROMPT_TEMPLATE,
+    [JOINED],
+    context({ targetLanguage: "es" }),
+  );
+  assertEquals(stringLines(rendered.prompt)[0].arguments, undefined);
+  assertFalse(rendered.system.includes(argumentRules("es")));
 });

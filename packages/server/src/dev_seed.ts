@@ -140,6 +140,7 @@ export async function seedDemo(
     languages: config.languages,
     limits: config.limits,
     pluralExclusions: config.pluralExclusions,
+    arguments: config.arguments,
   });
   const imports: ImportResult[] = [];
   for (const { language, as } of DEMO_IMPORTS) {

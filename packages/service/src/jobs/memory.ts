@@ -39,6 +39,7 @@ export function memoryMatches(
           kind: item.kind,
           source: JSON.stringify(item.english),
           max_length: item.maxLength,
+          arguments: JSON.stringify(item.arguments),
           document: item.document,
         },
         item.language,

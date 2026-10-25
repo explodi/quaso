@@ -207,6 +207,65 @@ test("parseConfig refuses globs that can't be compiled", () => {
   assert(problems[0].message.startsWith("isn't a valid glob: "), problems[0].message);
 });
 
+const AUTHOR_GENDER = {
+  name: "authorGender",
+  cases: ["female", "male"],
+  description: "The gender of the person who wrote the post. other: nonbinary, or not known.",
+  files: ["feed.json"],
+  keys: ["posts.*"],
+};
+
+test("parseConfig accepts declared arguments", () => {
+  const { config, problems } = parseConfig(text({ ...CONFIG, arguments: [AUTHOR_GENDER] }));
+  assertEquals(problems, []);
+  assertEquals(config?.arguments, [AUTHOR_GENDER]);
+});
+
+test("parseConfig refuses an argument name that ICU can't read", () => {
+  const { problems } = parseConfig(
+    text({ ...CONFIG, arguments: [{ ...AUTHOR_GENDER, name: "author-gender" }] }),
+  );
+  assertEquals(problems, [
+    {
+      file: "quaso.config.json",
+      key: "arguments[0].name",
+      message: "must be an ICU argument name: letters, digits, _ and $",
+    },
+  ]);
+});
+
+test("parseConfig refuses other among an argument's cases: it is always one", () => {
+  const { problems } = parseConfig(
+    text({ ...CONFIG, arguments: [{ ...AUTHOR_GENDER, cases: ["female", "male", "other"] }] }),
+  );
+  assertEquals(problems, [
+    {
+      file: "quaso.config.json",
+      key: "arguments[0].cases[2]",
+      message: "is always a case: leave it out",
+    },
+  ]);
+});
+
+test("parseConfig refuses an argument declared twice", () => {
+  const { problems } = parseConfig(
+    text({ ...CONFIG, arguments: [AUTHOR_GENDER, { ...AUTHOR_GENDER, files: ["chat.json"] }] }),
+  );
+  assertEquals(problems, [
+    { file: "quaso.config.json", key: "arguments", message: "declare authorGender once" },
+  ]);
+});
+
+test("parseConfig refuses an argument's key glob that can't be compiled", () => {
+  const { problems } = parseConfig(
+    text({ ...CONFIG, arguments: [{ ...AUTHOR_GENDER, keys: ["posts.[z-a]"] }] }),
+  );
+  assertEquals(
+    problems.map((problem) => problem.key),
+    ["arguments[0].keys[0]"],
+  );
+});
+
 // Regression (CLI-5): translations written inside the source glob were uploaded as English.
 test("parseConfig refuses translation patterns that write into a source glob", () => {
   const inside = parseConfig(

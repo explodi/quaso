@@ -71,7 +71,7 @@ export async function updateSettingsAsync(
         { sql: "SELECT 1 AS found FROM strings LIMIT 1" },
         { sql: "SELECT term, language, kind, translation, case_sensitive FROM glossary_terms" },
         {
-          sql: "SELECT t.string_id, t.language, t.value, t.qa_errors, t.qa_warnings, s.kind, s.source, s.max_length FROM translations t JOIN strings s ON s.id = t.string_id WHERE s.kind IN ('text', 'plural', 'ordinal')",
+          sql: "SELECT t.string_id, t.language, t.value, t.qa_errors, t.qa_warnings, s.kind, s.source, s.max_length, s.arguments FROM translations t JOIN strings s ON s.id = t.string_id WHERE s.kind IN ('text', 'plural', 'ordinal')",
         },
         ...permissionReadStatements(actor),
       ]);
@@ -152,7 +152,7 @@ async function readLanguageChange(sql: Sql, actor: Actor, tag: string) {
     { sql: "SELECT tag, instructions, plural_override, created_at FROM languages ORDER BY tag" },
     { sql: "SELECT term, language, kind, translation, case_sensitive FROM glossary_terms" },
     {
-      sql: "SELECT t.string_id, t.language, t.value, t.qa_errors, t.qa_warnings, s.kind, s.source, s.max_length FROM translations t JOIN strings s ON s.id = t.string_id WHERE t.language = ? AND s.kind IN ('text', 'plural', 'ordinal')",
+      sql: "SELECT t.string_id, t.language, t.value, t.qa_errors, t.qa_warnings, s.kind, s.source, s.max_length, s.arguments FROM translations t JOIN strings s ON s.id = t.string_id WHERE t.language = ? AND s.kind IN ('text', 'plural', 'ordinal')",
       params: [canonicalLanguageTag(tag)],
     },
     ...permissionReadStatements(actor),

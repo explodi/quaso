@@ -3,6 +3,8 @@
  * `quaso.config.json`, the CLI's config file (design §5.10, CLI-2). The CLI validates it
  * with this schema, and the server publishes its JSON Schema at `/schema/config-v1.json`.
  */
+import { globProblem, globToRegExp } from "./glob.ts";
+import { isArgumentName, isSelectKey } from "./icu.ts";
 import { type Infer, s, toJsonSchema } from "./schema.ts";
 import { isValidLanguageTag } from "./text.ts";
 
@@ -74,6 +76,66 @@ export const PluralExclusion = s.object({
     ),
 });
 
+const FileGlob = s.refine(
+  s.string({ minLength: 1, maxLength: 512 }),
+  (pattern) => globProblem(pattern) ?? undefined,
+);
+const KeyGlob = s.refine(
+  s.string({ minLength: 1, maxLength: 512 }),
+  (pattern) => globProblem(pattern, ".") ?? undefined,
+);
+
+/**
+ * An argument the app passes to its ICU messages that the English may not show, such as the
+ * gender of a post's author, so that a translation can agree with it (`checkTranslation`).
+ */
+export const ArgumentDeclaration = s.object({
+  name: s
+    .refine(s.string({ minLength: 1, maxLength: 100 }), (name) =>
+      isArgumentName(name) ? undefined : "must be an ICU argument name: letters, digits, _ and $",
+    )
+    .describe("The argument's name in the messages, such as authorGender"),
+  cases: s
+    .array(
+      s.refine(s.string({ minLength: 1, maxLength: 100 }), (key) => {
+        if (key === "other") return "is always a case: leave it out";
+        return isSelectKey(key) ? undefined : "must be a select case key: letters, digits, _ and -";
+      }),
+      { minItems: 1, maxItems: 20, unique: true },
+    )
+    .describe(
+      "The values the app passes, as select case keys, such as female and male. other, which every select block needs, is always a case: leave it out",
+    ),
+  description: s
+    .string({ minLength: 1, maxLength: 1000 })
+    .describe(
+      "For translators and the LLM: what the value is, and what other stands for, such as: The gender of the person who wrote the post. other: nonbinary, or not known.",
+    ),
+  files: s
+    .array(FileGlob, { minItems: 1 })
+    .optional()
+    .describe(
+      "Globs of the files whose strings receive it, by their path on the server (as limits name them), such as feed.json or posts/**. Default: every file",
+    ),
+  keys: s
+    .array(KeyGlob, { minItems: 1 })
+    .optional()
+    .describe(
+      "Globs of the keys that receive it, displayed with dots, such as posts.*: * stays within one key, ** spans several. Default: every key",
+    ),
+});
+
+/** The declared arguments, each name once. */
+export const ArgumentDeclarations = s
+  .refine(s.array(ArgumentDeclaration, { maxItems: 50 }), (declarations) => {
+    const names = declarations.map((declaration) => declaration.name);
+    const repeated = names.find((name, index) => names.indexOf(name) !== index);
+    return repeated === undefined ? undefined : `declare ${repeated} once`;
+  })
+  .describe(
+    "Arguments the app passes to its ICU messages that the English may not show, such as a person's gender, so that translations can agree with them. Only with ICU MessageFormat",
+  );
+
 export const QuasoConfig = s.object({
   $schema: s.string().optional(),
   hostname: s
@@ -108,6 +170,7 @@ export const QuasoConfig = s.object({
       "Maximum lengths, such as for app store fields (FMT-4). They win over limits set on the website.",
     ),
   pluralExclusions: s.array(PluralExclusion).optional(),
+  arguments: ArgumentDeclarations.optional(),
   outdated: s
     .enum(["write", "omit"])
     .optional()
@@ -126,6 +189,36 @@ export type QuasoConfig = Infer<typeof QuasoConfig>;
 export type FileMapping = Infer<typeof FileMapping>;
 export type LengthLimit = Infer<typeof LengthLimit>;
 export type PluralExclusion = Infer<typeof PluralExclusion>;
+export type ArgumentDeclaration = Infer<typeof ArgumentDeclaration>;
+
+/** A declared argument as a string receives it: what the checks, the LLM and translators see. */
+export type StringArgument = Pick<ArgumentDeclaration, "name" | "cases" | "description">;
+
+/**
+ * Which declared arguments each string receives: those whose `files` globs match its file's
+ * path on the server and whose `keys` globs match its key, displayed with dots.
+ */
+export function argumentResolver(
+  declarations: readonly ArgumentDeclaration[],
+): (file: string, key: string) => StringArgument[] {
+  const scopes = declarations.map((declaration) => ({
+    argument: {
+      name: declaration.name,
+      cases: declaration.cases,
+      description: declaration.description,
+    },
+    files: declaration.files?.map((pattern) => globToRegExp(pattern)),
+    keys: declaration.keys?.map((pattern) => globToRegExp(pattern, ".")),
+  }));
+  return (file, key) =>
+    scopes
+      .filter((scope) => {
+        const inFile = scope.files === undefined || scope.files.some((glob) => glob.test(file));
+        const inKeys = scope.keys === undefined || scope.keys.some((glob) => glob.test(key));
+        return inFile && inKeys;
+      })
+      .map((scope) => scope.argument);
+}
 
 /** The config file's JSON Schema, as the server publishes it. */
 export function configJsonSchema(id?: string) {

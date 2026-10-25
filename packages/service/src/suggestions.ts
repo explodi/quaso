@@ -97,10 +97,11 @@ type ListedRow = SuggestionRow & {
   source: string;
   string_hash: string;
   max_length: number | null;
+  arguments: string | null;
 } & { [K in keyof TranslationRow as `t_${K & string}`]: TranslationRow[K] | null };
 
 const LISTED_COLUMNS = `${SUGGESTION_COLUMNS}, f.path, s.key AS string_key, s.display_key, s.kind AS string_kind,
-  s.source, s.source_hash AS string_hash, s.max_length,
+  s.source, s.source_hash AS string_hash, s.max_length, s.arguments,
   ${TRANSLATION_COLUMNS.split(", ")
     .map((column) => `t.${column} AS t_${column}`)
     .join(", ")}`;
@@ -149,6 +150,7 @@ function describeRows(rows: ListedRow[], facts: Facts, actors: ActorDirectory): 
         source: row.source,
         source_hash: row.string_hash,
         max_length: row.max_length,
+        arguments: row.arguments,
       },
       current: translationOf(row),
       facts,
@@ -162,7 +164,14 @@ function describeSuggestion(
   context: {
     string: Pick<
       TargetString,
-      "path" | "key" | "display_key" | "kind" | "source" | "source_hash" | "max_length"
+      | "path"
+      | "key"
+      | "display_key"
+      | "kind"
+      | "source"
+      | "source_hash"
+      | "max_length"
+      | "arguments"
     >;
     current: TranslationRow | null;
     facts: Facts;
@@ -365,7 +374,7 @@ export async function suggestAsync(
           sql: "SELECT COALESCE((SELECT CAST(value AS INTEGER) FROM meta WHERE key = 'revision'), 0) AS revision",
         },
         {
-          sql: "SELECT s.id, f.path, s.key, s.display_key, s.kind, s.source, s.source_hash, s.max_length, s.active * f.active AS active FROM strings s JOIN files f ON f.id = s.file_id WHERE s.id = ?",
+          sql: "SELECT s.id, f.path, s.key, s.display_key, s.kind, s.source, s.source_hash, s.max_length, s.arguments, s.active * f.active AS active FROM strings s JOIN files f ON f.id = s.file_id WHERE s.id = ?",
           params: [input.id],
         },
         {
@@ -1046,6 +1055,7 @@ export async function reviewSuggestionsAsync(
               source: row.source,
               source_hash: row.string_hash,
               max_length: row.max_length,
+              arguments: row.arguments,
               active: row.active,
             },
             existing: translationOf(row) ?? undefined,
@@ -1298,7 +1308,12 @@ function suggestionApproval(
   if (!isTranslatableKind(row.string_kind)) throw notFound(`String ${row.string_id}`);
   const checks = checkValue(
     facts,
-    { kind: row.string_kind, source: row.source, max_length: row.max_length },
+    {
+      kind: row.string_kind,
+      source: row.source,
+      max_length: row.max_length,
+      arguments: row.arguments,
+    },
     row.language,
     value,
   );

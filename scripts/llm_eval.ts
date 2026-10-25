@@ -2,8 +2,8 @@
 import * as fs from "node:fs/promises";
 /**
  * The opt-in LLM evaluation (S0.6, S5.8; design open question 4), `deno task test:llm`:
- * translates the development fixture's strings into German, Polish and
- * Japanese with each model, through the service's own batching, prompts, checks and
+ * translates the development fixture's strings (or another project's, with `--project`, in
+ * ICU MessageFormat with `--icu`) into German, Polish and Japanese with each model, through the service's own batching, prompts, checks and
  * retries (an in-memory service with the Gemini provider), so the numbers are production's.
  * It prints, per model and language, the share of strings that passed the quality checks on
  * the first try and after the retries, the tokens and the time, and writes the translations
@@ -11,6 +11,7 @@ import * as fs from "node:fs/promises";
  *
  *   deno task test:llm [--models gemini-flash-latest,gemini-2.5-pro] [--languages de,pl,ja]
  *                      [--out .quaso/llm-eval.json] [--concurrency 4]
+ *                      [--project <folder with quaso.config.json>] [--icu]
  */
 import { dirname } from "node:path";
 import {
@@ -32,6 +33,10 @@ export interface EvalOptions {
   languages: string[];
   out: string;
   concurrency: number;
+  /** The folder of the project to translate: its `quaso.config.json` and source files. */
+  project: string;
+  /** Whether the project uses ICU MessageFormat (Settings → Placeholders). */
+  icu: boolean;
 }
 
 /** One model in one language. */
@@ -57,6 +62,8 @@ export function parseOptions(args: string[], env: { GEMINI_MODEL?: string } = {}
     languages: [...DEFAULT_LANGUAGES],
     out: ".quaso/llm-eval.json",
     concurrency: 4,
+    project: demoDir(),
+    icu: false,
   };
   for (let index = 0; index < args.length; index++) {
     const [name, inline] = args[index].split(/=(.*)/s, 2);
@@ -74,6 +81,8 @@ export function parseOptions(args: string[], env: { GEMINI_MODEL?: string } = {}
     else if (name === "--languages") options.languages = list();
     else if (name === "--out") options.out = value();
     else if (name === "--concurrency") options.concurrency = Number(value());
+    else if (name === "--project") options.project = value();
+    else if (name === "--icu") options.icu = true;
     else throw new Error(`Unknown argument ${args[index]}`);
   }
   if (!Number.isInteger(options.concurrency) || options.concurrency < 1) {
@@ -115,7 +124,7 @@ export async function evaluate(
   providerFor: (model: string) => TranslationProvider,
   log: (line: string) => void = () => {},
 ): Promise<EvalResult[]> {
-  const { config, sources } = await readProjectFiles(demoDir());
+  const { config, sources } = await readProjectFiles(options.project);
   const results: EvalResult[] = [];
   for (const model of options.models) {
     const database = openNodeSqlite(":memory:");
@@ -134,12 +143,16 @@ export async function evaluate(
       database.sql.run(
         "UPDATE settings SET data = json_set(data, '$.llm.autoTranslate', json('false'))",
       );
+      if (options.icu) {
+        database.sql.run("UPDATE settings SET data = json_set(data, '$.syntax.icu', json('true'))");
+      }
       await service.upload(SYSTEM, {
         files: sources,
         sourceLanguage: config.sourceLanguage,
         languages: options.languages,
         limits: config.limits,
         pluralExclusions: config.pluralExclusions,
+        arguments: config.arguments,
       });
       for (const language of options.languages) {
         log(`${model}, ${language}…`);
@@ -248,7 +261,7 @@ if (import.meta.main) {
     process.exit(2);
   }
   console.error(
-    `Translating ${demoDir()} into ${options.languages.join(
+    `Translating ${options.project} into ${options.languages.join(
       ", ",
     )} with ${options.models.join(", ")}…`,
   );
