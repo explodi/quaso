@@ -95,7 +95,8 @@ export function defaultSettings(model: string): ProjectSettings {
     name: "Untitled project",
     description: "",
     sourceLanguage: "en",
-    syntax: { ...DEFAULT_SYNTAX, extra: [], optional: [] },
+    // Every optional field needs a default here: loading keeps only the fields the defaults have.
+    syntax: { ...DEFAULT_SYNTAX, extra: [], optional: [], icu: false },
     logoUrl: null,
     links: [],
     languageRequestsEnabled: false,
