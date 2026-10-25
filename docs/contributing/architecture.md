@@ -83,10 +83,14 @@ This is why `core` and the main `service` logic use standard web APIs. They do n
 
 Every operation (an upload, an approval, an LLM result) reads the database at one revision, decides
 its writes, and commits them as one batch guarded by that revision (`packages/service/src/write.ts`).
-If another commit landed in between, the batch aborts before changing anything, and the operation
-reads again and retries; after four tries it answers that the project is busy. Each successful batch is atomic: all its writes commit together. Concurrent operations can
-read and prepare work at the same time, but a stale batch must retry. While the service waits for Gemini, it keeps serving other
-requests.
+Writes through the same `Sql` take turns: each read-decide-commit waits for the one before it
+(`withRetries`). The service sends every request's writes through one `Sql`, so a translator's
+saves sent together, their LLM suggestions and a running job queue instead of racing. A write
+must not start another through the same `Sql`, since it would wait for itself; a commit hook
+writes through the `Sql` it wraps. The revision guard catches writers that don't share the `Sql`:
+if another commit landed in between, the batch aborts before changing anything, and the operation
+reads again and retries; after four tries it answers that the project is busy. Each successful batch is atomic: all its writes commit together. Reads don't
+wait for a turn. While the service waits for Gemini, it keeps serving other requests.
 
 ## The data model
 

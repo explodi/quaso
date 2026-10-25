@@ -29,21 +29,43 @@ export const GUARD_STATEMENTS: Statement[] = [
   },
 ];
 
+/*
+ * Writes through the same `Sql` take turns reading and committing instead of racing for the
+ * revision: racing, a translator's saves sent together, their LLM suggestions and a running job
+ * made each other retry until some ran out of tries. The service sends every request's writes
+ * through one `Sql`; the revision guard still catches writers that don't share it.
+ */
+const lastTurn = new WeakMap<Sql, Promise<unknown>>();
+
+/** A write must not start another through the same `Sql`: it would wait for itself. */
+function inTurn<T>(sql: Sql, write: () => Promise<T>): Promise<T> {
+  const turn = (lastTurn.get(sql) ?? Promise.resolve()).then(write);
+  lastTurn.set(
+    sql,
+    turn.catch(() => {}),
+  );
+  return turn;
+}
+
 export async function withRetries<State, Result>(
   sql: Sql,
   read: () => Promise<{ revision: number; state: State }>,
   decide: (state: State) => { statements: Statement[]; result: Result },
 ): Promise<Result> {
   for (let attempt = 0; attempt < 4; attempt++) {
-    const { revision, state } = await read();
-    const { statements, result } = decide(state);
-    if (statements.length === 0) return result;
-    try {
-      await sql.commit(revision, statements);
-      return result;
-    } catch (error) {
-      if (!(error instanceof RevisionConflict)) throw error;
-    }
+    const outcome = await inTurn(sql, async () => {
+      const { revision, state } = await read();
+      const { statements, result } = decide(state);
+      if (statements.length === 0) return { committed: true, result };
+      try {
+        await sql.commit(revision, statements);
+        return { committed: true, result };
+      } catch (error) {
+        if (!(error instanceof RevisionConflict)) throw error;
+        return { committed: false, result };
+      }
+    });
+    if (outcome.committed) return outcome.result;
   }
   throw new ServiceError("unavailable", "The project is busy. Try again shortly.");
 }

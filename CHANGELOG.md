@@ -212,6 +212,9 @@ Release candidates are for deployment and migration testing. The team decides wh
 
 ### Fixed
 
+- Saving several strings in a row no longer fails with "wasn't saved. Open it to try again.": the
+  server's writes take turns instead of racing for the project's revision, so saves sent together,
+  LLM suggestions and a running job wait for each other rather than running out of retries.
 - The string list shows a string's "Saving…" in full, with a spinner, while its save runs in the
   background; the key and file name are cut short first.
 - LLM suggestions no longer fail with "The project is busy" while background saves run: the
