@@ -4,9 +4,11 @@ import { assert, assertEquals, assertThrows } from "@std/assert";
 import {
   categoriesFor,
   coversExactlyOne,
+  exampleNumber,
   exampleNumbers,
   hasPluralRules,
   pluralCategories,
+  pluralCategoryOf,
   sortCategories,
 } from "./plurals.ts";
 import type { PluralCategory } from "./types.ts";
@@ -367,4 +369,34 @@ test("coversExactlyOne: ordinals count integers only", () => {
   assertEquals(coversExactlyOne("hi", "few", { ordinal: true }), true);
   assertEquals(coversExactlyOne("hi", "two", { ordinal: true }), false);
   assertEquals(coversExactlyOne("pl", "other", { ordinal: true }), false);
+});
+
+test("exampleNumber: the smallest integer of the category", () => {
+  assertEquals(exampleNumber("pl", "one"), 1);
+  assertEquals(exampleNumber("pl", "few"), 2);
+  assertEquals(exampleNumber("pl", "many"), 0);
+  assertEquals(exampleNumber("es", "other"), 0);
+});
+
+test("exampleNumber: leaving out the numbers of exact cases", () => {
+  assertEquals(exampleNumber("es", "other", { except: [0] }), 2);
+  assertEquals(exampleNumber("pl", "many", { except: [0, 5] }), 6);
+});
+
+test("exampleNumber: 1000000 or a decimal when no integer up to 1000 is in it", () => {
+  assertEquals(exampleNumber("es", "many"), 1000000);
+  assertEquals(exampleNumber("pl", "other"), 1.5);
+});
+
+test("exampleNumber: ordinal categories, and categories the language doesn't have", () => {
+  assertEquals(exampleNumber("en", "few", { ordinal: true }), 3);
+  assertEquals(exampleNumber("de", "other", { ordinal: true }), 1);
+  assertEquals(exampleNumber("en", "many"), undefined);
+});
+
+test("pluralCategoryOf: the category apps pick for a number", () => {
+  assertEquals(pluralCategoryOf("pl", 22), "few");
+  assertEquals(pluralCategoryOf("pl", 25), "many");
+  assertEquals(pluralCategoryOf("en", 2, { ordinal: true }), "two");
+  assertEquals(pluralCategoryOf("cv", 1), "other");
 });

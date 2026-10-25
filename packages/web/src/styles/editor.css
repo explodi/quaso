@@ -715,6 +715,84 @@
   font-size: var(--text-md);
 }
 
+/* The cases an ICU plural block needs in the target language, above the input. */
+.icu-case-hints {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.icu-case-hint .form-name {
+  min-width: 0;
+  color: var(--fg);
+}
+
+/* The translation in each case, under the input. */
+.icu-preview > summary {
+  font-size: var(--text-sm);
+}
+
+.icu-preview-rows {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-1) var(--space-3);
+}
+
+.icu-preview-row {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: baseline;
+}
+
+.icu-preview-cases {
+  white-space: nowrap;
+}
+
+.icu-preview-cases .form-name {
+  min-width: 0;
+}
+
+.icu-preview-text {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.icu-preview-problem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.icu-preview-excerpt {
+  font-family: var(--mono);
+  font-size: var(--text-sm);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.icu-preview-mark {
+  background: var(--danger-bg);
+  color: var(--danger);
+  outline: 1px solid var(--danger);
+}
+
+@media (max-width: 36rem) {
+  .icu-preview-rows,
+  .icu-preview-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .icu-preview-row {
+    gap: 0;
+  }
+  .icu-preview-cases {
+    white-space: normal;
+  }
+}
+
 .length {
   align-self: flex-end;
   display: inline-flex;

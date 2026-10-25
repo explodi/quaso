@@ -7,6 +7,15 @@ Release candidates are for deployment and migration testing. The team decides wh
 
 ### Added
 
+- ICU editor help: a source with blocks shows as a tree, each block's cases on lines of their own
+  under their keys, also in the history, suggestions and other languages. Above the input, the
+  target language's plural and ordinal cases for each plural block, with example numbers. Under
+  it, **Preview in each case**: the translation in every case, with an example number for `#`,
+  or where it stops being valid ICU. **Copy the English** gives plural and selectordinal blocks
+  the target language's categories instead of the English's. Core adds `formatIcu`,
+  `icuPreview`, `icuSyntaxError`, `icuWithLanguageCases`, `exampleNumber` and
+  `pluralCategoryOf`.
+
 - Folder context: managers write a context for a folder in Settings → Files & length limits, and
   the LLM reads it with every file in the folder and its subfolders: the folders' contexts,
   outermost first, then the file's own, in `%fileContext%`. `PATCH /folders` writes one; a blank

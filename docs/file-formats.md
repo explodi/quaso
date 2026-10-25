@@ -202,8 +202,22 @@ or `selectordinal`), any `offset:` and, in a select block, its case keys as writ
 check `offset:`. Blocks can sit inside the cases of other blocks; the checks compare each level of
 nesting in turn.
 
-The editor shows a block's syntax, such as `{n, plural, one {`, in grey monospace in the source
-text. Chips above the input insert the arguments of every case.
+The editor shows a source with blocks as a tree: each block, such as `{n, plural}` in grey
+monospace, with its cases on lines of their own, labelled with their keys, and blocks inside a case
+indented under it. The history, suggestions and other languages show ICU translations the same way.
+Chips above the input insert the arguments of every case.
+
+**Copy the English** fits plural and selectordinal blocks to the target language: each gets the
+language's categories, a category the English lacks gets the text of the English `other` case,
+categories the language doesn't use are left out, and exact cases such as `=0` stay. Select blocks
+are copied as they are. Blocks inside other blocks get the same treatment.
+
+**Preview in each case**, under the input, shows the translation as the app shows it: once for
+each case of a select block, and for a plural block once for each exact case and once for each
+category of the language, with an example number in place of `#`. Blocks inside a case add their
+cases to that case's lines. Arguments the app fills in, such as `{host}`, stay as written. If the
+translation isn't valid ICU, the preview says what is wrong and where, such as an unclosed `{` or a
+block without an `other` case.
 
 ### Plural blocks
 
@@ -219,8 +233,10 @@ becomes, in Polish, which has four categories:
 {n, plural, one {# moneta} few {# monety} many {# monet} other {# monety}}
 ```
 
-The editor shows each language's categories, with example numbers, for plural strings. A
-`selectordinal` block works the same way with ordinal categories: English has `one`, `two`, `few`
+Above the input, the editor lists the target language's categories for each plural block, with
+example numbers, as it does for plural strings: `Spanish plural cases for {n}: one (1), many
+(1000000), other (0, 2–1000, …, 1.5)`. A `selectordinal` block works the same way with ordinal
+categories: English has `one`, `two`, `few`
 and `other` (1st, 2nd, 3rd, 4th), while German only has `other`. A language's plural override
 applies to its blocks too.
 
