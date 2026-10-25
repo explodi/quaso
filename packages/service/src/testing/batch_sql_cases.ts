@@ -108,6 +108,28 @@ export const BATCH_SQL_CASES: {
     },
   },
   {
+    name: "eight writes sent together all commit",
+    async run(makeSql) {
+      const sql = await makeSql();
+      const read = async () => {
+        const [rows] = await sql.read([
+          { sql: "SELECT CAST(value AS INTEGER) AS revision FROM meta WHERE key = 'revision'" },
+        ]);
+        return { revision: Number(rows[0]?.revision ?? 0), state: null };
+      };
+      const names = ["a", "b", "c", "d", "e", "f", "g", "h"];
+      await Promise.all(
+        names.map((name) =>
+          withRetries(sql, read, () => ({
+            statements: [{ sql: "INSERT INTO items (name) VALUES (?)", params: [name] }],
+            result: null,
+          })),
+        ),
+      );
+      checkEqual(await sql.read([{ sql: "SELECT COUNT(*) AS n FROM items" }]), [[{ n: 8 }]]);
+    },
+  },
+  {
     name: "read batches cannot write",
     async run(makeSql) {
       const sql = await makeSql();
