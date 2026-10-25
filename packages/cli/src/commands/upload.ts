@@ -101,41 +101,7 @@ export const upload: Command = {
       parseRename(value, (file) => resolveFileArgs(project, sources, ctx.cwd, [file])[0].server),
     );
     const client = ctx.client(project);
-
-    const files: UploadRequest["files"] = [];
-    const invalid: CliError[] = [];
-    for (const source of selected) {
-      try {
-        const content = await readProjectText(project, source.local);
-        if (content === null) {
-          throw usageError(`${source.local} disappeared while the upload was being prepared.`);
-        }
-        // Only JSON files have a `.descriptions.json` sidecar: a document is its own context.
-        const descriptions = source.local.endsWith(".json")
-          ? await readProjectText(project, source.local.replace(/\.json$/, ".descriptions.json"))
-          : null;
-        files.push({
-          path: source.server,
-          repoPath: source.local,
-          content,
-          ...(descriptions === null ? {} : { descriptions }),
-        });
-      } catch (error) {
-        if (error instanceof CliError && error.exitCode === EXIT.invalidSource) invalid.push(error);
-        else throw error;
-      }
-    }
-    if (invalid.length > 0) {
-      throw new CliError(
-        EXIT.invalidSource,
-        `${count(invalid.length, "source file")} can't be read.`,
-        {
-          code: "invalid_source",
-          details: invalid.flatMap((error) => error.details),
-        },
-      );
-    }
-
+    const files = await readUploadFiles(project, selected);
     const repository = await repositoryTranslations(project, selected, files);
     const importLanguages = new Map<string, { as: "blue" | "green"; overwrite: boolean }>();
     for (const tag of project.config.translationsInRepository ?? [])
@@ -154,19 +120,10 @@ export const upload: Command = {
       if (!importLanguages.has(language))
         importLanguages.set(language, { as: colour as "blue" | "green", overwrite: false });
     }
-    const { config } = project;
-    const request: UploadRequest = {
-      files,
-      sourceLanguage: config.sourceLanguage,
-      languages: config.languages,
-    };
+    const request = uploadRequest(project, files);
     if (named.length > 0) request.partial = true;
     if (dryRun) request.dryRun = true;
     if (renames.length > 0) request.renames = renames;
-    if (config.limits) request.limits = config.limits;
-    if (config.pluralExclusions) request.pluralExclusions = config.pluralExclusions;
-    if (config.arguments) request.arguments = config.arguments;
-    if (config.descriptionSuffix) request.descriptionSuffix = config.descriptionSuffix;
 
     ctx.out.info(
       `${dryRun ? "Comparing" : "Uploading"} ${count(files.length, "file")} ${
@@ -268,8 +225,67 @@ export const upload: Command = {
   },
 };
 
+/**
+ * The source files as an upload sends them: each with its server path and, for JSON, its
+ * `.descriptions.json` sidecar. Files that aren't valid UTF-8 are reported together.
+ */
+export async function readUploadFiles(
+  project: Project,
+  selected: SourceFile[],
+): Promise<UploadRequest["files"]> {
+  const files: UploadRequest["files"] = [];
+  const invalid: CliError[] = [];
+  for (const source of selected) {
+    try {
+      const content = await readProjectText(project, source.local);
+      if (content === null) {
+        throw usageError(`${source.local} disappeared while the upload was being prepared.`);
+      }
+      // Only JSON files have a `.descriptions.json` sidecar: a document is its own context.
+      const descriptions = source.local.endsWith(".json")
+        ? await readProjectText(project, source.local.replace(/\.json$/, ".descriptions.json"))
+        : null;
+      files.push({
+        path: source.server,
+        repoPath: source.local,
+        content,
+        ...(descriptions === null ? {} : { descriptions }),
+      });
+    } catch (error) {
+      if (error instanceof CliError && error.exitCode === EXIT.invalidSource) invalid.push(error);
+      else throw error;
+    }
+  }
+  if (invalid.length > 0) {
+    throw new CliError(
+      EXIT.invalidSource,
+      `${count(invalid.length, "source file")} can't be read.`,
+      {
+        code: "invalid_source",
+        details: invalid.flatMap((error) => error.details),
+      },
+    );
+  }
+  return files;
+}
+
+/** A full upload of these files, with the config's languages, limits and exclusions. */
+export function uploadRequest(project: Project, files: UploadRequest["files"]): UploadRequest {
+  const { config } = project;
+  const request: UploadRequest = {
+    files,
+    sourceLanguage: config.sourceLanguage,
+    languages: config.languages,
+  };
+  if (config.limits) request.limits = config.limits;
+  if (config.pluralExclusions) request.pluralExclusions = config.pluralExclusions;
+  if (config.arguments) request.arguments = config.arguments;
+  if (config.descriptionSuffix) request.descriptionSuffix = config.descriptionSuffix;
+  return request;
+}
+
 /** The upload's error with local paths, and a clearer message for invalid source files. */
-function uploadError(error: unknown, project: Project, sources: Sources): unknown {
+export function uploadError(error: unknown, project: Project, sources: Sources): unknown {
   const localized = localizeError(error, (file) => sources.byServer.get(file)?.local, {
     configName: project.configName,
   });
