@@ -106,24 +106,25 @@ never writes outside it. `quaso init` writes a starter file.
 }
 ```
 
-| Field                      | Meaning                                                                                                                                                                                                                                                                 |
-| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `$schema`                  | The JSON Schema of the file, which your instance publishes at `/schema/config-v1.json`, for completion and checks in editors. Optional.                                                                                                                                 |
-| `hostname`                 | The instance, when `QUASO_HOSTNAME` isn't set and no API key is. With `QUASO_API_KEY` set, `QUASO_HOSTNAME` is required. Optional.                                                                                                                                      |
-| `sourceLanguage`           | The language of your source files, as a BCP 47 tag such as `en`.                                                                                                                                                                                                        |
-| `languages`                | The languages to translate into: what `download` writes and `status --fail-on` counts. `upload` adds any of them that the instance lacks. Languages that the instance has and the config doesn't list, such as one volunteers are just starting, are left alone.        |
-| `descriptionSuffix`        | A suffix for JSON keys that describe another source string, such as `@description`. These description keys are not translated. Optional.                                                                                                                                |
-| `translationsInRepository` | Languages authored in the repository. Upload imports their selected local files as blue, replacing the instance's values. Must name target languages.                                                                                                                   |
-| `languageMapping`          | The name a language has in your game, when it differs from its tag: `{ "zh-Hans": "zh-CN" }` writes Simplified Chinese to `src/locales/zh-CN/`. Optional.                                                                                                               |
-| `files`                    | Where the files are: one or more entries, each with `source`, `translation` and an optional `exclude`.                                                                                                                                                                  |
-| `files[].source`           | A glob of the source files, such as `src/locales/en/**/*.json`.                                                                                                                                                                                                         |
-| `files[].translation`      | Where translations go, with `{lang}` (the language as your game names it, after `languageMapping`) and `{path}` (the source file's path below the folder where the glob starts).                                                                                        |
-| `files[].exclude`          | Globs of source files to leave out, relative to the project folder. Optional.                                                                                                                                                                                           |
-| `files[].folder`           | A folder the instance keeps these files in, such as `game`: `game/menus/main.json` instead of `menus/main.json`. It doesn't change where translations go. Optional.                                                                                                     |
-| `limits`                   | Maximum lengths, such as for app store fields, in user-perceived characters. `file` is the file's path as the instance knows it (below the folder where the glob starts, inside the entry's `folder`). They win over limits set on the website. Optional.               |
-| `pluralExclusions`         | Groups of keys that only look like plurals (`menu.power_one`, `menu.power_other`), named without the category. Optional.                                                                                                                                                |
-| `outdated`                 | What `download` writes for translations of an older source: `"write"` (default), or `"omit"` so the app falls back to its source language.                                                                                                                              |
-| `untranslated`             | What `download` writes for a string that isn't translated: `"source"` (the default), its source text, so every file has every key; or `"omit"`, nothing, for apps that fall back to the source language themselves (for example, i18next with `fallbackLng`). Optional. |
+| Field                      | Meaning                                                                                                                                                                                                                                                                                                       |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `$schema`                  | The JSON Schema of the file, which your instance publishes at `/schema/config-v1.json`, for completion and checks in editors. Optional.                                                                                                                                                                       |
+| `hostname`                 | The instance, when `QUASO_HOSTNAME` isn't set and no API key is. With `QUASO_API_KEY` set, `QUASO_HOSTNAME` is required. Optional.                                                                                                                                                                            |
+| `sourceLanguage`           | The language of your source files, as a BCP 47 tag such as `en`.                                                                                                                                                                                                                                              |
+| `languages`                | The languages to translate into: what `download` writes and `status --fail-on` counts. `upload` adds any of them that the instance lacks. Languages that the instance has and the config doesn't list, such as one volunteers are just starting, are left alone.                                              |
+| `descriptionSuffix`        | A suffix for JSON keys that describe another source string, such as `@description`. These description keys are not translated. Optional.                                                                                                                                                                      |
+| `translationsInRepository` | Languages authored in the repository. Upload imports their selected local files as blue, replacing the instance's values. Must name target languages.                                                                                                                                                         |
+| `languageMapping`          | The name a language has in your game, when it differs from its tag: `{ "zh-Hans": "zh-CN" }` writes Simplified Chinese to `src/locales/zh-CN/`. Optional.                                                                                                                                                     |
+| `files`                    | Where the files are: one or more entries, each with `source`, `translation` and an optional `exclude`.                                                                                                                                                                                                        |
+| `files[].source`           | A glob of the source files, such as `src/locales/en/**/*.json`.                                                                                                                                                                                                                                               |
+| `files[].translation`      | Where translations go, with `{lang}` (the language as your game names it, after `languageMapping`) and `{path}` (the source file's path below the folder where the glob starts).                                                                                                                              |
+| `files[].exclude`          | Globs of source files to leave out, relative to the project folder. Optional.                                                                                                                                                                                                                                 |
+| `files[].folder`           | A folder the instance keeps these files in, such as `game`: `game/menus/main.json` instead of `menus/main.json`. It doesn't change where translations go. Optional.                                                                                                                                           |
+| `limits`                   | Maximum lengths, such as for app store fields, in user-perceived characters. `file` is the file's path as the instance knows it (below the folder where the glob starts, inside the entry's `folder`). They win over limits set on the website. Optional.                                                     |
+| `pluralExclusions`         | Groups of keys that only look like plurals (`menu.power_one`, `menu.power_other`), named without the category. Optional.                                                                                                                                                                                      |
+| `arguments`                | Arguments your game passes to its ICU messages that the English may not show, such as the gender of a post's author, so that translations can agree with them. Each has a `name`, its `cases` besides `other`, a `description`, and optional `files` and `keys` globs. Only with ICU MessageFormat. Optional. |
+| `outdated`                 | What `download` writes for translations of an older source: `"write"` (default), or `"omit"` so the app falls back to its source language.                                                                                                                                                                    |
+| `untranslated`             | What `download` writes for a string that isn't translated: `"source"` (the default), its source text, so every file has every key; or `"omit"`, nothing, for apps that fall back to the source language themselves (for example, i18next with `fallbackLng`). Optional.                                       |
 
 **Globs** use `/` on every system: `*` matches within a folder, `**` matches any number of folders,
 `?` one character, `{a,b}` either alternative, and `[abc]`, `[a-z]` or `[!abc]` one character of a
@@ -137,6 +138,32 @@ stays `menus/main.json`: the folder groups the entry's files on the instance, wh
 [folder context](concepts.md#context-reuse-and-meaning-checks) can describe them all. Two source
 files can't have the same path on the instance. A single file works too:
 `"source": "locales/en.json"` with `"translation": "locales/{lang}.json"`.
+
+**Arguments the English doesn't show.** With ICU MessageFormat on, a translation may only use
+the English's arguments. Declare the others your game passes, and translations may vary by them:
+
+```json
+"arguments": [
+  {
+    "name": "authorGender",
+    "cases": ["female", "male"],
+    "description": "The gender of the person who wrote the post. other: nonbinary, or not known.",
+    "files": ["feed.json"],
+    "keys": ["posts.*"]
+  }
+]
+```
+
+`name` is the argument's name in the messages, and `cases` the values your game passes, as select
+case keys: `other`, which every select block needs, is always a case, so the CLI refuses it in the
+list. `description` tells translators and the LLM what the value is and what `other` stands for.
+`files` are globs of the files whose strings receive it, by their path on the instance, as
+`limits` name them; `keys` are globs of the keys, displayed with dots, where `*` stays within one
+key (`posts.*` matches `posts.joined`, not `posts.joined.title`) and `**` spans several. Without
+`files` or `keys`, every file or every key receives it. Each name may be declared once. Every upload
+sets the arguments of the strings in the files it sends; an upload without `arguments` clears
+them. On a project without ICU MessageFormat, the strings keep them and the upload warns that they
+don't apply. See [File formats](file-formats.md#arguments-the-english-doesnt-show) for the checks.
 
 **Markdown documents.** Add a file rule such as `"source": "text/en/**/*.md"` with
 `"translation": "text/{lang}/{path}"`. Each `.md` or `.markdown` file is one translatable string;

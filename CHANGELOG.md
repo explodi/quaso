@@ -22,7 +22,17 @@ Release candidates are for deployment and migration testing. The team decides wh
   the target language's categories instead of the English's. Core adds `formatIcu`,
   `icuPreview`, `icuSyntaxError`, `icuWithLanguageCases`, `exampleNumber` and
   `pluralCategoryOf`.
-
+- Declared arguments: with ICU MessageFormat on, `arguments` in `quaso.config.json` declares the
+  arguments a game passes that the English may not show, such as the gender of a post's author,
+  with their select cases, a description and optional `files` and `keys` globs. A translation may
+  add a select block on one, leave out the English's or restructure it: the checks compare each
+  case with the English, name the case of a problem found in only some, and refuse a case that
+  isn't declared or a block without `other`. The LLM gets each string's arguments and a rule to
+  agree with them where the language needs it, with a neutral `other` case, and to write one text
+  where it doesn't. The editor shows them beside the source, and **Vary by …** writes a select
+  block into the translation. Uploads to a project without ICU keep them and warn. Schema version
+  7 stores them with each string. Instances on the default prompt get its `arguments` field on the
+  next request. `deno task test:llm` takes `--project` and `--icu` to evaluate another project.
 - Folder context: managers write a context for a folder in Settings → Files & length limits, and
   the LLM reads it with every file in the folder and its subfolders: the folders' contexts,
   outermost first, then the file's own, in `%fileContext%`. `PATCH /folders` writes one; a blank
