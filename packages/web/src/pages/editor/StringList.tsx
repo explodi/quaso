@@ -22,6 +22,7 @@ import {
   SparklesIcon,
   WarningIcon,
   Loading,
+  SpinnerIcon,
 } from "@quaso/design-system";
 /** A virtualized queue with source and translation previews, filters, and bulk selection. */
 import {
@@ -448,7 +449,15 @@ export function StringList(props: StringListProps) {
 /** Whether the string's background save is running, or failed and waits to be tried again. */
 function SaveStatus(props: { language: string; id: number }) {
   const state = useSaveState(`${props.language}:${props.id}`);
-  if (state === "saving") return <span className="row-kind">Saving…</span>;
-  if (state === "failed") return <span className="row-kind row-not-saved">Not saved</span>;
+  if (state === "saving") {
+    return (
+      <span className="row-kind row-save-status">
+        <SpinnerIcon /> Saving…
+      </span>
+    );
+  }
+  if (state === "failed") {
+    return <span className="row-kind row-save-status row-not-saved">Not saved</span>;
+  }
   return null;
 }
