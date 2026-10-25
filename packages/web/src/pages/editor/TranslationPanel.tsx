@@ -54,6 +54,7 @@ import { SourceText } from "../../components/SourceText.tsx";
 import { StateBadge } from "../../components/StateBadge.tsx";
 import { useToast } from "../../components/Toast.tsx";
 import { JobProgress } from "../../components/JobProgress.tsx";
+import { ArgumentsNote, VaryByButtons } from "./DeclaredArguments.tsx";
 import { DocumentParagraphs } from "./DocumentParagraphs.tsx";
 import { fieldEnglish, IcuCaseInput, useIcuFields } from "./IcuCaseEditor.tsx";
 import { IcuPreviewList, PluralCaseHints, pluralCaseHints } from "./IcuHelp.tsx";
@@ -166,6 +167,7 @@ export function TranslationPanel(props: TranslationPanelProps) {
       otherLanguages: [],
       references: [],
       checks: [],
+      arguments: [],
     });
   if (!data) {
     if (detail.error !== undefined) {
@@ -305,6 +307,7 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
         syntax,
         pluralOverride: language.plural,
         glossary: detail.glossary,
+        arguments: detail.arguments,
       });
     } catch {
       return [];
@@ -319,6 +322,7 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
     tag,
     detail.maxLength,
     detail.glossary,
+    detail.arguments,
     detail.checks,
     syntax,
     language.plural,
@@ -390,6 +394,12 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
       );
     }
     return true;
+  };
+
+  /** The text selected in the last focused input, for a tool that wraps it. */
+  const selectedText = (): string => {
+    const element = inputs.current.get(lastFocused.current ?? forms[0]);
+    return element ? element.value.slice(element.selectionStart, element.selectionEnd) : "";
   };
 
   /** Replaces a form's input with the LLM's text, keeping undo for what was typed. */
@@ -716,6 +726,7 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
             ))}
           </dl>
         )}
+        {detail.arguments.length > 0 && <ArgumentsNote declared={detail.arguments} />}
         {detail.identicalSources && detail.identicalSources.length > 0 && (
           <p className="panel-hint">
             Same source as{" "}
@@ -808,6 +819,11 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
                 Translate with the LLM
               </Button>
             )}
+            <VaryByButtons
+              declared={detail.arguments}
+              selectedText={selectedText}
+              insert={insert}
+            />
             {canAskLlm && (
               <Label className="llm-switch">
                 <Switch
