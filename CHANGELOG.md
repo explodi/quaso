@@ -7,6 +7,13 @@ Release candidates are for deployment and migration testing. The team decides wh
 
 ### Added
 
+- ICU case editor: a string whose English has blocks is translated case by case, one field per
+  case (`female › one`, with the case's English above it) and per text around blocks, the syntax
+  locked and plural cases for the target language. Fields hold plain text; braces and apostrophes
+  are quoted as ICU needs on save. **Edit as text** shows the ICU in one input; a translation the
+  fields can't show (other blocks or cases, or invalid ICU) opens as text with a note. Tab, chips,
+  the shortcuts and undo work per field. Core adds `icuFieldForm`, `writeIcuFieldForm` and
+  `quoteField`.
 - ICU editor help: a source with blocks shows as a tree, each block's cases on lines of their own
   under their keys, also in the history, suggestions and other languages. Above the input, the
   target language's plural and ordinal cases for each plural block, with example numbers. Under

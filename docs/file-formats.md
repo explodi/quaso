@@ -207,10 +207,29 @@ monospace, with its cases on lines of their own, labelled with their keys, and b
 indented under it. The history, suggestions and other languages show ICU translations the same way.
 Chips above the input insert the arguments of every case.
 
+When the English has blocks, the translation is written **case by case**: one field per case,
+labelled with the cases that lead to it (`female › one`, with example numbers for a plural
+category) and with that case's English above it, plus a field for text the English has before,
+between or after blocks (`Before {gender}`). The blocks' syntax stays as it is. Plural and
+selectordinal blocks get the target language's categories, as with **Copy the English** below. A
+field holds plain text: `{name}` is an argument when the English has one of that name, `#` is the
+number in a plural case, and any other brace or apostrophe is text, which Quaso quotes as ICU
+needs when it saves. Tab moves between the fields, chips and **Copy the English** go to the field
+that had focus, and each field has its own undo. Spaces at the edges of a field's English show as
+`·`. A field can't hold a literal `#` in a plural case; write that case as text.
+
+**Edit as text** shows the whole message as ICU in one input instead. A translation the fields can't
+show opens as text, with a note: one that isn't valid ICU, one whose blocks differ from the English's
+(another argument or order, a block added or left out), one with a case the fields don't have (an
+exact case of its own, or a category the language doesn't use), or one with text around blocks
+where the English has none. Once you type in the text, it stays text until you switch back. Strings
+in plural groups and Markdown documents always use the text input.
+
 **Copy the English** fits plural and selectordinal blocks to the target language: each gets the
 language's categories, a category the English lacks gets the text of the English `other` case,
 categories the language doesn't use are left out, and exact cases such as `=0` stay. Select blocks
-are copied as they are. Blocks inside other blocks get the same treatment.
+are copied as they are. Blocks inside other blocks get the same treatment. In the case fields, it
+copies the English of the field that had focus.
 
 **Preview in each case**, under the input, shows the translation as the app shows it: once for
 each case of a select block, and for a plural block once for each exact case and once for each

@@ -130,11 +130,16 @@ conflict with the string's text, the editor keeps the original references visibl
 In a project that uses ICU MessageFormat, placeholders look like `{name}` or `#`, and a string can
 hold blocks such as `{n, plural, one {# coin} other {# coins}}`. The source shows such a string as
 a tree: each block's cases on lines of their own, labelled `one`, `other`, `female` and so on.
-Translate the text inside each case and keep the rest. A plural block needs one case per plural
-category of your language; the line above the input lists them with example numbers.
-**Copy the English** starts you off with those cases. **Preview in each case**, under the input,
-shows your translation in every case, with an example number for `#`, and says where the text
-stops being valid ICU. To write a literal `{` or `'` in your translation, refer to
+Such a string is translated case by case: one field per case, labelled `female › one` and so on,
+with the case's English above it, and the syntax around the fields kept for you. A plural block
+gets one case per plural category of your language; the line above the fields lists them with
+example numbers. Type braces and apostrophes as they are: Quaso quotes them as ICU needs. Use Tab
+to move between the fields. **Edit as text** shows the whole message as ICU instead; a translation
+whose blocks or cases differ from the English's opens that way, with a note. **Preview in each
+case**, under the input, shows your translation in every case, with an example number for `#`, and
+says where the text stops being valid ICU. In the text input, **Copy the English** starts you off
+with your language's cases; in the fields, it copies the English of the field you are in. To write
+a literal `{` or `'` in the text input, refer to
 [braces and apostrophes](file-formats.md#braces-and-apostrophes).
 
 The editor checks for missing or extra placeholders and references, missing plural forms, empty
