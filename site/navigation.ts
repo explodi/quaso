@@ -18,6 +18,7 @@ export const NAVIGATION: NavigationGroup[] = [
     sources: [
       "add-to-your-game.md",
       "website.md",
+      "variants.md",
       "migrate-from-crowdin.md",
       "move-from-crowdin.md",
       "move-to-icu.md",
