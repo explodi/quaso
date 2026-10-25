@@ -275,7 +275,7 @@ export function sourceFileToIcu(
     return { ...unchanged, text: converted.value as string, escapes: converted.escapes };
   }
   const { root, format } = parseJson(text, { file: options.file });
-  const result: SourceFileConversion = { ...unchanged };
+  const result: SourceFileConversion = { text, merged: [], escapes: 0, refusals: [] };
   let changed = false;
   for (const entry of source.entries) {
     if (isDescription(entry, options.descriptionSuffix)) continue;

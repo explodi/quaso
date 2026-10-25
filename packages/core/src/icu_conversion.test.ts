@@ -321,13 +321,18 @@ test("ICU conversion: a plural group whose base is another key is refused", () =
 test("ICU conversion: a plural and an ordinal group with the same base are refused", () => {
   const file =
     '{"place_one": "{{count}} place", "place_other": "{{count}} places", "place_ordinal_one": "{{count}}st", "place_ordinal_other": "{{count}}th"}';
-  assertEquals(sourceFileToIcu(file, { syntax: I18NEXT, language: "en" }).refusals, [
-    {
-      key: "place",
-      message:
-        "Its forms would become one string named place, but another key has that name: rename one of them first",
-    },
-  ]);
+  assertEquals(sourceFileToIcu(file, { syntax: I18NEXT, language: "en" }), {
+    text: file,
+    merged: [],
+    escapes: 0,
+    refusals: [
+      {
+        key: "place",
+        message:
+          "Its forms would become one string named place, but another key has that name: rename one of them first",
+      },
+    ],
+  });
 });
 
 test("ICU conversion: refusals in a file are listed by key, and nothing changes", () => {

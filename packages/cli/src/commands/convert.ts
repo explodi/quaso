@@ -11,6 +11,7 @@
  * files converted when that makes them match.
  */
 import {
+  type ErrorDetail,
   type IcuConversionResult,
   type InterpolationSyntax,
   type ProjectInfo,
@@ -243,7 +244,7 @@ class Instance {
   }
 
   /** A detail of the instance's result as a problem, with its local path. */
-  problem(detail: Parameters<typeof problemFromDetail>[0]): Problem {
+  problem(detail: ErrorDetail): Problem {
     const problem = problemFromDetail(detail);
     if (problem.file !== undefined) problem.file = this.local(problem.file);
     return problem;
