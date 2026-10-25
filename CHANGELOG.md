@@ -45,6 +45,10 @@ Release candidates are for deployment and migration testing. The team decides wh
   that would fail the ICU checks. `POST /api/v1/conversions/icu` converts the instance alone, for
   administrators and API keys with the `upload` scope. See
   [Move an i18next project to ICU MessageFormat](docs/move-to-icu.md).
+- A guide, "Gender, plurals and other variants": which tool fits each kind of variation (plural
+  and ordinal blocks, a select in the English, declared arguments for agreement only other
+  languages need, alternatives, fragments the app joins), why a string must be a whole sentence
+  and each case a whole phrase, what the LLM is told, and what the checks refuse.
 - Folder context: managers write a context for a folder in Settings → Files & length limits, and
   the LLM reads it with every file in the folder and its subfolders: the folders' contexts,
   outermost first, then the file's own, in `%fileContext%`. `PATCH /folders` writes one; a blank
