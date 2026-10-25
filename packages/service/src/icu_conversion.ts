@@ -172,19 +172,37 @@ function snapshotFromRows(
   };
 }
 
-/** A translation, or a pending suggestion, as it will be stored. */
-interface ConvertedText {
-  value: string;
-  sourceHash: string;
-  changed: boolean;
-}
-
 /** An active string, converted. */
 interface ConvertedString {
   row: StringRow;
   columns: EntryColumns;
   /** A plural or ordinal group that became one string. */
   merged: boolean;
+}
+
+/** A translation, converted: its new columns, and whether its text changed. */
+interface ConvertedTranslation {
+  row: TranslationRow;
+  value: string;
+  sourceHash: string;
+  searchText: string;
+  /** The checks' counts, with ICU's rules. */
+  errors: number;
+  warnings: number;
+  changed: boolean;
+}
+
+/** What every step of a conversion shares: the syntaxes, the languages, and the result. */
+interface Conversion {
+  /** The project's i18next syntax. */
+  from: InterpolationSyntax;
+  /** The project's syntax afterwards. */
+  to: InterpolationSyntax;
+  sourceLanguage: string;
+  languages: Map<string, Language>;
+  /** For the checks with ICU's rules. */
+  facts: CheckFacts;
+  result: IcuConversionResult;
 }
 
 /**
@@ -213,174 +231,57 @@ export function planIcuConversion(
   };
   const { settings } = snapshot;
   if (settings.syntax.icu) return { statements: [], result: { ...result, alreadyIcu: true } };
-  const from = settings.syntax;
-  const to: InterpolationSyntax = { ...from, optional: optionalToIcu(settings), icu: true };
-  const sourceLanguage = settings.sourceLanguage;
+  const to: InterpolationSyntax = {
+    ...settings.syntax,
+    optional: optionalToIcu(settings),
+    icu: true,
+  };
   const languages = new Map(snapshot.languages.map((language) => [language.tag, language]));
+  const sourceLanguage = settings.sourceLanguage;
   const facts: CheckFacts = { sourceLanguage, syntax: to, languages, glossary: snapshot.glossary };
+  const conversion: Conversion = {
+    from: settings.syntax,
+    to,
+    sourceLanguage,
+    languages,
+    facts,
+    result,
+  };
   for (const job of snapshot.jobs) {
     result.refusals.push({
       message: `Translation job ${job} is queued or running: let it finish, or cancel it`,
     });
   }
 
-  const converted: ConvertedString[] = [];
-  for (const row of snapshot.strings) {
-    if (row.active !== 1 || row.kind === "literal") continue;
-    const where = { file: row.path, key: row.display_key };
-    if (row.kind === "reference") {
-      result.refusals.push({ ...where, message: REFERENCE_ONLY });
-      continue;
-    }
-    const english = valueToIcu(row.kind as TranslatableKind, fromJson<TextValue>(row.source), {
-      syntax: from,
-      language: sourceLanguage,
-    });
-    if (!english.ok) {
-      result.refusals.push(...english.problems.map((message) => ({ ...where, message })));
-      continue;
-    }
-    const keyPath = fromJson<KeyPath>(row.key_path);
-    const entry = { kind: "text" as const, keyPath, value: english.value as string };
-    const columns = entryColumns(entry, { syntax: to, locale: sourceLanguage });
-    const merged = row.kind !== "text";
-    converted.push({ row, columns, merged });
-    if (merged) result.merged.push(where);
-    if (columns.source !== row.source) result.strings++;
-    result.escapes += english.escapes;
-    if (english.escapes > 0) result.escaped.push(where);
-  }
-  const retired = planMergedKeys(snapshot.strings, converted, result.refusals);
-
-  const strings = new Map(converted.map((string) => [string.row.id, string]));
-  const translations = new Map<string, TranslationRow & ConvertedText>();
-  const qaUpdates: unknown[] = [];
-  const history: unknown[] = [];
-  for (const translation of snapshot.translations) {
-    const string = strings.get(translation.string_id);
-    const language = languages.get(translation.language);
-    if (string === undefined || language === undefined) continue;
-    const where = { file: string.row.path, key: string.row.display_key, language: language.tag };
-    const icu = valueToIcu(
-      string.row.kind as TranslatableKind,
-      fromJson<TextValue>(translation.value),
-      { syntax: from, language: language.tag, pluralOverride: language.pluralOverride },
-    );
-    if (!icu.ok) {
-      result.refusals.push(...icu.problems.map((message) => ({ ...where, message })));
-      continue;
-    }
-    const text = convertedText(translation, icu.value, string);
-    translations.set(pairKey(translation.string_id, language.tag), { ...translation, ...text });
-    const target = { ...string.columns, max_length: string.row.max_length };
-    const checks = checkValue(facts, target, language.tag, icu.value);
-    const errors = errorsOf(checks);
-    if (errors.length > 0) {
-      result.failing.push({ ...where, check: errors[0].check, message: errors[0].message });
-    }
-    result.escapes += icu.escapes;
-    if (icu.escapes > 0) result.escaped.push(where);
-    const unchanged =
-      !text.changed &&
-      text.sourceHash === translation.source_hash &&
-      errors.length === translation.qa_errors &&
-      checks.length - errors.length === translation.qa_warnings;
-    if (unchanged) continue;
-    if (text.changed) result.translations++;
-    qaUpdates.push({
-      stringId: translation.string_id,
-      language: translation.language,
-      value: text.value,
-      sourceHash: text.sourceHash,
-      searchText: normalizeSearch(valueText(icu.value)),
-      revision: text.changed ? at.revision + 1 : translation.revision,
-      errors: errors.length,
-      warnings: checks.length - errors.length,
-    });
-    if (text.changed)
-      history.push({
-        stringId: translation.string_id,
-        language: translation.language,
-        event: "translation_converted",
-        before: translation.value,
-        after: text.value,
-        colour: translation.colour,
-      });
-  }
-
-  const suggestionUpdates: unknown[] = [];
-  for (const suggestion of snapshot.suggestions) {
-    const string = strings.get(suggestion.string_id);
-    const language = languages.get(suggestion.language);
-    if (string === undefined || language === undefined) continue;
-    const current = translations.get(pairKey(suggestion.string_id, suggestion.language));
-    const outgrown = current === undefined || current.revision !== suggestion.base_revision;
-    const baseRevision = outgrown || !current.changed ? suggestion.base_revision : at.revision + 1;
-    const sourceHash =
-      suggestion.source_hash === string.row.source_hash
-        ? string.columns.sourceHash
-        : suggestion.source_hash;
-    let value = suggestion.value;
-    if (value !== null) {
-      const icu = valueToIcu(string.row.kind as TranslatableKind, fromJson<TextValue>(value), {
-        syntax: from,
-        language: language.tag,
-        pluralOverride: language.pluralOverride,
-      });
-      if (!icu.ok) {
-        const where = {
-          file: string.row.path,
-          key: string.row.display_key,
-          language: language.tag,
-        };
-        result.refusals.push(
-          ...icu.problems.map((message) => ({
-            ...where,
-            message: `A pending suggestion: ${message}`,
-          })),
-        );
-        continue;
-      }
-      result.escapes += icu.escapes;
-      value = canonicalValue(icu.value);
-      if (value !== suggestion.value) result.suggestions++;
-    }
-    const unchanged =
-      value === suggestion.value &&
-      sourceHash === suggestion.source_hash &&
-      baseRevision === suggestion.base_revision;
-    if (!unchanged) suggestionUpdates.push({ id: suggestion.id, value, sourceHash, baseRevision });
-  }
-
+  const strings = convertStrings(conversion, snapshot.strings);
+  const retired = planMergedKeys(snapshot.strings, strings, result.refusals);
+  const byId = new Map(strings.map((string) => [string.row.id, string]));
+  const translations = convertTranslations(conversion, snapshot.translations, byId);
+  const suggestions = convertSuggestions(conversion, snapshot.suggestions, byId, translations, at);
   if (result.refusals.length > 0 || result.dryRun) return { statements: [], result };
-  const changedStrings = converted.filter(
-    (string) => string.columns.source !== string.row.source || string.merged,
+
+  const changedStrings = strings.filter(
+    (string) => string.merged || string.columns.source !== string.row.source,
   );
+  const changedTranslations = translations.filter((translation) => translation.changed);
+  const fileIds = [...new Set(changedStrings.map((string) => string.row.file_id))];
   const statements: Statement[] = [
     ...retired.map((row) => ({
       sql: "UPDATE strings SET key = ?, updated_at = ? WHERE id = ?",
       params: [retiredKey(row.key, row.id), at.now, row.id],
     })),
-    ...jsonStatements(STRINGS_UPDATE, [at.now], changedStrings.map(stringUpdate)),
-    ...jsonStatements(
-      SOURCE_WARNINGS_UPDATE,
-      [],
-      changedStrings.map((string) => ({
-        id: string.row.id,
-        before: string.row.source_hash,
-        after: string.columns.sourceHash,
-      })),
-    ),
+    ...jsonStatements(STRINGS_UPDATE, [at.now], changedStrings.map(stringColumns)),
+    ...jsonStatements(SOURCE_WARNINGS_UPDATE, [], changedStrings.map(warningHashes)),
     {
       sql: "UPDATE files SET source_updated_at = ?, source_revision = ? WHERE id IN (SELECT value FROM json_each(?))",
-      params: [
-        at.now,
-        at.revision + 1,
-        toJson([...new Set(changedStrings.map((string) => string.row.file_id))]),
-      ],
+      params: [at.now, at.revision + 1, toJson(fileIds)],
     },
-    ...jsonStatements(TRANSLATIONS_UPDATE, [], qaUpdates),
-    ...jsonStatements(SUGGESTIONS_UPDATE, [], suggestionUpdates),
+    ...jsonStatements(
+      TRANSLATIONS_UPDATE,
+      [],
+      translations.flatMap((translation) => translationColumns(translation, at.revision + 1)),
+    ),
+    ...jsonStatements(SUGGESTIONS_UPDATE, [], suggestions),
     ...jsonStatements(
       HISTORY_INSERT,
       [author.type, author.id, author.label, at.now],
@@ -393,7 +294,14 @@ export function planIcuConversion(
           after: string.columns.source,
           colour: null,
         })),
-        ...history,
+        ...changedTranslations.map((translation) => ({
+          stringId: translation.row.string_id,
+          language: translation.row.language,
+          event: "translation_converted",
+          before: translation.row.value,
+          after: translation.value,
+          colour: translation.row.colour,
+        })),
       ],
     ),
     {
@@ -403,6 +311,176 @@ export function planIcuConversion(
     conversionActivity(result, author, at.now),
   ];
   return { statements, result: { ...result, converted: true, revision: at.revision + 1 } };
+}
+
+/** The active strings' English, converted; the others are refused or left as they are. */
+function convertStrings(conversion: Conversion, rows: StringRow[]): ConvertedString[] {
+  const { result } = conversion;
+  const converted: ConvertedString[] = [];
+  for (const row of rows) {
+    if (row.active !== 1 || row.kind === "literal") continue;
+    const where = { file: row.path, key: row.display_key };
+    if (row.kind === "reference") {
+      result.refusals.push({ ...where, message: REFERENCE_ONLY });
+      continue;
+    }
+    const english = valueToIcu(row.kind as TranslatableKind, fromJson<TextValue>(row.source), {
+      syntax: conversion.from,
+      language: conversion.sourceLanguage,
+    });
+    if (!english.ok) {
+      result.refusals.push(...english.problems.map((message) => ({ ...where, message })));
+      continue;
+    }
+    const entry = {
+      kind: "text" as const,
+      keyPath: fromJson<KeyPath>(row.key_path),
+      value: english.value as string,
+    };
+    const columns = entryColumns(entry, {
+      syntax: conversion.to,
+      locale: conversion.sourceLanguage,
+    });
+    const merged = row.kind !== "text";
+    converted.push({ row, columns, merged });
+    if (merged) result.merged.push(where);
+    if (columns.source !== row.source) result.strings++;
+    result.escapes += english.escapes;
+    if (english.escapes > 0) result.escaped.push(where);
+  }
+  return converted;
+}
+
+/**
+ * The converted strings' translations in the project's languages, converted and checked
+ * with ICU's rules: failures are listed in the result, and the translations kept.
+ */
+function convertTranslations(
+  conversion: Conversion,
+  rows: TranslationRow[],
+  strings: Map<number, ConvertedString>,
+): ConvertedTranslation[] {
+  const { result } = conversion;
+  const converted: ConvertedTranslation[] = [];
+  for (const row of rows) {
+    const string = strings.get(row.string_id);
+    const language = conversion.languages.get(row.language);
+    if (string === undefined || language === undefined) continue;
+    const where = { file: string.row.path, key: string.row.display_key, language: language.tag };
+    const icu = valueToIcu(string.row.kind as TranslatableKind, fromJson<TextValue>(row.value), {
+      syntax: conversion.from,
+      language: language.tag,
+      pluralOverride: language.pluralOverride,
+    });
+    if (!icu.ok) {
+      result.refusals.push(...icu.problems.map((message) => ({ ...where, message })));
+      continue;
+    }
+    const target = { ...string.columns, max_length: string.row.max_length };
+    const checks = checkValue(conversion.facts, target, language.tag, icu.value);
+    const errors = errorsOf(checks);
+    if (errors.length > 0) {
+      result.failing.push({ ...where, check: errors[0].check, message: errors[0].message });
+    }
+    const value = canonicalValue(icu.value);
+    const madeForCurrentEnglish = row.source_hash === string.row.source_hash;
+    converted.push({
+      row,
+      value,
+      sourceHash: madeForCurrentEnglish ? string.columns.sourceHash : row.source_hash,
+      searchText: normalizeSearch(valueText(icu.value)),
+      errors: errors.length,
+      warnings: checks.length - errors.length,
+      changed: value !== row.value,
+    });
+    if (value !== row.value) result.translations++;
+    result.escapes += icu.escapes;
+    if (icu.escapes > 0) result.escaped.push(where);
+  }
+  return converted;
+}
+
+/**
+ * A translation's row update, or none when nothing about it changes. A changed text takes
+ * the new revision, so that an edit based on the old text conflicts.
+ */
+function translationColumns(translation: ConvertedTranslation, revision: number): unknown[] {
+  const { row } = translation;
+  const sameChecks =
+    translation.errors === row.qa_errors && translation.warnings === row.qa_warnings;
+  const sameHash = translation.sourceHash === row.source_hash;
+  if (!translation.changed && sameHash && sameChecks) return [];
+  return [
+    {
+      stringId: row.string_id,
+      language: row.language,
+      value: translation.value,
+      sourceHash: translation.sourceHash,
+      searchText: translation.searchText,
+      revision: translation.changed ? revision : row.revision,
+      errors: translation.errors,
+      warnings: translation.warnings,
+    },
+  ];
+}
+
+/**
+ * The pending suggestions' updates: their text converted, the English hash they are for,
+ * and their base revision when their translation takes a new one, so they stay approvable.
+ */
+function convertSuggestions(
+  conversion: Conversion,
+  rows: SuggestionRow[],
+  strings: Map<number, ConvertedString>,
+  translations: ConvertedTranslation[],
+  at: { revision: number },
+): unknown[] {
+  const { result } = conversion;
+  const byPair = new Map(
+    translations.map((translation) => [
+      pairKey(translation.row.string_id, translation.row.language),
+      translation,
+    ]),
+  );
+  const updates: unknown[] = [];
+  for (const row of rows) {
+    const string = strings.get(row.string_id);
+    const language = conversion.languages.get(row.language);
+    if (string === undefined || language === undefined) continue;
+    const translation = byPair.get(pairKey(row.string_id, row.language));
+    const basedOnCurrent =
+      translation !== undefined && translation.row.revision === row.base_revision;
+    const baseRevision =
+      basedOnCurrent && translation.changed ? at.revision + 1 : row.base_revision;
+    const madeForCurrentEnglish = row.source_hash === string.row.source_hash;
+    const sourceHash = madeForCurrentEnglish ? string.columns.sourceHash : row.source_hash;
+    let value = row.value;
+    if (value !== null) {
+      const icu = valueToIcu(string.row.kind as TranslatableKind, fromJson<TextValue>(value), {
+        syntax: conversion.from,
+        language: language.tag,
+        pluralOverride: language.pluralOverride,
+      });
+      if (!icu.ok) {
+        const where = {
+          file: string.row.path,
+          key: string.row.display_key,
+          language: language.tag,
+        };
+        for (const problem of icu.problems) {
+          result.refusals.push({ ...where, message: `A pending suggestion: ${problem}` });
+        }
+        continue;
+      }
+      value = canonicalValue(icu.value);
+      if (value !== row.value) result.suggestions++;
+      result.escapes += icu.escapes;
+    }
+    const unchanged =
+      value === row.value && sourceHash === row.source_hash && baseRevision === row.base_revision;
+    if (!unchanged) updates.push({ id: row.id, value, sourceHash, baseRevision });
+  }
+  return updates;
 }
 
 export function logConversion(logger: Logger, result: IcuConversionResult): void {
@@ -462,21 +540,6 @@ function planMergedKeys(
   return retired;
 }
 
-/** A translation's or suggestion's new value, and the English hash it is for. */
-function convertedText(
-  translation: Pick<TranslationRow, "value" | "source_hash">,
-  value: TextValue,
-  string: ConvertedString,
-): ConvertedText {
-  const stored = canonicalValue(value);
-  const current = translation.source_hash === string.row.source_hash;
-  return {
-    value: stored,
-    sourceHash: current ? string.columns.sourceHash : translation.source_hash,
-    changed: stored !== translation.value,
-  };
-}
-
 function pairKey(stringId: number, language: string): string {
   return `${stringId} ${language}`;
 }
@@ -492,7 +555,8 @@ function optionalToIcu(settings: ProjectSettings): InterpolationSyntax["optional
   });
 }
 
-function stringUpdate(string: ConvertedString) {
+/** A converted string's row update. */
+function stringColumns(string: ConvertedString) {
   const { columns } = string;
   return {
     id: string.row.id,
@@ -503,6 +567,11 @@ function stringUpdate(string: ConvertedString) {
     words: columns.words,
     searchText: columns.searchText,
   };
+}
+
+/** The English hash a converted string's ambiguity reports move from, and to. */
+function warningHashes(string: ConvertedString) {
+  return { id: string.row.id, before: string.row.source_hash, after: string.columns.sourceHash };
 }
 
 function conversionActivity(result: IcuConversionResult, author: Author, now: number): Statement {

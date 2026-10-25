@@ -399,8 +399,7 @@ export const ICU_CONVERSION_CASES: { name: string; run(sql: Sql): Promise<void> 
           "llm",
         ),
       ]);
-      const result = await convertToIcuAsync(sql, { type: "system" }, {}, AT);
-      checkEqual(result.failing, [
+      const failing = [
         {
           file: "common.json",
           key: "coins",
@@ -408,7 +407,11 @@ export const ICU_CONVERSION_CASES: { name: string; run(sql: Sql): Promise<void> 
           check: "placeholder_extra",
           message: "Placeholder {count} isn't in the English in the one case of {count, plural}.",
         },
-      ]);
+      ];
+      const preview = await convertToIcuAsync(sql, { type: "system" }, { dryRun: true }, AT);
+      checkEqual(preview.failing, failing);
+      const result = await convertToIcuAsync(sql, { type: "system" }, {}, AT);
+      checkEqual(result.failing, failing);
       const [rows] = await sql.read([{ sql: "SELECT colour, qa_errors FROM translations" }]);
       checkEqual(rows, [{ colour: "blue", qa_errors: 1 }]);
     },
