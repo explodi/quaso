@@ -214,6 +214,11 @@ Release candidates are for deployment and migration testing. The team decides wh
 
 - The string list shows a string's "Saving…" in full, with a spinner, while its save runs in the
   background; the key and file name are cut short first.
+- LLM suggestions no longer fail with "The project is busy" while background saves run: the
+  server tries recording a suggestion's usage three times, then keeps the paid-for answer without
+  it and logs that. The editor sends a request the server couldn't answer again up to three
+  times, after 1, 2 and 4 seconds, and keeps six suggestions ready or on their way ahead of the
+  translator instead of three, so they are more often there on arrival.
 - A server with many files starts in seconds. It used to publish before it answered, reading
   every file's stored objects one by one: with a few thousand files on Cloudflare, a start took
   over an hour and every request got 502. Starting now only schedules the next wake-up, and a

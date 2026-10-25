@@ -6,8 +6,9 @@ import { ApiError } from "../../lib/api.ts";
 import { type SuggestionTarget, SuggestionCache, stringsToAsk } from "./useLlmSuggestion.ts";
 
 const STRING = (id: number): SuggestionTarget => ({ id, source: `English ${id}` });
-/** The open string, 1, and the six after it. */
-const OPEN_AND_NEXT = [1, 2, 3, 4, 5, 6, 7].map(STRING);
+/** The open string, 1, and the nine after it. */
+const OPEN_AND_NEXT = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(STRING);
+const NO_WAIT = () => Promise.resolve();
 
 const covering =
   (...ids: number[]) =>
@@ -33,12 +34,15 @@ test("with nothing answered yet, it asks about the open string and the next thre
   assertEquals(stringsToAsk([1, 2, 3, 4, 5, 6, 7], covering()), [1, 2, 3, 4]);
 });
 
-test("while three answers wait ahead, it asks about nothing", () => {
-  assertEquals(stringsToAsk([1, 2, 3, 4, 5, 6, 7], covering(1, 2, 3, 4)), []);
+test("while six answers wait ahead, it asks about nothing", () => {
+  assertEquals(stringsToAsk([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], covering(1, 2, 3, 4, 5, 6, 7)), []);
 });
 
-test("when fewer than three answers wait ahead, it asks about the next four", () => {
-  assertEquals(stringsToAsk([1, 2, 3, 4, 5, 6, 7], covering(1, 2, 3)), [4, 5, 6, 7]);
+test("when fewer than six answers wait ahead, it asks about the next four", () => {
+  assertEquals(
+    stringsToAsk([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], covering(1, 2, 3, 4, 5, 6)),
+    [7, 8, 9, 10],
+  );
 });
 
 test("without an answer for the open string, it asks for it first, even with answers ahead", () => {
@@ -49,33 +53,36 @@ test("with no strings, it asks about nothing", () => {
   assertEquals(stringsToAsk([], covering()), []);
 });
 
-test("the cache asks about the open string and the next three in one request", async () => {
+test("the cache asks about the open string and the next seven, four to a request", async () => {
   const { ask, asked } = answering();
   const cache = new SuggestionCache(ask);
   await cache.askFor("de", OPEN_AND_NEXT);
-  assertEquals(asked, [{ language: "de", ids: [1, 2, 3, 4] }]);
+  assertEquals(asked, [
+    { language: "de", ids: [1, 2, 3, 4] },
+    { language: "de", ids: [5, 6, 7, 8] },
+  ]);
   assertEquals(cache.stateOf("de", STRING(1)), {
     status: "ready",
     suggestion: { id: 1, value: "de 1", model: "m" },
   });
-  assertEquals(cache.stateOf("de", STRING(5)), undefined);
+  assertEquals(cache.stateOf("de", STRING(9)), undefined);
 });
 
-test("moving to the next string asks about the next four", async () => {
+test("moving on while six answers wait ahead asks about nothing", async () => {
   const { ask, asked } = answering();
   const cache = new SuggestionCache(ask);
   await cache.askFor("de", OPEN_AND_NEXT);
-  await cache.askFor("de", [2, 3, 4, 5, 6, 7, 8].map(STRING));
-  assertEquals(asked[1], { language: "de", ids: [5, 6, 7, 8] });
-});
-
-test("moving on while enough answers wait ahead asks about nothing", async () => {
-  const { ask, asked } = answering();
-  const cache = new SuggestionCache(ask);
-  await cache.askFor("de", OPEN_AND_NEXT);
-  await cache.askFor("de", [2, 3, 4, 5, 6, 7, 8].map(STRING));
-  await cache.askFor("de", [3, 4, 5, 6, 7, 8, 9].map(STRING));
+  await cache.askFor("de", [2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(STRING));
   assertEquals(asked.length, 2);
+});
+
+test("moving on when fewer than six answers wait ahead asks about the next four", async () => {
+  const { ask, asked } = answering();
+  const cache = new SuggestionCache(ask);
+  await cache.askFor("de", OPEN_AND_NEXT);
+  await cache.askFor("de", [2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(STRING));
+  await cache.askFor("de", [3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(STRING));
+  assertEquals(asked[2], { language: "de", ids: [9, 10, 11, 12] });
 });
 
 test("a string the LLM couldn't translate fails, with the reason", async () => {
@@ -91,8 +98,8 @@ test("a string the LLM couldn't translate fails, with the reason", async () => {
 
 test("a request that fails fails each of its strings", async () => {
   const ask = () => Promise.reject(new ApiError(503, "unavailable", "The LLM is down."));
-  const cache = new SuggestionCache(ask, () => 1_000);
-  await cache.askFor("de", OPEN_AND_NEXT);
+  const cache = new SuggestionCache(ask, () => 1_000, NO_WAIT);
+  await cache.askFor("de", [1, 2, 3, 4].map(STRING));
   assertEquals(cache.stateOf("de", STRING(1)), {
     status: "failed",
     message: "The LLM is down.",
@@ -103,6 +110,50 @@ test("a request that fails fails each of its strings", async () => {
     message: "The LLM is down.",
     failedAt: 1_000,
   });
+});
+
+test("a request the server couldn't answer is sent again three times, waiting longer each time", async () => {
+  let asked = 0;
+  const ask = () => {
+    asked++;
+    return Promise.reject(new ApiError(503, "unavailable", "The project is busy."));
+  };
+  const waits: number[] = [];
+  const wait = (ms: number) => {
+    waits.push(ms);
+    return Promise.resolve();
+  };
+  const cache = new SuggestionCache(ask, () => 1_000, wait);
+  await cache.askFor("de", [STRING(1)]);
+  assertEquals(asked, 4);
+  assertEquals(waits, [1_000, 2_000, 4_000]);
+});
+
+test("a request answered on a retry gives its suggestions", async () => {
+  const { ask: answer } = answering();
+  let busy = true;
+  const ask = (language: string, ids: number[]) => {
+    if (!busy) return answer(language, ids);
+    busy = false;
+    return Promise.reject(new ApiError(503, "unavailable", "The project is busy."));
+  };
+  const cache = new SuggestionCache(ask, () => 1_000, NO_WAIT);
+  await cache.askFor("de", [STRING(1)]);
+  assertEquals(cache.stateOf("de", STRING(1)), {
+    status: "ready",
+    suggestion: { id: 1, value: "de 1", model: "m" },
+  });
+});
+
+test("a request the server refused isn't sent again", async () => {
+  let asked = 0;
+  const ask = () => {
+    asked++;
+    return Promise.reject(new ApiError(403, "forbidden", "No."));
+  };
+  const cache = new SuggestionCache(ask, () => 1_000, NO_WAIT);
+  await cache.askFor("de", [STRING(1)]);
+  assertEquals(asked, 1);
 });
 
 test("a failed string is asked about again after half a minute, not before", async () => {
@@ -142,6 +193,6 @@ test("those waiting hear when the request starts and when it ends", async () => 
   const cache = new SuggestionCache(ask);
   let heard = 0;
   cache.subscribe(() => heard++);
-  await cache.askFor("de", OPEN_AND_NEXT);
+  await cache.askFor("de", [STRING(1)]);
   assertEquals(heard, 2);
 });

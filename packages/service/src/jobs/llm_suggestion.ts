@@ -38,6 +38,9 @@ import { batchesOf, type WorkItem } from "./work.ts";
 
 /** How long all the requests of one call may take. */
 export const SUGGESTION_DEADLINE_MS = 30_000;
+/** How many times a request's usage is written while the project's other writes keep winning. */
+const USAGE_TRIES = 3;
+const USAGE_RETRY_MS = 50;
 
 export interface LlmSuggestionOptions {
   provider: TranslationProvider | null;
@@ -139,7 +142,7 @@ export async function suggestWithLlm(
         model: settings.llm.suggestionModel || settings.llm.model,
         clock: options.clock,
         canRequest: () => true,
-        record: (entry) => options.record({ ...entry, jobId: null, provider: provider.name }),
+        record: (entry) => recordUsage(options, { ...entry, jobId: null, provider: provider.name }),
         pauseForAuth(error) {
           refusedKey = true;
           options.logger.error("The provider refused the API key for an LLM suggestion", {
@@ -170,6 +173,28 @@ export async function suggestWithLlm(
       .filter((id) => !suggestions.has(id))
       .map((id) => ({ id, message: whyNot(id) })),
   };
+}
+
+/**
+ * Recording usage races the project's other writes, such as the translator's own background
+ * saves. The answer is already paid for, so when the project stays busy it is kept anyway.
+ */
+async function recordUsage(options: LlmSuggestionOptions, entry: RequestRecord): Promise<number> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await options.record(entry);
+    } catch (error) {
+      const busy = error instanceof ServiceError && error.code === "unavailable";
+      if (!busy) throw error;
+      if (attempt === USAGE_TRIES) {
+        options.logger.error("An LLM suggestion's usage wasn't recorded: the project was busy", {
+          strings: entry.strings,
+        });
+        return 0;
+      }
+      await new Promise((resolve) => setTimeout(resolve, USAGE_RETRY_MS * attempt));
+    }
+  }
 }
 
 /** Always a fresh translation: the person is writing their own, so the current one isn't shown. */
