@@ -3,10 +3,10 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { load, JSON_SCHEMA } from "js-yaml";
-import { canonicalLanguageTag } from "@quaso/core";
+import { canonicalLanguageTag, globBase } from "@quaso/core";
 import { canonical, describeFsError, normalizePattern } from "./config.ts";
 import { usageError } from "./errors.ts";
-import { glob, globBase } from "./glob.ts";
+import { glob } from "./glob.ts";
 
 export async function convertCrowdin(cwd: string, path: string, sourceLanguage: string) {
   let document: Record<string, unknown>;

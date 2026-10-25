@@ -15,9 +15,12 @@ import {
   QuasoConfig,
   toPlain,
   validate,
+  globBase,
+  globSample,
+  globToRegExp,
+  globProblem,
 } from "@quaso/core";
 import { CliError, EXIT, type Problem, usageError } from "./errors.ts";
-import { globBase, globSample, globToRegExp } from "./glob.ts";
 import { invalidKeyError } from "./http.ts";
 import type { Env } from "./output.ts";
 
@@ -234,16 +237,6 @@ export function parseConfig(
   return { config: checked, problems };
 }
 
-/** Why a glob can't be used (such as `[z-a]`), or null. */
-function globProblem(pattern: string): string | null {
-  try {
-    globToRegExp(pattern);
-    return null;
-  } catch (error) {
-    return `isn't a valid glob: ${error instanceof Error ? error.message : String(error)}`;
-  }
-}
-
 /**
  * Translation patterns that write into a source glob (CLI-5), such as `locales/{lang}/{path}`
  * with the source `locales/**\/*.json`: the next upload would send the translations as
@@ -253,7 +246,7 @@ function globProblem(pattern: string): string | null {
 function translationsInSources(config: QuasoConfig): { key: string; message: string }[] {
   const globs = config.files.map((mapping) => ({
     source: globToRegExp(mapping.source),
-    exclude: (mapping.exclude ?? []).map(globToRegExp),
+    exclude: (mapping.exclude ?? []).map((pattern) => globToRegExp(pattern)),
   }));
   const folders = languageFolders(config);
   const source = canonical(config.sourceLanguage);

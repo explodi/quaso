@@ -7,7 +7,14 @@
  * the first file. `--prune` deletes translation files whose source file is gone.
  */
 import { DownloadState } from "../download_state.ts";
-import { formatForPath, PublicationTime, validate, type ExportResult } from "@quaso/core";
+import {
+  formatForPath,
+  PublicationTime,
+  validate,
+  type ExportResult,
+  globBase,
+  globToRegExp,
+} from "@quaso/core";
 import { flag, option, values } from "../args.ts";
 import { canonical, languageFolder, type Project } from "../config.ts";
 import type { Command, Context } from "../context.ts";
@@ -30,7 +37,7 @@ import {
   utf8,
   writeAtomic,
 } from "../fs.ts";
-import { compareStrings, globBase, globToRegExp, walk } from "../glob.ts";
+import { compareStrings, walk } from "../glob.ts";
 import { LONG_TIMEOUT_MS } from "../http.ts";
 import { count, type Output } from "../output.ts";
 
@@ -349,7 +356,7 @@ export async function findPrunable(
     if (parts.length !== 2) continue;
     const base = globBase(mapping.source);
     const sourceMatch = globToRegExp(mapping.source);
-    const excludes = (mapping.exclude ?? []).map(globToRegExp);
+    const excludes = (mapping.exclude ?? []).map((pattern) => globToRegExp(pattern));
     for (const language of languages) {
       if (canonical(language) === project.sourceLanguage) continue;
       const folder = languageFolder(project, language);
