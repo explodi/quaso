@@ -215,6 +215,11 @@ Release candidates are for deployment and migration testing. The team decides wh
 - Saving several strings in a row no longer fails with "wasn't saved. Open it to try again.": the
   server's writes take turns instead of racing for the project's revision, so saves sent together,
   LLM suggestions and a running job wait for each other rather than running out of retries.
+- The editor's quick re-polls of the project, its files and their progress no longer read the
+  whole project each time: the server keeps the answers in memory while the project's revision
+  stays the same, and reads one row to check it. The cache has a memory budget, a default time to
+  live, and evicts expired entries first, then the least recently used. A refresh of the
+  contextual checks (duplicates, consistency) now raises the revision too.
 - The string list shows a string's "Saving…" in full, with a spinner, while its save runs in the
   background; the key and file name are cut short first.
 - LLM suggestions no longer fail with "The project is busy" while background saves run: the

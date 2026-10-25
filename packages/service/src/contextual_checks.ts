@@ -73,8 +73,16 @@ export async function refreshContextualChecks(sql: Sql): Promise<void> {
     { sql: "SELECT CAST(value AS INTEGER) AS revision FROM meta WHERE key = 'revision'" },
     { sql: SNAPSHOT },
   ]);
-  const statements = updates(rows, Number(revision[0]?.revision ?? 0));
-  if (statements.length > 0) await sql.migrate(statements);
+  const read = Number(revision[0]?.revision ?? 0);
+  const statements = updates(rows, read);
+  if (statements.length === 0) return;
+  // Changed checks raise the revision too, so a value cached under the revision is never stale.
+  // Last, so the updates above still see the revision they were decided at.
+  const raise: Statement = {
+    sql: "UPDATE meta SET value = CAST(? + 1 AS TEXT) WHERE key = 'revision' AND CAST(value AS INTEGER) = ?",
+    params: [read, read],
+  };
+  await sql.migrate([...statements, raise]);
 }
 
 export function withContextualChecks(sql: Sql): Sql {

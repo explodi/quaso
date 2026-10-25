@@ -8,6 +8,7 @@ import {
   type ProjectSettings,
   type LanguageProgress,
 } from "@quaso/core";
+import type { MemoryCache } from "./cache.ts";
 import type { Context } from "./context.ts";
 import { getRevision } from "./db.ts";
 import { loadLanguages } from "./languages.ts";
@@ -42,8 +43,9 @@ export async function getProjectAsync(
   sql: Sql,
   model: string,
   llmAvailable = false,
+  cache?: MemoryCache,
 ): Promise<ProjectInfo> {
-  const snapshot = await readProgressSnapshot(sql, model);
+  const snapshot = await readProgressSnapshot(sql, model, undefined, cache);
   const languages = snapshot.languages.map(({ files: _files, ...progress }) => progress);
   return projectInfo({ ...snapshot, languages }, llmAvailable);
 }

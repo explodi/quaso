@@ -11,6 +11,7 @@ import { createAsyncLlm } from "./jobs/llm_async.ts";
 import { readPermissions } from "./permissions.ts";
 import { silentLogger, type Sql, type Store } from "./ports.ts";
 import { createPublication, LLM_ALARM } from "./publication.ts";
+import { MemoryCache } from "./cache.ts";
 import { asyncReadMethods } from "./read_methods.ts";
 import type { Service, ServiceOptions } from "./service.ts";
 import { initializeDatabase } from "./startup.ts";
@@ -29,6 +30,8 @@ export function createAsyncService(options: AsyncServiceOptions): Service {
   const logger = options.logger ?? silentLogger;
   const model = options.defaultModel ?? FALLBACK_MODEL;
   const checkedSql = withContextualChecks(options.sql);
+  // A whole project's progress is a few megabytes; the server peaks near half of its memory.
+  const cache = new MemoryCache({ budgetBytes: 32 * 1024 * 1024, defaultTtlMs: 5 * 60_000 });
   const publication =
     options.store === undefined
       ? null
@@ -80,6 +83,7 @@ export function createAsyncService(options: AsyncServiceOptions): Service {
     ...asyncReadMethods({
       ...options,
       sql,
+      cache,
       clock,
       logger,
       models: llm.models,

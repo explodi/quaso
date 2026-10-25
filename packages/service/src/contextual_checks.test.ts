@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { assertEquals, assertStringIncludes } from "@std/assert";
 import { openAsyncSqlite } from "./adapters/node_async_sqlite.ts";
 import { SYSTEM } from "./api.ts";
+import { refreshContextualChecks } from "./contextual_checks.ts";
 import { createAsyncService } from "./service_async.ts";
 import { openNodeSqlite } from "./adapters/node_sqlite.ts";
 import { migrate } from "./migrate.ts";
@@ -50,6 +51,48 @@ test("duplicate warnings flag both keys, stay nonblocking and disappear after co
     });
     assertEquals((await service.listStrings(SYSTEM, { language: "de", state: "qa" })).total, 0);
     assertEquals((await service.getString(SYSTEM, { id: barn.id, language: "de" })).checks, []);
+  } finally {
+    opened.close();
+  }
+});
+
+test("progress read between a commit and its check refresh isn't served after the refresh", async () => {
+  const opened = openAsyncSqlite(":memory:");
+  try {
+    const service = createAsyncService({
+      sql: opened.sql,
+      scheduler: { schedule() {}, cancel() {} },
+      secretKey: "test",
+    });
+    await service.start();
+    await service.upload(SYSTEM, {
+      files: [
+        {
+          path: "buildings.json",
+          repoPath: "buildings.json",
+          content: '{"barn":"Storage Barn","loft":"Hay Loft"}',
+        },
+      ],
+      languages: ["de"],
+    });
+    await service.importTranslations(SYSTEM, {
+      language: "de",
+      as: "blue",
+      files: [{ path: "buildings.json", content: '{"barn":"Scheune","loft":"Heuboden"}' }],
+    });
+    const [[{ revision }]] = await opened.sql.read([
+      { sql: "SELECT CAST(value AS INTEGER) AS revision FROM meta WHERE key = 'revision'" },
+    ]);
+    // A commit that bypasses the service's check refresh, as if the read below came in between.
+    await opened.sql.commit(Number(revision), [
+      {
+        sql: `UPDATE translations SET value = '"scheune"' WHERE language = 'de'
+          AND string_id = (SELECT id FROM strings WHERE display_key = 'loft')`,
+      },
+    ]);
+    assertEquals((await service.getStatus(SYSTEM, {})).languages[0].qa, 0);
+    await refreshContextualChecks(opened.sql);
+    assertEquals((await service.getStatus(SYSTEM, {})).languages[0].qa, 2);
   } finally {
     opened.close();
   }
