@@ -269,23 +269,50 @@ export class QueryCache {
 export const queryCache = new QueryCache();
 
 /**
- * Revalidates what's on screen when the window gets focus again or the tab becomes
- * visible, if it's older than `minAge`. Returns a function that stops listening.
+ * After this long without a key, click, scroll or touch, polling stops: an open tab nobody
+ * looks at would otherwise keep asking the server, and keep a sleeping server awake.
+ */
+export const IDLE_AFTER_MS = 5 * 60_000;
+let lastInput = Date.now();
+
+/** Records input at `at`; true when the person was idle until then. */
+export function noteInput(at = Date.now()): boolean {
+  const wasIdle = isIdle(at);
+  lastInput = at;
+  return wasIdle;
+}
+
+export function isIdle(at = Date.now()): boolean {
+  return at - lastInput >= IDLE_AFTER_MS;
+}
+
+const INPUT_EVENTS = ["keydown", "pointerdown", "wheel", "touchstart"] as const;
+
+/**
+ * Revalidates what's on screen when the window gets focus again, the tab becomes visible or
+ * the person comes back after being idle, if it's older than `minAge`. Returns a function
+ * that stops listening.
  */
 export function revalidateOnFocus(cache = queryCache, minAge = 5_000): () => void {
   const onFocus = () => {
+    noteInput();
     if (document.visibilityState !== "hidden") cache.revalidateActive(minAge);
+  };
+  const onInput = () => {
+    if (noteInput()) cache.revalidateActive(minAge);
   };
   addEventListener("focus", onFocus);
   document.addEventListener("visibilitychange", onFocus);
+  for (const name of INPUT_EVENTS) addEventListener(name, onInput, { passive: true });
   return () => {
     removeEventListener("focus", onFocus);
     document.removeEventListener("visibilitychange", onFocus);
+    for (const name of INPUT_EVENTS) removeEventListener(name, onInput);
   };
 }
 
 export interface QueryOptions {
-  /** Poll every so many milliseconds while the page is visible. */
+  /** Poll every so many milliseconds while the page is visible and the person isn't idle. */
   refreshInterval?: number;
   /** Data younger than this isn't fetched again when a component mounts. Default: 10 s. */
   staleTime?: number;
@@ -370,7 +397,8 @@ export function useQuery<T>(
   useEffect(() => {
     if (key === null || !interval) return;
     const timer = setInterval(() => {
-      if (document.visibilityState !== "hidden") cache.fetch(stableKey).catch(() => {});
+      const watched = document.visibilityState !== "hidden" && !isIdle();
+      if (watched) cache.fetch(stableKey).catch(() => {});
     }, interval);
     return () => clearInterval(timer);
   }, [cache, stableKey, key === null, interval]);
