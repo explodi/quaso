@@ -56,6 +56,8 @@ type StringRow = {
   source: string;
   source_hash: string;
   max_length: number | null;
+  /** JSON `StringArgument[]`, or null. */
+  arguments: string | null;
   active: number;
 };
 
@@ -123,7 +125,7 @@ const CONVERSION_READS: Statement[] = [
   { sql: "SELECT term, language, kind, translation, case_sensitive FROM glossary_terms" },
   {
     sql: `SELECT s.id, s.file_id, f.path, s.key, s.key_path, s.display_key, s.kind, s.source,
-      s.source_hash, s.max_length, s.active FROM strings s JOIN files f ON f.id = s.file_id
+      s.source_hash, s.max_length, s.arguments, s.active FROM strings s JOIN files f ON f.id = s.file_id
       WHERE f.active = 1 ORDER BY f.path, s.position, s.id`,
   },
   {
@@ -376,7 +378,11 @@ function convertTranslations(
       result.refusals.push(...icu.problems.map((message) => ({ ...where, message })));
       continue;
     }
-    const target = { ...string.columns, max_length: string.row.max_length };
+    const target = {
+      ...string.columns,
+      max_length: string.row.max_length,
+      arguments: string.row.arguments,
+    };
     const checks = checkValue(conversion.facts, target, language.tag, icu.value);
     const errors = errorsOf(checks);
     if (errors.length > 0) {
