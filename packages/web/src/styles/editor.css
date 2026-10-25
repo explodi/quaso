@@ -728,6 +728,67 @@
   color: var(--fg);
 }
 
+/* The case editor: "Edit as text", then one field per case. */
+.icu-mode {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+}
+
+.icu-mode-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.icu-mode-note {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+
+.icu-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.icu-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.icu-field-outer {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+.icu-field-label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 560;
+}
+
+.icu-field-label .form-name {
+  min-width: 0;
+  color: var(--fg);
+}
+
+.icu-field-english {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
 /* The translation in each case, under the input. */
 .icu-preview > summary {
   font-size: var(--text-sm);

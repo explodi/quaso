@@ -55,6 +55,7 @@ import { StateBadge } from "../../components/StateBadge.tsx";
 import { useToast } from "../../components/Toast.tsx";
 import { JobProgress } from "../../components/JobProgress.tsx";
 import { DocumentParagraphs } from "./DocumentParagraphs.tsx";
+import { fieldEnglish, IcuCaseInput, useIcuFields } from "./IcuCaseEditor.tsx";
 import { IcuPreviewList, PluralCaseHints, pluralCaseHints } from "./IcuHelp.tsx";
 import { OutdatedNotice } from "./OutdatedNotice.tsx";
 import { MarkdownPreview } from "../../lib/markdown.tsx";
@@ -245,6 +246,16 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
   const pristine = retain ? edit.pristine : serverDraft;
   const baseRevision = retain ? edit.baseRevision : serverRevision;
   const dirty = !sameDraft(draft, pristine, forms);
+  const icuFields = useIcuFields(
+    icuStrings && detail.kind === "text" && typeof detail.source === "string"
+      ? detail.source
+      : null,
+    unmask(draft.text ?? ""),
+    unmask(pristine.text ?? ""),
+    tag,
+    language.plural,
+  );
+  const fieldsShown = icuFields?.shown === true;
   const [conflict, setConflict] = useState<Conflict | undefined>(() =>
     isApiError(failure, "conflict") && failure.current !== undefined
       ? { operation: "save", current: failure.current }
@@ -260,6 +271,8 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
   const inputs = useRef(new Map<FormKey, HTMLTextAreaElement>());
   const lastFocused = useRef<FormKey>(forms[0]);
   const root = useRef<HTMLDivElement>(null);
+  // The case editor's field that last had focus, and its English: chips and copying go there.
+  const focusedField = useRef<{ element: HTMLTextAreaElement; english: string } | null>(null);
 
   // Keep an unsaved draft when moving to another string; forget it once saved.
   const latest = useRef({ draft, dirty, baseRevision });
@@ -352,7 +365,8 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
   /** Inserts text at the cursor of the last focused input, keeping undo where possible. */
   const insert = (text: string, replaceAll = false): boolean => {
     const form = lastFocused.current ?? forms[0];
-    const element = inputs.current.get(form);
+    const field = fieldsShown ? focusedField.current?.element : undefined;
+    const element = field?.isConnected ? field : inputs.current.get(form);
     if (!element) return false;
     element.focus();
     if (replaceAll) element.select();
@@ -362,7 +376,11 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
     } catch {
       inserted = false;
     }
-    if (!inserted) {
+    if (!inserted && fieldsShown) {
+      // A field's change handler writes the translation, so it must see the change.
+      element.setRangeText(text, element.selectionStart, element.selectionEnd, "end");
+      element.dispatchEvent(new Event("input", { bubbles: true }));
+    } else if (!inserted) {
       // Without execCommand, change the value ourselves (undo then skips the insertion).
       const start = element.selectionStart;
       const next = element.value.slice(0, start) + text + element.value.slice(element.selectionEnd);
@@ -379,6 +397,11 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
     const text = llmDraft?.[form];
     if (text === undefined || !writable) return false;
     lastFocused.current = form;
+    if (fieldsShown) {
+      // The LLM translates the whole message, not one field.
+      setForm(form, text);
+      return true;
+    }
     return insert(text, true);
   };
 
@@ -391,6 +414,11 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
   const copySource = (): boolean => {
     if (!writable) return false;
     const form = lastFocused.current ?? forms[0];
+    if (fieldsShown && icuFields?.form) {
+      const focused = focusedField.current;
+      const focusedEnglish = focused?.element.isConnected ? focused.english : undefined;
+      return insert(focusedEnglish ?? fieldEnglish(icuFields.form.fields[0]), true);
+    }
     return insert(mask(englishToCopy(form)), true);
   };
 
@@ -841,7 +869,9 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
               detail.maxLength !== null && `${inputId}-length`,
               caseHints.length > 0 && `${inputId}-cases`,
             ];
-            const input = (
+            const describedByIds = describedBy.filter(Boolean).join(" ");
+            const singleLine = !/[\r\n]/.test(english);
+            const textInput = (
               <TextArea
                 id={inputId}
                 ref={(element) => {
@@ -855,19 +885,48 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
                 minRows={form !== "text" ? 2 : detail.document ? 8 : 3}
                 spellCheck
                 aria-invalid={invalid || undefined}
-                aria-describedby={describedBy.filter(Boolean).join(" ")}
+                aria-describedby={describedByIds}
                 onFocus={() => (lastFocused.current = form)}
-                onChange={(event) => setForm(form, event.target.value)}
+                onChange={(event) => {
+                  setForm(form, event.target.value);
+                  icuFields?.keepText();
+                }}
                 onKeyDown={(event) => {
                   const composing = event.nativeEvent.isComposing;
                   const saveShortcut = event.ctrlKey || event.metaKey;
-                  const singleLine = !/[\r\n]/.test(english);
                   if (event.key === "Enter" && singleLine && !composing && !saveShortcut) {
                     event.preventDefault();
                   }
                 }}
               />
             );
+            const input =
+              icuFields !== null && form === "text" ? (
+                <IcuCaseInput
+                  fields={icuFields}
+                  text={unmask(text)}
+                  textInput={textInput}
+                  inputId={inputId}
+                  language={tag}
+                  direction={direction}
+                  sourceLanguage={project.sourceLanguage}
+                  sourceDirection={sourceDirection}
+                  invalid={invalid}
+                  describedBy={describedByIds}
+                  singleLine={singleLine}
+                  firstFieldRef={(element) => {
+                    if (element) inputs.current.set(form, element);
+                    else inputs.current.delete(form);
+                  }}
+                  onFieldFocus={(element, fieldText) => {
+                    lastFocused.current = form;
+                    focusedField.current = { element, english: fieldText };
+                  }}
+                  onChange={(next) => setForm(form, mask(next))}
+                />
+              ) : (
+                textInput
+              );
             return (
               <div key={form} className="form-input">
                 <Label htmlFor={inputId} className="input-label">

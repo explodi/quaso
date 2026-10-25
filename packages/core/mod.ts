@@ -12,6 +12,7 @@ export * from "./src/tokens.ts";
 export * from "./src/icu.ts";
 export * from "./src/icu_format.ts";
 export * from "./src/icu_cases.ts";
+export * from "./src/icu_fields.ts";
 export * from "./src/plurals.ts";
 export * from "./src/entries.ts";
 export * from "./src/render.ts";

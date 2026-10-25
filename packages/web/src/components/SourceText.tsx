@@ -180,7 +180,14 @@ function isBlank(text: string, nodes: IcuNode[]): boolean {
 const LEADING_WHITESPACE = /^\s+/;
 const TRAILING_WHITESPACE = /\s+$/;
 
-function EdgeWhitespace({ whitespace, edge }: { whitespace: string; edge: "start" | "end" }) {
+/** Spaces and line breaks at an edge of a text, as signs: `·`, `↵`. */
+export function EdgeWhitespace({
+  whitespace,
+  edge,
+}: {
+  whitespace: string;
+  edge: "start" | "end";
+}) {
   if (whitespace === "") return null;
   const signs = Array.from(whitespace.replaceAll("\r\n", "\n"), (character) => {
     if (character === "\n" || character === "\r") return "↵";
