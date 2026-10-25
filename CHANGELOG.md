@@ -33,6 +33,18 @@ Release candidates are for deployment and migration testing. The team decides wh
   block into the translation. Uploads to a project without ICU keep them and warn. Schema version
   7 stores them with each string. Instances on the default prompt get its `arguments` field on the
   next request. `deno task test:llm` takes `--project` and `--icu` to evaluate another project.
+- Converting a project from i18next to ICU MessageFormat: `quaso convert-to-icu` converts the
+  instance's strings, translations and pending suggestions in one transaction, then the source
+  files in place with the same rules, and turns on **ICU MessageFormat**. `{{name}}` becomes
+  `{name}`, a plural group (`coins_one`, `coins_other`) becomes one `coins` string with a plural
+  block of each language's own forms (`_zero` as `=0`, ordinals as `selectordinal`), and braces,
+  `#` and apostrophes are quoted where ICU would read them. Colours, authors, timestamps, outdated
+  flags, history and comments stay; each converted text gets a history event. Nesting references,
+  i18next formats and other text ICU can't say are refused with their file, key and language, and
+  nothing changes until they are fixed. `--dry-run` reports both sides, including translations
+  that would fail the ICU checks. `POST /api/v1/conversions/icu` converts the instance alone, for
+  administrators and API keys with the `upload` scope. See
+  [Move an i18next project to ICU MessageFormat](docs/move-to-icu.md).
 - Folder context: managers write a context for a folder in Settings → Files & length limits, and
   the LLM reads it with every file in the folder and its subfolders: the folders' contexts,
   outermost first, then the file's own, in `%fileContext%`. `PATCH /folders` writes one; a blank

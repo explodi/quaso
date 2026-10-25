@@ -128,7 +128,9 @@ function piecesOf(text: string, syntax: InterpolationSyntax, problems: string[])
     if (token.type === "text") {
       pieces.push({ text: token.text });
     } else if (token.type === "reference") {
-      problems.push(`${token.raw} is an i18next nesting reference; ICU MessageFormat has no nesting`);
+      problems.push(
+        `${token.raw} is an i18next nesting reference; ICU MessageFormat has no nesting`,
+      );
     } else if (token.type === "placeholder") {
       const argument = argumentOf(token);
       if (typeof argument === "string") pieces.push({ argument });
@@ -141,7 +143,9 @@ function piecesOf(text: string, syntax: InterpolationSyntax, problems: string[])
 /** The ICU argument for a placeholder, or why there is none. */
 function argumentOf(token: PlaceholderToken): string | { problem: string } {
   if (token.format !== undefined) {
-    return { problem: `${token.raw} has an i18next format, which ICU MessageFormat writes differently` };
+    return {
+      problem: `${token.raw} has an i18next format, which ICU MessageFormat writes differently`,
+    };
   }
   if (!ARGUMENT_NAME.test(token.name)) {
     return {

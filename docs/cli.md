@@ -10,7 +10,7 @@ agents. For your first setup, follow [Add Quaso to your game](add-to-your-game.m
 - [The config file](#the-config-file)
 - [Commands](#commands): [init](#quaso-init), [upload](#quaso-upload), [download](#quaso-download),
   [translate](#quaso-translate), [status](#quaso-status), [import](#quaso-import),
-  [version and help](#quaso-version-and-quaso-help)
+  [convert-to-icu](#quaso-convert-to-icu), [version and help](#quaso-version-and-quaso-help)
 - [Options for every command](#options-for-every-command)
 - [JSON output](#json-output)
 - [Exit codes](#exit-codes)
@@ -60,7 +60,7 @@ Two environment variables connect the CLI to your team's Quaso instance:
 | Variable         | What it is                                                                                                                                                                                                  |
 | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `QUASO_HOSTNAME` | The instance, such as `translate.yourgame.com`. HTTPS is assumed; a full URL such as `http://localhost:8000` also works, for development. Plain `http://` is only for `localhost`, `127.0.0.1` and `[::1]`. |
-| `QUASO_API_KEY`  | A key created by an administrator: `read` permits `download` and `status`; `upload` also permits `upload`, `import`, and `translate`. Creator permissions also apply; see below.                            |
+| `QUASO_API_KEY`  | A key created by an administrator: `read` permits `download` and `status`; `upload` also permits `upload`, `import`, `translate`, and `convert-to-icu`. Creator permissions also apply; see below.          |
 
 ```sh
 export QUASO_HOSTNAME=translate.yourgame.com
@@ -466,6 +466,35 @@ every language it is about to import, and imports nothing when one is missing (e
 others stay imported: the output lists the failed languages (`result.failed` with `--json`) and the
 exit code is 6, so import them again with `--language`.
 
+### `quaso convert-to-icu`
+
+Converts the project from i18next to ICU MessageFormat, on the instance and in the source files
+together: every string, translation and pending suggestion on the instance, then the source files
+in place, with the same rules. `{{name}}` becomes `{name}`, plural keys such as `coins_one` and
+`coins_other` become one `coins` string with a plural block, and braces and apostrophes are quoted
+where ICU would read them. Translations keep their colour, author and history, and the project's
+**ICU MessageFormat** setting is turned on. Then run `quaso download` and commit the source files
+and translations together. [Move an i18next project to ICU MessageFormat](move-to-icu.md) has the
+rules and the steps around it.
+
+| Option      | Meaning                                                                               |
+| ----------- | ------------------------------------------------------------------------------------- |
+| `--dry-run` | Report what would change on the instance and in the source files, and change nothing. |
+
+The source files must match the instance's first: the command compares them as `quaso upload
+--dry-run` does, and stops with exit code 2 (`sources_differ`) when they differ. Afterwards it
+compares them again, and they match. Text ICU MessageFormat can't say, such as `$t()` nesting or
+`{{price, number}}`, is refused with its file, key and language: nothing changes, and the exit
+code is 6. A queued or running translation job is refused too. On a project the instance
+converted before, the command converts only the source files, when that makes them match, and
+otherwise reports nothing to do.
+
+The command needs an API key with the `upload` scope that an administrator created (exit code 3
+otherwise). With `--json`, `result.instance` is the instance's report (see
+[the API](api.md#convert-to-icu-messageformat)), `result.files` lists each source file with
+`changed`, `merged` and `escapes`, `result.refusals` has every refusal with its local path, and
+`result.sourcesMatch` says whether `quaso upload` would change nothing.
+
 ### `quaso version` and `quaso help`
 
 `quaso version` (or `--version`) prints the version and the runtime. `quaso help`, `quaso --help`,
@@ -646,7 +675,8 @@ stays the command's when a pipe closes early, as in `quaso status 2>&1 | head -1
   language or a file that wasn't asked for is refused.
 - It refuses to write a source file, the config file, the source language, a file a `source` glob
   would find, or anything outside the project folder, and it checks every path before it writes
-  the first file. `--prune` only deletes files the `translation` pattern could have written for a
+  the first file. The one exception is `convert-to-icu`, which rewrites the source files in place,
+  only once they match the instance's and nothing refuses the conversion. `--prune` only deletes files the `translation` pattern could have written for a
   source file that no longer exists.
 - Upload reads files inside the project folder. Import reads there by default, or inside the
   folder selected with `--from`.

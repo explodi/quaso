@@ -350,7 +350,10 @@ export function asyncWriteMethods(options: {
       }),
     convertToIcu: (caller, input) =>
       call(caller, "convert", IcuConversionRequest, input, async (request, actor) => {
-        const result = await convertToIcuAsync(options.sql, actor, request, { now: clock(), model });
+        const result = await convertToIcuAsync(options.sql, actor, request, {
+          now: clock(),
+          model,
+        });
         if (result.converted) logConversion(logger, result);
         return result;
       }),

@@ -60,7 +60,11 @@ export const convertToIcu: Command = {
     },
   ],
   exitCodes: [0, 1, 2, 3, 4, 5, 6],
-  examples: ["quaso convert-to-icu --dry-run", "quaso convert-to-icu", "quaso convert-to-icu --json"],
+  examples: [
+    "quaso convert-to-icu --dry-run",
+    "quaso convert-to-icu",
+    "quaso convert-to-icu --json",
+  ],
   async run(ctx: Context) {
     const project = await ctx.project();
     const sources = await ctx.sources();
@@ -82,7 +86,8 @@ export const convertToIcu: Command = {
     const ready = local.refusals.length === 0 && !dryRun;
     const result = await instance.convert(!ready);
     // Someone else converted the instance meanwhile.
-    if (result.alreadyIcu) return convertedBefore(project, sources, instance, files, syntax, dryRun);
+    if (result.alreadyIcu)
+      return convertedBefore(project, sources, instance, files, syntax, dryRun);
     if (result.converted) {
       await writeConverted(project, local, "Run quaso convert-to-icu again to convert them.");
       warnAboutRepositoryTranslations(ctx, project);
@@ -168,7 +173,8 @@ async function convertedBefore(
   };
   if (differences(await instance.compare(files)) === 0) return done;
   const local = convertFiles(project, sources, files, { ...syntax, icu: false });
-  const matching = local.refusals.length === 0 && differences(await instance.compare(local.files)) === 0;
+  const matching =
+    local.refusals.length === 0 && differences(await instance.compare(local.files)) === 0;
   if (!matching) {
     throw sourcesDiffer(
       "The project is on ICU MessageFormat already, but the source files differ from the instance's, converted or not.",
@@ -394,7 +400,9 @@ function renderConversion(out: Output, report: ConversionReport, instance: Insta
     return;
   }
   if (report.alreadyIcu) {
-    out.print(green("Converted the source files to match the instance, on ICU MessageFormat already."));
+    out.print(
+      green("Converted the source files to match the instance, on ICU MessageFormat already."),
+    );
   } else {
     out.print(green(`Converted to ICU MessageFormat (revision ${result!.revision}).`));
   }

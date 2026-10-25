@@ -73,7 +73,13 @@ async function seed(sql: Sql) {
     },
     translation("greeting", "de", "Hallo {{name}}", "green", "llm"),
     translation("greeting", "pl", "Cześć {{name}}", "blue", "user"),
-    translation("coins", "de", { one: "{{count}} Münze", other: "{{count}} Münzen" }, "blue", "user"),
+    translation(
+      "coins",
+      "de",
+      { one: "{{count}} Münze", other: "{{count}} Münzen" },
+      "blue",
+      "user",
+    ),
     translation(
       "coins",
       "pl",
@@ -296,7 +302,13 @@ export const ICU_CONVERSION_CASES: { name: string; run(sql: Sql): Promise<void> 
       await seed(sql);
       await convertToIcuAsync(sql, ADMIN, {}, AT);
       const settings = await loadSettingsAsync(sql, "test");
-      checkEqual(settings.syntax, { prefix: "{{", suffix: "}}", extra: [], optional: [], icu: true });
+      checkEqual(settings.syntax, {
+        prefix: "{{",
+        suffix: "}}",
+        extra: [],
+        optional: [],
+        icu: true,
+      });
       const before = await dump(sql);
       const again = await convertToIcuAsync(sql, ADMIN, {}, AT);
       checkEqual([again.alreadyIcu, again.converted, again.revision], [true, false, 3]);
@@ -333,12 +345,14 @@ export const ICU_CONVERSION_CASES: { name: string; run(sql: Sql): Promise<void> 
         {
           file: "common.json",
           key: "back",
-          message: "It is made of i18next nesting references only; ICU MessageFormat has no nesting",
+          message:
+            "It is made of i18next nesting references only; ICU MessageFormat has no nesting",
         },
         {
           file: "common.json",
           key: "price",
-          message: "{{n, number}} has an i18next format, which ICU MessageFormat writes differently",
+          message:
+            "{{n, number}} has an i18next format, which ICU MessageFormat writes differently",
         },
         {
           file: "common.json",
@@ -375,7 +389,12 @@ export const ICU_CONVERSION_CASES: { name: string; run(sql: Sql): Promise<void> 
         translation(
           "coins",
           "pl",
-          { one: "{{count}} moneta", few: "{{count}} monety", many: "x {{count}}", other: "y {{count}}" },
+          {
+            one: "{{count}} moneta",
+            few: "{{count}} monety",
+            many: "x {{count}}",
+            other: "y {{count}}",
+          },
           "blue",
           "llm",
         ),

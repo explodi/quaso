@@ -205,7 +205,10 @@ test("convert-to-icu refuses texts ICU can't say, and changes nothing", async ()
     assertEquals((await cli(["upload"])).code, 0);
     const refused = await cli(["convert-to-icu"]);
     assertEquals(refused.code, 6);
-    assertStringIncludes(refused.stdout, "src/locales/en/common.json › title: $t(back) is an i18next");
+    assertStringIncludes(
+      refused.stdout,
+      "src/locales/en/common.json › title: $t(back) is an i18next",
+    );
     assertStringIncludes(refused.stdout, "Nothing was converted.");
     assertEquals(
       await read("src/locales/en/common.json"),
@@ -231,6 +234,9 @@ test("convert-to-icu with a read key says which key it needs", async () => {
     const read = await service.createApiToken(SYSTEM, { name: "Reader", scope: "read" });
     const refused = await cli(["convert-to-icu"], read.secret);
     assertEquals(refused.code, 3);
-    assertStringIncludes(refused.stderr, "an API key with the upload scope that an administrator created");
+    assertStringIncludes(
+      refused.stderr,
+      "an API key with the upload scope that an administrator created",
+    );
   });
 });

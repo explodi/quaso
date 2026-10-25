@@ -328,9 +328,16 @@ export function planIcuConversion(
         pluralOverride: language.pluralOverride,
       });
       if (!icu.ok) {
-        const where = { file: string.row.path, key: string.row.display_key, language: language.tag };
+        const where = {
+          file: string.row.path,
+          key: string.row.display_key,
+          language: language.tag,
+        };
         result.refusals.push(
-          ...icu.problems.map((message) => ({ ...where, message: `A pending suggestion: ${message}` })),
+          ...icu.problems.map((message) => ({
+            ...where,
+            message: `A pending suggestion: ${message}`,
+          })),
         );
         continue;
       }

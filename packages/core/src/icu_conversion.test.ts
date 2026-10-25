@@ -109,7 +109,11 @@ test("ICU conversion: a blank placeholder, which i18next shows, stays text", () 
 });
 
 test("ICU conversion: an apostrophe before an argument is doubled", () => {
-  assertEquals(text("qu'{{article}} maire"), { ok: true, value: "qu''{article} maire", escapes: 1 });
+  assertEquals(text("qu'{{article}} maire"), {
+    ok: true,
+    value: "qu''{article} maire",
+    escapes: 1,
+  });
   assertEquals(shown("qu''{article} maire"), "qu'<article> maire");
 });
 
@@ -189,16 +193,23 @@ test("ICU conversion: a language with a zero category keeps a zero case too", ()
   const converted = plural({ zero: "{{count}} monētu", one: "{{count}} monēta", other: "x" }, "lv");
   assertEquals(converted, {
     ok: true,
-    value: "{count, plural, =0 {{count} monētu} zero {{count} monētu} one {{count} monēta} other {x}}",
+    value:
+      "{count, plural, =0 {{count} monētu} zero {{count} monētu} one {{count} monēta} other {x}}",
     escapes: 0,
   });
 });
 
 test("ICU conversion: ordinal forms become a selectordinal block", () => {
-  const forms = { one: "{{count}}st", two: "{{count}}nd", few: "{{count}}rd", other: "{{count}}th" };
+  const forms = {
+    one: "{{count}}st",
+    two: "{{count}}nd",
+    few: "{{count}}rd",
+    other: "{{count}}th",
+  };
   assertEquals(valueToIcu("ordinal", forms, { syntax: I18NEXT, language: "en" }), {
     ok: true,
-    value: "{count, selectordinal, one {{count}st} two {{count}nd} few {{count}rd} other {{count}th}}",
+    value:
+      "{count, selectordinal, one {{count}st} two {{count}nd} few {{count}rd} other {{count}th}}",
     escapes: 0,
   });
 });
@@ -206,7 +217,9 @@ test("ICU conversion: ordinal forms become a selectordinal block", () => {
 test("ICU conversion: an i18next format is refused", () => {
   assertEquals(text("Costs {{price, number}}"), {
     ok: false,
-    problems: ["{{price, number}} has an i18next format, which ICU MessageFormat writes differently"],
+    problems: [
+      "{{price, number}} has an i18next format, which ICU MessageFormat writes differently",
+    ],
   });
 });
 
@@ -289,7 +302,8 @@ test("ICU conversion: a file with nothing to convert stays byte for byte", () =>
 });
 
 test("ICU conversion: a plural group whose base is another key is refused", () => {
-  const file = '{"coins": "Coins", "coins_one": "{{count}} coin", "coins_other": "{{count}} coins"}';
+  const file =
+    '{"coins": "Coins", "coins_one": "{{count}} coin", "coins_other": "{{count}} coins"}';
   assertEquals(sourceFileToIcu(file, { syntax: I18NEXT, language: "en" }), {
     text: file,
     merged: [],
@@ -329,7 +343,8 @@ test("ICU conversion: refusals in a file are listed by key, and nothing changes"
       },
       {
         key: "price",
-        message: "{{price, number}} has an i18next format, which ICU MessageFormat writes differently",
+        message:
+          "{{price, number}} has an i18next format, which ICU MessageFormat writes differently",
       },
     ],
   });

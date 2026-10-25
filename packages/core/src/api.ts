@@ -1413,7 +1413,10 @@ export interface RenameResult {
 
 /** `POST /conversions/icu`: converts the project from i18next to ICU MessageFormat. */
 export const IcuConversionRequest = s.object({
-  dryRun: s.boolean().optional().describe("Report what the conversion would change, and change nothing"),
+  dryRun: s
+    .boolean()
+    .optional()
+    .describe("Report what the conversion would change, and change nothing"),
 });
 export type IcuConversionRequest = Infer<typeof IcuConversionRequest>;
 

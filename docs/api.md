@@ -37,7 +37,7 @@ Access depends on the route:
 | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
 | Public project data                        | Anyone, without a key: project, source files, strings, history, and activity.                                 |
 | Status, export, and file versions          | An administrator's key with `read` or `upload` scope, or an administrator's session.                          |
-| Source upload and translation import       | An administrator's key with `upload` scope, or an administrator's session.                                    |
+| Source upload, import, and ICU conversion  | An administrator's key with `upload` scope, or an administrator's session.                                    |
 | Translation jobs, models, and usage        | A manager's or administrator's key with `upload` scope, or their session. Assigned languages limit job scope. |
 | Settings and provider secrets              | An administrator's session. API keys do not grant this access.                                                |
 | Create, list, and revoke personal API keys | A signed-in account can manage its own keys. Administrators can also list and revoke everyone's keys.         |
@@ -240,6 +240,63 @@ Check `imported`, `unchanged`, `skippedIdentical`, `skippedEmpty`, `skippedBlue`
 `refused`, `flagged`, `unknownKeys`, and `unknownFiles` in the response. Remove `dryRun` only after
 reviewing the preview. See [Migrate from Crowdin](migrate-from-crowdin.md) for preserving approval
 states through two imports.
+
+## Convert to ICU MessageFormat
+
+`POST /api/v1/conversions/icu` converts the project from i18next to ICU MessageFormat in one
+transaction: every active string's English, its translations in the project's languages and its
+pending suggestions, then the **ICU MessageFormat** setting. It keeps colours, authors, timestamps,
+outdated flags and history, and adds a `source_converted` or `translation_converted` history event
+for each text it changes. [Move an i18next project to ICU MessageFormat](move-to-icu.md) lists the
+rules. Preview it first:
+
+```json
+{ "dryRun": true }
+```
+
+The response reports what changes, or would change:
+
+```json
+{
+  "dryRun": true,
+  "converted": false,
+  "alreadyIcu": false,
+  "strings": 120,
+  "translations": 830,
+  "suggestions": 3,
+  "merged": [{ "file": "common.json", "key": "coins" }],
+  "escapes": 4,
+  "escaped": [{ "file": "common.json", "key": "hint", "language": "fr" }],
+  "refusals": [
+    {
+      "file": "menu.json",
+      "key": "price",
+      "message": "{{price, number}} has an i18next format, which ICU MessageFormat writes differently"
+    }
+  ],
+  "failing": [
+    {
+      "file": "common.json",
+      "key": "coins",
+      "language": "pl",
+      "check": "placeholder_extra",
+      "message": "Placeholder {count} isn't in the English in the one case of {count, plural}."
+    }
+  ],
+  "revision": 41
+}
+```
+
+`merged` lists the plural groups that become one string each. `escaped` lists the texts with
+characters quoted to stay text; an entry without `language` is the English. `failing` lists
+translations that fail the ICU checks once converted: they are kept, with their errors.
+`refusals` lists what stops the conversion, with the file, key and language where they apply: a
+request without `dryRun` converts nothing while there is one, and returns them with
+`converted: false`. On a project that is on ICU MessageFormat already, `alreadyIcu` is true and
+nothing changes. Downloads and published files then follow, as after any change.
+
+This converts the instance only: the source files in your repository still need converting before
+the next upload, which `quaso convert-to-icu` does with the same rules.
 
 ## Translation estimates
 

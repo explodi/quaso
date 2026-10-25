@@ -49,8 +49,10 @@ Before uploading, choose the message format your game reads in **Settings → Pl
 - **ICU MessageFormat** (`{name}`, plural or select blocks inside strings): turn **ICU MessageFormat** on.
   This includes games using i18next-icu or another ICU MessageFormat library.
 
-This setting applies to the whole project, including Markdown. It does not convert your strings.
-See [the comparison and examples](file-formats.md#choose-your-message-format) if you are unsure.
+This setting applies to the whole project, including Markdown. It does not convert your strings:
+to move an existing i18next project to ICU, see
+[Move an i18next project to ICU MessageFormat](move-to-icu.md). See
+[the comparison and examples](file-formats.md#choose-your-message-format) if you are unsure.
 
 ## 2. Connect your game and upload
 
