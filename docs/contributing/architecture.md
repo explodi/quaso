@@ -92,6 +92,26 @@ if another commit landed in between, the batch aborts before changing anything, 
 reads again and retries; after four tries it answers that the project is busy. Each successful batch is atomic: all its writes commit together. Reads don't
 wait for a turn. While the service waits for Gemini, it keeps serving other requests.
 
+### The cache
+
+Some reads cover the whole project, such as its progress (every string and translation), and
+the editor asks for them every few seconds. The service keeps their results in memory
+(`packages/service/src/cache.ts`), under keys that hold the project revision:
+`["progress", 41, model, "es"]`. A request reads only the revision (one row); while it stays the
+same, the answer comes from memory. Every write raises the revision, so the next request uses a
+new key and the old entry ages out. Nothing is ever invalidated by hand.
+
+That holds only if nothing changes what a key names without raising the revision. Commits raise
+it; the contextual-check refresh, which writes outside a commit, raises it in the same batch; a
+restore raises it rather than taking the backup's. Anything cached must depend only on data that
+changes with the revision, and on what else is in its key.
+
+The cache has a memory budget (32 MB, sizes estimated) and evicts expired entries first, then the
+least recently used; every entry has a time to live (five minutes by default), which also bounds
+how long a change made outside Quaso, such as editing the database by hand, could go unseen.
+Requests for a key while it loads share that one load; a failed load isn't kept; values are
+frozen, since every caller shares them.
+
 ## The data model
 
 The service keeps these records and states:

@@ -27,7 +27,8 @@ import {
   requireLanguage,
   toLanguage,
 } from "./languages.ts";
-import type { Sql, SyncSql } from "./ports.ts";
+import type { MemoryCache } from "./cache.ts";
+import type { Sql, Statement, SyncSql } from "./ports.ts";
 import { loadSettings, settingsFromData } from "./settings.ts";
 import { ServiceError } from "./errors.ts";
 
@@ -316,6 +317,10 @@ function sourceFiles(counting: Counting, ambiguities: SourceAmbiguity[] = []): S
   };
 }
 
+const REVISION: Statement = {
+  sql: "SELECT COALESCE((SELECT CAST(value AS INTEGER) FROM meta WHERE key = 'revision'), 0) AS revision",
+};
+
 export interface ProgressSnapshot {
   revision: number;
   settings: ProjectSettings;
@@ -325,12 +330,26 @@ export interface ProgressSnapshot {
   lastActivity: number | null;
 }
 
-/** The revision and every count come from the same read batch. */
+/**
+ * The project's progress, from `cache` while the revision stays the same: reading it means
+ * reading every string and translation, and the editor asks for it every few seconds. A changed
+ * revision is a new key, so the snapshot is never older than the revision it's stored under.
+ */
 export async function readProgressSnapshot(
   sql: Sql,
   model: string,
   language?: string,
+  cache?: MemoryCache,
 ): Promise<ProgressSnapshot> {
+  if (cache === undefined) return readProgress(sql, model, language);
+  const canonical = language === undefined ? null : canonicalLanguageTag(language);
+  const [rows] = await sql.read([REVISION]);
+  const key = ["progress", Number(rows[0].revision), model, canonical];
+  return cache.remember(key, () => readProgress(sql, model, language));
+}
+
+/** The revision and every count come from the same read batch. */
+async function readProgress(sql: Sql, model: string, language?: string): Promise<ProgressSnapshot> {
   const canonical = language === undefined ? undefined : canonicalLanguageTag(language);
   const scope = canonical === undefined ? "" : " AND language = ?";
   const params = canonical === undefined ? [] : [canonical];
@@ -387,8 +406,9 @@ export async function getStatusAsync(
   sql: Sql,
   model: string,
   language?: string,
+  cache?: MemoryCache,
 ): Promise<StatusResult> {
-  const snapshot = await readProgressSnapshot(sql, model, language);
+  const snapshot = await readProgressSnapshot(sql, model, language, cache);
   return {
     revision: snapshot.revision,
     sourceLanguage: snapshot.settings.sourceLanguage,
@@ -400,21 +420,28 @@ export async function listFilesAsync(
   sql: Sql,
   model: string,
   language?: string,
+  cache?: MemoryCache,
 ): Promise<FilesResult> {
   if (language === undefined) {
-    const rows = await sql.read([
-      { sql: ACTIVE_FILES },
-      { sql: ACTIVE_STRINGS },
-      { sql: AMBIGUITIES },
-    ]);
-    return sourceFiles(
-      countingFromRows(rows[0] as Counting["files"], rows[1] as CountingRow[]),
-      ambiguityRows(rows[2]),
-    );
+    if (cache === undefined) return readSourceFiles(sql);
+    const [rows] = await sql.read([REVISION]);
+    return cache.remember(["sourceFiles", Number(rows[0].revision)], () => readSourceFiles(sql));
   }
-  const snapshot = await readProgressSnapshot(sql, model, language);
+  const snapshot = await readProgressSnapshot(sql, model, language, cache);
   const found = snapshot.languages[0];
   return { language: found.tag, files: found.files };
+}
+
+async function readSourceFiles(sql: Sql): Promise<FilesResult> {
+  const rows = await sql.read([
+    { sql: ACTIVE_FILES },
+    { sql: ACTIVE_STRINGS },
+    { sql: AMBIGUITIES },
+  ]);
+  return sourceFiles(
+    countingFromRows(rows[0] as Counting["files"], rows[1] as CountingRow[]),
+    ambiguityRows(rows[2]),
+  );
 }
 
 const AMBIGUITIES = `SELECT s.id, f.path AS file, s.display_key AS key, s.source, w.message FROM source_warnings w

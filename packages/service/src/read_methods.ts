@@ -53,6 +53,7 @@ import {
   readPermissions,
 } from "./permissions.ts";
 import { type Clock, type Logger, silentLogger, type Sql, type Store } from "./ports.ts";
+import type { MemoryCache } from "./cache.ts";
 import { getProjectAsync } from "./project.ts";
 import { getSettingsAsync } from "./settings_api.ts";
 import { getStatusAsync, listFilesAsync } from "./status.ts";
@@ -118,6 +119,8 @@ interface ReadOptions {
   emailFetch?: import("@quaso/core").Fetch;
   testLlm?: (sql: Sql) => Promise<LlmTestResult>;
   sql: Sql;
+  /** Holds what's expensive to read and often asked for, keyed by the project revision. */
+  cache?: MemoryCache;
   store?: Store;
   clock?: Clock;
   logger?: Logger;
@@ -233,11 +236,11 @@ export function asyncReadMethods(options: ReadOptions): AsyncReadMethods {
       }),
     getProject: (actor, input) =>
       call(actor, "read", Empty, input, async (sql) =>
-        getProjectAsync(sql, model, (await configuration()).provider !== null),
+        getProjectAsync(sql, model, (await configuration()).provider !== null, options.cache),
       ),
     listFiles: (actor, input) =>
       call(actor, "read", OptionalLanguageInput, input, (sql, { language }) =>
-        listFilesAsync(sql, model, language),
+        listFilesAsync(sql, model, language, options.cache),
       ),
     listStrings: (actor, input) =>
       call(actor, "read", StringsQuery, input, (sql, query) => listStringsAsync(sql, query)),
@@ -259,7 +262,7 @@ export function asyncReadMethods(options: ReadOptions): AsyncReadMethods {
       ),
     getStatus: (actor, input) =>
       call(actor, "download", OptionalLanguageInput, input, (sql, { language }) =>
-        getStatusAsync(sql, model, language),
+        getStatusAsync(sql, model, language, options.cache),
       ),
     exportFiles: (actor, input) =>
       call(actor, "download", ExportQuery, input, (sql, query) => {
