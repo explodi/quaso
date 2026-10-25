@@ -15,7 +15,13 @@ test("the default settings", () => {
   const settings = defaultSettings("gemini-flash-latest");
   assertEquals(settings.name, "Untitled project");
   assertEquals(settings.sourceLanguage, "en");
-  assertEquals(settings.syntax, { prefix: "{{", suffix: "}}", extra: [], optional: [] });
+  assertEquals(settings.syntax, {
+    prefix: "{{",
+    suffix: "}}",
+    extra: [],
+    optional: [],
+    icu: false,
+  });
   assertEquals([settings.logoUrl, settings.links], [null, []]);
   assertEquals(settings.llm.model, "gemini-flash-latest");
   assertEquals(settings.llm.context, {
@@ -51,6 +57,13 @@ test("settings are saved, and loaded with missing fields from the defaults", asy
   assertEquals(loaded.llm.model, "model-a");
   assertEquals(loaded.sourceLanguage, "en");
   assertEquals("removed" in loaded, false);
+});
+
+test("ICU MessageFormat stays on after saving", async () => {
+  using instance = await startTestService();
+  const settings = loadSettings(instance.ctx);
+  saveSettings(instance.ctx, { ...settings, syntax: { ...settings.syntax, icu: true } });
+  assertEquals(loadSettings(instance.ctx).syntax.icu, true);
 });
 
 /** Sprint 2's default template, as instances made then store it. */
