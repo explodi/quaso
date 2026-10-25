@@ -229,17 +229,18 @@ shows the same string's translations and links to open them.
 
 Managers and administrators can enable **LLM suggestions** above the input when a provider is
 available. The browser remembers this choice. After you stay on an untranslated or outdated string
-for half a second, the editor asks for a draft for that string and up to three upcoming strings.
-It requests more drafts as you work. Requests use the project's instructions, context, and quality
+for half a second, the editor asks for drafts for that string and the next seven to do, four to a
+request. It keeps six drafts ready or on their way ahead of you as you work. Requests use the project's instructions, context, and quality
 checks, and count toward usage and the monthly token budget.
 
 A draft appears below each input. Click it, or press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd>,
 to replace the focused input. Use <kbd>Ctrl</kbd>+<kbd>Z</kbd> to undo. Nothing is accepted until you
 choose **Save**. These local drafts are separate from the pending proposals in **Suggestions**.
 
-Returning to a string in the same page session reuses its draft. A failed response leaves you free
-to type your own text; the request does not use a job's retry loop. After a short delay, revisiting
-that string can request it again. For many accepted machine translations at once, select strings
+Returning to a string in the same page session reuses its draft. When the server is busy or can't
+be reached, the editor sends the request again up to three times, after 1, 2 and 4 seconds. A
+failed response leaves you free to type your own text; after half a minute, revisiting that string
+can request it again. For many accepted machine translations at once, select strings
 and choose **Translate with the LLM** instead.
 
 In **Settings → AI translation**, administrators can choose **Model for editor suggestions**.

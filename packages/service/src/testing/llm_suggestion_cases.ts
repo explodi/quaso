@@ -58,6 +58,8 @@ const SILENT_PROVIDER: TranslationProvider = {
     }),
 };
 
+const BUSY = new ServiceError("unavailable", "The project is busy. Try again shortly.");
+
 async function failure(run: () => Promise<unknown>): Promise<string> {
   try {
     await run();
@@ -156,6 +158,46 @@ export const LLM_SUGGESTION_CASES: { name: string; run(sql: Sql): Promise<void> 
         { sql: "SELECT job_id, language, strings, outcome FROM llm_requests" },
       ]);
       checkEqual(rows, [{ job_id: null, language: "de", strings: 2, outcome: "ok" }]);
+    },
+  },
+  {
+    name: "a suggestion's usage is recorded on a later try when the project was busy",
+    async run(sql) {
+      await seed(sql);
+      let busyTries = 2;
+      const record: LlmSuggestionOptions["record"] = (entry) => {
+        if (busyTries-- > 0) throw BUSY;
+        return recordRequestAsync(sql, SYSTEM, entry, 200);
+      };
+      const result = await suggestWithLlm(
+        sql,
+        MANAGER_OF_DE,
+        { language: "de", ids: [1] },
+        options(sql, { record }),
+      );
+      checkEqual(result.suggestions[0].value, "[Ĥéļļö]");
+      const [rows] = await sql.read([{ sql: "SELECT COUNT(*) AS n FROM llm_requests" }]);
+      checkEqual(rows[0].n, 1);
+    },
+  },
+  {
+    name: "a suggestion is kept when the project stays too busy to record its usage",
+    async run(sql) {
+      await seed(sql);
+      const result = await suggestWithLlm(
+        sql,
+        MANAGER_OF_DE,
+        { language: "de", ids: [1] },
+        options(sql, {
+          record: () => {
+            throw BUSY;
+          },
+        }),
+      );
+      checkEqual(result, {
+        suggestions: [{ id: 1, value: "[Ĥéļļö]", model: FAKE_MODEL }],
+        failed: [],
+      });
     },
   },
   {

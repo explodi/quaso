@@ -7,7 +7,7 @@
  */
 import type { LlmSuggestion, LlmSuggestionsResult, TextValue } from "@quaso/core";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
-import { errorMessage, suggestWithLlm } from "../../lib/api.ts";
+import { ApiError, errorMessage, suggestWithLlm } from "../../lib/api.ts";
 
 /** A string the LLM may be asked about. */
 export interface SuggestionTarget {
@@ -26,14 +26,21 @@ type Entry = Exclude<LlmSuggestionState, { status: "off" }>;
 
 /** Strings in one request. */
 const CHUNK = 4;
-/** Ask again when fewer strings than this, after the open one, are answered or on their way. */
-const REFILL_BELOW = 3;
+/**
+ * Ask again when fewer strings than this, after the open one, are answered or on their way:
+ * an answer takes several strings' worth of the translator's time to arrive.
+ */
+const REFILL_BELOW = 6;
 /** How many strings after the open one the editor hands over: enough for a refill to fill its request. */
 export const LOOKAHEAD = REFILL_BELOW - 1 + CHUNK;
 /** How long the person stays on a string before the LLM is asked: skimming past costs nothing. */
 const ASK_DELAY_MS = 500;
 /** A string that got no suggestion isn't asked about again for this long. */
 const RETRY_AFTER_MS = 30_000;
+/** A request the server couldn't answer, busy or out of reach, is sent again this many times. */
+const REQUEST_RETRIES = 3;
+/** The wait before the first of those, doubled before each next one. */
+const REQUEST_RETRY_DELAY_MS = 1_000;
 
 const OFF: LlmSuggestionState = { status: "off" };
 const LOADING: Entry = { status: "loading" };
@@ -62,15 +69,18 @@ function keyOf(language: string, string: SuggestionTarget): string {
 export class SuggestionCache {
   readonly #ask: (language: string, ids: number[]) => Promise<LlmSuggestionsResult>;
   readonly #now: () => number;
+  readonly #wait: (ms: number) => Promise<void>;
   readonly #entries = new Map<string, Entry>();
   readonly #listeners = new Set<() => void>();
 
   constructor(
     ask: (language: string, ids: number[]) => Promise<LlmSuggestionsResult>,
     now: () => number = Date.now,
+    wait: (ms: number) => Promise<void> = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
   ) {
     this.#ask = ask;
     this.#now = now;
+    this.#wait = wait;
   }
 
   /** For `useSyncExternalStore`. */
@@ -86,14 +96,26 @@ export class SuggestionCache {
     return this.#entries.get(keyOf(language, string));
   }
 
-  /** Asks about what the open string and those after it need, and settles when the answer comes. */
+  /**
+   * Asks about what the open string and those after it need, in as many requests as it takes to
+   * cover them, sent together, and settles when the answers come.
+   */
   async askFor(language: string, openAndNext: SuggestionTarget[]): Promise<void> {
-    const strings = stringsToAsk(openAndNext, (string) => this.#isCovered(language, string));
-    if (strings.length === 0) return;
-    for (const string of strings) this.#entries.set(keyOf(language, string), LOADING);
+    const requests: Promise<void>[] = [];
+    for (;;) {
+      const strings = stringsToAsk(openAndNext, (string) => this.#isCovered(language, string));
+      if (strings.length === 0) break;
+      for (const string of strings) this.#entries.set(keyOf(language, string), LOADING);
+      requests.push(this.#request(language, strings));
+    }
+    if (requests.length === 0) return;
     this.#notify();
+    await Promise.all(requests);
+  }
+
+  async #request(language: string, strings: SuggestionTarget[]): Promise<void> {
     try {
-      const result = await this.#ask(
+      const result = await this.#askWithRetries(
         language,
         strings.map((string) => string.id),
       );
@@ -104,6 +126,19 @@ export class SuggestionCache {
       this.#settle(language, strings, { suggestions: [], failed });
     }
     this.#notify();
+  }
+
+  /** The strings stay loading while a request the server couldn't answer is sent again. */
+  async #askWithRetries(language: string, ids: number[]): Promise<LlmSuggestionsResult> {
+    for (let retry = 0; ; retry++) {
+      try {
+        return await this.#ask(language, ids);
+      } catch (error) {
+        const serverUnavailable = error instanceof ApiError && error.code === "unavailable";
+        if (!serverUnavailable || retry === REQUEST_RETRIES) throw error;
+        await this.#wait(REQUEST_RETRY_DELAY_MS * 2 ** retry);
+      }
+    }
   }
 
   /** Whether the string has an answer, is waiting for one, or failed too recently to ask again. */
