@@ -3,7 +3,10 @@ import { test } from "node:test";
 import { assertEquals, assertRejects } from "@std/assert";
 import {
   type FetchContext,
+  IDLE_AFTER_MS,
+  isIdle,
   keyStartsWith,
+  noteInput,
   QueryCache,
   type QueryState,
   shownData,
@@ -257,4 +260,13 @@ test("keepPrevious shows the previous data while loading, but not once the new k
     shownData(state({ data: ["own"], status: "error", error: new Error("500") }), kept, true),
     { data: ["own"], previous: false },
   );
+});
+
+test("polling stops after five minutes without input, and input brings it back", () => {
+  noteInput(1_000_000);
+  assertEquals(isIdle(1_000_000 + IDLE_AFTER_MS - 1), false);
+  assertEquals(isIdle(1_000_000 + IDLE_AFTER_MS), true);
+  assertEquals(noteInput(1_000_000 + IDLE_AFTER_MS), true);
+  assertEquals(isIdle(1_000_000 + IDLE_AFTER_MS + 1), false);
+  assertEquals(noteInput(1_000_000 + IDLE_AFTER_MS + 2), false);
 });

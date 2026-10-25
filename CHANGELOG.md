@@ -212,6 +212,12 @@ Release candidates are for deployment and migration testing. The team decides wh
 
 ### Fixed
 
+- Saving a translation no longer rereads every translation in the project to refresh the
+  duplicate and consistency warnings: it checks again only the translations in the same file and
+  language, and those with the same English. Uploads, renames and restores still check everything.
+- Pages stop polling the server after five minutes without a key, click, scroll or touch, so an
+  open tab nobody looks at no longer keeps the server awake; the first input after that refreshes
+  what's on screen.
 - Saving several strings in a row no longer fails with "wasn't saved. Open it to try again.": the
   server's writes take turns instead of racing for the project's revision, so saves sent together,
   LLM suggestions and a running job wait for each other rather than running out of retries.
