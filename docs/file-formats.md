@@ -188,6 +188,9 @@ Quaso still groups sibling keys such as `coins_one` and `coins_other` into plura
 checks the ICU in each form. If your app uses ICU plural blocks only and some keys merely look like
 plural groups, add those keys to `pluralExclusions`.
 
+To decide how a string should vary (a plural, a select, an argument only other languages use,
+alternatives or fragments), read [Gender, plurals and other variants](variants.md).
+
 ### Arguments and blocks
 
 Arguments such as `{name}`, `{price, number}` and `{day, date, short}` are placeholders. So is `#`
