@@ -14,6 +14,7 @@ import {
 } from "@quaso/design-system";
 /** Filters and the selected string live in the address so a workspace can be shared. */
 import {
+  type InterpolationSyntax,
   type LanguageFilesResult,
   STATE_FILTERS,
   type StateFilter,
@@ -608,6 +609,7 @@ export function EditorPage() {
                       onTab={setTab}
                       onChanged={onChanged}
                       sourceLanguage={project.data.sourceLanguage}
+                      syntax={project.data.syntax}
                     />
                   </>
                 )}
@@ -629,6 +631,7 @@ function DetailTabs({
   onTab,
   onChanged,
   sourceLanguage,
+  syntax,
 }: {
   id: number;
   language: string;
@@ -636,6 +639,7 @@ function DetailTabs({
   onTab(tab: SideTab): void;
   onChanged(ids: number[]): Promise<void>;
   sourceLanguage: string;
+  syntax: InterpolationSyntax;
 }) {
   const detail = useQuery<StringDetail>(
     stringKey(id, language),
@@ -654,6 +658,7 @@ function DetailTabs({
         onTab={onTab}
         onChanged={onChanged}
         sourceLanguage={sourceLanguage}
+        syntax={syntax}
       />
     </div>
   );

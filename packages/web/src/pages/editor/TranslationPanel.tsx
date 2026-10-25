@@ -29,6 +29,8 @@ import {
   type CheckResult,
   checkTranslation,
   graphemeLength,
+  icuWithLanguageCases,
+  type InterpolationSyntax,
   type LanguageProgress,
   paragraphCount,
   type ProjectInfo,
@@ -53,6 +55,7 @@ import { StateBadge } from "../../components/StateBadge.tsx";
 import { useToast } from "../../components/Toast.tsx";
 import { JobProgress } from "../../components/JobProgress.tsx";
 import { DocumentParagraphs } from "./DocumentParagraphs.tsx";
+import { IcuPreviewList, PluralCaseHints, pluralCaseHints } from "./IcuHelp.tsx";
 import { OutdatedNotice } from "./OutdatedNotice.tsx";
 import { MarkdownPreview } from "../../lib/markdown.tsx";
 import {
@@ -201,6 +204,8 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
   const toast = useToast();
   const { location } = useRoute();
   const syntax = project.syntax;
+  // Documents are Markdown first: their ICU gets the checks, not the case help.
+  const icuStrings = syntax.icu === true && !detail.document;
   const direction = textDirection(tag);
   const current = detail.translation;
   const draftKey = `${tag}:${detail.id}`;
@@ -377,10 +382,16 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
     return insert(text, true);
   };
 
+  /** The English of a form, with the cases its ICU plural blocks need in this language. */
+  const englishToCopy = (form: FormKey): string => {
+    const english = englishFor(detail.source, form);
+    return syntax.icu ? icuWithLanguageCases(english, tag, language.plural) : english;
+  };
+
   const copySource = (): boolean => {
     if (!writable) return false;
     const form = lastFocused.current ?? forms[0];
-    return insert(mask(englishFor(detail.source, form)), true);
+    return insert(mask(englishToCopy(form)), true);
   };
 
   /**
@@ -656,6 +667,7 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
               syntax={syntax}
               masking={masking}
               glossary={detail.glossary}
+              tree={!detail.document}
             />
           </p>
         ) : (
@@ -669,6 +681,7 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
                     syntax={syntax}
                     masking={masking}
                     glossary={detail.glossary}
+                    tree
                   />
                 </dd>
               </div>
@@ -710,6 +723,7 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
           detail={detail}
           language={language}
           sourceLanguageName={project.sourceLanguageName}
+          syntax={icuStrings ? syntax : undefined}
           next={location.pathname + location.search}
         />
       )}
@@ -820,6 +834,13 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
             const length = detail.maxLength !== null ? graphemeLength(unmask(text)) : 0;
             const formChecks = checksFor(form);
             const invalid = errors.some((e) => forms.length === 1 || e.form === form);
+            const english = englishFor(detail.source, form);
+            const caseHints = icuStrings ? pluralCaseHints(english, tag, language.plural) : [];
+            const describedBy = [
+              `${inputId}-checks`,
+              detail.maxLength !== null && `${inputId}-length`,
+              caseHints.length > 0 && `${inputId}-cases`,
+            ];
             const input = (
               <TextArea
                 id={inputId}
@@ -834,15 +855,13 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
                 minRows={form !== "text" ? 2 : detail.document ? 8 : 3}
                 spellCheck
                 aria-invalid={invalid || undefined}
-                aria-describedby={`${inputId}-checks${
-                  detail.maxLength !== null ? ` ${inputId}-length` : ""
-                }`}
+                aria-describedby={describedBy.filter(Boolean).join(" ")}
                 onFocus={() => (lastFocused.current = form)}
                 onChange={(event) => setForm(form, event.target.value)}
                 onKeyDown={(event) => {
                   const composing = event.nativeEvent.isComposing;
                   const saveShortcut = event.ctrlKey || event.metaKey;
-                  const singleLine = !/[\r\n]/.test(englishFor(detail.source, form));
+                  const singleLine = !/[\r\n]/.test(english);
                   if (event.key === "Enter" && singleLine && !composing && !saveShortcut) {
                     event.preventDefault();
                   }
@@ -872,13 +891,14 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
                     lang={project.sourceLanguage}
                     dir={sourceDirection}
                   >
-                    <SourceText
-                      text={englishFor(detail.source, form)}
-                      syntax={syntax}
-                      masking={masking}
-                    />
+                    <SourceText text={english} syntax={syntax} masking={masking} tree />
                   </p>
                 )}
+                <PluralCaseHints
+                  id={`${inputId}-cases`}
+                  hints={caseHints}
+                  languageName={language.name}
+                />
                 {detail.document && typeof detail.source === "string" ? (
                   <Tabs
                     label="How to show the document"
@@ -935,6 +955,14 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
                   />
                 )}
                 <CheckList id={`${inputId}-checks`} checks={formChecks} />
+                {icuStrings && (
+                  <IcuPreviewList
+                    text={unmask(text)}
+                    language={tag}
+                    override={language.plural}
+                    dir={direction}
+                  />
+                )}
               </div>
             );
           })}
@@ -1265,11 +1293,14 @@ function ReadOnly({
   detail,
   language,
   sourceLanguageName,
+  syntax,
   next,
 }: {
   detail: StringDetail;
   language: LanguageProgress;
   sourceLanguageName: string;
+  /** An ICU project's syntax: blocks then show as a tree. */
+  syntax?: InterpolationSyntax;
   next: string;
 }) {
   const session = useSession();
@@ -1284,7 +1315,11 @@ function ReadOnly({
       {current ? (
         <p className="translation-text" lang={language.tag} dir={direction}>
           {typeof current.value === "string" ? (
-            current.value
+            syntax ? (
+              <SourceText text={current.value} syntax={syntax} tree />
+            ) : (
+              current.value
+            )
           ) : (
             <span className="plural-forms">
               {Object.entries(current.value).map(([form, text]) => (

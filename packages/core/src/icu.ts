@@ -94,6 +94,171 @@ export function blockLabel(block: IcuBlock): string {
   return `{${block.name}, ${block.blockType}}`;
 }
 
+/** A plural block's `offset:`, which `#` and the categories subtract; 0 without one. */
+export function blockOffset(text: string, block: IcuBlock): number {
+  const head = text.slice(block.start, block.cases[0].start);
+  const offset = /offset:\s*([0-9]+)/.exec(head);
+  return offset ? Number(offset[1]) : 0;
+}
+
+/**
+ * What the raw text of a text node shows: quoted text without its apostrophes, and `''` as
+ * one apostrophe. `inPlural` is whether the text is directly in a plural case, where `'#'`
+ * quotes a `#`.
+ */
+export function unquoteIcu(raw: string, inPlural = false): string {
+  let result = "";
+  let at = 0;
+  while (at < raw.length) {
+    if (raw[at] !== "'") {
+      result += raw[at++];
+      continue;
+    }
+    const next = raw[at + 1];
+    if (next === "'") {
+      result += "'";
+      at += 2;
+      continue;
+    }
+    const special = next === "{" || next === "}" || (next === "#" && inPlural);
+    if (!special) {
+      result += "'";
+      at++;
+      continue;
+    }
+    for (at++; at < raw.length; at++) {
+      if (raw[at] !== "'") {
+        result += raw[at];
+      } else if (raw[at + 1] === "'") {
+        result += "'";
+        at++;
+      } else {
+        at++;
+        break;
+      }
+    }
+  }
+  return result;
+}
+
+/** Where a message isn't valid ICU, and why. */
+export interface IcuSyntaxError {
+  /** A sentence, such as "This { is never closed." */
+  message: string;
+  /** The offset of the character it is about. */
+  at: number;
+}
+
+/**
+ * The first place where a message isn't valid ICU as apps' strict parsers (FormatJS,
+ * i18next-icu) read it, or null. Unlike `parseIcu`, which reads a broken block as text, a
+ * `{` that starts no argument is an error here, and so are a `}` that closes nothing, a case
+ * without its text in braces and a block without an `other` case.
+ */
+export function icuSyntaxError(text: string): IcuSyntaxError | null {
+  const result = strictMessage(text, 0, false);
+  if ("message" in result) return result;
+  if (result.end < text.length) return { message: "This } closes nothing.", at: result.end };
+  return null;
+}
+
+type Strict = { end: number } | IcuSyntaxError;
+
+/** A message from `start` up to the `}` that ends it, or the end of the text. */
+function strictMessage(text: string, start: number, inPlural: boolean): Strict {
+  let at = start;
+  while (at < text.length) {
+    const quoteEnd = quotedEnd(text, at, inPlural);
+    if (quoteEnd !== -1) {
+      at = quoteEnd;
+      continue;
+    }
+    if (text[at] === "}") return { end: at };
+    if (text[at] === "{") {
+      const argument = strictArgument(text, at);
+      if ("message" in argument) return argument;
+      at = argument.end;
+      continue;
+    }
+    at++;
+  }
+  return { end: at };
+}
+
+const NOT_ARGUMENT =
+  "This { doesn't start an argument such as {name}. A brace as text is written '{'.";
+const NEVER_CLOSED = "This { is never closed.";
+
+/** The argument or block whose `{` is at `start`, up to after its `}`. */
+function strictArgument(text: string, start: number): Strict {
+  const nameEnd = nextOf(text, start + 1, ",}{");
+  if (nameEnd === -1) return { message: NEVER_CLOSED, at: start };
+  const name = text.slice(start + 1, nameEnd).trim();
+  if (text[nameEnd] === "{" || !NAME.test(name)) return { message: NOT_ARGUMENT, at: start };
+  if (text[nameEnd] === "}") return { end: nameEnd + 1 };
+  const typeEnd = nextOf(text, nameEnd + 1, ",}{");
+  if (typeEnd === -1) return { message: NEVER_CLOSED, at: start };
+  const type = text.slice(nameEnd + 1, typeEnd).trim();
+  if (!BLOCK_TYPES.has(type)) {
+    const close = nextOf(text, nameEnd + 1, "}{");
+    if (close === -1) return { message: NEVER_CLOSED, at: start };
+    if (text[close] === "{") return { message: NOT_ARGUMENT, at: close };
+    return { end: close + 1 };
+  }
+  const label = `{${name}, ${type}}`;
+  if (text[typeEnd] !== ",") return { message: `The ${label} block has no cases.`, at: start };
+  return strictCases(text, start, label, type !== "select", typeEnd + 1);
+}
+
+/** A block's cases from `at`, up to after the block's `}`. */
+function strictCases(
+  text: string,
+  start: number,
+  label: string,
+  plural: boolean,
+  casesStart: number,
+): Strict {
+  let at = skipSpace(text, casesStart);
+  if (plural) {
+    const offset = OFFSET.exec(text.slice(at));
+    if (offset) at = skipSpace(text, at + offset[0].length);
+  }
+  const keys: string[] = [];
+  while (at < text.length) {
+    if (text[at] === "}") {
+      if (keys.length === 0) return { message: `The ${label} block has no cases.`, at: start };
+      if (!keys.includes("other")) {
+        return { message: `The ${label} block has no other case.`, at: start };
+      }
+      return { end: at + 1 };
+    }
+    const open = nextOf(text, at, "{}");
+    const key = text.slice(at, open === -1 ? text.length : open).trim();
+    // Text after a case that is no key is most often text after a block missing its `}`.
+    if (!CASE_KEY.test(key) && keys.length > 0) {
+      return { message: `The ${label} block has no } after its last case.`, at };
+    }
+    if (!CASE_KEY.test(key)) return { message: `“${key}” isn't a case of ${label}.`, at };
+    if (open === -1 || text[open] === "}") {
+      return { message: `The case “${key}” of ${label} has no text in braces.`, at };
+    }
+    const message = strictMessage(text, open + 1, plural);
+    if ("message" in message) return message;
+    if (message.end >= text.length) return { message: NEVER_CLOSED, at: open };
+    keys.push(key);
+    at = skipSpace(text, message.end + 1);
+  }
+  return { message: NEVER_CLOSED, at: start };
+}
+
+/** The position of the first of `chars` at or after `at`, or -1. */
+function nextOf(text: string, at: number, chars: string): number {
+  for (let index = at; index < text.length; index++) {
+    if (chars.includes(text[index])) return index;
+  }
+  return -1;
+}
+
 const NAME = /^[\p{L}\p{N}_$]+$/u;
 const BLOCK_TYPES = new Set<string>(["select", "plural", "selectordinal"]);
 const CASE_KEY = /^(=-?[0-9]+(\.[0-9]+)?|[\p{L}\p{N}_-]+)$/u;

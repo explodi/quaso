@@ -9,6 +9,7 @@ import {
   type HistoryEntry,
   type HistoryEvent,
   type HistoryResult,
+  type InterpolationSyntax,
   type StringDetail,
   type SuggestionInfo,
   textDirection,
@@ -25,6 +26,7 @@ import {
   Tabs,
 } from "@quaso/design-system";
 import { ErrorMessage } from "../../components/ErrorMessage.tsx";
+import { SourceText } from "../../components/SourceText.tsx";
 import { StateMarker } from "../../components/StateBadge.tsx";
 import { useToast } from "../../components/Toast.tsx";
 import { ApiError, getHistory, reviewSuggestions, withdrawSuggestion } from "../../lib/api.ts";
@@ -43,12 +45,15 @@ export function SideTabs({
   onTab,
   onChanged,
   sourceLanguage,
+  syntax,
 }: {
   detail: StringDetail;
   tab: SideTab;
   onTab(tab: SideTab): void;
   onChanged(ids: number[]): Promise<void>;
   sourceLanguage: string;
+  /** The project's syntax: ICU blocks in values show as a tree. */
+  syntax: InterpolationSyntax;
 }) {
   const pending = detail.suggestions.filter((s) => s.status === "pending").length;
   return (
@@ -67,9 +72,13 @@ export function SideTabs({
         { id: "comments", label: "Comments" },
       ]}
     >
-      {tab === "history" && <History detail={detail} sourceLanguage={sourceLanguage} />}
-      {tab === "suggestions" && <Suggestions detail={detail} onChanged={onChanged} />}
-      {tab === "languages" && <OtherLanguages detail={detail} />}
+      {tab === "history" && (
+        <History detail={detail} sourceLanguage={sourceLanguage} syntax={syntax} />
+      )}
+      {tab === "suggestions" && (
+        <Suggestions detail={detail} onChanged={onChanged} syntax={syntax} />
+      )}
+      {tab === "languages" && <OtherLanguages detail={detail} syntax={syntax} />}
       {tab === "glossary" && <GlossaryPanel detail={detail} />}
       {tab === "comments" && (
         <CommentsPanel key={`${detail.id}:${detail.language}`} detail={detail} />
@@ -78,9 +87,20 @@ export function SideTabs({
   );
 }
 
-function Value({ value, lang }: { value: TextValue | null; lang: string }) {
+function Value({
+  value,
+  lang,
+  syntax,
+}: {
+  value: TextValue | null;
+  lang: string;
+  syntax: InterpolationSyntax;
+}) {
   if (value === null) return <span className="muted">(none)</span>;
   const dir = textDirection(lang);
+  if (typeof value === "string" && syntax.icu) {
+    return <SourceText text={value} syntax={syntax} lang={lang} dir={dir} tree />;
+  }
   if (typeof value === "string") {
     return (
       <span className="value-text" lang={lang} dir={dir}>
@@ -130,7 +150,15 @@ function When({ at }: { at: number }) {
   );
 }
 
-function History({ detail, sourceLanguage }: { detail: StringDetail; sourceLanguage: string }) {
+function History({
+  detail,
+  sourceLanguage,
+  syntax,
+}: {
+  detail: StringDetail;
+  sourceLanguage: string;
+  syntax: InterpolationSyntax;
+}) {
   const history = useQuery<HistoryResult>(
     ["history", detail.id, detail.language],
     ({ fresh }) => getHistory(detail.id, detail.language, { fresh }),
@@ -145,13 +173,21 @@ function History({ detail, sourceLanguage }: { detail: StringDetail; sourceLangu
   return (
     <ol className="history">
       {entries.map((entry) => (
-        <HistoryItem key={entry.id} entry={entry} sourceLanguage={sourceLanguage} />
+        <HistoryItem key={entry.id} entry={entry} sourceLanguage={sourceLanguage} syntax={syntax} />
       ))}
     </ol>
   );
 }
 
-function HistoryItem({ entry, sourceLanguage }: { entry: HistoryEntry; sourceLanguage: string }) {
+function HistoryItem({
+  entry,
+  sourceLanguage,
+  syntax,
+}: {
+  entry: HistoryEntry;
+  sourceLanguage: string;
+  syntax: InterpolationSyntax;
+}) {
   const lang = entry.language ?? sourceLanguage;
   const reusedFrom =
     entry.event === "translation_reused" &&
@@ -186,12 +222,14 @@ function HistoryItem({ entry, sourceLanguage }: { entry: HistoryEntry; sourceLan
         <div className="history-values">
           {entry.before !== null && (
             <p className="before">
-              <span className="value-label">Before</span> <Value value={entry.before} lang={lang} />
+              <span className="value-label">Before</span>{" "}
+              <Value value={entry.before} lang={lang} syntax={syntax} />
             </p>
           )}
           {entry.after !== null && (
             <p className="after">
-              <span className="value-label">After</span> <Value value={entry.after} lang={lang} />
+              <span className="value-label">After</span>{" "}
+              <Value value={entry.after} lang={lang} syntax={syntax} />
             </p>
           )}
         </div>
@@ -219,9 +257,11 @@ const STATUS_LABELS: Record<SuggestionInfo["status"], string> = {
 function Suggestions({
   detail,
   onChanged,
+  syntax,
 }: {
   detail: StringDetail;
   onChanged(ids: number[]): Promise<void>;
+  syntax: InterpolationSyntax;
 }) {
   const session = useSession();
   const toast = useToast();
@@ -289,7 +329,7 @@ function Suggestions({
               </p>
               {suggestion.value !== null ? (
                 <p className="suggestion-value">
-                  <Value value={suggestion.value} lang={detail.language} />
+                  <Value value={suggestion.value} lang={detail.language} syntax={syntax} />
                 </p>
               ) : (
                 <p className="muted">The current translation looks good to them.</p>
@@ -370,7 +410,7 @@ function Suggestions({
   );
 }
 
-function OtherLanguages({ detail }: { detail: StringDetail }) {
+function OtherLanguages({ detail, syntax }: { detail: StringDetail; syntax: InterpolationSyntax }) {
   if (detail.otherLanguages.length === 0) {
     return <p className="muted pad">The project has no other languages.</p>;
   }
@@ -384,7 +424,7 @@ function OtherLanguages({ detail }: { detail: StringDetail }) {
           </p>
           {other.translation ? (
             <p className="other-value">
-              <Value value={other.translation.value} lang={other.language} />
+              <Value value={other.translation.value} lang={other.language} syntax={syntax} />
             </p>
           ) : (
             <p className="muted small">Untranslated</p>

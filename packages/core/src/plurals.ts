@@ -121,6 +121,43 @@ export function exampleNumbers(
 }
 
 /**
+ * One number of a category, for previews: the smallest integer up to 1000 in it, leaving out
+ * `except` (numbers an exact case such as `=0` already shows); else 1000000 or a decimal, as
+ * `exampleNumbers` shows them. Ordinals start at 1, since nothing comes 0th. Undefined for a
+ * category the runtime's rules don't have. Spanish `other` gives 0, or 2 with `except: [0]`;
+ * Spanish `many` gives 1000000.
+ */
+export function exampleNumber(
+  language: string,
+  category: PluralCategory,
+  options: { ordinal?: boolean; except?: readonly number[] } = {},
+): number | undefined {
+  const ordinal = options.ordinal === true;
+  const rules = pluralRules(language, ordinal);
+  if (!rules.categories.includes(category)) return undefined;
+  const except = new Set(options.except ?? []);
+  if (ordinal) except.add(0);
+  for (const [first, last] of rules.ranges.get(category) ?? []) {
+    for (let n = first; n <= last; n++) if (!except.has(n)) return n;
+  }
+  if (rules.select(LARGE_NUMBER) === category) return LARGE_NUMBER;
+  if (ordinal) return undefined;
+  return EXAMPLE_DECIMALS.find((n) => rules.select(n) === category);
+}
+
+/**
+ * The category a number falls in, as apps pick it with `Intl.PluralRules`; `other` where the
+ * runtime has no rules for the language. Invalid tags throw a `RangeError`.
+ */
+export function pluralCategoryOf(
+  language: string,
+  n: number,
+  options: { ordinal?: boolean } = {},
+): PluralCategory {
+  return pluralRules(language, options.ordinal === true).select(n);
+}
+
+/**
  * Whether a category covers exactly one number in a language, integers and decimals
  * included, so a form may leave out `{{count}}` (design §5.7). Polish `one` covers only 1;
  * Russian `one` covers 1, 21, 31, …; French `one` covers 0, 1 and 1.5. A `zero` category the

@@ -4,13 +4,19 @@
  * with a hint of what they refer to. Spaces and line breaks at either end, which the page
  * would otherwise hide, show as signs (`·`, `↵`): a translation should usually have them too. Everything is rendered as text, never as HTML (design
  * §8: whatever people and the LLM write is user content).
+ *
+ * With `tree`, an ICU message with blocks shows as a tree: each block's cases one per line,
+ * labelled with their keys, and blocks inside a case indented under it.
  */
 import {
+  blockLabel,
   describeWhitespace,
   glossaryMatches,
   type GlossaryTerm,
+  type IcuNode,
   type InterpolationSyntax,
   maskToken,
+  parseIcu,
   tokenize,
 } from "@quaso/core";
 import { Fragment, type ReactNode, useId } from "react";
@@ -23,6 +29,7 @@ export function SourceText({
   lang,
   dir,
   glossary = [],
+  tree = false,
 }: {
   text: string;
   glossary?: GlossaryTerm[];
@@ -31,11 +38,24 @@ export function SourceText({
   masking?: Pick<Masking, "enabled" | "references" | "chips">;
   lang?: string;
   dir?: "ltr" | "rtl";
+  /** Show ICU blocks as a tree of cases rather than in one line. */
+  tree?: boolean;
 }) {
   const hasVisibleText = text.trim() !== "";
   const leading = hasVisibleText ? (LEADING_WHITESPACE.exec(text)?.[0] ?? "") : "";
   const trailing = hasVisibleText ? (TRAILING_WHITESPACE.exec(text)?.[0] ?? "") : "";
-  const tokens = tokenize(text.slice(leading.length, text.length - trailing.length), syntax);
+  const inner = text.slice(leading.length, text.length - trailing.length);
+  const nodes = tree && syntax.icu ? parseIcu(inner) : [];
+  if (nodes.some((node) => node.type === "block")) {
+    return (
+      <span className="source-text source-tree" lang={lang} dir={dir}>
+        <EdgeWhitespace whitespace={leading} edge="start" />
+        <IcuMessage text={inner} nodes={nodes} glossary={glossary} />
+        <EdgeWhitespace whitespace={trailing} edge="end" />
+      </span>
+    );
+  }
+  const tokens = tokenize(inner, syntax);
   return (
     <span className="source-text" lang={lang} dir={dir}>
       <EdgeWhitespace whitespace={leading} edge="start" />
@@ -76,6 +96,84 @@ export function SourceText({
       })}
       <EdgeWhitespace whitespace={trailing} edge="end" />
     </span>
+  );
+}
+
+/** A message of the tree: text and arguments inline, each block on lines of its own. */
+function IcuMessage({
+  text,
+  nodes,
+  glossary,
+}: {
+  text: string;
+  nodes: IcuNode[];
+  glossary: GlossaryTerm[];
+}) {
+  const pieces: ReactNode[] = [];
+  let line: ReactNode[] = [];
+  let lineHasText = false;
+  const endLine = () => {
+    // Space between blocks is layout, not text to read.
+    if (lineHasText) {
+      pieces.push(
+        <span key={pieces.length} className="icu-line">
+          {line}
+        </span>,
+      );
+    }
+    line = [];
+    lineHasText = false;
+  };
+  nodes.forEach((node, index) => {
+    if (node.type === "block") {
+      endLine();
+      pieces.push(
+        <span key={pieces.length} className="icu-block">
+          <span className="icu-syntax icu-block-head">{blockLabel(node)}</span>
+          <span className="icu-cases" role="list">
+            {node.cases.map((icuCase, caseIndex) => (
+              <span key={caseIndex} className="icu-case" role="listitem">
+                <span className="icu-case-key">
+                  {icuCase.key}
+                  <span className="sr-only">: </span>
+                </span>
+                <span className="icu-case-message">
+                  {isBlank(text, icuCase.message) ? (
+                    <span className="muted">(empty)</span>
+                  ) : (
+                    <IcuMessage text={text} nodes={icuCase.message} glossary={glossary} />
+                  )}
+                </span>
+              </span>
+            ))}
+          </span>
+        </span>,
+      );
+      return;
+    }
+    let raw = text.slice(node.start, node.end);
+    if (node.type === "text") {
+      // Each block has lines of its own, so the spaces that part it from the text go.
+      if (nodes[index - 1]?.type === "block") raw = raw.trimStart();
+      if (nodes[index + 1]?.type === "block") raw = raw.trimEnd();
+      lineHasText ||= raw !== "";
+      line.push(<GlossaryText key={node.start} text={raw} terms={glossary} />);
+    } else {
+      lineHasText = true;
+      line.push(
+        <mark key={node.start} className="ph">
+          {raw}
+        </mark>,
+      );
+    }
+  });
+  endLine();
+  return <Fragment>{pieces}</Fragment>;
+}
+
+function isBlank(text: string, nodes: IcuNode[]): boolean {
+  return nodes.every(
+    (node) => node.type === "text" && text.slice(node.start, node.end).trim() === "",
   );
 }
 
