@@ -154,7 +154,7 @@ browserTest(
 );
 
 browserTest(
-  "LLM suggestions are asked for ahead: the open string and the next three, then the next four",
+  "LLM suggestions are asked for ahead: the open string and the next seven, then four more when fewer than six are ahead",
   {
     prepare,
     serviceOptions: { provider: createFakeTranslator() },
@@ -182,29 +182,32 @@ browserTest(
       }
     });
 
+    const openString = async (index: number) => {
+      await click(tab.page, "Next", ".editor-string-navigation");
+      await waitFor(
+        tab.page,
+        (id: number) => new URLSearchParams(location.search).get("id") === String(id),
+        [ids[index]],
+      );
+      await waitFor(tab.page, () => document.querySelector(".llm-offer-button") !== null);
+    };
+
     await tab.page.goto(`${server.url}/translate/fr?id=${ids[0]}`, { waitUntil: "networkidle0" });
     await waitFor(tab.page, () => document.querySelector(".llm-offer-button") !== null);
-    assertEquals(asked, [ids.slice(0, 4)]);
+    assertEquals(asked, [ids.slice(0, 4), ids.slice(4, 8)]);
 
-    // On the second string fewer than three answers are ahead: the next four are asked for.
+    // On the second string six answers are ahead: nothing is asked.
+    await openString(1);
+    await new Promise((done) => setTimeout(done, 1_200));
+    assertEquals(asked.length, 2);
+
+    // On the third string five are ahead: the next four are asked for.
     const refill = tab.page.waitForRequest((request) =>
       request.url().endsWith("/api/v1/llm-suggestions"),
     );
-    await click(tab.page, "Next", ".editor-string-navigation");
+    await openString(2);
     await refill;
-    assertEquals(asked, [ids.slice(0, 4), ids.slice(4, 8)]);
-
-    // Further on, the answers are there already: nothing is asked.
-    await click(tab.page, "Next", ".editor-string-navigation");
-    await click(tab.page, "Next", ".editor-string-navigation");
-    await waitFor(
-      tab.page,
-      (id: number) => new URLSearchParams(location.search).get("id") === String(id),
-      [ids[3]],
-    );
-    await waitFor(tab.page, () => document.querySelector(".llm-offer-button") !== null);
-    await new Promise((done) => setTimeout(done, 1_200));
-    assertEquals(asked.length, 2);
+    assertEquals(asked, [ids.slice(0, 4), ids.slice(4, 8), ids.slice(8, 12)]);
     assertEquals(tab.problems, []);
   },
 );
