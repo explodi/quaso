@@ -4,6 +4,7 @@ import { assertEquals, assertStringIncludes } from "@std/assert";
 import { openAsyncSqlite } from "./adapters/node_async_sqlite.ts";
 import { SYSTEM } from "./api.ts";
 import { refreshContextualChecks } from "./contextual_checks.ts";
+import type { Sql, SqlRow, Statement } from "./ports.ts";
 import { createAsyncService } from "./service_async.ts";
 import { openNodeSqlite } from "./adapters/node_sqlite.ts";
 import { migrate } from "./migrate.ts";
@@ -93,6 +94,121 @@ test("progress read between a commit and its check refresh isn't served after th
     assertEquals((await service.getStatus(SYSTEM, {})).languages[0].qa, 0);
     await refreshContextualChecks(opened.sql);
     assertEquals((await service.getStatus(SYSTEM, {})).languages[0].qa, 2);
+  } finally {
+    opened.close();
+  }
+});
+
+async function twoFileProject(sql: Sql) {
+  const service = createAsyncService({
+    sql,
+    scheduler: { schedule() {}, cancel() {} },
+    secretKey: "test",
+  });
+  await service.start();
+  await service.upload(SYSTEM, {
+    files: [
+      {
+        path: "menu.json",
+        repoPath: "menu.json",
+        content: '{"open":"Open","start":"Start","quit":"Quit"}',
+      },
+      { path: "dialog.json", repoPath: "dialog.json", content: '{"open":"Open","close":"Close"}' },
+    ],
+    languages: ["de", "fr"],
+  });
+  await service.importTranslations(SYSTEM, {
+    language: "de",
+    as: "blue",
+    files: [
+      { path: "menu.json", content: '{"open":"Öffnen","start":"Beginnen","quit":"Beenden"}' },
+      { path: "dialog.json", content: '{"open":"Aufmachen","close":"Schließen"}' },
+    ],
+  });
+  await service.importTranslations(SYSTEM, {
+    language: "fr",
+    as: "blue",
+    files: [{ path: "dialog.json", content: '{"open":"Ouvrir","close":"ouvrir"}' }],
+  });
+  return service;
+}
+
+const EXTRA_CHECKS: Statement = {
+  sql: "SELECT string_id, language, extra_checks FROM translations ORDER BY string_id, language",
+};
+
+/** The checks as stored, and as a full refresh then stores them. */
+async function storedAndFull(sql: Sql) {
+  const [stored] = await sql.read([EXTRA_CHECKS]);
+  await refreshContextualChecks(sql);
+  const [full] = await sql.read([EXTRA_CHECKS]);
+  return { stored, full };
+}
+
+/** Which translations have warnings, as "string language". */
+function warned(rows: SqlRow[]) {
+  return rows
+    .filter((row) => row.extra_checks !== "[]")
+    .map((row) => `${row.string_id} ${row.language}`);
+}
+
+test("checks refreshed after each translation save equal a full refresh's", async () => {
+  const opened = openAsyncSqlite(":memory:");
+  try {
+    const service = await twoFileProject(opened.sql);
+    const afterImports = await storedAndFull(opened.sql);
+    assertEquals(afterImports.stored, afterImports.full);
+    // menu › open and dialog › open differ in German; both French values are "ouvrir".
+    assertEquals(warned(afterImports.full), ["1 de", "4 de", "4 fr", "5 fr"]);
+
+    await service.importTranslations(SYSTEM, {
+      language: "de",
+      as: "blue",
+      overwrite: true,
+      files: [{ path: "menu.json", content: '{"quit":"beginnen"}' }],
+    });
+    const afterDuplicate = await storedAndFull(opened.sql);
+    assertEquals(afterDuplicate.stored, afterDuplicate.full);
+    assertEquals(warned(afterDuplicate.full), ["1 de", "2 de", "3 de", "4 de", "4 fr", "5 fr"]);
+
+    await service.importTranslations(SYSTEM, {
+      language: "de",
+      as: "blue",
+      overwrite: true,
+      files: [{ path: "dialog.json", content: '{"open":"Öffnen"}' }],
+    });
+    const afterAgreeing = await storedAndFull(opened.sql);
+    assertEquals(afterAgreeing.stored, afterAgreeing.full);
+    assertEquals(warned(afterAgreeing.full), ["2 de", "3 de", "4 fr", "5 fr"]);
+  } finally {
+    opened.close();
+  }
+});
+
+test("a translation save reads the translations it can affect, not the whole project", async () => {
+  const opened = openAsyncSqlite(":memory:");
+  const reads: string[] = [];
+  const recording: Sql = {
+    ...opened.sql,
+    read(statements) {
+      reads.push(...statements.map((statement) => statement.sql));
+      return opened.sql.read(statements);
+    },
+  };
+  try {
+    const service = await twoFileProject(recording);
+    reads.length = 0;
+    await service.importTranslations(SYSTEM, {
+      language: "de",
+      as: "blue",
+      overwrite: true,
+      files: [{ path: "menu.json", content: '{"quit":"beginnen"}' }],
+    });
+    const scoped = reads.filter((sql) => sql.includes("WITH scope"));
+    const whole = reads.filter(
+      (sql) => sql.includes("extra_checks") && !sql.includes("WITH scope"),
+    );
+    assertEquals([scoped.length, whole.length], [1, 0]);
   } finally {
     opened.close();
   }

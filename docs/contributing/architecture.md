@@ -112,6 +112,19 @@ how long a change made outside Quaso, such as editing the database by hand, coul
 Requests for a key while it loads share that one load; a failed load isn't kept; values are
 frozen, since every caller shares them.
 
+### Contextual checks
+
+Duplicates (two keys of a file with the same translation but different English) and consistency
+(the same English translated differently) compare translations with each other, so they're
+stored per translation and refreshed after the commit that changes one
+(`packages/service/src/contextual_checks.ts`). A commit that writes strings or files (an upload,
+a rename) checks every translation again. One that writes only translations checks again only
+what it can affect: the translations of each changed string's file and language, and those with
+the same English in that language. A `meta` checkpoint holds the newest history row the stored
+checks reflect; every translation change writes history in its commit, so the history after the
+checkpoint lists every change since. Without a checkpoint, such as after a restore, which deletes
+it, the refresh checks everything.
+
 ## The data model
 
 The service keeps these records and states:

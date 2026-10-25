@@ -37,6 +37,7 @@ import { DATABASE_VERSION, MIGRATIONS, BATCH_MIGRATIONS } from "./migrations.ts"
 import type { Clock, Sql, Statement, SyncSql, SqlRow, SqlValue } from "./ports.ts";
 import { permissionReadStatements, permissionsFromRows } from "./permissions.ts";
 import { SETUP_TOKEN } from "./accounts.ts";
+import { CHECKS_CHECKPOINT } from "./contextual_checks.ts";
 import { constantTimeEqualText } from "./passwords.ts";
 import { setupRequired } from "./users.ts";
 
@@ -58,7 +59,8 @@ export const LAST_BACKUP_META = "last_backup";
  * `meta` keys a backup leaves out: a restore in progress, the setup token (a secret that
  * only matters until the first administrator exists), and the last backup (a file of this
  * instance's setup, which the instance a backup moves to doesn't have). Runtime
- * publication and alarm deadlines are rebuilt from restored data and jobs.
+ * publication and alarm deadlines are rebuilt from restored data and jobs, and the contextual
+ * checks' checkpoint is deleted when a restore finishes, so they're all checked again.
  */
 const PRIVATE_META: readonly string[] = [
   RESTORE_META,
@@ -68,6 +70,7 @@ const PRIVATE_META: readonly string[] = [
   "llm_alarm",
   "file_sweep",
   "next_alarm",
+  CHECKS_CHECKPOINT,
 ];
 
 /** `meta` keys a restore never writes: the schema version is the migrations' business. */
@@ -1184,6 +1187,7 @@ export async function finishRestoreAsync(
     }
     statements.push(
       { sql: "DELETE FROM meta WHERE key = 'restore'" },
+      { sql: "DELETE FROM meta WHERE key = ?", params: [CHECKS_CHECKPOINT] },
       {
         sql: "DELETE FROM meta WHERE key = ? AND EXISTS (SELECT 1 FROM users WHERE role = 'administrator' AND deleted_at IS NULL)",
         params: [SETUP_TOKEN],
