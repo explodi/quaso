@@ -29,11 +29,13 @@ import {
   type CheckResult,
   checkTranslation,
   graphemeLength,
+  type IcuField,
   icuWithLanguageCases,
   type InterpolationSyntax,
   type LanguageProgress,
   paragraphCount,
   type ProjectInfo,
+  type StringArgument,
   type StringDetail,
   type StringSummary,
   textDirection,
@@ -54,7 +56,12 @@ import { SourceText } from "../../components/SourceText.tsx";
 import { StateBadge } from "../../components/StateBadge.tsx";
 import { useToast } from "../../components/Toast.tsx";
 import { JobProgress } from "../../components/JobProgress.tsx";
-import { ArgumentsNote, VaryByButtons } from "./DeclaredArguments.tsx";
+import {
+  ArgumentsNote,
+  selectBlock,
+  VaryByButtons,
+  varyFieldSelection,
+} from "./DeclaredArguments.tsx";
 import { DocumentParagraphs } from "./DocumentParagraphs.tsx";
 import { fieldEnglish, IcuCaseInput, useIcuFields } from "./IcuCaseEditor.tsx";
 import { IcuPreviewList, PluralCaseHints, pluralCaseHints } from "./IcuHelp.tsx";
@@ -274,7 +281,11 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
   const lastFocused = useRef<FormKey>(forms[0]);
   const root = useRef<HTMLDivElement>(null);
   // The case editor's field that last had focus, and its English: chips and copying go there.
-  const focusedField = useRef<{ element: HTMLTextAreaElement; english: string } | null>(null);
+  const focusedField = useRef<{
+    element: HTMLTextAreaElement;
+    english: string;
+    field: IcuField;
+  } | null>(null);
 
   // Keep an unsaved draft when moving to another string; forget it once saved.
   const latest = useRef({ draft, dirty, baseRevision });
@@ -400,6 +411,28 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
   const selectedText = (): string => {
     const element = inputs.current.get(lastFocused.current ?? forms[0]);
     return element ? element.value.slice(element.selectionStart, element.selectionEnd) : "";
+  };
+
+  /** Writes a select block on an argument around the selection, in the input or a case field. */
+  const varyBy = (argument: StringArgument): boolean => {
+    const form = lastFocused.current ?? forms[0];
+    if (!fieldsShown || !icuFields?.form) return insert(selectBlock(argument, selectedText()));
+    const focused = focusedField.current?.element.isConnected ? focusedField.current : null;
+    const field = focused?.field ?? icuFields.form.fields[0];
+    const element = focused?.element ?? inputs.current.get(form);
+    const caret = field.text.length;
+    const selection = {
+      start: element?.selectionStart ?? caret,
+      end: element?.selectionEnd ?? caret,
+    };
+    const next = varyFieldSelection(icuFields.write, field, selection, argument);
+    if (next === null) return false;
+    // The fields follow the English's blocks, and this one isn't the English's: the
+    // translation goes on as text.
+    icuFields.keepText();
+    setForm(form, mask(next));
+    requestAnimationFrame(() => inputs.current.get(form)?.focus());
+    return true;
   };
 
   /** Replaces a form's input with the LLM's text, keeping undo for what was typed. */
@@ -819,11 +852,7 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
                 Translate with the LLM
               </Button>
             )}
-            <VaryByButtons
-              declared={detail.arguments}
-              selectedText={selectedText}
-              insert={insert}
-            />
+            <VaryByButtons declared={detail.arguments} onVary={varyBy} />
             {canAskLlm && (
               <Label className="llm-switch">
                 <Switch
@@ -934,9 +963,9 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
                     if (element) inputs.current.set(form, element);
                     else inputs.current.delete(form);
                   }}
-                  onFieldFocus={(element, fieldText) => {
+                  onFieldFocus={(element, fieldText, field) => {
                     lastFocused.current = form;
-                    focusedField.current = { element, english: fieldText };
+                    focusedField.current = { element, english: fieldText, field };
                   }}
                   onChange={(next) => setForm(form, mask(next))}
                 />

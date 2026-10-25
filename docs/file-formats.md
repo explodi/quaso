@@ -301,7 +301,9 @@ it vary by the poster's gender, declare the argument your game passes, in `argum
 
 Each string in its `files` and `keys` receives it. The editor shows it beside the source ("Can vary
 by authorGender (female, male, other)", with the description), and **Vary by authorGender** writes
-a select block on it into the translation, with the selected text in every case. The LLM gets the
+a select block on it into the translation, with the selected text in every case. In the case
+fields of a string whose English has blocks, it wraps the selection of the field you were in, and
+the translation goes on as text, since the fields follow the English's blocks. The LLM gets the
 string's arguments, and writes a select block on one where the language makes words agree with it;
 where the language needs none, it writes one text. Arguments only apply with ICU MessageFormat on;
 on another project, upload keeps them and warns.

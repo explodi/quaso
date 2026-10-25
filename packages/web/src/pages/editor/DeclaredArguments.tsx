@@ -5,7 +5,7 @@
  * it into the translation, so that the translation can agree with it.
  */
 import { Button } from "@quaso/design-system";
-import type { StringArgument } from "@quaso/core";
+import type { IcuField, StringArgument } from "@quaso/core";
 
 /** The argument's select cases, `other` included: every select block needs it. */
 function casesOf(argument: StringArgument): string[] {
@@ -16,6 +16,29 @@ function casesOf(argument: StringArgument): string[] {
 export function selectBlock(argument: StringArgument, text: string): string {
   const cases = casesOf(argument).map((key) => `${key} {${text}}`);
   return `{${argument.name}, select, ${cases.join(" ")}}`;
+}
+
+/** A character no translation has: it marks where a field's selection was. */
+const MARK = "";
+
+/**
+ * The translation with a case field's selection varied by an argument. The field is written
+ * with marks around the selection, so that the selected text comes out as ICU, quoted as
+ * the field writes it, and goes into every case. Null if the text has the mark already.
+ */
+export function varyFieldSelection(
+  write: (field: IcuField, text: string) => string,
+  field: IcuField,
+  selection: { start: number; end: number },
+  argument: StringArgument,
+): string | null {
+  const { start, end } = selection;
+  const text = field.text;
+  const marked = text.slice(0, start) + MARK + text.slice(start, end) + MARK + text.slice(end);
+  const parts = write(field, marked).split(MARK);
+  if (parts.length !== 3) return null;
+  const [before, selected, after] = parts;
+  return before + selectBlock(argument, selected) + after;
 }
 
 /** "Can vary by": each argument's name, its cases and its description, as text. */
@@ -34,16 +57,11 @@ export function ArgumentsNote({ declared }: { declared: StringArgument[] }) {
   );
 }
 
-/**
- * "Vary by authorGender": writes a select block on the argument, with the selected text in
- * every case, or empty cases at the cursor.
- */
+/** "Vary by authorGender", for each argument. */
 export function VaryByButtons(props: {
   declared: StringArgument[];
-  /** The text selected in the input the block goes to. */
-  selectedText: () => string;
-  /** Inserts at the cursor of that input, replacing the selection, keeping undo. */
-  insert: (text: string) => boolean;
+  /** Writes a select block on the argument, around the selected text. */
+  onVary: (argument: StringArgument) => boolean;
 }) {
   return props.declared.map((argument) => (
     <Button
@@ -52,7 +70,7 @@ export function VaryByButtons(props: {
       variant="ghost"
       // The input keeps its focus and selection, as with the placeholder chips.
       onMouseDown={(event) => event.preventDefault()}
-      onClick={() => props.insert(selectBlock(argument, props.selectedText()))}
+      onClick={() => props.onVary(argument)}
     >
       Vary by {argument.name}
     </Button>

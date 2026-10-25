@@ -142,6 +142,13 @@ with your language's cases; in the fields, it copies the English of the field yo
 a literal `{` or `'` in the text input, refer to
 [braces and apostrophes](file-formats.md#braces-and-apostrophes).
 
+A string can also vary by a value the English doesn't show, such as the gender of the person who
+wrote a post: under the source, **Can vary by** names it, with its cases and what it means. Where
+your language makes words agree with it, select the text that changes and press **Vary by
+authorGender** (the argument's name): the selection goes into every case of a select block, and you
+adjust each case. Where your language needs no agreement, write one text. See
+[arguments the English doesn't show](file-formats.md#arguments-the-english-doesnt-show).
+
 The editor checks for missing or extra placeholders and references, missing plural forms, empty
 translations, and length limits as you type. A missing placeholder or reference turns its chip red.
 For JSON strings, leading and trailing whitespace and the number of line breaks must match the
