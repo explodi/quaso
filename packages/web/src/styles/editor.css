@@ -512,6 +512,14 @@
   border-radius: 0;
 }
 
+/* The key and file give way first, so the save status is always read in full. */
+.row-save-status {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
 .row-not-saved {
   border-color: var(--danger);
   color: var(--danger);
