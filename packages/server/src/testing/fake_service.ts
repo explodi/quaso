@@ -287,6 +287,7 @@ export class FakeService implements ServiceApi {
   updateFolder = notFaked("updateFolder");
   updateString = notFaked("updateString");
   renameKey = notFaked("renameKey");
+  convertToIcu = notFaked("convertToIcu");
   backupInfo = notFaked("backupInfo");
   backupTables = notFaked("backupTables");
   beginRestore = notFaked("beginRestore");

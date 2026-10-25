@@ -374,6 +374,7 @@ export const HISTORY_EVENTS = [
   "source_removed",
   "source_restored",
   "source_renamed",
+  "source_converted",
   "translation_saved",
   "translation_reused",
   "translation_llm",
@@ -381,6 +382,7 @@ export const HISTORY_EVENTS = [
   "translation_approved",
   "translation_unapproved",
   "translation_deleted",
+  "translation_converted",
   "suggestion_created",
   "suggestion_approved",
   "suggestion_rejected",
@@ -412,7 +414,7 @@ export interface HistoryResult {
 
 export interface ActivityItem {
   id: string;
-  type: "upload" | "job" | "review" | "import" | "rename" | "secret";
+  type: "upload" | "job" | "review" | "import" | "rename" | "secret" | "conversion";
   at: number;
   actor: ActorInfo;
   summary: string;
@@ -1406,6 +1408,49 @@ export interface UpdateStringResult {
 /** `POST /renames`: the rename made (none when it was made before). */
 export interface RenameResult {
   renamed: { file: string; from: string; to: string }[];
+  revision: number;
+}
+
+/** `POST /conversions/icu`: converts the project from i18next to ICU MessageFormat. */
+export const IcuConversionRequest = s.object({
+  dryRun: s.boolean().optional().describe("Report what the conversion would change, and change nothing"),
+});
+export type IcuConversionRequest = Infer<typeof IcuConversionRequest>;
+
+/** A text of a conversion: a string's English, or its translation in `language`. */
+export interface ConversionText {
+  file: string;
+  /** The key path displayed with dots; empty for a document. */
+  key: string;
+  /** The translation's language; absent for the English. */
+  language?: string;
+}
+
+/**
+ * `POST /conversions/icu`: what the conversion changed, or would change with `dryRun`. It
+ * converts only when nothing refuses it, and changes nothing in a project already on ICU.
+ */
+export interface IcuConversionResult {
+  dryRun: boolean;
+  /** Whether this request converted the project: false for a dry run, refusals or ICU. */
+  converted: boolean;
+  /** The project already reads ICU MessageFormat, so there is nothing to convert. */
+  alreadyIcu: boolean;
+  /** English texts that change, the merged plural groups among them. */
+  strings: number;
+  translations: number;
+  /** Pending suggestions whose text changes. */
+  suggestions: number;
+  /** Plural and ordinal groups that become one string each, by that string's key. */
+  merged: KeyRef[];
+  /** Characters quoted and apostrophes doubled so that they stay text, in every text. */
+  escapes: number;
+  /** The texts with escapes, to review. */
+  escaped: ConversionText[];
+  /** What stops the conversion, located where it can be: fix these, then convert. */
+  refusals: ErrorDetail[];
+  /** Translations that fail the ICU checks once converted: they stay, with their errors. */
+  failing: ErrorDetail[];
   revision: number;
 }
 

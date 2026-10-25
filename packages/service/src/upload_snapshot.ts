@@ -3,6 +3,7 @@ import type { PluralOverride, ProjectSettings, UploadRequest } from "@quaso/core
 import { fromJsonOrNull, toJson } from "./db.ts";
 import type { Language } from "./languages.ts";
 import type { Sql, SqlRow, Statement } from "./ports.ts";
+import { PERSON_HISTORY } from "./rename.ts";
 import { settingsFromData } from "./settings.ts";
 import type { ExistingSourceString } from "./source_diff.ts";
 import type { TranslationRow } from "./translations.ts";
@@ -95,7 +96,7 @@ export function uploadReadStatements(request: UploadRequest): Statement[] {
     scoped(`SELECT string_id, language, kind, status, source_hash FROM suggestions
       WHERE string_id IN (${selected}) ORDER BY id`),
     scoped(`SELECT string_id, language, COUNT(*) AS people FROM history
-      WHERE actor_type <> 'llm' AND string_id IN (${selected}) GROUP BY string_id, language`),
+      WHERE ${PERSON_HISTORY} AND string_id IN (${selected}) GROUP BY string_id, language`),
     scoped(`SELECT string_id, detail FROM history WHERE event = 'source_renamed'
       AND string_id IN (${selected}) ORDER BY id`),
     { sql: "SELECT tag, instructions, plural_override, created_at FROM languages ORDER BY tag" },

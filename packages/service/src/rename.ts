@@ -38,6 +38,12 @@ import { type Facts } from "./facts.ts";
 import { type LanguageRow, toLanguage } from "./languages.ts";
 import { type GlossaryRow, glossaryTermFromRow } from "./glossary.ts";
 
+/**
+ * History rows that show a person made or reviewed a translation, for SQL on `history`: not
+ * the LLM's, nor a conversion to ICU MessageFormat's, which only rewrote its syntax.
+ */
+export const PERSON_HISTORY = "actor_type <> 'llm' AND event <> 'translation_converted'";
+
 /** How to name one of several strings with the same key, for error messages and warnings. */
 export const AMBIGUOUS_HINT =
   'add #text, #plural or #ordinal to the key, or write its key path as a JSON array, such as ["a.b", "c"]';
@@ -200,7 +206,7 @@ export function moveRename(
   const clashes = sql.query<RenameClash>(
     `SELECT t.language, t.value, t.colour, t.author_type,
        (SELECT COUNT(*) FROM history h
-        WHERE h.string_id = t.string_id AND h.language = t.language AND h.actor_type <> 'llm')
+        WHERE h.string_id = t.string_id AND h.language = t.language AND ${PERSON_HISTORY})
          AS people
      FROM translations t
      WHERE t.string_id = ?
@@ -369,7 +375,7 @@ export async function renameKeyAsync(
           params: [request.file],
         },
         {
-          sql: `SELECT t.*, (SELECT COUNT(*) FROM history h WHERE h.string_id = t.string_id AND h.language = t.language AND h.actor_type <> 'llm') AS people FROM translations t WHERE t.string_id IN (${selected}) ORDER BY t.language`,
+          sql: `SELECT t.*, (SELECT COUNT(*) FROM history h WHERE h.string_id = t.string_id AND h.language = t.language AND ${PERSON_HISTORY}) AS people FROM translations t WHERE t.string_id IN (${selected}) ORDER BY t.language`,
           params: [request.file],
         },
         {
