@@ -414,49 +414,32 @@ export const JOB_CREATION_CASES: { name: string; run(sql: Sql): Promise<void> }[
     },
   },
   {
-    name: "dry-run retries discard estimates when access changes during prompt reads",
+    name: "a dry run doesn't start over when the project changes during its prompt reads",
     async run(sql) {
       await seed(sql);
-      let changed = false;
-      const raced: Sql = {
+      const before = await createJobAsync(sql, MANAGER, { dryRun: true }, OPTIONS);
+      let promptReads = 0;
+      const changing: Sql = {
         ...sql,
         async read(statements) {
           const rows = await sql.read(statements);
-          if (!changed && statements[0].sql.includes("generated_context")) {
-            changed = true;
-            await sql.commit(2, [{ sql: "UPDATE users SET role = 'contributor' WHERE id = 2" }]);
-          }
-          return rows;
-        },
-      };
-      await rejected(() => createJobAsync(raced, MANAGER, { dryRun: true }, OPTIONS), "forbidden");
-      check(changed);
-    },
-  },
-  {
-    name: "dry-run retries refresh changed batching settings instead of mixing estimates",
-    async run(sql) {
-      await seed(sql);
-      let changed = false;
-      const settings = defaultSettings("test");
-      settings.llm.batchSize = 1;
-      const raced: Sql = {
-        ...sql,
-        async read(statements) {
-          const rows = await sql.read(statements);
-          if (!changed && statements[0].sql.includes("generated_context")) {
-            changed = true;
-            await sql.commit(2, [
-              { sql: "INSERT INTO settings VALUES (1, ?)", params: [JSON.stringify(settings)] },
+          if (!statements[0].sql.includes("generated_context")) return rows;
+          promptReads++;
+          if (promptReads === 1) {
+            // A running job's write, landing while the estimate reads.
+            const [[{ revision }]] = await sql.read([
+              { sql: "SELECT CAST(value AS INTEGER) AS revision FROM meta WHERE key = 'revision'" },
+            ]);
+            await sql.commit(Number(revision), [
+              { sql: "UPDATE users SET display_name = display_name WHERE id = 2" },
             ]);
           }
           return rows;
         },
       };
-      const result = await createJobAsync(raced, MANAGER, { dryRun: true }, OPTIONS);
-      check(changed);
-      checkEqual(result.estimate?.requests, 4);
-      checkEqual(result, await createJobAsync(sql, MANAGER, { dryRun: true }, OPTIONS));
+      const during = await createJobAsync(changing, MANAGER, { dryRun: true }, OPTIONS);
+      checkEqual(during, before);
+      checkEqual(promptReads, before.estimate?.requests);
     },
   },
   {

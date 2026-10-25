@@ -88,7 +88,8 @@ export function AutoTranslateDialog({
   const estimate = useQuery(
     project.data?.llmAvailable && validScope ? ["estimate", debouncedScope] : null,
     () => createJob(checkJobRequest({ ...JSON.parse(debouncedScope), dryRun: true })),
-    { staleTime: 0 },
+    // An estimate reads the whole scope: refreshing it on every focus kept the button disabled.
+    { staleTime: 0, revalidateOnFocus: false },
   );
   const start = useMutation((body: JobScope) => createJob(checkJobRequest(body)), {
     invalidate: [["jobs"]],
@@ -197,6 +198,12 @@ export function AutoTranslateDialog({
           ) : (
             count && (
               <p>
+                {estimate.fetching && (
+                  <>
+                    <span>Updating the estimate…</span>
+                    <br />
+                  </>
+                )}
                 <strong>
                   {count.strings} strings · {count.words} words · {count.requests} requests
                 </strong>
@@ -247,13 +254,13 @@ export function AutoTranslateDialog({
           type="submit"
           variant="primary"
           busy={start.pending}
+          // The estimate shown is for this scope; a refresh of it running doesn't block starting.
           disabled={
             !project.data?.llmAvailable ||
             !validScope ||
             !count ||
             !!estimate.error ||
-            scopeJson !== debouncedScope ||
-            estimate.fetching
+            scopeJson !== debouncedScope
           }
         >
           Start translation
