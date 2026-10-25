@@ -9,6 +9,7 @@ import {
   ExportQuery,
   FileVersionQuery,
   FileVersionsQuery,
+  IcuConversionRequest,
   Id,
   ImportRequest,
   LanguageTag,
@@ -38,6 +39,7 @@ import {
   getPublishedFile,
 } from "./file_reads.ts";
 import { getActivity, getHistory } from "./history.ts";
+import { convertToIcuAsync } from "./icu_conversion.ts";
 import { importTranslations } from "./imports.ts";
 import { migrate, schemaVersion } from "./migrate.ts";
 import { type Action, requirePermission } from "./permissions.ts";
@@ -152,7 +154,8 @@ export function createService(options: ServiceOptions): Service {
     concurrency: options.llmConcurrency,
     monthlyTokenBudget: options.monthlyTokenBudget,
   });
-  const qualitySql: Sql = {
+  // The batch port over the synchronous database, for operations written only for it.
+  const batchSql: Sql = {
     async read(statements) {
       return ctx.sql.transaction(() =>
         statements.map((statement) =>
@@ -163,7 +166,10 @@ export function createService(options: ServiceOptions): Service {
     async commit(revision, statements) {
       return ctx.sql.transaction(() => {
         if (getRevision(ctx.sql) !== revision) throw new RevisionConflict();
-        ctx.sql.run("UPDATE meta SET value = ? WHERE key = 'revision'", String(revision + 1));
+        ctx.sql.run(
+          "INSERT INTO meta (key, value) VALUES ('revision', ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value",
+          String(revision + 1),
+        );
         for (const statement of statements) ctx.sql.run(statement.sql, ...(statement.params ?? []));
         return revision + 1;
       });
@@ -174,7 +180,7 @@ export function createService(options: ServiceOptions): Service {
       });
     },
   };
-  const quality = createQualityJobs(qualitySql, {
+  const quality = createQualityJobs(batchSql, {
     clock: ctx.clock,
     logger: ctx.logger,
     model: ctx.defaultModel,
@@ -224,8 +230,8 @@ export function createService(options: ServiceOptions): Service {
   const service: Service = {
     createQualityJob: quality.create,
     reviewTerminology: quality.reviewTerminology,
-    getQualityJob: (actor, { id }) => getQualityJob(qualitySql, actor, id),
-    listQualityJobs: (actor) => listQualityJobs(qualitySql, actor),
+    getQualityJob: (actor, { id }) => getQualityJob(batchSql, actor, id),
+    listQualityJobs: (actor) => listQualityJobs(batchSql, actor),
     async start() {
       const migrated = await migrate(ctx.sql, { beforeMigrate: options.beforeMigrate });
       transaction(ctx.sql, () => {
@@ -330,6 +336,15 @@ export function createService(options: ServiceOptions): Service {
       call(caller, "upload", ImportRequest, input, (request, actor) =>
         importTranslations(ctx, actor, request),
       ),
+    async convertToIcu(caller, input) {
+      const actor = validateActor(caller);
+      const request = validateInput(IcuConversionRequest, input);
+      const now = ctx.clock();
+      const model = ctx.defaultModel;
+      const result = await convertToIcuAsync(batchSql, actor, request, { now, model });
+      if (result.converted) transaction(ctx.sql, () => refreshContextualChecksSync(ctx.sql));
+      return result;
+    },
 
     authenticateToken: (caller, input) =>
       call(caller, null, SecretInput, input, ({ secret }, actor) => {

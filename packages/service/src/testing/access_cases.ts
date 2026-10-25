@@ -163,7 +163,7 @@ export const ACCESS_CASES: { name: string; run(sql: Sql): Promise<void> }[] = [
       );
       checkEqual(
         ACTIONS.filter((action) => upload.can(action)),
-        ["read", "download", "upload", "translate", "usage"],
+        ["read", "download", "upload", "convert", "translate", "usage"],
       );
       checkEqual(
         ACTIONS.filter((action) => revoked.can(action)),

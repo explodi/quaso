@@ -10,6 +10,7 @@ import {
   CreateApiTokenRequest,
   ExportQuery,
   FilePath,
+  IcuConversionRequest,
   Id,
   ImportRequest,
   LanguageTag,
@@ -275,6 +276,17 @@ export const API_ROUTES: ApiRoute[] = [
     body: ImportRequest,
     bodyLimit: 50 * MB,
     handle: ({ service, actor, body }) => service.importTranslations(actor, body),
+  }),
+  route({
+    method: "POST",
+    path: "/conversions/icu",
+    operationId: "convertToIcu",
+    summary:
+      "Convert the project from i18next to ICU MessageFormat, or report what that changes (quaso convert-to-icu)",
+    tag: "CLI",
+    access: "upload",
+    body: IcuConversionRequest,
+    handle: ({ service, actor, body }) => service.convertToIcu(actor, body),
   }),
   route({
     method: "GET",

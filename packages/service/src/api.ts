@@ -36,6 +36,8 @@ import type {
   AdminInfo,
   FileSettings,
   FolderSettings,
+  IcuConversionRequest,
+  IcuConversionResult,
   LanguageSettings,
   RenameRequest,
   RenameResult,
@@ -182,6 +184,11 @@ export interface ServiceApi extends AccountsApi, LlmMethods, LaterApi, LaterApi 
   ): Promise<UpdateStringResult>;
   /** Administrators: `quaso upload --rename`, on the website. */
   renameKey(actor: Actor, input: RenameRequest): Promise<RenameResult>;
+  /**
+   * Administrators and upload keys (`quaso convert-to-icu`): converts the project from
+   * i18next to ICU MessageFormat, or reports what that would change.
+   */
+  convertToIcu(actor: Actor, input: IcuConversionRequest): Promise<IcuConversionResult>;
 
   // --- Backups and restore (S8.9, S9.1, S9.2) and the admin page (S9.10).
   /** Administrators: the tables a backup holds, with their row counts. */

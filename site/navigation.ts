@@ -20,6 +20,7 @@ export const NAVIGATION: NavigationGroup[] = [
       "website.md",
       "migrate-from-crowdin.md",
       "move-from-crowdin.md",
+      "move-to-icu.md",
     ],
   },
   {

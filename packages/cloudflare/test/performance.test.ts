@@ -76,6 +76,9 @@ it("3,000 strings in ten languages: upload, recheck, export and browse each fini
     }),
   );
   expect(strings.total).toBe(300);
+  // Last, as it rewrites every string and translation.
+  const converted = await measure("icuConversion", () => service.convertToIcu(SYSTEM, {}));
+  expect([converted.strings, converted.translations]).toEqual([3000, 30_000]);
   console.log("D1 3,000 × 10 timings (ms):", timings);
   for (const [operation, ms] of Object.entries(timings)) {
     expect(ms, operation).toBeLessThan(30_000);

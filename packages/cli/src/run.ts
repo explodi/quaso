@@ -20,6 +20,7 @@ import { download } from "./commands/download.ts";
 import { status } from "./commands/status.ts";
 import { importCommand } from "./commands/import.ts";
 import { translate } from "./commands/translate.ts";
+import { convertToIcu } from "./commands/convert.ts";
 
 export const COMMANDS: readonly Command[] = [
   init,
@@ -28,6 +29,7 @@ export const COMMANDS: readonly Command[] = [
   translate,
   status,
   importCommand,
+  convertToIcu,
 ];
 
 const byName = new Map(COMMANDS.map((command) => [command.name, command]));

@@ -18,6 +18,11 @@ export const ACTIONS = [
   "download",
   /** Upload the English and import translations. */
   "upload",
+  /**
+   * Convert the project from i18next to ICU MessageFormat. Upload keys may, as the CLI
+   * converts the source files with the project: their creator's role still limits them.
+   */
+  "convert",
   /** Run LLM jobs. */
   "translate",
   /** Manage everyone's API keys; people manage their own with `account`. */
@@ -55,7 +60,7 @@ export type Action = (typeof ACTIONS)[number];
 /** What each API key scope allows (OPS-3). */
 const SCOPES: Record<TokenScope, readonly Action[]> = {
   read: ["read", "download"],
-  upload: ["read", "download", "upload", "translate", "usage"],
+  upload: ["read", "download", "upload", "convert", "translate", "usage"],
 };
 
 /** What each role allows (design §5.8). */

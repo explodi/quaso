@@ -28,6 +28,7 @@ const TYPE_LABELS: Record<ActivityItem["type"], string> = {
   import: "Import",
   rename: "Rename",
   secret: "Secret",
+  conversion: "Conversion",
 };
 
 function TypeIcon({ type }: { type: ActivityItem["type"] }) {

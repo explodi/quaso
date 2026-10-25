@@ -40,6 +40,8 @@ test("every command leaves the English files as they were (acceptance test 6)", 
       { args: ["download", "--prune", "--dry-run"] },
       { args: ["download", "--prune"] },
       { args: ["upload", "--file", "common.json"] },
+      // The demo's $t() nesting is refused, so this exits 6, and only reports.
+      { args: ["convert-to-icu", "--dry-run"], code: 6 },
       { args: ["download", "--language", "en"], code: 2 },
       { args: ["version"] },
       { args: ["help"] },

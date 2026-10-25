@@ -32,6 +32,7 @@ import {
   SaveTranslationRequest,
   TranslationActionRequest,
   ImportRequest,
+  IcuConversionRequest,
   RenameRequest,
   UpdateGlossaryTermRequest,
   Id,
@@ -46,6 +47,7 @@ import {
   recordBackupAsync,
 } from "./backup.ts";
 import { renameKeyAsync } from "./rename.ts";
+import { convertToIcuAsync, logConversion } from "./icu_conversion.ts";
 import { importTranslationsAsync } from "./imports.ts";
 import { editTranslationAsync } from "./edits.ts";
 import { FALLBACK_MODEL } from "./context.ts";
@@ -161,6 +163,7 @@ export type AsyncWriteMethods = Pick<
   | "deleteTranslation"
   | "importTranslations"
   | "renameKey"
+  | "convertToIcu"
   | "restoreRows"
   | "beginRestore"
   | "finishRestore"
@@ -343,6 +346,15 @@ export function asyncWriteMethods(options: {
       call(caller, "settings", RenameRequest, input, async (request, actor) => {
         const result = await renameKeyAsync(options.sql, actor, request, clock(), model);
         if (result.renamed.length > 0) logger.info("Key renamed", { ...result.renamed[0] });
+        return result;
+      }),
+    convertToIcu: (caller, input) =>
+      call(caller, "convert", IcuConversionRequest, input, async (request, actor) => {
+        const result = await convertToIcuAsync(options.sql, actor, request, {
+          now: clock(),
+          model,
+        });
+        if (result.converted) logConversion(logger, result);
         return result;
       }),
     importTranslations: (caller, input) =>

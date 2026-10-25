@@ -24,7 +24,7 @@ test("the system may do everything, anonymous visitors only read", async () => {
   );
 });
 
-test("API keys: read reads and downloads; upload also uploads, translates and sees usage", async () => {
+test("API keys: read reads and downloads; upload also uploads, converts, translates and sees usage", async () => {
   using instance = await startTestService();
   const read = await createToken(instance.service, "read");
   const upload = await createToken(instance.service, "upload");
@@ -34,7 +34,7 @@ test("API keys: read reads and downloads; upload also uploads, translates and se
   );
   assertEquals(
     allowed((action) => can(instance.ctx, upload.actor, action)),
-    ["read", "download", "upload", "translate", "usage"],
+    ["read", "download", "upload", "convert", "translate", "usage"],
   );
   await instance.service.revokeApiToken(SYSTEM, { id: upload.id });
   assertEquals(
@@ -118,7 +118,7 @@ test("an administrator's upload key does everything its scope allows", async () 
   const key = await keyOf(instance, admin, "upload");
   assertEquals(
     allowed((action) => can(instance.ctx, key, action)),
-    ["read", "download", "upload", "translate", "usage"],
+    ["read", "download", "upload", "convert", "translate", "usage"],
   );
 });
 

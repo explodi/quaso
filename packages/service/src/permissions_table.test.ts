@@ -40,6 +40,8 @@ const TABLE: Record<Action, Who[]> = {
   read: EVERYONE,
   download: ["read key", "upload key", "administrator", "system"],
   upload: ["upload key", "administrator", "system"],
+  // Convert the project to ICU MessageFormat: as upload, which the CLI does with it.
+  convert: ["upload key", "administrator", "system"],
   // Run the LLM: managers, administrators and upload keys.
   translate: ["manager", "administrator", "upload key", "system"],
   // See LLM usage.

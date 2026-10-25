@@ -19,7 +19,8 @@ Choose the message format your game already uses. An administrator sets it in
 | ICU MessageFormat, including i18next-icu | On                        | `{name}`            | One string: `{count, plural, one {# coin} other {# coins}}` |
 
 The setting applies to every JSON string and Markdown document in the project. Quaso does not
-auto-detect a format per file or convert between formats. With ICU enabled, `{{name}}` and `$t(…)`
+auto-detect a format per file, and turning the setting on converts nothing; to move an i18next
+project to ICU, follow [Move an i18next project to ICU MessageFormat](move-to-icu.md). With ICU enabled, `{{name}}` and `$t(…)`
 are not treated as i18next placeholders or references. Custom placeholder delimiters are also
 ignored; changing delimiters to `{` and `}` alone does not enable ICU blocks.
 
@@ -178,7 +179,10 @@ If your app uses i18next-icu or another ICU MessageFormat library, turn on **ICU
 
 The setting applies to the whole project. With it on, `{{name}}` and `$t(…)` are no longer
 placeholders or references, and the prefix, suffix and extra delimiters described above are not
-used. Turn it on only if your app reads every string as ICU.
+used. Turn it on only if your app reads every string as ICU. Turning it on converts nothing: stored
+texts keep `{{name}}` and plural keys. To convert an i18next project, its translations and its
+source files together, run `quaso convert-to-icu`, as
+[Move an i18next project to ICU MessageFormat](move-to-icu.md) explains.
 
 Quaso still groups sibling keys such as `coins_one` and `coins_other` into plural strings, and
 checks the ICU in each form. If your app uses ICU plural blocks only and some keys merely look like

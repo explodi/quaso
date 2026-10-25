@@ -68,6 +68,7 @@ Run `npx quaso <command> --help` for every option. The main commands are:
 | `translate`       | Start a translation job and wait; preview its scope with `--dry-run`.                     |
 | `status`          | Show progress; use `--fail-on untranslated,outdated,green` to enforce release conditions. |
 | `import`          | Read existing translations as `--as green` or `--as blue`; preview with `--dry-run`.      |
+| `convert-to-icu`  | Move the project and its source files from i18next to ICU MessageFormat; `--dry-run`.     |
 | `version`, `help` | Print the version or command help.                                                        |
 
 By default, download includes current accepted values, including outdated translations. Pending suggestions
@@ -100,7 +101,8 @@ before using `--overwrite-local`. Keep `.quaso/` ignored by Git. `--prune` does 
 edits in files whose source is gone, so check its dry-run list before deleting them.
 
 The CLI checks output paths before writing and refuses writes outside the project folder or over
-source files. It does not follow HTTP redirects, start other programs, or run Git. Use previews,
+source files, except `convert-to-icu`, which rewrites the source files once they match the
+instance's. It does not follow HTTP redirects, start other programs, or run Git. Use previews,
 review downloaded changes, and run your game tests before committing translations.
 
 See the [full CLI reference](https://github.com/explodi/quaso/blob/main/docs/cli.md) for config
