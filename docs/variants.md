@@ -90,9 +90,14 @@ with a value the app passes, so the app declares it in `quaso.config.json`:
 ```
 
 - `name` is the argument the app passes to every string in `files` and `keys` (both optional:
-  without them, every string).
-- `cases` are the values the app passes, besides `other`.
-- `description` tells translators and the LLM what the value is and what `other` stands for.
+  without them, every string). `files` are globs over the files' paths on the instance; in `keys`,
+  `*` matches within one key (`posts.*` is `posts.joined`, not `posts.joined.title`) and `**`
+  across keys.
+- `cases` are the values the app passes, besides `other`, which every select has.
+- `description` (required) tells translators and the LLM what the value is and what `other`
+  stands for.
+
+The reference is [Arguments the English doesn't show](file-formats.md#arguments-the-english-doesnt-show).
 
 The English stays as it is. Each translation chooses:
 
@@ -115,9 +120,10 @@ The rules for a block on a declared argument:
 
 For the app:
 
-- Pass the argument to every string in its scope. A formatter that falls back to `other` when a
-  select's value is missing, as FormatJS does, keeps a forgotten value harmless: the reader sees
-  the `other` text.
+- Pass the argument to every string in its scope, from one place in your code, so no call can
+  forget it. FormatJS throws when a message's value is missing; if your formatter can pick `other`
+  for a missing select value instead, a forgotten value shows the `other` text rather than an
+  error.
 - Declare only values the app really has. A declared argument the app never passes makes every
   translation's specific cases dead text.
 - An argument for the whole app (the player's chosen pronouns, say) is declared without `files` and
@@ -197,15 +203,22 @@ Errors stop a save and an LLM answer. See [Checks](file-formats.md#checks) for e
 
 ## In the editor
 
-The source shows each block as an indented tree, one case per line. Beside the translation, the
-editor lists the target language's plural cases with example numbers, and the string's declared
-arguments with a button that writes a select around the selected text. **Copy the English** copies
-the blocks with the target language's plural cases, and a preview under the translation shows the
-text for every case.
+- The source shows each block as an indented tree, one case per line under its key.
+- A string whose English has blocks is translated case by case: one field per case, labelled with
+  its path (`female › one`) and the case's English above it, with the target language's plural
+  cases. The syntax is written for you; **Edit as text** shows the whole ICU.
+- Above the input: the target language's plural cases with example numbers, and, under the
+  source, what the string can vary by, its declared arguments with their cases and descriptions.
+- **Vary by authorGender** writes a select on the argument around the selected text, in every
+  case. **Copy the English** copies the blocks with the target language's plural cases.
+- **Preview in each case**, under the input, shows the translation for every case, with example
+  numbers, or where it stops being valid ICU.
+
+See [ICU MessageFormat](file-formats.md#icu-messageformat) for the details.
 
 ## Moving an i18next project to ICU
 
 An i18next project (`{{name}}`, `coins_one` and `coins_other`) can move to ICU MessageFormat without
 translating or proofreading again: Quaso converts the sources, translations and suggestions in
 place and keeps who translated what. See
-[Move an i18next project to ICU MessageFormat](file-formats.md#icu-messageformat).
+[Move an i18next project to ICU MessageFormat](move-to-icu.md).
