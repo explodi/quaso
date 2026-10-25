@@ -212,6 +212,11 @@ Release candidates are for deployment and migration testing. The team decides wh
 
 ### Fixed
 
+- Auto-translate's estimate no longer takes half a minute, or fails with "The project is busy"
+  while a job runs: it reads its batches' prompt context eight at a time, and no longer starts
+  over when the project changes as it reads (an estimate may mix revisions). Start translation
+  stays enabled while the estimate for the chosen scope refreshes, which it shows, and the estimate
+  no longer refreshes on every focus of the window.
 - Saving a translation no longer rereads every translation in the project to refresh the
   duplicate and consistency warnings: it checks again only the translations in the same file and
   language, and those with the same English. Uploads, renames and restores still check everything.

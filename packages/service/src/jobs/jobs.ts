@@ -337,6 +337,9 @@ function estimateFromBatches(
   return result;
 }
 
+/** Batch contexts an estimate reads at once: enough to be quick, few enough for D1. */
+const ESTIMATE_READS_AT_ONCE = 8;
+
 export async function createJobAsync(
   sql: Sql,
   actor: Actor,
@@ -418,26 +421,33 @@ export async function createJobAsync(
       settings.llm,
       request.dryRun ? Number.MAX_SAFE_INTEGER : 0,
     );
-    // Settings, permissions, counts and prompt context must describe the same project revision.
-    if (work.revision !== revision) continue;
+    // An estimate may mix revisions: while a job runs, the project changes every few seconds,
+    // and insisting on one revision made estimates start over until the project was "busy".
     if (request.dryRun) {
       const facts = {
         sourceLanguage: settings.sourceLanguage,
         syntax: settings.syntax,
         languages: new Map(languages.map((language) => [language.tag, language])),
       };
-      const contexts = [];
-      for (const batch of work.batches)
+      // A batch's context is one database round trip; a whole project has hundreds of batches.
+      const contexts: PromptContext[] = [];
+      for (let start = 0; start < work.batches.length; start += ESTIMATE_READS_AT_ONCE) {
+        const batches = work.batches.slice(start, start + ESTIMATE_READS_AT_ONCE);
         contexts.push(
-          await promptContextAsync(sql, settings, facts, batch, scope.instruction ?? ""),
+          ...(await Promise.all(
+            batches.map((batch) =>
+              promptContextAsync(sql, settings, facts, batch, scope.instruction ?? ""),
+            ),
+          )),
         );
-      const [latest] = await sql.read([revisionStatement]);
-      if (Number(latest[0].revision) !== revision) continue;
+      }
       return {
         job: null,
         estimate: estimateFromBatches(work.scope.languages, work.batches, contexts, settings, work),
       };
     }
+    // Settings, permissions and counts must describe the same project revision.
+    if (work.revision !== revision) continue;
     const author =
       actor.type === "system"
         ? SYSTEM_AUTHOR
