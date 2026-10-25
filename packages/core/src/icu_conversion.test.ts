@@ -2,8 +2,9 @@
 import { test } from "node:test";
 import { assertEquals } from "@std/assert";
 import { checkTranslation } from "./checks.ts";
-import { type IcuNode, parseIcu } from "./icu.ts";
+import { icuSyntaxError, type IcuNode, parseIcu, unquoteIcu } from "./icu.ts";
 import { sourceFileToIcu, valueToIcu } from "./icu_conversion.ts";
+import { formatIcu } from "./icu_format.ts";
 import type { InterpolationSyntax, PluralForms } from "./types.ts";
 
 const I18NEXT: InterpolationSyntax = { prefix: "{{", suffix: "}}" };
@@ -20,15 +21,17 @@ function plural(forms: PluralForms, language = "en") {
 
 /**
  * What an ICU formatter shows for a message, read back with `parseIcu`: its text unquoted,
- * each argument as `<name>`, and each block as `[name type: key(…) key(…)]`.
+ * each argument as `<name>`, and each block as `[name type: key(…) key(…)]`. Strict parsers,
+ * as apps have them, must read it too.
  */
 function shown(message: string): string {
+  assertEquals(icuSyntaxError(message), null);
   return showNodes(message, parseIcu(message), false);
 }
 
 function showNodes(message: string, nodes: IcuNode[], inPlural: boolean): string {
   const parts = nodes.map((node) => {
-    if (node.type === "text") return unquote(message.slice(node.start, node.end), inPlural);
+    if (node.type === "text") return unquoteIcu(message.slice(node.start, node.end), inPlural);
     if (node.type === "argument") return `<${node.name}>`;
     if (node.type === "pound") return "<#>";
     const cases = node.cases.map(
@@ -38,29 +41,6 @@ function showNodes(message: string, nodes: IcuNode[], inPlural: boolean): string
     return `[${node.name} ${node.blockType}: ${cases.join(" ")}]`;
   });
   return parts.join("");
-}
-
-/** ICU's quoting undone: `''` is `'`, and `'` before syntax quotes up to the next lone `'`. */
-function unquote(quoted: string, inPlural: boolean): string {
-  let plain = "";
-  let inQuote = false;
-  for (let at = 0; at < quoted.length; at++) {
-    const char = quoted[at];
-    const next = quoted[at + 1];
-    if (char !== "'") {
-      plain += char;
-    } else if (next === "'") {
-      plain += "'";
-      at++;
-    } else if (inQuote) {
-      inQuote = false;
-    } else if (next === "{" || next === "}" || (next === "#" && inPlural)) {
-      inQuote = true;
-    } else {
-      plain += "'";
-    }
-  }
-  return plain;
 }
 
 test("ICU conversion: {{name}} and {{- name}} become {name}", () => {
@@ -144,6 +124,7 @@ test("ICU conversion: plural forms become one plural block with {count}", () => 
   const block = "{count, plural, one {{count} coin} other {{count} coins}}";
   assertEquals(converted, { ok: true, value: block, escapes: 0 });
   assertEquals(shown(block), "[count plural: one(<count> coin) other(<count> coins)]");
+  assertEquals(formatIcu(block, { count: 1000 }, "en"), "1000 coins", "as i18next prints it");
 });
 
 test("ICU conversion: # and an apostrophe ending a plural case are quoted", () => {
@@ -187,6 +168,7 @@ test("ICU conversion: a zero form becomes the exact case =0", () => {
   const converted = plural({ zero: "No coins", one: "One coin", other: "{{count}} coins" });
   const block = "{count, plural, =0 {No coins} one {One coin} other {{count} coins}}";
   assertEquals(converted, { ok: true, value: block, escapes: 0 });
+  assertEquals(formatIcu(block, { count: 0 }, "en"), "No coins");
 });
 
 test("ICU conversion: a language with a zero category keeps a zero case too", () => {
@@ -197,6 +179,9 @@ test("ICU conversion: a language with a zero category keeps a zero case too", ()
       "{count, plural, =0 {{count} monētu} zero {{count} monētu} one {{count} monēta} other {x}}",
     escapes: 0,
   });
+  const block =
+    "{count, plural, =0 {{count} monētu} zero {{count} monētu} one {{count} monēta} other {x}}";
+  assertEquals(formatIcu(block, { count: 10 }, "lv"), "10 monētu", "Latvian's zero has 10–20");
 });
 
 test("ICU conversion: ordinal forms become a selectordinal block", () => {
@@ -373,6 +358,10 @@ test("ICU conversion: a Markdown document is converted whole, its line endings k
     escapes: 2,
     refusals: [],
   });
+  assertEquals(
+    shown("# {cityName}\r\n\r\nCode: `'{' a: 1 '}'`\r\n"),
+    "# <cityName>\r\n\r\nCode: `{ a: 1 }`\r\n",
+  );
 });
 
 test("ICU conversion: converting a converted file again changes nothing", () => {
