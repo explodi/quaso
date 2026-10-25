@@ -14,12 +14,13 @@ import {
   type LlmSuggestionsRequest,
   type LlmSuggestionsResult,
   MAX_LLM_SUGGESTIONS,
+  type StringArgument,
   type TextValue,
   type TranslatableKind,
 } from "@quaso/core";
 import { ActorDirectory } from "../actors.ts";
 import type { Actor } from "../api.ts";
-import { fromJson } from "../db.ts";
+import { fromJson, fromJsonOrNull } from "../db.ts";
 import { TRANSLATABLE_SQL } from "../entries.ts";
 import { notFound, ServiceError } from "../errors.ts";
 import type { Facts } from "../facts.ts";
@@ -62,6 +63,7 @@ type StringRow = {
   source: string;
   source_hash: string;
   max_length: number | null;
+  arguments: string | null;
   description: string;
   words: number;
 };
@@ -84,7 +86,7 @@ export async function suggestWithLlm(
       { sql: "SELECT * FROM glossary_terms" },
       {
         sql: `SELECT s.id, s.file_id, f.path, s.position, s.key, s.display_key, s.kind, s.source,
-                s.source_hash, s.max_length, s.description, s.words
+                s.source_hash, s.max_length, s.arguments, s.description, s.words
               FROM strings s JOIN files f ON f.id = s.file_id
               WHERE s.id IN (SELECT value FROM json_each(?)) AND s.active = 1 AND f.active = 1
                 AND s.kind IN (${TRANSLATABLE_SQL})
@@ -184,6 +186,7 @@ function workItem(string: StringRow, language: string): WorkItem {
     english: fromJson<TextValue>(string.source),
     sourceHash: string.source_hash,
     maxLength: string.max_length,
+    arguments: fromJsonOrNull<StringArgument[]>(string.arguments) ?? [],
     description: string.description,
     words: string.words,
     action: "translate",

@@ -1747,3 +1747,112 @@ test("checks, ICU: a block inside a Markdown document is checked like a string's
     "The femenino case of {style, select} isn't in the English.",
   ]);
 });
+
+// --- ICU MessageFormat: arguments the English doesn't show.
+
+const AUTHOR = [{ name: "authorGender", cases: ["female", "male"] }];
+
+const JOINED = "Excited to join {company}!";
+
+const UNIDA = `{authorGender, select,
+  female {¡Emocionada de unirme a {company}!}
+  male {¡Emocionado de unirme a {company}!}
+  other {¡Qué ganas de empezar en {company}!}
+}`;
+
+const HIRING = "{name} says {authorGender, select, female {she} male {he} other {they}}'s hiring.";
+
+/** Checks a text string in ICU MessageFormat, with `authorGender` declared. */
+function feed(source: string, translation: string, language: string): CheckResult[] {
+  return text(source, translation, { language, syntax: ICU, arguments: AUTHOR });
+}
+
+test("checks, arguments: a Spanish select added on a declared argument passes", () => {
+  assertEquals(feed(JOINED, UNIDA, "es"), []);
+});
+
+test("checks, arguments: a case missing a placeholder of the English names the case", () => {
+  const translation = UNIDA.replace("¡Emocionado de unirme a {company}!", "¡Emocionado!");
+  assertEquals(messages(feed(JOINED, translation, "es")), [
+    "Placeholder {company} is missing in the male case of {authorGender, select}.",
+  ]);
+});
+
+test("checks, arguments: a problem in every case is reported once, without a case", () => {
+  const translation = `{authorGender, select,
+  female {¡Emocionada!}
+  male {¡Emocionado!}
+  other {¡Qué ganas!}
+}`;
+  assertEquals(messages(feed(JOINED, translation, "es")), ["Placeholder {company} is missing."]);
+});
+
+test("checks, arguments: a case the declaration doesn't list is an error", () => {
+  const translation = UNIDA.replace("other {", "neutral {¡Feliz en {company}!}\n  other {");
+  assertEquals(messages(feed(JOINED, translation, "es")), [
+    "The neutral case of {authorGender, select} isn't one of its cases: female, male, other.",
+  ]);
+});
+
+test("checks, arguments: a select on a declared argument needs an other case", () => {
+  const translation = UNIDA.replace("other {¡Qué ganas de empezar en {company}!}", "");
+  assertEquals(messages(feed(JOINED, translation, "es")), [
+    "The {authorGender, select} block needs an other case.",
+  ]);
+});
+
+test("checks, arguments: the English's select may be left out where the language needs none", () => {
+  assertEquals(feed(HIRING, "{name}さんは採用活動中だそうです。", "ja"), []);
+});
+
+test("checks, arguments: without the English's select, its placeholders are still required", () => {
+  assertEquals(messages(feed(HIRING, "Hier wird eingestellt.", "de")), [
+    "Placeholder {name} is missing.",
+  ]);
+});
+
+test("checks, arguments: a select on an undeclared argument is refused as before", () => {
+  const translation = UNIDA.replaceAll("authorGender", "readerGender");
+  assertEquals(messages(feed(JOINED, translation, "es")), [
+    "Placeholder {company} is missing.",
+    "The {readerGender, select} block isn't in the English.",
+    "The English has 0 line breaks inside; the translation has 4.",
+    "The English ends with an exclamation mark; the translation doesn't.",
+  ]);
+});
+
+test("checks, arguments: without the declaration, an added select is refused as before", () => {
+  assertEquals(messages(text(JOINED, UNIDA, { language: "es", syntax: ICU })), [
+    "Placeholder {company} is missing.",
+    "The {authorGender, select} block isn't in the English.",
+    "The English has 0 line breaks inside; the translation has 4.",
+    "The English ends with an exclamation mark; the translation doesn't.",
+  ]);
+});
+
+test("checks, arguments: two arguments vary together", () => {
+  const translation = `{authorGender, select,
+  female {{readerGender, select, female {A {reader} le gustó.} other {A {reader} le gustó.}}}
+  other {{readerGender, select, female {A {reader} le gustó.} other {Le gustó.}}}
+}`;
+  const declared = [...AUTHOR, { name: "readerGender", cases: ["female"] }];
+  const options = { language: "es", syntax: ICU, arguments: declared };
+  assertEquals(messages(text("{reader} liked it.", translation, options)), [
+    "Placeholder {reader} is missing in the male case of {authorGender, select} and the other case of {readerGender, select}.",
+    "Placeholder {reader} is missing in the other case of {authorGender, select} and the other case of {readerGender, select}.",
+  ]);
+});
+
+test("checks, arguments: a plural form's select is checked in that form", () => {
+  const source = { one: "{count} person follows you", other: "{count} people follow you" };
+  const translation = {
+    one: "Te sigue {count} persona",
+    many: "Te siguen {count} personas",
+    other: "{authorGender, select, female {Te siguen {count} personas} other {Te siguen}}",
+  };
+  const options = { syntax: ICU, arguments: AUTHOR };
+  assertEquals(messages(plural("es", source, translation, options)), [
+    "Placeholder {count} is missing in the male case of {authorGender, select} (other form).",
+    "Placeholder {count} is missing in the other case of {authorGender, select} (other form).",
+  ]);
+});

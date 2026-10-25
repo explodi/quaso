@@ -57,6 +57,7 @@ export async function translateBatch(input: {
         kind: string.kind,
         source: JSON.stringify(items.get(string.id)!.english),
         max_length: string.maxLength,
+        arguments: JSON.stringify(items.get(string.id)!.arguments),
         document: string.document === true,
       },
       batch.language,

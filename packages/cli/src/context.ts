@@ -115,7 +115,10 @@ export function localizeError(
   error.details = error.details.map((detail): Problem => {
     const mapped: Problem = { ...detail };
     if (detail.file !== undefined) mapped.file = local(detail.file) ?? detail.file;
-    else if (extra.configName && /^(limits|pluralExclusions)\[/.test(detail.key ?? "")) {
+    else if (
+      extra.configName &&
+      /^(limits|pluralExclusions|arguments)(\[|$)/.test(detail.key ?? "")
+    ) {
       mapped.file = extra.configName;
     }
     if (extra.language && detail.language === undefined && detail.file !== undefined) {

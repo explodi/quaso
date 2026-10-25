@@ -5,7 +5,7 @@
  */
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { isValidLanguageTag } from "@quaso/core";
+import { isValidLanguageTag, globBase, hasMagic } from "@quaso/core";
 import { option, values } from "../args.ts";
 import {
   canonical,
@@ -18,7 +18,7 @@ import {
 } from "../config.ts";
 import type { Command, Context } from "../context.ts";
 import { CliError, EXIT, usageError } from "../errors.ts";
-import { glob, globBase, hasMagic } from "../glob.ts";
+import { glob } from "../glob.ts";
 import { count } from "../output.ts";
 import { convertCrowdin } from "../crowdin.ts";
 

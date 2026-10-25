@@ -28,6 +28,7 @@ import {
   type PluralCategory,
   type PluralForms,
   type PluralOverride,
+  type StringArgument,
   type TextValue,
   type TranslatableKind,
 } from "@quaso/core";
@@ -139,6 +140,8 @@ export interface PromptString {
   outdated?: TextValue | null;
   /** The English the outdated translation was made for, when known: what the update follows. */
   outdatedEnglish?: TextValue;
+  /** Arguments the app passes that the English may not show: the answer may vary by them. */
+  arguments?: StringArgument[];
   /** The previous answer and why it was refused, on a retry. */
   refused?: { answer: TextValue | null; reasons: string[] };
 }
@@ -278,7 +281,23 @@ export function formExamples(
 
 /** How to translate ICU MessageFormat, for projects that use it; part of `%pluralForms%`. */
 export const ICU_RULES =
-  "The strings use ICU MessageFormat. In a block such as {style, select, masculine {…} other {…}} or {count, plural, one {# item} other {# items}}, keep the argument, the block type and the case keys as written, and translate only the text inside each case. A select block keeps exactly the English's cases. A plural or selectordinal block has one case for each of the plural or ordinal forms above, plus the English's exact cases such as =0; # stands for the number. Write a literal brace as '{' or '}'.";
+  "The strings use ICU MessageFormat. In a block such as {style, select, masculine {…} other {…}} or {count, plural, one {# item} other {# items}}, keep the argument, the block type and the case keys as written, and translate only the text inside each case. A select block keeps exactly the English's cases, unless it is on one of the string's \"arguments\". A plural or selectordinal block has one case for each of the plural or ordinal forms above, plus the English's exact cases such as =0; # stands for the number. Write a literal brace as '{' or '}'.";
+
+/**
+ * How to use a string's `arguments`, for batches that have some; part of `%pluralForms%`,
+ * after `ICU_RULES`.
+ */
+export function argumentRules(language: string): string {
+  const name = languageName(language);
+  return (
+    `Some strings list "arguments": values the app passes with the string that its English may not show, such as the gender of the person who wrote it, with the cases the app uses and what each means. ` +
+    `Where ${name} makes words agree with one of them, write a select block on it, such as {authorGender, select, female {…} male {…} other {…}}, with only the listed cases and always other. ` +
+    `Put the whole phrase or sentence that changes inside each case, never part of a word, so that each case reads naturally on its own, with every placeholder of the English. ` +
+    `In each case, translate the English as it is, agreeing with that case: do not rephrase a sentence to avoid the agreement. ` +
+    `The other case is for what the argument's description says, such as a nonbinary person or one whose gender isn't known: word it so that it assumes no gender, rephrasing around the words that would agree if needed, rather than repeating another case. ` +
+    `Where ${name} needs no agreement, don't use the argument: write one text, and a select on it in the English may become one text too.`
+  );
+}
 
 /** `%pluralForms%`: the language's categories, with example numbers. */
 export function pluralFormsText(language: string, override?: PluralOverride): string {
@@ -314,6 +333,8 @@ export function renderPrompt(
     providerStrings.push(provider);
   }
   const language = (tag: string) => `${languageName(tag)} (${tag})`;
+  const hasArguments =
+    context.syntax.icu === true && strings.some((string) => (string.arguments?.length ?? 0) > 0);
   const values: Record<string, string> = {
     sourceLanguage: language(context.sourceLanguage),
     targetLanguage: language(context.targetLanguage),
@@ -326,6 +347,7 @@ export function renderPrompt(
     pluralForms: [
       pluralFormsText(context.targetLanguage, context.pluralOverride),
       context.syntax.icu ? ICU_RULES : "",
+      hasArguments ? argumentRules(context.targetLanguage) : "",
     ]
       .filter((paragraph) => paragraph !== "")
       .join("\n\n"),
@@ -394,6 +416,13 @@ function stringLine(
   if (placeholders.length > 0) line.placeholders = placeholders;
   const optional = optionalIn(string.english, context.syntax, context.targetLanguage);
   if (optional.length > 0) line.optionalPlaceholders = optional;
+  if (context.syntax.icu && string.arguments && string.arguments.length > 0) {
+    line.arguments = string.arguments.map((argument) => ({
+      name: argument.name,
+      cases: [...argument.cases, "other"],
+      description: argument.description,
+    }));
+  }
   if (mask.references.length > 0) {
     line.references = Object.fromEntries(
       mask.references.map((raw, index) => [`⟦${index + 1}⟧`, referenceText(raw, context)]),

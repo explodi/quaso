@@ -19,6 +19,7 @@ import {
 import { canonicalValue } from "./hash.ts";
 import { glossaryMatches } from "./glossary.ts";
 import { blockLabel, type IcuBlock, type IcuNode, parseIcu } from "./icu.ts";
+import type { StringArgument } from "./config.ts";
 import { categoriesFor, coversExactlyOne, type PluralOverride } from "./plurals.ts";
 import { graphemeLength, languageName } from "./text.ts";
 import {
@@ -144,7 +145,16 @@ export interface CheckInput {
     kind: "translate" | "keep";
     caseSensitive?: boolean;
   }[];
+  /**
+   * Arguments the app passes that the English may not show, such as the gender of a post's
+   * author (`arguments` in the CLI config). With ICU MessageFormat, a select block on one may
+   * be added, left out or restructured.
+   */
+  arguments?: readonly ArgumentCases[];
 }
+
+/** A declared argument as the checks need it: its name, and its select cases besides `other`. */
+export type ArgumentCases = Pick<StringArgument, "name" | "cases">;
 
 /**
  * Runs every check and returns the results, errors first, in a stable order: by severity,
@@ -188,6 +198,14 @@ export interface CheckInput {
  *   compares each paragraph's `blockKind` with the English one when the counts match, and
  *   `heading_anchor` reports links to a heading of the file (`#…`) that no heading of the
  *   translation has, when the English link led to a heading or isn't in the English.
+ * - With ICU MessageFormat, select blocks on the string's `arguments` are transparent: for
+ *   each of an argument's cases and `other`, every select block on it, in the English and in
+ *   the translation, is replaced by that case (its `other` case when it has none), and the
+ *   texts are checked as above. A problem found in only some cases names them
+ *   (` in the female case of {authorGender, select}`); one found in every case is reported
+ *   once, as for any string. Several arguments are expanded together. A select block on an
+ *   argument may have only its cases and `other`, and must have `other` (`icu_structure`).
+ *   A text where neither has such a block is checked as any other.
  *
  * Messages show placeholders in the project's syntax; `value` holds the `placeholderKey`,
  * the reference's raw text or the number as written. For plural strings, an invalid
@@ -224,6 +242,7 @@ function checkText(input: CheckInput): CheckResult[] {
     counterpart: english,
     countOptional: false,
     optional: optionalPlaceholders(syntax, input.language),
+    arguments: syntax.icu ? input.arguments : undefined,
     maxLength: input.maxLength,
     syntax,
     language: input.language,
@@ -267,6 +286,7 @@ function checkForms(input: CheckInput, kind: "plural" | "ordinal"): CheckResult[
         counterpart: english.get(category) ?? other,
         countOptional: coversExactlyOne(language, category, coverage),
         optional: optionalPlaceholders(syntax, language),
+        arguments: syntax.icu ? input.arguments : undefined,
         maxLength: input.maxLength,
         syntax,
         language,
@@ -330,13 +350,169 @@ interface Comparison {
   glossary?: CheckInput["glossary"];
   /** A document: paragraphs are compared instead of line breaks. */
   document?: boolean;
+  /** The string's arguments, with ICU MessageFormat on. */
+  arguments?: readonly ArgumentCases[];
+}
+
+/** Runs the checks on one text or form: case by case when it varies by an argument. */
+function checkValue(results: CheckResult[], value: string, comparison: Comparison): void {
+  const texts = [value, comparison.required.text, comparison.counterpart.text];
+  const varying = (comparison.arguments ?? []).filter((argument) =>
+    texts.some((text) => argumentSelects(parseIcu(text), argument.name).length > 0),
+  );
+  if (varying.length === 0) checkPlainValue(results, value, comparison);
+  else checkArgumentCases(results, value, comparison, varying);
+}
+
+/** The most combinations of cases checked together; beyond, each argument varies alone. */
+const MAX_CASE_COMBINATIONS = 64;
+
+/**
+ * Checks a text or form that has select blocks on some of the string's arguments, or whose
+ * English has: the blocks' cases first, then the texts of each combination of cases.
+ */
+function checkArgumentCases(
+  results: CheckResult[],
+  value: string,
+  comparison: Comparison,
+  varying: readonly ArgumentCases[],
+): void {
+  const { form } = comparison;
+  for (const argument of varying) {
+    const keys = [...argument.cases, "other"];
+    for (const block of argumentSelects(parseIcu(value), argument.name)) {
+      const label = blockLabel(block);
+      for (const icuCase of block.cases) {
+        if (keys.includes(icuCase.key)) continue;
+        const problem = `The ${icuCase.key} case of ${label} isn't one of its cases: ${keys.join(", ")}`;
+        results.push(
+          result("icu_structure", sentence(problem, form), { form, value: icuCase.key }),
+        );
+      }
+      if (block.cases.some((icuCase) => icuCase.key === "other")) continue;
+      const message = sentence(`The ${label} block needs an other case`, form);
+      results.push(result("icu_structure", message, { form, value: label }));
+    }
+  }
+
+  const runs = caseCombinations(varying).map((choices) => {
+    const found: CheckResult[] = [];
+    const chosen = (analysis: Analysis) =>
+      analyze(chooseCases(analysis.text, choices), comparison.syntax);
+    checkPlainValue(found, chooseCases(value, choices), {
+      ...comparison,
+      required: chosen(comparison.required),
+      counterpart: chosen(comparison.counterpart),
+    });
+    return { where: whereOf(choices), found };
+  });
+  const identity = (found: CheckResult) =>
+    JSON.stringify([found.check, found.message, found.form, found.value]);
+  const runsWith = new Map<string, number>();
+  for (const run of runs) {
+    for (const id of new Set(run.found.map(identity)))
+      runsWith.set(id, (runsWith.get(id) ?? 0) + 1);
+  }
+  const reported = new Set<string>();
+  for (const run of runs) {
+    for (const found of run.found) {
+      const everywhere = runsWith.get(identity(found)) === runs.length;
+      const located = everywhere
+        ? found
+        : { ...found, message: withWhere(found.message, run.where, found.form) };
+      if (reported.has(identity(located))) continue;
+      reported.add(identity(located));
+      results.push(located);
+    }
+  }
+}
+
+/**
+ * Every combination of the arguments' cases (`other` included), as the case chosen for each
+ * argument; when there would be too many, each argument's cases with the others at `other`.
+ */
+function caseCombinations(varying: readonly ArgumentCases[]): Map<string, string>[] {
+  const keysOf = (argument: ArgumentCases) => [...argument.cases, "other"];
+  const count = varying.reduce((product, argument) => product * keysOf(argument).length, 1);
+  if (count > MAX_CASE_COMBINATIONS) {
+    const others = varying.map((argument): [string, string] => [argument.name, "other"]);
+    return varying.flatMap((argument) =>
+      keysOf(argument).map((key) => new Map([...others, [argument.name, key]])),
+    );
+  }
+  let combinations = [new Map<string, string>()];
+  for (const argument of varying) {
+    combinations = combinations.flatMap((choices) =>
+      keysOf(argument).map((key) => new Map([...choices, [argument.name, key]])),
+    );
+  }
+  return combinations;
+}
+
+/** ` in the female case of {authorGender, select}`, for each chosen case. */
+function whereOf(choices: ReadonlyMap<string, string>): string {
+  const parts = [...choices].map(([name, key]) => `the ${key} case of {${name}, select}`);
+  return ` in ${parts.join(" and ")}`;
+}
+
+/** A message with where it applies, before its form and final period. */
+function withWhere(message: string, where: string, form: PluralCategory | undefined): string {
+  const formEnding = form === undefined ? null : ` (${form} form).`;
+  let ending = "";
+  if (formEnding !== null && message.endsWith(formEnding)) ending = formEnding;
+  else if (message.endsWith(".")) ending = ".";
+  return message.slice(0, message.length - ending.length) + where + ending;
+}
+
+/** The select blocks on an argument, at any depth. */
+function argumentSelects(nodes: IcuNode[], name: string): IcuBlock[] {
+  const found: IcuBlock[] = [];
+  for (const node of nodes) {
+    if (node.type !== "block") continue;
+    if (node.blockType === "select" && node.name === name) found.push(node);
+    for (const icuCase of node.cases) found.push(...argumentSelects(icuCase.message, name));
+  }
+  return found;
+}
+
+/**
+ * The text with each select block on a chosen argument replaced by the chosen case's
+ * message: its key's case, else its `other` case, else its first.
+ */
+function chooseCases(text: string, choices: ReadonlyMap<string, string>): string {
+  const render = (nodes: IcuNode[]): string => {
+    let out = "";
+    for (const node of nodes) {
+      if (node.type !== "block") {
+        out += text.slice(node.start, node.end);
+        continue;
+      }
+      const key = node.blockType === "select" ? choices.get(node.name) : undefined;
+      if (key !== undefined) {
+        const chosen =
+          node.cases.find((icuCase) => icuCase.key === key) ??
+          node.cases.find((icuCase) => icuCase.key === "other") ??
+          node.cases[0];
+        out += render(chosen.message);
+        continue;
+      }
+      let at = node.start;
+      for (const icuCase of node.cases) {
+        out += text.slice(at, icuCase.messageStart) + render(icuCase.message);
+        at = icuCase.messageEnd;
+      }
+      out += text.slice(at, node.end);
+    }
+    return out;
+  };
+  return render(parseIcu(text));
 }
 
 /**
  * Runs the checks on one text or form. An empty value is reported as such, and only that,
  * unless the English is empty too.
  */
-function checkValue(results: CheckResult[], value: string, comparison: Comparison): void {
+function checkPlainValue(results: CheckResult[], value: string, comparison: Comparison): void {
   const { form } = comparison;
   if (value.trim() === "") {
     if (comparison.counterpart.text.trim() === "") {

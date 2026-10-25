@@ -93,7 +93,7 @@ export async function updateStringAsync(
           { sql: "SELECT tag, instructions, plural_override, created_at FROM languages" },
           { sql: "SELECT term, language, kind, translation, case_sensitive FROM glossary_terms" },
           {
-            sql: "SELECT t.string_id, t.language, t.value, t.qa_errors, t.qa_warnings, s.kind, s.source, s.max_length FROM translations t JOIN strings s ON s.id = t.string_id WHERE s.id = ? AND s.kind IN ('text', 'plural', 'ordinal')",
+            sql: "SELECT t.string_id, t.language, t.value, t.qa_errors, t.qa_warnings, s.kind, s.source, s.max_length, s.arguments FROM translations t JOIN strings s ON s.id = t.string_id WHERE s.id = ? AND s.kind IN ('text', 'plural', 'ordinal')",
             params: [id],
           },
           ...permissionReadStatements(actor),

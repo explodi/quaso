@@ -156,7 +156,10 @@ without hiding other files:
 
 `path` and `repoPath` are required for each file. The source language must match the instance once
 it has strings. Missing target languages are added from `languages`; existing languages are kept.
-Optional `renames`, `limits`, `pluralExclusions`, and `descriptionSuffix` follow the request schema.
+Optional `renames`, `limits`, `pluralExclusions`, `arguments`, and `descriptionSuffix` follow the
+request schema. `arguments` replaces the declared arguments of every string in the uploaded files;
+`GET /api/v1/strings/{id}` lists a string's `arguments` when ICU MessageFormat is on (see
+[Arguments the English doesn't show](file-formats.md#arguments-the-english-doesnt-show)).
 Each JSON source file can include `descriptions`, a string containing a JSON object of descriptions
 with matching key paths. Description entries are metadata, not translation strings. See
 [the CLI config reference](cli.md#the-config-file) and [File formats](file-formats.md) for their meaning.

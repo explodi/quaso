@@ -147,3 +147,25 @@ test(
     ]);
   }),
 );
+
+test(
+  "migration 7 keeps a version 6 project's strings, which receive no arguments yet",
+  withDatabase(async (sql) => {
+    await migrate(sql, { migrations: MIGRATIONS.slice(0, 6) });
+    sql.run(
+      `INSERT INTO files (id, path, repo_path, format, created_at, updated_at)
+       VALUES (1, 'feed.json', 'feed.json', '{}', 100, 100)`,
+    );
+    sql.run(
+      `INSERT INTO strings (id, file_id, key, key_path, display_key, kind, source, source_hash,
+       search_text, position, created_at, updated_at)
+       VALUES (1, 1, '["posts","joined"]', '["posts","joined"]', 'posts.joined', 'text',
+       '"Excited to join {company}!"', 'h', '', 0, 100, 100)`,
+    );
+    const result = await migrate(sql, { migrations: MIGRATIONS.slice(0, 7) });
+    assertEquals(result, { from: 6, to: 7, created: false });
+    assertEquals(sql.query("SELECT display_key, arguments FROM strings"), [
+      { display_key: "posts.joined", arguments: null },
+    ]);
+  }),
+);

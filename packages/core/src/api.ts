@@ -9,11 +9,13 @@
  */
 import type { CheckResult } from "./checks.ts";
 import {
+  ArgumentDeclarations,
   FolderPath,
   LanguageTag,
   LengthLimit,
   MAX_LENGTH_LIMIT,
   PluralExclusion,
+  type StringArgument,
 } from "./config.ts";
 import { formatForPath } from "./documents.ts";
 import type { PluralOverride } from "./plurals.ts";
@@ -359,6 +361,11 @@ export interface StringDetail extends StringSummary {
   checks: CheckResult[];
   /** Matching glossary terms for the requested language. */
   glossary: GlossaryTerm[];
+  /**
+   * Arguments the app passes that the English may not show (`arguments` in the CLI config),
+   * which a translation may vary by with ICU MessageFormat on. Empty without.
+   */
+  arguments: StringArgument[];
 }
 
 export const HISTORY_EVENTS = [
@@ -461,6 +468,7 @@ export const UploadRequest = s.object({
   renames: s.array(Rename).optional(),
   limits: s.array(LengthLimit).optional(),
   pluralExclusions: s.array(PluralExclusion).optional(),
+  arguments: ArgumentDeclarations.optional(),
 });
 export type UploadRequest = Infer<typeof UploadRequest>;
 

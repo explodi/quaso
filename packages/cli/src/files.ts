@@ -8,10 +8,10 @@
  * written.
  */
 import { isAbsolute, relative, resolve, sep } from "node:path";
-import { formatForPath, isValidLanguageTag } from "@quaso/core";
+import { formatForPath, isValidLanguageTag, globBase, globToRegExp } from "@quaso/core";
 import { canonical, languageFolder, type Project } from "./config.ts";
 import { usageError } from "./errors.ts";
-import { compareStrings, glob, globBase, globToRegExp } from "./glob.ts";
+import { compareStrings, glob } from "./glob.ts";
 
 export interface SourceFile {
   /** The local path, relative to the project folder, with `/` separators. */

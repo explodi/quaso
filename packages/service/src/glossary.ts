@@ -220,7 +220,7 @@ async function readGlossaryForChange(sql: Sql, actor: Actor) {
       },
       { sql: "SELECT * FROM glossary_terms ORDER BY id" },
       {
-        sql: "SELECT t.string_id, t.language, t.value, t.qa_errors, t.qa_warnings, s.kind, s.source, s.max_length FROM translations t JOIN strings s ON s.id = t.string_id WHERE s.kind IN ('text', 'plural', 'ordinal')",
+        sql: "SELECT t.string_id, t.language, t.value, t.qa_errors, t.qa_warnings, s.kind, s.source, s.max_length, s.arguments FROM translations t JOIN strings s ON s.id = t.string_id WHERE s.kind IN ('text', 'plural', 'ordinal')",
       },
       { sql: "SELECT data FROM settings WHERE id = 1" },
       { sql: "SELECT tag, instructions, plural_override, created_at FROM languages" },

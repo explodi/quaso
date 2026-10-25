@@ -270,13 +270,73 @@ out `#` and the block's argument.
 ### Checks
 
 - `icu_structure` (error): a block is missing, broken or not in the English, a select block's
-  cases differ from the English's, a plural block has a case that isn't a plural category, or an
+  cases differ from the English's (except on a
+  [declared argument](#arguments-the-english-doesnt-show)), a plural block has a case that isn't a plural category, or an
   exact case such as `=0` is missing. A block with a broken case, such as an unclosed `{`, counts
   as missing.
 - `plural_form_missing` and `plural_form_unexpected` (errors): a plural block lacks a case for one
   of the target language's categories, or has a case for a category the language doesn't use.
 - `placeholder_missing` and `placeholder_extra` (errors) name the case they are about, such as "in
   the few case of {n, plural}".
+
+### Arguments the English doesn't show
+
+Many languages make words agree with a value the English never shows. A social feed in your game
+shows "Excited to join {company}!" whoever wrote the post, but Spanish writes "¡Emocionada…!" for a
+woman and "¡Emocionado…!" for a man. A translation may only use the English's arguments, so to let
+it vary by the poster's gender, declare the argument your game passes, in `arguments` in
+`quaso.config.json` (see [the CLI config reference](cli.md#the-config-file)):
+
+```json
+"arguments": [
+  {
+    "name": "authorGender",
+    "cases": ["female", "male"],
+    "description": "The gender of the person who wrote the post. other: nonbinary, or not known.",
+    "files": ["feed.json"],
+    "keys": ["posts.*"]
+  }
+]
+```
+
+Each string in its `files` and `keys` receives it. The editor shows it beside the source ("Can vary
+by authorGender (female, male, other)", with the description), and **Vary by authorGender** writes
+a select block on it into the translation, with the selected text in every case. In the case
+fields of a string whose English has blocks, it wraps the selection of the field you were in, and
+the translation goes on as text, since the fields follow the English's blocks. The LLM gets the
+string's arguments, and writes a select block on one where the language makes words agree with it;
+where the language needs none, it writes one text. Arguments only apply with ICU MessageFormat on;
+on another project, upload keeps them and warns.
+
+The Spanish translation of "Excited to join {company}!" can then be:
+
+```
+{authorGender, select,
+  female {¡Emocionada de unirme a {company}!}
+  male {¡Emocionado de unirme a {company}!}
+  other {¡Qué emoción unirme a {company}!}
+}
+```
+
+The English may use the argument too. "{name} says {authorGender, select, female {she} male {he}
+other {they}}'s hiring." needs no pronoun in Japanese, which drops the block:
+`{name}さんが採用中とのことです。`
+
+The checks treat a select block on a string's argument as transparent. For each of the argument's
+cases and `other`, they replace every select block on it, in the English and in the translation, by
+that case (by its `other` case when the block has no such case), and compare the two texts with the
+rules above. So a translation may add such a block, leave out the English's, or put it around more
+or less of the sentence, as long as every case keeps the English's placeholders. A problem found
+in only some cases names them, such as "Placeholder {company} is missing in the male case of
+{authorGender, select}."; one found in every case is reported once, without a case. Several
+arguments in one string vary together. Besides:
+
+- A select block on an argument may only have its declared cases and `other` (`icu_structure`):
+  "The neutral case of {authorGender, select} isn't one of its cases: female, male, other."
+- It must have an `other` case (`icu_structure`): "The {authorGender, select} block needs an other
+  case."
+- A select block on any other argument, and every string without declared arguments, follows the
+  rules above unchanged.
 
 ### Braces and apostrophes
 

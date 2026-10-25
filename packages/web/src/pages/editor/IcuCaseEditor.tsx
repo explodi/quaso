@@ -111,8 +111,8 @@ export function IcuCaseInput({
   /** Enter doesn't add a line break where the English has none. */
   singleLine: boolean;
   firstFieldRef(element: HTMLTextAreaElement | null): void;
-  /** A field got focus: chips and Copy the English go there. */
-  onFieldFocus(element: HTMLTextAreaElement, english: string): void;
+  /** A field got focus: chips, Copy the English and Vary by go there. */
+  onFieldFocus(element: HTMLTextAreaElement, english: string, field: IcuField): void;
   onChange(text: string): void;
 }) {
   const form = fields.form;
@@ -167,7 +167,9 @@ export function IcuCaseInput({
                   spellCheck
                   aria-invalid={invalid || undefined}
                   aria-describedby={describedBy}
-                  onFocus={(event) => onFieldFocus(event.currentTarget, plainText(field.english))}
+                  onFocus={(event) =>
+                    onFieldFocus(event.currentTarget, plainText(field.english), field)
+                  }
                   onChange={(event) => onChange(fields.write(field, event.target.value))}
                   onKeyDown={(event) => {
                     const composing = event.nativeEvent.isComposing;

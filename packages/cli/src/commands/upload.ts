@@ -165,6 +165,7 @@ export const upload: Command = {
     if (renames.length > 0) request.renames = renames;
     if (config.limits) request.limits = config.limits;
     if (config.pluralExclusions) request.pluralExclusions = config.pluralExclusions;
+    if (config.arguments) request.arguments = config.arguments;
     if (config.descriptionSuffix) request.descriptionSuffix = config.descriptionSuffix;
 
     ctx.out.info(

@@ -21,13 +21,22 @@ import {
   type HistoryEvent,
   isDocumentKey,
   normalizeDocument,
+  type StringArgument,
   type TextValue,
   type TranslatableKind,
   type TranslationInfo,
 } from "@quaso/core";
 import { ActorDirectory, type Author } from "./actors.ts";
 import type { Context } from "./context.ts";
-import { bumpRevision, fromJson, idList, normalizeSearch, toJson, writeRevision } from "./db.ts";
+import {
+  bumpRevision,
+  fromJson,
+  fromJsonOrNull,
+  idList,
+  normalizeSearch,
+  toJson,
+  writeRevision,
+} from "./db.ts";
 import { isTranslatableKind, TRANSLATABLE_SQL, valueText } from "./entries.ts";
 import { badRequest, conflict, notFound, ServiceError } from "./errors.ts";
 import { type CheckFacts, type Facts, loadFacts, overrideOf } from "./facts.ts";
@@ -44,6 +53,8 @@ export type TargetString = {
   source: string;
   source_hash: string;
   max_length: number | null;
+  /** JSON `StringArgument[]`: the declared arguments the string receives, or null. */
+  arguments: string | null;
   active: number;
 };
 
@@ -74,7 +85,7 @@ export const TRANSLATION_COLUMNS =
 export function loadString(sql: SyncSql, id: number): TargetString | undefined {
   return sql.query<TargetString>(
     `SELECT s.id, f.path, s.key, s.display_key, s.kind, s.source, s.source_hash, s.max_length,
-            s.active * f.active AS active
+            s.arguments, s.active * f.active AS active
      FROM strings s JOIN files f ON f.id = s.file_id WHERE s.id = ?`,
     id,
   )[0];
@@ -409,7 +420,7 @@ export function historyParams(record: HistoryRecord): (string | number | null)[]
  */
 export function checkValue(
   facts: CheckFacts,
-  string: Pick<TargetString, "kind" | "source" | "max_length"> &
+  string: Pick<TargetString, "kind" | "source" | "max_length" | "arguments"> &
     Partial<Pick<TargetString, "key">> & { document?: boolean },
   language: string,
   value: TextValue,
@@ -422,6 +433,7 @@ export function checkValue(
     document,
     language,
     maxLength: string.max_length,
+    arguments: fromJsonOrNull<StringArgument[]>(string.arguments) ?? undefined,
     syntax: facts.syntax,
     pluralOverride: overrideOf(facts, language),
     glossary: facts.glossary?.filter(
@@ -474,7 +486,7 @@ export function recomputeQa(
   for (let start = 0; start < ids.length; start += 500) {
     const rows = ctx.sql.query<QaRow>(
       `SELECT t.string_id, t.language, t.value, t.qa_errors, t.qa_warnings, s.key, s.kind,
-              s.source, s.max_length
+              s.source, s.max_length, s.arguments
        FROM translations t JOIN strings s ON s.id = t.string_id
        WHERE t.string_id IN (${idList(ids.slice(start, start + 500))})
          AND s.kind IN (${TRANSLATABLE_SQL})`,
@@ -497,6 +509,7 @@ export type QaRow = {
   kind: string;
   source: string;
   max_length: number | null;
+  arguments: string | null;
 };
 
 /** Recheck a snapshot without I/O; store only counts that changed. */

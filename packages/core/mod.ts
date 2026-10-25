@@ -23,6 +23,7 @@ export * from "./src/hash.ts";
 export * from "./src/config.ts";
 export * from "./src/api.ts";
 export * from "./src/glossary.ts";
+export * from "./src/glob.ts";
 export * from "./src/version.ts";
 
 /** The callable fetch API, independent of runtime-specific helpers. */
