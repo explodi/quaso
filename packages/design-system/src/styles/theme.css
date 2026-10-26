@@ -87,7 +87,7 @@
   --state-red: var(--vermilion-500);
   --state-green: var(--teal-800);
   --state-blue: var(--blue-800);
-  --bar-track: var(--paper-200);
+  --bar-track: var(--paper-500);
   --mark-bg: var(--violet-50);
   --mark-fg: var(--violet-700);
   --shadow: 4px 4px 0 var(--border);
@@ -125,7 +125,7 @@
     --state-red: var(--vermilion-400);
     --state-green: var(--teal-200);
     --state-blue: var(--blue-200);
-    --bar-track: var(--ink-600);
+    --bar-track: var(--paper-400);
     --mark-bg: var(--violet-950);
     --mark-fg: var(--violet-200);
     --shadow: 4px 4px 0 var(--ink-950);
@@ -163,7 +163,7 @@
   --state-red: var(--vermilion-400);
   --state-green: var(--teal-200);
   --state-blue: var(--blue-200);
-  --bar-track: var(--ink-600);
+  --bar-track: var(--paper-400);
   --mark-bg: var(--violet-950);
   --mark-fg: var(--violet-200);
   --shadow: 4px 4px 0 var(--ink-950);

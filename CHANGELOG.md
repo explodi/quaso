@@ -181,6 +181,10 @@ Release candidates are for deployment and migration testing. The team decides wh
 - Auto-translate and `quaso translate` give outdated proofread translations a proposal whenever
   their scope includes outdated work, whatever the upload setting "Propose updates for outdated
   proofread translations" says. The two outdated settings apply to uploads only.
+- Progress bars are drawn in pixels. Translation progress dithers from full to empty: solid blue
+  for proofread words, a green checkerboard for translated ones, sparse dots for the rest. Bars
+  of one value (jobs, the token budget, waking up) are a solid fill ending in a thick tick over a
+  row of thin ticks, and move a tick at a time. `--bar-track` is the colour of the dots.
 
 - An API key never does more than the person who created it may do now: a demotion narrows it,
   and deleting the account disables it. Keys created on the server (`quaso token create`) act by

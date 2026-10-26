@@ -414,8 +414,30 @@ function Feedback() {
             <ProgressBar progress={sampleProgress} />
           </Label>
           <Label className="field">
+            35% translated · 0% proofread
+            <ProgressBar progress={{ translatedPercent: 35, proofreadPercent: 0 }} />
+          </Label>
+          <ul className="legend" aria-label="Translation progress legend">
+            <li>
+              <span className="legend-swatch bar-blue" aria-hidden="true" />
+              Proofread
+            </li>
+            <li>
+              <span className="legend-swatch bar-green" aria-hidden="true" />
+              Translated, needs proofreading
+            </li>
+            <li>
+              <span className="legend-swatch bar-rest" aria-hidden="true" />
+              Untranslated
+            </li>
+          </ul>
+          <Label className="field">
             Importing strings
             <Progress aria-label="Importing strings" max={100} value={64} />
+          </Label>
+          <Label className="field">
+            Checking quality
+            <Progress aria-label="Checking quality" max={120} value={14} />
           </Label>
           <Spinner label="Finding the right words…" />
           <Loading label="Loading translations…" />

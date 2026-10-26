@@ -5,6 +5,7 @@
  * bar follows how long the last start took; it never reaches the end before the server
  * answers.
  */
+import { Progress } from "@quaso/design-system";
 import { useEffect, useState } from "react";
 import type { ServerState } from "../lib/wake.ts";
 
@@ -36,16 +37,7 @@ export function WakingUp({ server, compact = false }: { server: ServerState; com
           ? "This start is taking longer than usual. This page continues on its own when Quaso is ready."
           : `Quaso sleeps when nobody uses it, and takes about ${expectedSeconds} seconds to start. This page continues on its own.`}
       </p>
-      <div
-        className="bar bar-medium"
-        role="progressbar"
-        aria-label="Starting Quaso"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={percent}
-      >
-        <span className="bar-part bar-blue waking-progress" style={{ width: `${percent}%` }} />
-      </div>
+      <Progress aria-label="Starting Quaso" max={100} value={percent} />
       <p className="waking-elapsed">{seconds} s</p>
     </div>
   );

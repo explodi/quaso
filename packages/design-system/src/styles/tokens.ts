@@ -88,7 +88,7 @@ export const TOKENS = [
   "state-red",
   "state-green",
   "state-blue",
-  /** The untranslated rest of a progress bar. */
+  /** The dots of a progress bar's untranslated rest. */
   "bar-track",
   /** Highlighted placeholders in text. */
   "mark-bg",
@@ -129,7 +129,7 @@ export const LIGHT: Theme = {
   "state-red": p.vermilion[500],
   "state-green": p.teal[800],
   "state-blue": p.blue[800],
-  "bar-track": p.paper[200],
+  "bar-track": p.paper[500],
   "mark-bg": p.violet[50],
   "mark-fg": p.violet[700],
   shadow: "4px 4px 0 var(--border)",
@@ -165,7 +165,7 @@ export const DARK: Theme = {
   "state-red": p.vermilion[400],
   "state-green": p.teal[200],
   "state-blue": p.blue[200],
-  "bar-track": p.ink[600],
+  "bar-track": p.paper[400],
   "mark-bg": p.violet[950],
   "mark-fg": p.violet[200],
   shadow: "4px 4px 0 var(--ink-950)",
@@ -203,8 +203,8 @@ export const CONTRAST_CHECKS: ContrastCheck[] = [
   { fg: "focus", bg: "surface", min: 3 },
   { fg: "focus", bg: "bg", min: 3 },
   { fg: "border-strong", bg: "surface", min: 3 },
-  { fg: "state-green", bg: "bar-track", min: 3 },
-  { fg: "state-blue", bg: "bar-track", min: 3 },
+  // Progress bars sit wherever text does, and their sparsest dots must still be seen.
+  ...TEXT_BACKGROUNDS.map((bg) => ({ fg: "bar-track" as Token, bg, min: 3 })),
 ];
 
 export const THEMES = { light: LIGHT, dark: DARK };
