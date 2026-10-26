@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 /**
- * A progress bar (design §5.9): blue for proofread words, green for translated words not yet
- * proofread (striped, so the two differ without colour), the rest untranslated. The bar is
- * an image with a text alternative: "45% translated • 10% proofread".
+ * A progress bar (design §5.9), dithered from full to empty like the state squares: solid blue
+ * for proofread words, a green checkerboard for translated words not yet proofread, sparse dots
+ * for the untranslated rest. The bar is an image with a text alternative: "45% translated •
+ * 10% proofread".
  */
 import type { Progress } from "@quaso/core";
 import { progressText } from "../lib/format.ts";
@@ -24,6 +25,7 @@ export function ProgressBar({
     <div className={`bar bar-${size}`} role="img" aria-label={text} title={text}>
       {blue > 0 && <span className="bar-part bar-blue" style={{ width: `${blue}%` }} />}
       {green > 0 && <span className="bar-part bar-green" style={{ width: `${green}%` }} />}
+      <span className="bar-part bar-rest" />
     </div>
   );
 }

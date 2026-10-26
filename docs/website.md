@@ -46,8 +46,8 @@ link your own methods again afterward.
 The home page, **Overview**, lists the project's target languages. Search by language name or tag, then sort by
 name or progress. Each language shows:
 
-- A progress bar: blue for proofread words, striped green for translated words awaiting review,
-  and an unfilled area for untranslated words.
+- A progress bar: solid blue for proofread words, a green checkerboard for translated words
+  awaiting review, and sparse dots for untranslated words.
 - Translated and proofread percentages, measured in **source words**. Translated progress includes
   both green and blue translations.
 - The number of source words without a translation.

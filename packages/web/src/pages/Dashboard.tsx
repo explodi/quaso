@@ -251,15 +251,15 @@ export function Dashboard() {
             )}
             <ul className="legend language-legend" aria-label="Translation progress legend">
               <li>
-                <span className="legend-swatch legend-blue" aria-hidden="true" />
+                <span className="legend-swatch bar-blue" aria-hidden="true" />
                 Proofread
               </li>
               <li>
-                <span className="legend-swatch legend-green" aria-hidden="true" />
+                <span className="legend-swatch bar-green" aria-hidden="true" />
                 Translated, needs proofreading
               </li>
               <li>
-                <span className="legend-swatch legend-rest" aria-hidden="true" />
+                <span className="legend-swatch bar-rest" aria-hidden="true" />
                 Untranslated
               </li>
             </ul>

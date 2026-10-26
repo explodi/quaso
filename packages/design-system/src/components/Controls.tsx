@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import type { ComponentProps } from "react";
+import type { ComponentProps, CSSProperties } from "react";
 
 function classes(base: string, extra?: string): string {
   return extra ? `${base} ${extra}` : base;
@@ -35,8 +35,18 @@ export function Fieldset(props: ComponentProps<"fieldset">) {
   return <fieldset {...props} />;
 }
 
-export function Progress({ className, ...props }: ComponentProps<"progress">) {
-  return <progress className={classes("progress", className)} {...props} />;
+/** A solid fill over a row of ticks; the fill moves a tick at a time. */
+export function Progress({ className, style, ...props }: ComponentProps<"progress">) {
+  const fraction = Number(props.value ?? 0) / Number(props.max ?? 1);
+  const filled = Number.isFinite(fraction) ? Math.min(1, Math.max(0, fraction)) : 0;
+  const base = filled === 1 ? "progress progress-full" : "progress";
+  return (
+    <progress
+      className={classes(base, className)}
+      style={{ ...style, "--progress": filled } as CSSProperties}
+      {...props}
+    />
+  );
 }
 
 export function Table({ className, ...props }: ComponentProps<"table">) {
