@@ -302,7 +302,7 @@ function estimateFromBatches(
     requests: batches.length,
     languages: languages.map((language) => ({ language, strings: 0, words: 0 })),
     files: [],
-    work: { translate: 0, retranslate: 0, update: 0, propose: 0 },
+    work: { translate: 0, retranslate: 0, update: 0 },
     estimatedTokens: { input: 0, output: 0 },
   };
   const files = new Map<string, JobEstimate["files"][number]>();

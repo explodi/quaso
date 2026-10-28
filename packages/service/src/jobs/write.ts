@@ -17,10 +17,9 @@ import { loadFacts, type Facts } from "../facts.ts";
 import type { GlossaryRow } from "../glossary.ts";
 import { toLanguage, type LanguageRow } from "../languages.ts";
 import type { Sql, SqlRow, Statement } from "../ports.ts";
-import { loadSettings, settingsFromData } from "../settings.ts";
+import { settingsFromData } from "../settings.ts";
 import { planSuperseded } from "../suggestions.ts";
 import {
-  historyParams,
   planTranslationWrite,
   TRANSLATION_COLUMNS,
   type TargetString,
@@ -46,10 +45,8 @@ interface BatchState {
   strings: Map<number, TargetString>;
   translations: Map<number, TranslationRow>;
   proposals: PendingProposal[];
-  nextSuggestion: number;
   processed: Map<number, Outcome>;
   facts: Facts;
-  proposeForProofread: boolean;
 }
 
 function batchReadStatements(jobId: number, batch: Batch): Statement[] {
@@ -69,24 +66,21 @@ function batchReadStatements(jobId: number, batch: Batch): Statement[] {
       sql: "SELECT id, string_id, value FROM suggestions WHERE language = ? AND kind = 'llm' AND status = 'pending' AND string_id IN (SELECT value FROM json_each(?)) ORDER BY id",
       params: [batch.language, ids],
     },
-    { sql: "SELECT COALESCE(MAX(id), 0) + 1 AS id FROM suggestions" },
     {
       sql: "SELECT string_id, outcome FROM job_items WHERE job_id = ? AND language = ? AND string_id IN (SELECT value FROM json_each(?))",
       params: [jobId, batch.language, ids],
     },
   ];
 }
-function batchState(rows: SqlRow[][], facts: Facts, proposeForProofread: boolean): BatchState {
-  const [jobs, strings, translations, proposals, next, processed] = rows;
+function batchState(rows: SqlRow[][], facts: Facts): BatchState {
+  const [jobs, strings, translations, proposals, processed] = rows;
   return {
     job: jobs[0] as JobRow | undefined,
     strings: new Map((strings as TargetString[]).map((row) => [row.id, row])),
     translations: new Map((translations as TranslationRow[]).map((row) => [row.string_id, row])),
     proposals: proposals as PendingProposal[],
-    nextSuggestion: Number(next[0].id),
     processed: new Map(processed.map((row) => [Number(row.string_id), row.outcome as Outcome])),
     facts,
-    proposeForProofread,
   };
 }
 
@@ -103,7 +97,7 @@ export function writeBatch(
       ctx.sql.query(statement.sql, ...(statement.params ?? [])),
     );
     const plan = planBatch(
-      batchState(rows, loadFacts(ctx), loadSettings(ctx).llm.proposeForProofread),
+      batchState(rows, loadFacts(ctx)),
       batch,
       successes,
       failures,
@@ -164,7 +158,7 @@ export async function writeBatchAsync(
       return {
         revision: Number(revision[0].revision),
         state: {
-          batch: batchState(rows, facts, settings.llm.proposeForProofread),
+          batch: batchState(rows, facts),
           revision: Number(revision[0].revision) + 1,
         },
       };
@@ -198,7 +192,6 @@ function planBatch(
   const newOutcomes = new Map<number, Outcome>();
   const delta: ProgressDelta = { translated: 0, proposed: 0, failed: 0, skipped: 0, failures: [] };
   let raisesRevision = false;
-  let nextSuggestion = state.nextSuggestion;
   const fail = (item: WorkItem, reason: string) => {
     outcomes.set(item.stringId, "failed");
     newOutcomes.set(item.stringId, "failed");
@@ -247,55 +240,42 @@ function planBatch(
         ? { ...success.reusedFrom, fromStringId: success.reusedFrom.id, jobId: job.id }
         : { model: success.model, requestId: success.requestId, jobId: job.id };
       try {
-        if (current?.colour === "blue") {
-          // The setting governs upload jobs; a person who starts a job chose to include them.
-          const proposalsAllowed = job.source !== "upload" || state.proposeForProofread;
-          if (current.source_hash !== string.source_hash && proposalsAllowed) {
+        const plan = planTranslationWrite(
+          {
+            stringId: item.stringId,
+            language: item.language,
+            value: success.value,
+            colour: "green",
+            actor: author,
+            event: success.reusedFrom ? "translation_reused" : "translation_llm",
+            baseRevision: item.revision,
+            llm: true,
+            detail,
+          },
+          {
+            string,
+            existing: current,
+            facts: state.facts,
+            actors: new ActorDirectory({ users: [], tokens: [] }),
+            revision,
+            now,
+          },
+        );
+        statements.push(...plan.statements);
+        outcome =
+          plan.result.status === "skipped"
+            ? "skipped"
+            : success.reusedFrom
+              ? "reused"
+              : "translated";
+        if (plan.statements.length > 0) raisesRevision = true;
+        // A model's proposal for review of the outdated proofread text is moot once updated.
+        const replacedProofread = current?.colour === "blue" && plan.result.status === "written";
+        if (replacedProofread) {
+          for (const proposal of state.proposals.filter((row) => row.string_id === item.stringId))
             statements.push(
-              ...planProposal(
-                nextSuggestion++,
-                state.proposals.filter((row) => row.string_id === item.stringId),
-                item,
-                success,
-                author,
-                detail,
-                current,
-                now,
-              ),
+              ...planSuperseded(proposal, item.stringId, item.language, author, now, null),
             );
-            outcome = "proposed";
-            raisesRevision = true;
-          }
-        } else {
-          const plan = planTranslationWrite(
-            {
-              stringId: item.stringId,
-              language: item.language,
-              value: success.value,
-              colour: "green",
-              actor: author,
-              event: success.reusedFrom ? "translation_reused" : "translation_llm",
-              baseRevision: item.revision,
-              llm: true,
-              detail,
-            },
-            {
-              string,
-              existing: current,
-              facts: state.facts,
-              actors: new ActorDirectory({ users: [], tokens: [] }),
-              revision,
-              now,
-            },
-          );
-          statements.push(...plan.statements);
-          outcome =
-            plan.result.status === "skipped"
-              ? "skipped"
-              : success.reusedFrom
-                ? "reused"
-                : "translated";
-          if (plan.statements.length > 0) raisesRevision = true;
         }
       } catch (error) {
         if (!(error instanceof ServiceError)) throw error;
@@ -381,48 +361,4 @@ function planBatch(
     });
   if (newOutcomes.size > 0) statements.push(jobProgressStatement(job, delta, now));
   return { statements, result: outcomes, raisesRevision };
-}
-
-function planProposal(
-  id: number,
-  older: PendingProposal[],
-  item: WorkItem,
-  success: BatchSuccess,
-  author: Author,
-  detail: Record<string, unknown>,
-  current: TranslationRow,
-  now: number,
-): Statement[] {
-  const value = canonicalValue(success.value);
-  return [
-    {
-      sql: `INSERT INTO suggestions (id, string_id, language, kind, value, source_hash, base_revision, status, author_type, author_id, author_label, created_at) VALUES (?, ?, ?, 'llm', ?, ?, ?, 'pending', ?, ?, ?, ?)`,
-      params: [
-        id,
-        item.stringId,
-        item.language,
-        value,
-        item.sourceHash,
-        current.revision,
-        author.type,
-        author.id,
-        author.label,
-        now,
-      ],
-    },
-    ...older.flatMap((row) => planSuperseded(row, item.stringId, item.language, author, now, id)),
-    {
-      sql: "INSERT INTO history (string_id, language, event, before_value, after_value, before_colour, after_colour, actor_type, actor_id, actor_label, detail, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-      params: historyParams({
-        stringId: item.stringId,
-        language: item.language,
-        event: "suggestion_created",
-        before: [current.value, "blue"],
-        after: [value, null],
-        actor: author,
-        detail: { suggestionId: id, kind: "llm", ...detail },
-        at: now,
-      }),
-    },
-  ];
 }

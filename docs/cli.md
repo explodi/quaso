@@ -257,9 +257,8 @@ key, stops the upload with exit code 5 and its place:
 `src/locales/en/menus.json:3:19: trailing comma is not allowed`.
 
 When automatic translation is enabled and a Gemini key is configured, upload queues a job for
-new and changed strings. Automatic translation is enabled by default. Separate settings control
-updates to outdated green translations and proposals for outdated blue translations; both are on
-by default. Use `--wait` to wait for the job.
+new and changed strings. Automatic translation is enabled by default. A setting controls updates
+to outdated translations, proofread ones included; it is on by default. Use `--wait` to wait for the job.
 
 Local translations of new or restored keys appear in upload output with a
 `quaso import --as blue --language <tag> --file <file>` command to import them. Local translations of
@@ -337,8 +336,9 @@ list before allowing those deletions.
 ### `quaso translate`
 
 Asks the instance's large language model (LLM) to translate the untranslated strings of the config's languages (or
-`--language`), in every file (or `--file`), and waits for it. Outdated translations are updated too;
-proofread (blue) translations never change: an outdated one gets a proposal that a manager reviews.
+`--language`), in every file (or `--file`), and waits for it. Outdated translations are updated too,
+proofread (blue) ones included: proofreading holds for the source text it was made for, and comes
+back if that text does. Proofread translations of the current source text never change.
 If **Reuse translations of identical source strings** is enabled, a job can copy a current
 matching translation as green before asking the model. This setting is off by default.
 Every result goes through the quality checks. Results that keep failing are not saved; any
@@ -381,7 +381,7 @@ Dry run: nothing was translated.
   pl  56 strings  192 words
 
 84 strings (288 words) in 4 requests: about 18,400 input and 2,900 output tokens.
-Of these: 78 untranslated, 4 outdated green to update, 2 outdated proofread to get a proposal for review.
+Of these: 78 untranslated, 6 outdated to update.
 ```
 
 The estimate counts characters / 4 of each request's prompt and the expected answer; thinking models

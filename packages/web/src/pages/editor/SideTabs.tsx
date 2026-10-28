@@ -137,6 +137,7 @@ const EVENT_LABELS: Record<HistoryEvent, string> = {
   translation_unapproved: "Unapproved",
   translation_deleted: "Deleted",
   translation_converted: "Converted to ICU MessageFormat",
+  translation_proofread_restored: "Proofread translation back with its source",
   suggestion_created: "Suggestion sent",
   suggestion_approved: "Suggestion approved",
   suggestion_rejected: "Suggestion rejected",

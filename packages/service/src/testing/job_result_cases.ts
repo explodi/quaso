@@ -35,7 +35,7 @@ async function batch(sql: Sql) {
     0,
     "website",
     { languages: ["de"], strings: [1, 3, 5] },
-    { batchSize: 25, updateOutdated: true, proposeForProofread: true },
+    { batchSize: 25, updateOutdated: true },
   );
   return work.batches[0];
 }
@@ -72,7 +72,7 @@ async function rejected(run: () => Promise<unknown>, code: string) {
 
 export const JOB_RESULT_CASES: { name: string; run(sql: Sql): Promise<void> }[] = [
   {
-    name: "green results, blue proposals, history and progress commit at one revision",
+    name: "green results over outdated green and blue, history and progress commit at one revision",
     async run(sql) {
       await seed(sql);
       const selected = await batch(sql);
@@ -90,15 +90,15 @@ export const JOB_RESULT_CASES: { name: string; run(sql: Sql): Promise<void> }[] 
         [
           [1, "translated"],
           [3, "translated"],
-          [5, "proposed"],
+          [5, "translated"],
         ],
       );
-      const [translations, suggestions, history, job, items, revision] = await sql.read([
+      const [translations, setAside, history, job, items, revision] = await sql.read([
         {
           sql: "SELECT string_id, value, colour, revision FROM translations WHERE language = 'de' AND string_id IN (1,3,5) ORDER BY string_id",
         },
         {
-          sql: "SELECT id, string_id, base_revision, source_hash, value FROM suggestions WHERE string_id = 5",
+          sql: "SELECT string_id, language, source_hash, value FROM proofread_translations",
         },
         { sql: "SELECT event, actor_type, actor_label FROM history ORDER BY id" },
         { sql: "SELECT total, done, translated, proposed, failed, skipped FROM jobs WHERE id = 1" },
@@ -108,21 +108,22 @@ export const JOB_RESULT_CASES: { name: string; run(sql: Sql): Promise<void> }[] 
       checkEqual(translations, [
         { string_id: 1, value: '"Hallo"', colour: "green", revision: 3 },
         { string_id: 3, value: '"Neu"', colour: "green", revision: 3 },
-        { string_id: 5, value: '"old blue"', colour: "blue", revision: 5 },
+        { string_id: 5, value: '"Vorschlag"', colour: "green", revision: 3 },
       ]);
-      checkEqual(suggestions, [
-        { id: 2, string_id: 5, base_revision: 5, source_hash: "new", value: '"Vorschlag"' },
+      // The proofread translation is kept for the English it was made for.
+      checkEqual(setAside, [
+        { string_id: 5, language: "de", source_hash: "old", value: '"old blue"' },
       ]);
       checkEqual(history, [
         { event: "translation_llm", actor_type: "llm", actor_label: "test" },
         { event: "translation_llm", actor_type: "llm", actor_label: "test" },
-        { event: "suggestion_created", actor_type: "llm", actor_label: "test" },
+        { event: "translation_llm", actor_type: "llm", actor_label: "test" },
       ]);
-      checkEqual(job, [{ total: 3, done: 3, translated: 2, proposed: 1, failed: 0, skipped: 0 }]);
+      checkEqual(job, [{ total: 3, done: 3, translated: 3, proposed: 0, failed: 0, skipped: 0 }]);
       checkEqual(items, [
         { string_id: 1, outcome: "translated" },
         { string_id: 3, outcome: "translated" },
-        { string_id: 5, outcome: "proposed" },
+        { string_id: 5, outcome: "translated" },
       ]);
       checkEqual(revision, [{ value: "3" }]);
     },
@@ -318,7 +319,7 @@ export const JOB_RESULT_CASES: { name: string; run(sql: Sql): Promise<void> }[] 
         0,
         "website",
         { languages: ["de"], strings: ids },
-        { batchSize: 100, updateOutdated: true, proposeForProofread: true },
+        { batchSize: 100, updateOutdated: true },
       );
       const result = await writeBatchAsync(
         sql,
@@ -381,29 +382,11 @@ export const JOB_RESULT_CASES: { name: string; run(sql: Sql): Promise<void> }[] 
     },
   },
   {
-    name: "removed languages, and disabled proofread proposals in an upload job, skip successful results",
+    name: "removed languages skip successful results",
     async run(sql) {
       await seed(sql);
       const selected = await batch(sql);
-      await sql.commit(2, [
-        { sql: 'INSERT INTO settings VALUES (1, \'{"llm":{"proposeForProofread":false}}\')' },
-        { sql: "UPDATE jobs SET source = 'upload' WHERE id = 1" },
-      ]);
-      checkEqual(
-        [
-          ...(await writeBatchAsync(
-            sql,
-            SYSTEM,
-            1,
-            selected,
-            new Map([[5, successes().get(5)!]]),
-            new Map(),
-            OPTIONS,
-          ))!,
-        ],
-        [[5, "skipped"]],
-      );
-      await sql.commit(4, [{ sql: "DELETE FROM languages WHERE tag = 'de'" }]);
+      await sql.commit(2, [{ sql: "DELETE FROM languages WHERE tag = 'de'" }]);
       checkEqual(
         [
           ...(await writeBatchAsync(
@@ -416,15 +399,12 @@ export const JOB_RESULT_CASES: { name: string; run(sql: Sql): Promise<void> }[] 
             OPTIONS,
           ))!,
         ],
-        [
-          [1, "skipped"],
-          [5, "skipped"],
-        ],
+        [[1, "skipped"]],
       );
     },
   },
   {
-    name: "a new LLM proposal supersedes only earlier pending LLM proposals with history",
+    name: "updating an outdated proofread translation supersedes its pending LLM proposals",
     async run(sql) {
       await seed(sql);
       const selected = await batch(sql);
@@ -446,14 +426,14 @@ export const JOB_RESULT_CASES: { name: string; run(sql: Sql): Promise<void> }[] 
         { sql: "SELECT id, status FROM suggestions WHERE string_id = 5 ORDER BY id" },
         { sql: "SELECT event, detail FROM history ORDER BY id" },
       ]);
+      // A person's correction stays for review.
       checkEqual(suggestions, [
         { id: 2, status: "superseded" },
         { id: 3, status: "pending" },
-        { id: 4, status: "pending" },
       ]);
-      checkEqual(history[0].event, "suggestion_superseded");
-      checkEqual(JSON.parse(String(history[0].detail)), { suggestionId: 2, supersededBy: 4 });
-      checkEqual(history[1].event, "suggestion_created");
+      checkEqual(history[0].event, "translation_llm");
+      checkEqual(history[1].event, "suggestion_superseded");
+      checkEqual(JSON.parse(String(history[1].detail)), { suggestionId: 2 });
     },
   },
   {
@@ -523,19 +503,19 @@ export const JOB_RESULT_CASES: { name: string; run(sql: Sql): Promise<void> }[] 
         [
           [1, "translated"],
           [3, "skipped"],
-          [5, "proposed"],
+          [5, "translated"],
         ],
       );
       checkEqual(
         await sql.read([
           { sql: "SELECT done, total, translated, proposed, skipped FROM jobs WHERE id = 1" },
         ]),
-        [[{ done: 5, total: 5, translated: 3, proposed: 1, skipped: 1 }]],
+        [[{ done: 5, total: 5, translated: 4, proposed: 0, skipped: 1 }]],
       );
     },
   },
   {
-    name: "failed batch commit rolls back translations, proposals, history, progress and revision",
+    name: "failed batch commit rolls back translations, set-aside proofreading, history, progress and revision",
     async run(sql) {
       await seed(sql);
       const selected = await batch(sql);
@@ -555,7 +535,7 @@ export const JOB_RESULT_CASES: { name: string; run(sql: Sql): Promise<void> }[] 
         await sql.read([
           { sql: "SELECT done FROM jobs WHERE id = 1" },
           { sql: "SELECT string_id FROM translations WHERE string_id = 1" },
-          { sql: "SELECT id FROM suggestions WHERE string_id = 5" },
+          { sql: "SELECT string_id FROM proofread_translations" },
           { sql: "SELECT id FROM history" },
           { sql: "SELECT job_id FROM job_items" },
           { sql: "SELECT value FROM meta WHERE key = 'revision'" },

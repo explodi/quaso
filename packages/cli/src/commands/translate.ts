@@ -27,9 +27,10 @@ export const translate: Command = {
   description: [
     "Starts an LLM translation job on the instance for the untranslated strings of the " +
       "config's languages (or --language), in every file (or --file). Outdated translations " +
-      "are updated too, and outdated proofread (blue) ones get a proposal to review instead. " +
-      "--retranslate also translates green (not yet proofread) strings again; proofread " +
-      "strings never change.",
+      "are updated too, proofread (blue) ones included: proofreading holds only for the " +
+      "English it was made for, and comes back if that English does. --retranslate also " +
+      "translates green (not yet proofread) strings again; current proofread strings never " +
+      "change.",
     "Every result goes through the quality checks. By default the command waits for the " +
       "job, with its progress on stderr, and lists the strings that failed as " +
       "file › key (lang): reason, with exit code 6. --no-wait only starts the job. --dry-run " +
@@ -214,14 +215,12 @@ function renderEstimate(out: Output, estimate: JobEstimate): void {
   out.print(dim("Thinking models use more tokens than this; retries add some too."));
 }
 
-/** "Of these: 3 untranslated, 2 outdated green to update…", leaving out what is zero. */
+/** "Of these: 3 untranslated, 2 outdated to update…", leaving out what is zero. */
 function workSummary(work: JobEstimate["work"]): string {
   const parts: string[] = [];
   if (work.translate > 0) parts.push(`${work.translate} untranslated`);
   if (work.retranslate > 0) parts.push(`${work.retranslate} green to translate again`);
-  if (work.update > 0) parts.push(`${work.update} outdated green to update`);
-  if (work.propose > 0)
-    parts.push(`${work.propose} outdated proofread to get a proposal for review`);
+  if (work.update > 0) parts.push(`${work.update} outdated to update`);
   return `Of these: ${parts.join(", ")}.`;
 }
 

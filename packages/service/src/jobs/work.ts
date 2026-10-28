@@ -5,14 +5,12 @@
  * scope, the pair needs work when
  *
  * - it is untranslated (`translate`);
- * - re-translating, and it is green (`translate`; never blue, LLM-4);
- * - it is outdated and the scope takes outdated translations: green is updated (`update`);
- *   blue gets a proposal (`propose`) unless a pending LLM proposal for the current English
- *   exists;
+ * - re-translating, and it is green (`translate`; never a current blue one, LLM-4);
+ * - it is outdated and the scope takes outdated translations (`update`), green or blue alike:
+ *   proofreading vouches for the English it was made for, not the English now;
  *
- * minus the pairs the job already processed (`job_items`). Only an upload job follows the two
- * settings, separately: `updateOutdated` for green, `proposeForProofread` for blue. A job a
- * person starts does what its scope says.
+ * minus the pairs the job already processed (`job_items`). Only an upload job follows the
+ * `updateOutdated` setting; a job a person starts does what its scope says.
  *
  * String and file lists go to SQLite as one JSON parameter (`json_each`), so any number of
  * them fits in one statement within the Durable Object limits.
@@ -33,7 +31,7 @@ import { ServiceError } from "../errors.ts";
 import type { Sql, SqlValue, Statement } from "../ports.ts";
 import type { JobSource, StoredScope } from "./store.ts";
 
-export type WorkAction = "translate" | "update" | "propose";
+export type WorkAction = "translate" | "update";
 
 /** A string that needs work in a language. */
 export interface WorkItem {
@@ -56,7 +54,7 @@ export interface WorkItem {
   action: WorkAction;
   /** The translation's revision when the work was computed; 0 when untranslated. */
   revision: number;
-  /** The current translation, for updates and proposals. */
+  /** The current translation, for updates. */
   current: TextValue | null;
   /** The English the current translation was made for, when the history has it. */
   outdatedEnglish: TextValue | null;
@@ -72,8 +70,8 @@ export interface WorkScope {
   retranslate: boolean;
   /** Green translations that fail the quality checks, such as imported ones. */
   qa: boolean;
-  updateGreen: boolean;
-  proposeBlue: boolean;
+  /** Outdated translations, green or blue, are updated. */
+  updateOutdated: boolean;
 }
 
 /** Resolves a job's scope against the settings: which outdated translations it takes. */
@@ -82,7 +80,7 @@ export function workScope(
   jobId: number,
   source: JobSource,
   scope: StoredScope,
-  llm: Pick<LlmSettings, "updateOutdated" | "proposeForProofread">,
+  llm: Pick<LlmSettings, "updateOutdated">,
 ): WorkScope {
   return resolveWorkScope(
     loadLanguages(ctx.sql).map((language) => language.tag),
@@ -102,7 +100,7 @@ function resolveWorkScope(
   jobId: number,
   source: JobSource,
   scope: StoredScope,
-  llm: Pick<LlmSettings, "updateOutdated" | "proposeForProofread">,
+  llm: Pick<LlmSettings, "updateOutdated">,
 ): WorkScope {
   const outdated = scope.outdated ?? true;
   const upload = source === "upload";
@@ -120,8 +118,7 @@ function resolveWorkScope(
     stringIds: scope.strings ?? null,
     retranslate: scope.retranslate === true,
     qa: scope.qa === true,
-    updateGreen: outdated && (!upload || llm.updateOutdated),
-    proposeBlue: outdated && (!upload || llm.proposeForProofread),
+    updateOutdated: outdated && (!upload || llm.updateOutdated),
   };
 }
 
@@ -176,15 +173,7 @@ function condition(
   const needs = ["t.string_id IS NULL"];
   if (scope.retranslate) needs.push("t.colour = 'green'");
   if (scope.qa) needs.push("(t.colour = 'green' AND t.qa_errors > 0)");
-  if (scope.updateGreen) needs.push("(t.colour = 'green' AND t.source_hash <> s.source_hash)");
-  if (scope.proposeBlue) {
-    needs.push(
-      `(t.colour = 'blue' AND t.source_hash <> s.source_hash AND NOT EXISTS (
-         SELECT 1 FROM suggestions g WHERE g.string_id = s.id AND g.language = ?
-           AND g.kind = 'llm' AND g.status = 'pending' AND g.source_hash = s.source_hash))`,
-    );
-    params.push(language);
-  }
+  if (scope.updateOutdated) needs.push("t.source_hash <> s.source_hash");
   where.push(`(${needs.join(" OR ")})`);
   return { where: where.join(" AND "), params };
 }
@@ -231,11 +220,8 @@ const ENGLISH_WHEN_TRANSLATED = `CASE WHEN t.source_hash <> s.source_hash THEN (
 
 function workItemsFromRows(rows: WorkRow[], scope: WorkScope, language: string): WorkItem[] {
   return rows.map((row) => {
-    let action: WorkAction = "translate";
-    if (row.t_colour === "blue") action = "propose";
-    else if (row.t_colour === "green" && row.t_hash !== row.source_hash && scope.updateGreen) {
-      action = "update";
-    }
+    const outdated = row.t_hash !== null && row.t_hash !== row.source_hash;
+    const action: WorkAction = outdated && scope.updateOutdated ? "update" : "translate";
     const current =
       action === "translate" || row.t_value === null ? null : fromJson<TextValue>(row.t_value);
     const english = row.t_english === null ? null : fromJson<TextValue>(row.t_english);
@@ -278,18 +264,17 @@ function workCount(scope: WorkScope, language: string): Statement {
   return { sql: `SELECT COUNT(*) AS n FROM ${FROM} WHERE ${where}`, params: [language, ...params] };
 }
 
+/** The outdated translations in one language, and those the scope's options leave as they are. */
 export function outdatedCountStatement(scope: WorkScope, language: string): Statement {
   const { where, params } = condition(scope, language, true);
-  const greenIncluded = scope.updateGreen || scope.retranslate;
   return {
-    sql: `SELECT COUNT(*) AS outdated, COALESCE(SUM(CASE WHEN
-      (t.colour = 'green' AND (? = 1 OR (? = 1 AND t.qa_errors > 0))) OR
-      (t.colour = 'blue' AND ? = 1) THEN 0 ELSE 1 END), 0) AS excluded
+    sql: `SELECT COUNT(*) AS outdated, COALESCE(SUM(CASE WHEN ? = 1 OR
+      (t.colour = 'green' AND (? = 1 OR (? = 1 AND t.qa_errors > 0))) THEN 0 ELSE 1 END), 0) AS excluded
       FROM ${FROM} WHERE ${where}`,
     params: [
-      greenIncluded ? 1 : 0,
+      scope.updateOutdated ? 1 : 0,
+      scope.retranslate ? 1 : 0,
       scope.qa ? 1 : 0,
-      scope.proposeBlue ? 1 : 0,
       language,
       ...params,
     ],
@@ -302,7 +287,7 @@ export async function readJobWork(
   jobId: number,
   source: JobSource,
   stored: StoredScope,
-  llm: Pick<LlmSettings, "updateOutdated" | "proposeForProofread" | "batchSize">,
+  llm: Pick<LlmSettings, "updateOutdated" | "batchSize">,
   maxBatches = Number.MAX_SAFE_INTEGER,
 ): Promise<{
   revision: number;

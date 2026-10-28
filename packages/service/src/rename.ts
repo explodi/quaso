@@ -268,6 +268,11 @@ export function planRenameMove(
       params: [to.id, from.id],
     });
   }
+  // Translations set aside for an older English go too; the key's own give way.
+  statements.push({
+    sql: "UPDATE OR REPLACE proofread_translations SET string_id = ? WHERE string_id = ?",
+    params: [to.id, from.id],
+  });
   // The new key has translations now where the LLM may have failed on it.
   statements.push({
     sql: `DELETE FROM llm_failures WHERE string_id = ?

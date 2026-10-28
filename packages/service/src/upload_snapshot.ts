@@ -6,7 +6,7 @@ import type { Sql, SqlRow, Statement } from "./ports.ts";
 import { PERSON_HISTORY } from "./rename.ts";
 import { settingsFromData } from "./settings.ts";
 import type { ExistingSourceString } from "./source_diff.ts";
-import type { TranslationRow } from "./translations.ts";
+import type { ProofreadTranslationRow, TranslationRow } from "./translations.ts";
 
 export type UploadFileRow = {
   id: number;
@@ -53,6 +53,8 @@ export type UploadSnapshot = {
   languages: Language[];
   glossary: UploadGlossaryRow[];
   nextIds: { file: number; string: number; upload: number; job: number };
+  /** Blue translations set aside when their English changed, should it return. */
+  proofreadTranslations: ProofreadTranslationRow[];
 };
 
 /** One consistent read supplies every row the upload decision can depend on. */
@@ -110,6 +112,8 @@ export function uploadReadStatements(request: UploadRequest): Statement[] {
       COALESCE((SELECT MAX(id) FROM uploads), 0) + 1 AS upload,
       COALESCE((SELECT MAX(id) FROM jobs), 0) + 1 AS job`,
     },
+    scoped(`SELECT * FROM proofread_translations WHERE string_id IN (${selected})
+      ORDER BY string_id, language, source_hash`),
   ];
 }
 
@@ -146,6 +150,7 @@ export function uploadSnapshotFromRows(
       languages,
       glossary: rows[10] as UploadSnapshot["glossary"],
       nextIds: rows[11][0] as UploadSnapshot["nextIds"],
+      proofreadTranslations: rows[12] as UploadSnapshot["proofreadTranslations"],
     },
   };
 }

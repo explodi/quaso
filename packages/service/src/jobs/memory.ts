@@ -26,7 +26,7 @@ export function memoryMatches(
   const matches = new Map<number, BatchSuccess>();
   for (const item of batch.items) {
     const currentGreen = item.action === "translate" && item.revision > 0;
-    if (item.action === "propose" || currentGreen) continue;
+    if (currentGreen) continue;
     const candidates = rows.filter(
       (row) =>
         row.source_hash === item.sourceHash && row.kind === item.kind && row.id !== item.stringId,

@@ -171,6 +171,15 @@ Release candidates are for deployment and migration testing. The team decides wh
 
 ### Changed
 
+- An outdated proofread (blue) translation is updated like any other. Proofreading holds for the
+  source text it was made for: when that text changes, a job rewrites the translation, green, and
+  sets the proofread one aside in a new `proofread_translations` table (schema version 8). An upload
+  that brings the source text back restores it, blue (`translation_proofread_restored` in the
+  history). Jobs no longer write proposals for review, the **Suggest updates to proofread
+  translations** setting (`proposeForProofread`) is gone, `updateOutdated` covers both colours, and
+  the estimate's `work.propose` count is removed. A job that updates a proofread translation
+  supersedes the model's pending proposals for it. The LLM still never replaces a proofread
+  translation of the current source text.
 - Upload tells local translations of new strings from those of changed strings. A changed string's
   local translation still translates the previous source text, so upload warns about it and offers
   the import command only for when it was updated along with the source. Languages with the same

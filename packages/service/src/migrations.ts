@@ -6,6 +6,10 @@ import { MIGRATION_4, SOURCE_WARNING_STATEMENTS } from "./migrations/004_source_
 import { MIGRATION_5, QUALITY_JOB_STATEMENTS } from "./migrations/005_quality_jobs.ts";
 import { MIGRATION_6, FOLDER_CONTEXT_STATEMENTS } from "./migrations/006_folder_context.ts";
 import { MIGRATION_7, DECLARED_ARGUMENT_STATEMENTS } from "./migrations/007_declared_arguments.ts";
+import {
+  MIGRATION_8,
+  PROOFREAD_TRANSLATION_STATEMENTS,
+} from "./migrations/008_proofread_translations.ts";
 import type { Statement } from "./ports.ts";
 
 /** Schema history begins at Beta 2; future releases append migrations. */
@@ -24,6 +28,7 @@ export const MIGRATIONS: readonly Migration[] = [
   MIGRATION_5,
   MIGRATION_6,
   MIGRATION_7,
+  MIGRATION_8,
 ];
 
 /** The database schema version after every migration. */
@@ -50,5 +55,10 @@ export const BATCH_MIGRATIONS: readonly BatchMigration[] = [
     version: MIGRATION_7.version,
     name: MIGRATION_7.name,
     statements: DECLARED_ARGUMENT_STATEMENTS,
+  },
+  {
+    version: MIGRATION_8.version,
+    name: MIGRATION_8.name,
+    statements: PROOFREAD_TRANSLATION_STATEMENTS,
   },
 ];

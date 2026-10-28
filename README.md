@@ -46,7 +46,9 @@ changes; managers and administrators review them or edit accepted translations d
 
 With a Gemini key and automatic translation enabled, uploads queue work for new and changed
 strings. Machine translations can be downloaded before proofreading. The language model does not
-replace proofread translations: changes to their source text can produce proposals for review.
+replace a proofread translation of the current source text. Proofreading holds for the text it was
+made for: when that text changes, the translation is updated like any other, and comes back if the
+text does.
 
 By default, downloads use the current accepted translations, including translations marked outdated. Pending
 suggestions are excluded. By default, missing translations use source text. Use status checks in

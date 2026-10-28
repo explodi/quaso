@@ -161,7 +161,7 @@ export const JOB_CREATION_CASES: { name: string; run(sql: Sql): Promise<void> }[
       const result = await createJobAsync(sql, MANAGER, {}, OPTIONS);
       checkEqual(
         [result.job?.scope, result.job?.progress.total, result.job?.createdBy.name],
-        [{ languages: ["de"] }, 4, "Manager"],
+        [{ languages: ["de"] }, 5, "Manager"],
       );
       await rejected(
         () => createJobAsync(sql, MANAGER, { languages: ["fr"] }, OPTIONS),
@@ -240,11 +240,11 @@ export const JOB_CREATION_CASES: { name: string; run(sql: Sql): Promise<void> }[
           result.estimate.requests,
           result.estimate.languages,
         ],
-        [null, 4, 4, 3, [{ language: "de", strings: 4, words: 4 }]],
+        [null, 5, 5, 3, [{ language: "de", strings: 5, words: 5 }]],
       );
       check(result.estimate.estimatedTokens.input > 0);
       checkEqual(result.estimate.files, [
-        { file: "a.json", strings: 3, words: 3 },
+        { file: "a.json", strings: 4, words: 4 },
         { file: "b.json", strings: 1, words: 1 },
       ]);
       check(result.estimate.estimatedTokens.output > 0);
@@ -273,10 +273,10 @@ export const JOB_CREATION_CASES: { name: string; run(sql: Sql): Promise<void> }[
       ]);
       const all = await createJobAsync(sql, SYSTEM, { dryRun: true }, OPTIONS);
       checkEqual(all.estimate?.files, [
-        { file: "a.json", strings: 9, words: 13 },
+        { file: "a.json", strings: 10, words: 14 },
         { file: "b.json", strings: 2, words: 2 },
       ]);
-      checkEqual([all.estimate?.strings, all.estimate?.words], [11, 15]);
+      checkEqual([all.estimate?.strings, all.estimate?.words], [12, 16]);
       const selected = await createJobAsync(
         sql,
         SYSTEM,
@@ -302,7 +302,7 @@ export const JOB_CREATION_CASES: { name: string; run(sql: Sql): Promise<void> }[
       const result = await createJobAsync(raced, TOKEN, { languages: ["de"] }, OPTIONS);
       checkEqual(
         [result.job?.id, result.job?.progress.total, result.job?.createdBy.name],
-        [3, 3, "Renamed CI"],
+        [3, 4, "Renamed CI"],
       );
       const [activity] = await sql.read([
         { sql: "SELECT COUNT(*) AS n FROM activity WHERE json_extract(detail, '$.jobId') = 3" },

@@ -111,7 +111,7 @@ export const JOB_RUNNER_CASES: { name: string; run(sql: Sql): Promise<void> }[] 
     },
   },
   {
-    name: "outdated proofread strings receive proposals while fresh green strings remain untouched",
+    name: "outdated proofread strings are updated and set aside while fresh green strings remain untouched",
     async run(sql) {
       await seedJobRunner(sql);
       await sql.commit(2, [
@@ -125,13 +125,13 @@ export const JOB_RUNNER_CASES: { name: string; run(sql: Sql): Promise<void> }[] 
       checkEqual(
         await sql.read([
           { sql: "SELECT value, colour FROM translations WHERE string_id = 3 AND language = 'de'" },
-          { sql: "SELECT kind, status, source_hash FROM suggestions WHERE string_id = 3" },
+          { sql: "SELECT value, source_hash FROM proofread_translations WHERE string_id = 3" },
           { sql: "SELECT translated, proposed, total FROM jobs WHERE id = 1" },
         ]),
         [
-          [{ value: '"Proofread"', colour: "blue" }],
-          [{ kind: "llm", status: "pending", source_hash: "new" }],
-          [{ translated: 1, proposed: 1, total: 2 }],
+          [{ value: '"[Ĥéļļö]"', colour: "green" }],
+          [{ value: '"Proofread"', source_hash: "old" }],
+          [{ translated: 2, proposed: 0, total: 2 }],
         ],
       );
     },

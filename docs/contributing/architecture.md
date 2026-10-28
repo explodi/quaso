@@ -136,8 +136,9 @@ The service keeps these records and states:
   Pending suggestions never supply exported text.
 - A translation is **outdated** when the source text changed after it was made: it remembers the
   hash of the source it was made for.
-- **Suggestions** are pending changes from volunteers, and the LLM's proposals for outdated blue
-  translations. Downloads never read them.
+- **Suggestions** are pending changes from volunteers. Downloads never read them.
+- **Proofread translations** set aside: a blue translation replaced after its source changed, kept
+  by the source hash it was proofread for. An upload that brings that source back restores it.
 - **History** records accepted translation changes in the same transaction as each change.
 - **Uploads delete nothing.** Removed keys and files are hidden, and come back with their
   translations. Retention rules for old published file versions do not remove these source records.
@@ -205,8 +206,8 @@ approves it. Approval supersedes competing suggestions, and revision checks turn
 LLM jobs persist their scope, progress, request outcomes and next wakeup. The local scheduler uses
 timers; Cloudflare uses alarms, shared with nightly backups. Batches call the translator outside a
 transaction, then recheck source hashes, translation revisions and blue status before saving.
-Quality checks run on every result, and outdated blue strings receive proposals instead of
-replacement text. Administrators submit provider keys through Settings. The service stores them and returns only
+Quality checks run on every result. An outdated blue string is updated like a green one, its
+proofread value set aside first. Administrators submit provider keys through Settings. The service stores them and returns only
 status and a short ending, not the saved key. Translation requests use the stored key on the server.
 
 Editor LLM drafts use a separate request path. They have the same quality rules and usage

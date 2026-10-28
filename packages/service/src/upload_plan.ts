@@ -9,15 +9,29 @@ import {
   type UploadResult,
 } from "@quaso/core";
 import type { Author } from "./actors.ts";
-import { forEachChunk, fromJsonOrNull, placeholders, toJson } from "./db.ts";
-import { isTranslatableKind } from "./entries.ts";
+import {
+  forEachChunk,
+  fromJson,
+  fromJsonOrNull,
+  normalizeSearch,
+  placeholders,
+  toJson,
+} from "./db.ts";
+import { isTranslatableKind, valueText } from "./entries.ts";
 import { badRequest } from "./errors.ts";
 import { KeyIndex, parseKeySelector } from "./keys.ts";
 import type { CheckFacts } from "./facts.ts";
 import type { Statement } from "./ports.ts";
 import { planRenameMove, resolveRenameRows } from "./rename.ts";
 import { diffSourceStrings } from "./source_diff.ts";
-import { historyParams, type HistoryRecord, planQa } from "./translations.ts";
+import {
+  historyParams,
+  type HistoryRecord,
+  planQa,
+  setAsideProofread,
+  type TranslationRow,
+  upsertTranslation,
+} from "./translations.ts";
 import { planUploadArguments } from "./upload_arguments.ts";
 import { planUploadLimits } from "./upload_limits.ts";
 import { readUploadFiles } from "./upload_parse.ts";
@@ -421,6 +435,62 @@ export function planUpload(
     new Set(translations.map((row) => row.string_id)),
     sourceRows.filter((row) => isTranslatableKind(row.kind)),
   );
+  // An English back to one a translation was proofread for brings that translation back, blue;
+  // the one made for the English in between is set aside in turn, if proofread.
+  const projectLanguages = new Set(languages.map((language) => language.tag));
+  for (const touched of [...changed, ...restored]) {
+    const source = strings.get(touched.id)!;
+    const returning = snapshot.proofreadTranslations.filter(
+      (row) =>
+        row.string_id === source.id &&
+        row.source_hash === source.source_hash &&
+        projectLanguages.has(row.language),
+    );
+    for (const proofread of returning) {
+      const index = translations.findIndex(
+        (row) => row.string_id === source.id && row.language === proofread.language,
+      );
+      const current = index >= 0 ? translations[index] : undefined;
+      if (current?.source_hash === source.source_hash) continue;
+      const back: TranslationRow = {
+        string_id: source.id,
+        language: proofread.language,
+        value: proofread.value,
+        colour: "blue",
+        source_hash: proofread.source_hash,
+        author_type: proofread.author_type,
+        author_id: proofread.author_id,
+        author_label: proofread.author_label,
+        approver_id: proofread.approver_id,
+        revision: revision + 1,
+        qa_errors: 0,
+        qa_warnings: 0,
+        created_at: current?.created_at ?? at,
+        updated_at: at,
+      };
+      if (current !== undefined) statements.push(...setAsideProofread(current, at));
+      statements.push(
+        upsertTranslation(back, normalizeSearch(valueText(fromJson(proofread.value)))),
+        {
+          sql: "DELETE FROM proofread_translations WHERE string_id = ? AND language = ? AND source_hash = ?",
+          params: [source.id, proofread.language, proofread.source_hash],
+        },
+      );
+      history.push({
+        stringId: source.id,
+        language: proofread.language,
+        event: "translation_proofread_restored",
+        before: current === undefined ? null : [current.value, current.colour],
+        after: [proofread.value, "blue"],
+        actor: author,
+        at,
+      });
+      if (index >= 0) translations[index] = back;
+      else translations.push(back);
+      // Its checks are worked out again with the others below.
+      recheck.add(source.id);
+    }
+  }
   const facts: CheckFacts = {
     sourceLanguage: settings.sourceLanguage,
     syntax: settings.syntax,
@@ -524,11 +594,6 @@ export function planUpload(
     const current = new Map(
       translations.map((row) => [toJson([row.string_id, row.language]), row]),
     );
-    const pending = new Set(
-      suggestions
-        .filter((row) => row.kind === "llm" && row.status === "pending")
-        .map((row) => toJson([row.string_id, row.language, row.source_hash])),
-    );
     let total = 0;
     for (const id of ids) {
       const source = strings.get(id)!;
@@ -545,19 +610,14 @@ export function planUpload(
           continue;
         }
         if (translation.source_hash === source.source_hash) continue;
-        const update = translation.colour === "green" && settings.llm.updateOutdated;
-        const propose =
-          translation.colour === "blue" &&
-          settings.llm.proposeForProofread &&
-          !pending.has(toJson([id, language.tag, source.source_hash]));
-        if (update || propose) total++;
+        if (settings.llm.updateOutdated) total++;
       }
     }
     if (total > 0) {
       result.job = { id: nextIds.job };
       const scope = {
         strings: [...ids].sort((a, b) => a - b),
-        outdated: settings.llm.updateOutdated || settings.llm.proposeForProofread,
+        outdated: settings.llm.updateOutdated,
       };
       statements.push({
         sql: `INSERT INTO jobs (id, status, priority, source, scope, actor_type, actor_id, actor_label, total, created_at, updated_at)

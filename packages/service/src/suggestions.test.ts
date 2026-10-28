@@ -5,7 +5,6 @@ import type { ExportResult } from "@quaso/core";
 import { type Actor, ANONYMOUS, SYSTEM } from "./api.ts";
 import { ServiceError } from "./errors.ts";
 import { addUser, count, stringId, type TestInstance, uploadJson, write } from "./test_helpers.ts";
-import { drain } from "./jobs/testing.ts";
 import { createFakeTranslator } from "./llm/fake.ts";
 import { ENGLISH, projectService } from "./testing/people.ts";
 
@@ -521,8 +520,7 @@ test("review: a suggestion a person's edit outgrew leaves the queue, and can't b
   const play = idOf(instance, "play");
   const translation = async () =>
     (await service.getString(SYSTEM, { id: play, language: "fr" })).translation!;
-  // A blue translation, a contributor's correction of it, and, once the English changes,
-  // the LLM's proposal for it.
+  // A blue translation, and a contributor's correction of it.
   const saved = await service.saveTranslation(manager, {
     id: play,
     language: "fr",
@@ -536,21 +534,8 @@ test("review: a suggestion a person's edit outgrew leaves the queue, and can't b
     value: "Lancer",
     baseRevision: saved.translation!.revision,
   });
-  await uploadJson(
-    service,
-    { "common.json": { ...ENGLISH, play: "Play now" } },
-    {
-      languages: ["de", "fr"],
-    },
-  );
-  await drain(instance);
-  await service.createJob(manager, { languages: ["fr"], strings: [play] });
-  await drain(instance);
-  const [proposal] = (await service.listSuggestions(lead, { language: "fr", kind: "llm" }))
-    .suggestions;
-  assertEquals(proposal.baseRevision, saved.translation!.revision);
 
-  // The manager fixes the text directly: both are stale now, and superseded.
+  // The manager fixes the text directly: the correction is stale now, and superseded.
   await service.saveTranslation(manager, {
     id: play,
     language: "fr",
@@ -564,16 +549,13 @@ test("review: a suggestion a person's edit outgrew leaves the queue, and can't b
     ["superseded"],
   );
   const result = await service.reviewSuggestions(lead, {
-    ids: [correction.id, proposal.id],
+    ids: [correction.id],
     action: "approve",
   });
   assertEquals(result.approved, []);
   assertEquals(
     result.failed.map((f) => [f.id, f.code]),
-    [
-      [correction.id, "conflict"],
-      [proposal.id, "conflict"],
-    ],
+    [[correction.id, "conflict"]],
   );
   const after = await translation();
   assertEquals(
