@@ -595,10 +595,10 @@ const PLACEHOLDER_HELP: Record<(typeof PROMPT_PLACEHOLDERS)[number], string> = {
   "%fileName%": "Source file path",
   "%fileContext%": "Folder contexts, then the written or generated file context",
   "%pluralForms%": "Required plural categories and example numbers",
-  "%otherLanguages%": "Translations in the selected reference languages",
+  "%otherLanguages%": "Proofread translations in the selected reference languages",
   "%identicalStrings%": "Proofread translations of matching source text",
   "%glossary%": "Matching glossary terms",
-  "%neighbours%": "Nearby strings",
+  "%neighbours%": "Nearby strings, with their proofread translations",
   "%strings%": "The strings and constraints to translate",
   "%customInstruction%": "Instructions for this job",
 };

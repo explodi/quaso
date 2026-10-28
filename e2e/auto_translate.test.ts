@@ -91,7 +91,7 @@ browserTest(
     await ready(page);
     assertStringIncludes(
       await text(page, ".reference-languages"),
-      "French (proofread strings marked)",
+      "French (proofread strings only)",
     );
     assertEquals(
       await page.$eval(".reference-languages a", (link) => link.getAttribute("href")),

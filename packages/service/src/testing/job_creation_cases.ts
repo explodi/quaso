@@ -466,7 +466,7 @@ export const JOB_CREATION_CASES: { name: string; run(sql: Sql): Promise<void> }[
     },
   },
   {
-    name: "prompt reads preserve written context, current other languages, neighbours, references and glossary",
+    name: "prompt reads preserve written context, proofread other languages, neighbours, references and glossary",
     async run(sql) {
       await seed(sql);
       await sql.commit(2, [
@@ -520,6 +520,11 @@ export const JOB_CREATION_CASES: { name: string; run(sql: Sql): Promise<void> }[
         context.neighbours.map((row) => row.key),
         ["2", "3", "4"],
       );
+      // Fresh green, old green and fresh blue: only the proofread one is shown.
+      checkEqual(
+        context.neighbours.map((row) => row.translation),
+        [null, null, "fresh blue"],
+      );
       checkEqual(
         [...context.references],
         [
@@ -532,13 +537,17 @@ export const JOB_CREATION_CASES: { name: string; run(sql: Sql): Promise<void> }[
       checkEqual(context.identicalStrings, [
         { english: "Hello", translation: "fresh blue", proofread: true },
         { english: "Hello", translation: "Remote", proofread: true },
-        { english: "Hello", translation: "fresh green", proofread: false },
       ]);
+      await sql.commit(3, [
+        { sql: "UPDATE translations SET colour = 'green' WHERE string_id = 1 AND language = 'fr'" },
+      ]);
+      const unproofread = await promptContextAsync(sql, settings, facts, work.batches[0], "");
+      checkEqual(unproofread.otherLanguages, []);
       settings.llm.context.fileContext = false;
       settings.llm.context.glossary = false;
       settings.llm.context.identicalStrings = false;
       settings.llm.neighbours = 0;
-      await sql.commit(3, [{ sql: "UPDATE files SET context = '' WHERE id = 1" }]);
+      await sql.commit(4, [{ sql: "UPDATE files SET context = '' WHERE id = 1" }]);
       const disabled = await promptContextAsync(sql, settings, facts, work.batches[0], "");
       checkEqual(
         [disabled.fileContext, disabled.glossary, disabled.identicalStrings, disabled.neighbours],

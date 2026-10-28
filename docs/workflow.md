@@ -103,8 +103,8 @@ proofread translation, both percentages read **100%**.
 ## 4. Choose the reference language
 
 As an administrator, open **Settings → AI translation → Reference languages**, select
-Spanish, and save. The prompt can then include Spanish translations and mark proofread
-references. Keep the project's output rules and placeholder instructions when editing
+Spanish, and save. The prompt then includes the Spanish translations proofread for the current
+English; a string without one goes with its English alone. Keep the project's output rules and placeholder instructions when editing
 its prompt. A manager can see the reference names in the translation dialog; changing
 Settings requires an administrator.
 
