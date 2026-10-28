@@ -319,7 +319,7 @@ The estimate includes total `strings`, `words` and `requests`, `estimatedTokens`
 output, and two breakdowns: `languages: [{language, strings, words}]` and
 `files: [{file, strings, words}]`. Each `file` is a server identity. File counts sum work across
 the selected languages; translating one source string into two languages counts twice.
-The `work` object separates `translate`, `retranslate`, `update`, and `propose` counts. Optional
+The `work` object separates `translate`, `retranslate`, and `update` counts. Optional
 `outdated` and `outdatedLeft` counts show older-source values in scope and those excluded from the
 run. The estimate includes only work selected by the request's files, strings, and options. Files with
 no work are left out; if no strings need translation, the file breakdown is empty.
@@ -338,9 +338,11 @@ no work are left out; if no strings need translation, the file breakdown is empt
 
 Omitted languages and files select all targets and active files within the caller's allowed
 languages. Jobs translate untranslated strings by default. `outdated` defaults to true: it updates
-outdated green values and proposes changes to outdated blue values. `retranslate: true` also
-translates other green values again; `qa: true` also selects green values with quality errors.
-Blue values are never replaced by the job. Optional `strings`, `instruction`, and `model` narrow
+outdated values, green or blue, since a blue value was proofread for the source text it was made
+for. The job sets an outdated blue value aside, and an upload that brings that source text back
+restores it, blue. `retranslate: true` also translates other green values again; `qa: true` also
+selects green values with quality errors. Blue values of the current source text are never
+replaced by the job. Optional `strings`, `instruction`, and `model` narrow
 or adjust the request; see the OpenAPI schema for limits.
 
 The response is `{job, estimate: null}`. Use the returned job ID to follow its progress:

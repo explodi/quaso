@@ -4,7 +4,7 @@ import { readJobWork } from "../jobs/work.ts";
 import type { Sql } from "../ports.ts";
 import { check, checkEqual } from "./assert.ts";
 
-const SETTINGS = { updateOutdated: true, proposeForProofread: true, batchSize: 2 };
+const SETTINGS = { updateOutdated: true, batchSize: 2 };
 export async function seedJobWork(sql: Sql) {
   await sql.commit(0, [
     { sql: "INSERT INTO languages (tag, created_at) VALUES ('de', 100), ('fr', 100)" },
@@ -40,27 +40,24 @@ export async function seedJobWork(sql: Sql) {
 
 export const JOB_WORK_CASES: { name: string; run(sql: Sql): Promise<void> }[] = [
   {
-    name: "only pending LLM proposals for the current source suppress new proposals",
+    name: "outdated proofread translations are updated, with a proposal pending or not",
     async run(sql) {
       await seedJobWork(sql);
-      await sql.commit(1, [{ sql: "UPDATE suggestions SET source_hash = 'old'" }]);
-      checkEqual(
-        (await readJobWork(sql, 0, "website", { languages: ["de"], strings: [6] }, SETTINGS)).total,
-        1,
+      const result = await readJobWork(
+        sql,
+        0,
+        "website",
+        { languages: ["de"], strings: [4, 5, 6] },
+        SETTINGS,
       );
-      await sql.commit(2, [
-        { sql: "UPDATE suggestions SET source_hash = 'new', status = 'rejected'" },
-      ]);
       checkEqual(
-        (await readJobWork(sql, 0, "website", { languages: ["de"], strings: [6] }, SETTINGS)).total,
-        1,
-      );
-      await sql.commit(3, [
-        { sql: "UPDATE suggestions SET status = 'pending', kind = 'correction'" },
-      ]);
-      checkEqual(
-        (await readJobWork(sql, 0, "website", { languages: ["de"], strings: [6] }, SETTINGS)).total,
-        1,
+        result.batches.flatMap((batch) =>
+          batch.items.map((item) => [item.stringId, item.action, item.current]),
+        ),
+        [
+          [5, "update", "old blue"],
+          [6, "update", "proposal"],
+        ],
       );
     },
   },
@@ -101,7 +98,7 @@ export const JOB_WORK_CASES: { name: string; run(sql: Sql): Promise<void> }[] = 
       await seedJobWork(sql);
       const result = await readJobWork(sql, 0, "website", { languages: ["de"] }, SETTINGS);
       checkEqual(result.revision, 1);
-      checkEqual(result.total, 4);
+      checkEqual(result.total, 5);
       checkEqual(
         result.batches.map((batch) => [
           batch.path,
@@ -115,7 +112,13 @@ export const JOB_WORK_CASES: { name: string; run(sql: Sql): Promise<void> }[] = 
               [3, "update", 3, "old green"],
             ],
           ],
-          ["a.json", [[5, "propose", 5, "old blue"]]],
+          [
+            "a.json",
+            [
+              [5, "update", 5, "old blue"],
+              [6, "update", 6, "proposal"],
+            ],
+          ],
           ["b.json", [[7, "translate", 0, null]]],
         ],
       );
@@ -128,7 +131,7 @@ export const JOB_WORK_CASES: { name: string; run(sql: Sql): Promise<void> }[] = 
     async run(sql) {
       await seedJobWork(sql);
       const result = await readJobWork(sql, 1, "website", {}, SETTINGS);
-      checkEqual(result.total, 10);
+      checkEqual(result.total, 11);
       checkEqual(
         result.batches.flatMap((batch) =>
           batch.items.map((item) => [item.language, item.stringId]),
@@ -136,6 +139,7 @@ export const JOB_WORK_CASES: { name: string; run(sql: Sql): Promise<void> }[] = 
         [
           ["de", 3],
           ["de", 5],
+          ["de", 6],
           ["de", 7],
           ["fr", 1],
           ["fr", 2],
@@ -149,15 +153,15 @@ export const JOB_WORK_CASES: { name: string; run(sql: Sql): Promise<void> }[] = 
     },
   },
   {
-    name: "manual jobs update old green and propose for old blue whatever the upload settings",
+    name: "manual jobs update outdated green and blue whatever the upload settings",
     async run(sql) {
       await seedJobWork(sql);
-      const settings = { ...SETTINGS, updateOutdated: false, proposeForProofread: false };
+      const settings = { ...SETTINGS, updateOutdated: false };
       const manual = await readJobWork(sql, 0, "cli", { languages: ["de"] }, settings);
       const upload = await readJobWork(sql, 0, "upload", { languages: ["de"] }, settings);
       checkEqual(
         manual.batches.flatMap((batch) => batch.items.map((item) => item.stringId)),
-        [1, 3, 5, 7],
+        [1, 3, 5, 6, 7],
       );
       checkEqual(
         upload.batches.flatMap((batch) => batch.items.map((item) => item.stringId)),
@@ -166,7 +170,7 @@ export const JOB_WORK_CASES: { name: string; run(sql: Sql): Promise<void> }[] = 
     },
   },
   {
-    name: "retranslation includes green only and outdated false excludes updates and proposals",
+    name: "retranslation includes green only and outdated false excludes updates",
     async run(sql) {
       await seedJobWork(sql);
       const result = await readJobWork(
@@ -217,7 +221,7 @@ export const JOB_WORK_CASES: { name: string; run(sql: Sql): Promise<void> }[] = 
     async run(sql) {
       await seedJobWork(sql);
       const result = await readJobWork(sql, 0, "website", {}, SETTINGS, 4);
-      checkEqual(result.total, 11);
+      checkEqual(result.total, 12);
       checkEqual(
         result.batches.map((batch) => [
           batch.language,
@@ -226,13 +230,13 @@ export const JOB_WORK_CASES: { name: string; run(sql: Sql): Promise<void> }[] = 
         ]),
         [
           ["de", "a.json", [1, 3]],
-          ["de", "a.json", [5]],
+          ["de", "a.json", [5, 6]],
           ["de", "b.json", [7]],
           ["fr", "a.json", [1, 2]],
         ],
       );
       const countOnly = await readJobWork(sql, 0, "website", {}, SETTINGS, 0);
-      checkEqual([countOnly.total, countOnly.batches], [11, []]);
+      checkEqual([countOnly.total, countOnly.batches], [12, []]);
     },
   },
   {
@@ -260,7 +264,7 @@ export const JOB_WORK_CASES: { name: string; run(sql: Sql): Promise<void> }[] = 
         },
         SETTINGS,
       );
-      checkEqual(result.total, 4);
+      checkEqual(result.total, 5);
       const [revision] = await sql.read([{ sql: "SELECT value FROM meta WHERE key = 'revision'" }]);
       checkEqual(revision, [{ value: "1" }]);
     },
@@ -316,10 +320,10 @@ export const JOB_WORK_CASES: { name: string; run(sql: Sql): Promise<void> }[] = 
         },
       };
       const result = await readJobWork(raced, 0, "website", { languages: ["de"] }, SETTINGS);
-      checkEqual([result.revision, result.total], [2, 3]);
+      checkEqual([result.revision, result.total], [2, 4]);
       checkEqual(
         result.batches.flatMap((batch) => batch.items.map((item) => item.stringId)),
-        [1, 5, 7],
+        [1, 5, 6, 7],
       );
     },
   },

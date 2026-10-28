@@ -124,8 +124,8 @@ export interface WriteTranslation {
   /** The hash of the English the value was made for. Default: the string's current hash. */
   sourceHash?: string;
   /**
-   * An LLM result: never over blue (LLM-4), and dropped if the translation changed. Always
-   * so when `actor` is the LLM.
+   * An LLM result: never over a blue translation of the current English (LLM-4), and dropped
+   * if the translation changed. Always so when `actor` is the LLM.
    */
   llm?: boolean;
   /** For blue translations: the person who approved it. */
@@ -139,7 +139,7 @@ export interface WriteTranslation {
 export interface WriteResult {
   /** `unchanged`: the same value, colour and English, so nothing was written. */
   status: "written" | "unchanged" | "skipped";
-  /** Why an LLM write was skipped: a blue translation, or one changed meanwhile. */
+  /** Why an LLM write was skipped: a current blue translation, or one changed meanwhile. */
   reason?: "blue" | "changed";
   /** The translation's revision now (0 when there is none). */
   revision: number;
@@ -151,9 +151,11 @@ export interface WriteResult {
  * Writes one translation, inside the caller's transaction (design §5.3, §5.4):
  *
  * - The string must be active and translatable, and the language a project language.
- * - An LLM result is skipped over a blue translation (LLM-4), and when `baseRevision` no
- *   longer matches (a person changed it meanwhile). For everyone else, a `baseRevision`
- *   mismatch fails with `conflict` and the current translation.
+ * - An LLM result is skipped over a blue translation of the current English (LLM-4), and when
+ *   `baseRevision` no longer matches (a person changed it meanwhile). For everyone else, a
+ *   `baseRevision` mismatch fails with `conflict` and the current translation.
+ * - A blue translation of an older English that the write replaces or deletes is set aside
+ *   in `proofread_translations`, to come back should the English return to it (upload_plan.ts).
  * - Writing the same value, colour and English hash changes nothing and writes no history.
  * - Values with check errors fail with `qa_failed` (QA-1), unless `allowQaErrors`.
  * - A write stores the checks' counts, the search text and the project revision, and adds
@@ -193,6 +195,81 @@ export function writeTranslation(
   return plan.result;
 }
 
+/** Writes a translation row whole: a new one, or over the language's current one. */
+export function upsertTranslation(row: TranslationRow, searchText: string): Statement {
+  return {
+    sql: `INSERT INTO translations (${TRANSLATION_COLUMNS}, search_text)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT (string_id, language) DO UPDATE SET
+       value = excluded.value, colour = excluded.colour, source_hash = excluded.source_hash,
+       author_type = excluded.author_type, author_id = excluded.author_id,
+       author_label = excluded.author_label, approver_id = excluded.approver_id,
+       revision = excluded.revision, qa_errors = excluded.qa_errors,
+       qa_warnings = excluded.qa_warnings, search_text = excluded.search_text,
+       updated_at = excluded.updated_at`,
+    params: [
+      row.string_id,
+      row.language,
+      row.value,
+      row.colour,
+      row.source_hash,
+      row.author_type,
+      row.author_id,
+      row.author_label,
+      row.approver_id,
+      row.revision,
+      row.qa_errors,
+      row.qa_warnings,
+      row.created_at,
+      row.updated_at,
+      searchText,
+    ],
+  };
+}
+
+/** A blue translation set aside by `setAsideProofread`. */
+export type ProofreadTranslationRow = {
+  string_id: number;
+  language: string;
+  /** The hash of the English it was proofread for. */
+  source_hash: string;
+  value: string;
+  author_type: string;
+  author_id: number | null;
+  author_label: string | null;
+  approver_id: number | null;
+  set_aside_at: number;
+};
+
+/**
+ * Keeps a blue translation being replaced after its English changed, by the English it was
+ * proofread for; nothing for a green one.
+ */
+export function setAsideProofread(existing: TranslationRow, now: number): Statement[] {
+  if (existing.colour !== "blue") return [];
+  return [
+    {
+      sql: `INSERT INTO proofread_translations (string_id, language, source_hash, value, author_type,
+        author_id, author_label, approver_id, set_aside_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT (string_id, language, source_hash) DO UPDATE SET value = excluded.value,
+        author_type = excluded.author_type, author_id = excluded.author_id,
+        author_label = excluded.author_label, approver_id = excluded.approver_id,
+        set_aside_at = excluded.set_aside_at`,
+      params: [
+        existing.string_id,
+        existing.language,
+        existing.source_hash,
+        existing.value,
+        existing.author_type,
+        existing.author_id,
+        existing.author_label,
+        existing.approver_id,
+        now,
+      ],
+    },
+  ];
+}
+
 /** Plans the common translation rules and writes from one consistent snapshot. */
 export function planTranslationWrite(
   input: WriteTranslation,
@@ -220,7 +297,9 @@ export function planTranslationWrite(
     if (input.value === null || input.colour !== "green") {
       throw new ServiceError("internal", "The LLM only writes green translations.");
     }
-    if (existing?.colour === "blue")
+    const currentProofread =
+      existing?.colour === "blue" && existing.source_hash === string.source_hash;
+    if (currentProofread)
       return { statements: [], result: skipped("blue", current), translation: existing ?? null };
     if (input.baseRevision !== undefined && input.baseRevision !== current) {
       return { statements: [], result: skipped("changed", current), translation: existing ?? null };
@@ -232,6 +311,10 @@ export function planTranslationWrite(
       info,
     );
   }
+  const setAside =
+    existing !== undefined && existing.source_hash !== string.source_hash
+      ? setAsideProofread(existing, now)
+      : [];
   if (input.value === null) {
     if (existing === undefined)
       return {
@@ -241,6 +324,7 @@ export function planTranslationWrite(
       };
     return {
       statements: [
+        ...setAside,
         {
           sql: "DELETE FROM translations WHERE string_id = ? AND language = ?",
           params: [string.id, existing.language],
@@ -297,34 +381,26 @@ export function planTranslationWrite(
       ? (input.approverId ?? (sameText && existing ? existing.approver_id : null))
       : null;
   const statements: Statement[] = [
-    {
-      sql: `INSERT INTO translations (${TRANSLATION_COLUMNS}, search_text)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT (string_id, language) DO UPDATE SET
-       value = excluded.value, colour = excluded.colour, source_hash = excluded.source_hash,
-       author_type = excluded.author_type, author_id = excluded.author_id,
-       author_label = excluded.author_label, approver_id = excluded.approver_id,
-       revision = excluded.revision, qa_errors = excluded.qa_errors,
-       qa_warnings = excluded.qa_warnings, search_text = excluded.search_text,
-       updated_at = excluded.updated_at`,
-      params: [
-        string.id,
-        language.tag,
+    ...setAside,
+    upsertTranslation(
+      {
+        string_id: string.id,
+        language: language.tag,
         value,
         colour,
-        sourceHash,
-        author.type,
-        author.id,
-        author.label,
-        approverId,
+        source_hash: sourceHash,
+        author_type: author.type,
+        author_id: author.id,
+        author_label: author.label,
+        approver_id: approverId,
         revision,
-        errors.length,
-        checks.length - errors.length,
-        existing?.created_at ?? now,
-        now,
-        normalizeSearch(valueText(written)),
-      ],
-    },
+        qa_errors: errors.length,
+        qa_warnings: checks.length - errors.length,
+        created_at: existing?.created_at ?? now,
+        updated_at: now,
+      },
+      normalizeSearch(valueText(written)),
+    ),
     translationHistory({
       stringId: string.id,
       language: language.tag,

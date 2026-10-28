@@ -112,7 +112,7 @@ export function AutoTranslateDialog({
       >
         <p>
           The LLM writes green translations, which players get at once. It never changes a proofread
-          (blue) translation: it proposes an update for review instead.
+          (blue) translation of the current text.
         </p>
         {project.data && !project.data.llmAvailable && (
           <p className="notice notice-warning">
@@ -165,9 +165,10 @@ export function AutoTranslateDialog({
             Update outdated translations ({count?.outdated ?? 0})
           </Label>
           <p id="auto-translate-outdated-hint" className="field-hint">
-            {outdatedExplanation(project.data?.sourceLanguageName ?? "source text", 2)} Green ones
-            are rewritten for the new {project.data?.sourceLanguageName ?? "source text"}; proofread
-            ones get a proposal, and stay as they are until a manager accepts it.
+            {outdatedExplanation(project.data?.sourceLanguageName ?? "source text", 2)} They are
+            rewritten for the new {project.data?.sourceLanguageName ?? "source text"}, proofread
+            ones too: proofreading holds for the text it was made for, and comes back if that text
+            does.
           </p>
         </div>
         <TextField
@@ -222,15 +223,7 @@ export function AutoTranslateDialog({
                     </span>
                   )}
                   {count.work.update > 0 && (
-                    <span>
-                      {formatCount(count.work.update, "outdated green translation")}: rewritten
-                    </span>
-                  )}
-                  {count.work.propose > 0 && (
-                    <span>
-                      {formatCount(count.work.propose, "outdated proofread translation")}: a
-                      proposal each, for review; the translations stay as they are
-                    </span>
+                    <span>{formatCount(count.work.update, "outdated translation")}: rewritten</span>
                   )}
                 </span>
                 {count.outdatedLeft !== undefined && count.outdatedLeft > 0 && (

@@ -117,7 +117,6 @@ export function defaultSettings(model: string): ProjectSettings {
         countsAgainstBudget: true,
       },
       updateOutdated: true,
-      proposeForProofread: true,
       model,
       suggestionModel: "",
       concurrency: 4,

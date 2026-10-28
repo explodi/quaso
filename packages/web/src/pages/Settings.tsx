@@ -643,16 +643,10 @@ function Llm({ data }: { data: SettingsResult }) {
           change={(value) => update("autoTranslate", value)}
         />
         <Check
-          label="Update outdated unreviewed translations"
-          hint="Refresh unreviewed translations when an upload changes their source text."
+          label="Update outdated translations"
+          hint="Refresh translations when an upload changes their source text, proofread ones too: proofreading holds only for the text it was made for, and comes back if that text does."
           checked={llm.updateOutdated}
           change={(value) => update("updateOutdated", value)}
-        />
-        <Check
-          label="Suggest updates to proofread translations"
-          hint="When an upload changes the source, create a suggestion for review. The proofread translation stays in place until a manager accepts."
-          checked={llm.proposeForProofread}
-          change={(value) => update("proposeForProofread", value)}
         />
       </SettingsGroup>
       <SettingsGroup

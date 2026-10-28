@@ -121,8 +121,8 @@ missing placeholders; a person still needs to check meaning and tone.
 
 **Automatically translate on upload** is enabled by default. With a working Gemini key, later
 uploads queue translations for new and changed strings. Upload does not wait for that work unless
-you pass `--wait`. The LLM does not replace proofread translations; it can propose updates when
-their source text changes.
+you pass `--wait`. The LLM does not replace a proofread translation of the current source text;
+when that text changes, it updates the translation like any other.
 
 ### By hand
 

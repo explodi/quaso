@@ -58,10 +58,12 @@ translations for changed source text become outdated. Removed strings are hidden
 downloads rather than treated as new text to translate.
 
 With a Gemini key and automatic translation enabled, new and changed strings can create a
-translation job. By default, the job can update outdated green translations and propose changes
-to outdated blue translations. The LLM never replaces an accepted blue value. An administrator
-can change these upload options in **Settings → AI translation**. A manually started translation
-job with outdated work in its scope proposes updates for blue values regardless of the upload setting.
+translation job. By default, the job updates outdated translations, blue ones included: proofreading
+holds for the source text it was made for. The outdated blue value is set aside, and comes back,
+blue, if an upload brings that source text back. The LLM never replaces a blue value of the current
+source text. An administrator can turn off updates on upload in **Settings → AI translation**. A
+manually started translation job with outdated work in its scope updates it regardless of that
+setting.
 
 An ordinary upload returns before its translation job finishes. Use `quaso upload --wait` to wait
 for a job created by that upload, or `quaso translate` to start and wait for a job on existing work.

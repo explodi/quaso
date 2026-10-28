@@ -157,95 +157,56 @@ test("an outdated green translation is updated", async () => {
   assertEquals([greeting.colour, greeting.outdated], ["green", false]);
 });
 
-test("an outdated blue translation gets a pending LLM proposal, and stays blue", async () => {
+test("an outdated proofread translation is updated green, and comes back blue with its English", async () => {
   using instance = await project();
   await drain(instance);
   writeBlue(instance, "greeting", "de", "Willkommen zurück, {{name}}!");
+  // The proofreading was for this English, not the next.
   await uploadJson(instance.service, {
     "common.json": { ...COMMON, greeting: "Hello again, {{name}}!" },
   });
   await drain(instance);
-  const greeting = (await translations(instance, "de")).greeting!;
+  const updated = (await translations(instance, "de")).greeting!;
   assertEquals(
-    [greeting.value, greeting.colour, greeting.outdated],
-    ["Willkommen zurück, {{name}}!", "blue", true],
+    [updated.value, updated.colour, updated.outdated],
+    ["[Ĥéļļö áğáíñ, {{name}}!]", "green", false],
   );
-  const suggestions = instance.sql.query<{
-    kind: string;
-    value: string;
-    status: string;
-    author_label: string;
-  }>("SELECT kind, value, status, author_label FROM suggestions WHERE language = 'de'");
-  assertEquals(suggestions, [
-    {
-      kind: "llm",
-      value: JSON.stringify("[Ĥéļļö áğáíñ, {{name}}!]"),
-      status: "pending",
-      author_label: FAKE_MODEL,
-    },
-  ]);
-  const german = await instance.service.exportFiles(SYSTEM, { languages: ["de"] });
-  assertEquals(JSON.parse(german.files[0].content).greeting, "Willkommen zurück, {{name}}!");
-  // Another run proposes nothing new: a proposal for this English is pending.
-  const { job } = await instance.service.createJob(SYSTEM, {});
-  assertEquals(job?.status, "done");
-  assertEquals(job?.progress.total, 0);
-  const string = await instance.service.listStrings(ANONYMOUS, { language: "de" });
-  assertEquals(string.strings.find((s) => s.key === "greeting")?.pending, 1);
+  assertEquals(count(instance.sql, "suggestions", "language = 'de'"), 0, "nothing to review");
 
-  // A manager approves the proposal: it is downloaded, blue, from then on.
-  const [{ id }] = instance.sql.query<{ id: number }>(
-    "SELECT id FROM suggestions WHERE kind = 'llm' AND status = 'pending'",
-  );
-  const manager = addUser(instance.sql, "manager");
-  const review = await instance.service.reviewSuggestions(manager, {
-    ids: [id],
-    action: "approve",
-  });
-  assertEquals(review.approved, [id]);
-  const approved = (await translations(instance, "de")).greeting!;
+  await uploadJson(instance.service, { "common.json": COMMON });
+  await drain(instance);
+  const restored = (await translations(instance, "de")).greeting!;
   assertEquals(
-    [approved.value, approved.colour, approved.outdated],
-    ["[Ĥéļļö áğáíñ, {{name}}!]", "blue", false],
+    [restored.value, restored.colour, restored.outdated],
+    ["Willkommen zurück, {{name}}!", "blue", false],
   );
   const after = await instance.service.exportFiles(SYSTEM, { languages: ["de"] });
-  assertEquals(JSON.parse(after.files[0].content).greeting, "[Ĥéļļö áğáíñ, {{name}}!]");
+  assertEquals(JSON.parse(after.files[0].content).greeting, "Willkommen zurück, {{name}}!");
 });
 
-test("upload jobs follow updateOutdated and proposeForProofread separately", async () => {
+test("upload jobs follow updateOutdated for green and proofread translations alike", async () => {
   using instance = await project();
   await drain(instance);
   writeBlue(instance, "title", "de", "Wanderer");
   const settings = loadSettings(instance.ctx);
   saveSettings(instance.ctx, { ...settings, llm: { ...settings.llm, updateOutdated: false } });
-  await uploadJson(instance.service, {
+  const upload = await uploadJson(instance.service, {
     "common.json": { ...COMMON, title: "Wayfarers", greeting: "Hello again, {{name}}!" },
   });
-  await drain(instance);
+  assertEquals(upload.job, null, "nothing to do: no job");
   const german = await translations(instance, "de");
   assertEquals(german.greeting?.outdated, true, "green stays outdated");
-  assertEquals(german.title?.outdated, true);
-  assertEquals(count(instance.sql, "suggestions", "kind = 'llm' AND language = 'de'"), 1);
-  assertEquals(count(instance.sql, "suggestions", "kind = 'llm' AND language = 'pl'"), 0);
-
-  saveSettings(instance.ctx, {
-    ...settings,
-    llm: { ...settings.llm, updateOutdated: false, proposeForProofread: false },
-  });
-  const upload = await uploadJson(instance.service, {
-    "common.json": { ...COMMON, title: "Wayfarers!", greeting: "Hello, {{name}}!" },
-  });
-  assertEquals(upload.job, null, "nothing to do: no job");
+  assertEquals(german.title?.outdated, true, "and so does the proofread one");
 });
 
-test("a person's job counts outdated work in its estimate and proposes whatever the upload settings", async () => {
+test("a person's job updates outdated translations, proofread ones too, whatever the upload settings", async () => {
   using instance = await project();
   await drain(instance);
   writeBlue(instance, "title", "de", "Wanderer");
   const settings = loadSettings(instance.ctx);
   saveSettings(instance.ctx, {
     ...settings,
-    llm: { ...settings.llm, autoTranslate: false, proposeForProofread: false },
+    llm: { ...settings.llm, autoTranslate: false, updateOutdated: false },
   });
   await uploadJson(instance.service, {
     "common.json": { ...COMMON, title: "Wayfarers", greeting: "Hello again, {{name}}!" },
@@ -254,12 +215,13 @@ test("a person's job counts outdated work in its estimate and proposes whatever 
     dryRun: true,
     languages: ["de"],
   });
-  assertEquals(estimate?.work, { translate: 0, retranslate: 0, update: 1, propose: 1 });
+  assertEquals(estimate?.work, { translate: 0, retranslate: 0, update: 2 });
 
   await instance.service.createJob(SYSTEM, { languages: ["de"] });
   await drain(instance);
-  assertEquals(count(instance.sql, "suggestions", "kind = 'llm' AND language = 'de'"), 1);
-  assertEquals((await translations(instance, "de")).greeting?.outdated, false);
+  const german = await translations(instance, "de");
+  assertEquals([german.title?.colour, german.title?.outdated], ["green", false]);
+  assertEquals(german.greeting?.outdated, false);
 });
 
 test("a person's change during a batch wins over the LLM's result", async () => {

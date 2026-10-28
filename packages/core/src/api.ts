@@ -383,6 +383,7 @@ export const HISTORY_EVENTS = [
   "translation_unapproved",
   "translation_deleted",
   "translation_converted",
+  "translation_proofread_restored",
   "suggestion_created",
   "suggestion_approved",
   "suggestion_rejected",
@@ -650,7 +651,7 @@ export const JobScope = s.object({
     .boolean()
     .optional()
     .describe(
-      "Update outdated green translations and propose updates for outdated blue ones (default true)",
+      "Update outdated translations, proofread ones included: proofreading vouches only for the English it was made for (default true)",
     ),
   instruction: s
     .string({ maxLength: 4000 })
@@ -728,10 +729,8 @@ export interface JobEstimate {
     translate: number;
     /** Green, translated again. */
     retranslate: number;
-    /** Outdated green: rewritten for the new English. */
+    /** Outdated, green or proofread: rewritten for the new English. */
     update: number;
-    /** Outdated blue: a proposal for review; the proofread translation stays. */
-    propose: number;
   };
   estimatedTokens: { input: number; output: number };
 }
@@ -1184,10 +1183,9 @@ export const LlmSettings = s.object({
     .optional()
     .describe("Copy current translations of identical sources as green before asking the model"),
   autoTranslate: s.boolean().describe("Translate new and changed strings on upload (LLM-3)"),
-  updateOutdated: s.boolean().describe("On upload, update outdated green translations too"),
-  proposeForProofread: s
+  updateOutdated: s
     .boolean()
-    .describe("Propose updates for outdated blue translations, as pending suggestions"),
+    .describe("On upload, update outdated translations too, proofread ones included"),
   model: s.string({ minLength: 1, maxLength: 200 }),
   suggestionModel: s
     .string({ maxLength: 200 })
