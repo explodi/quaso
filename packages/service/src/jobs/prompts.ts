@@ -106,10 +106,12 @@ function promptContextPlan(
   const otherTags = settings.llm.context.otherLanguages.filter(
     (tag) => tag !== batch.language && facts.languages.has(tag),
   );
+  // The translations the model reads are the ones people checked for the current source: a
+  // green one is another model's guess, and an outdated one translates other words.
   const other = select({
     sql: `SELECT t.string_id, t.language, t.value, t.colour FROM translations t
       JOIN strings s ON s.id = t.string_id AND s.source_hash = t.source_hash
-      WHERE t.string_id IN (SELECT value FROM json_each(?))
+      WHERE t.string_id IN (SELECT value FROM json_each(?)) AND t.colour = 'blue'
         AND t.language IN (SELECT value FROM json_each(?)) ORDER BY t.string_id, t.language`,
     params: [JSON.stringify(ids), JSON.stringify(otherTags)],
   });
@@ -120,8 +122,8 @@ function promptContextPlan(
         select({
           sql: `SELECT s.source, t.value, t.colour FROM strings s JOIN translations t ON t.string_id = s.id AND t.language = ?
           WHERE s.source_hash IN (${placeholders(hashes.length)}) AND s.active = 1 AND s.kind IN (${TRANSLATABLE_SQL})
-            AND t.source_hash = s.source_hash
-            AND s.id NOT IN (SELECT value FROM json_each(?)) ORDER BY t.colour = 'blue' DESC, s.id LIMIT ?`,
+            AND t.source_hash = s.source_hash AND t.colour = 'blue'
+            AND s.id NOT IN (SELECT value FROM json_each(?)) ORDER BY s.id LIMIT ?`,
           params: [batch.language, ...hashes, JSON.stringify(ids), MAX_IDENTICAL],
         }),
       );
@@ -137,6 +139,7 @@ function promptContextPlan(
         select({
           sql: `SELECT s.display_key, s.source, t.value FROM strings s
           LEFT JOIN translations t ON t.string_id = s.id AND t.language = ?
+            AND t.colour = 'blue' AND t.source_hash = s.source_hash
           WHERE s.file_id = ? AND s.active = 1 AND s.kind IN (${TRANSLATABLE_SQL}) AND s.position ${edge.condition} ?
           ORDER BY s.position ${edge.order} LIMIT ?`,
           params: [batch.language, batch.fileId, edge.position, settings.llm.neighbours],
