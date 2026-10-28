@@ -77,6 +77,36 @@ export const JOB_CREATION_CASES: { name: string; run(sql: Sql): Promise<void> }[
     },
   },
   {
+    name: "estimates count outdated proofread translations awaiting review apart from the work",
+    async run(sql) {
+      await seed(sql);
+      // String 5 is outdated and proofread; string 6 also has a pending proposal.
+      const scope = { languages: ["de"], strings: [5, 6], dryRun: true };
+      const included = await createJobAsync(sql, TOKEN, scope, OPTIONS);
+      check(included.estimate !== null);
+      checkEqual(
+        [
+          included.estimate.outdated,
+          included.estimate.outdatedAwaitingReview,
+          included.estimate.outdatedLeft,
+          included.estimate.strings,
+        ],
+        [2, 1, undefined, 1],
+      );
+      const excluded = await createJobAsync(sql, TOKEN, { ...scope, outdated: false }, OPTIONS);
+      check(excluded.estimate !== null);
+      checkEqual(
+        [
+          excluded.estimate.outdated,
+          excluded.estimate.outdatedAwaitingReview,
+          excluded.estimate.outdatedLeft,
+          excluded.estimate.strings,
+        ],
+        [2, 1, 1, 0],
+      );
+    },
+  },
+  {
     name: "job, creator metadata and queued activity commit together at one revision",
     async run(sql) {
       await seed(sql);

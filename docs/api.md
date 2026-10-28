@@ -321,7 +321,8 @@ output, and two breakdowns: `languages: [{language, strings, words}]` and
 the selected languages; translating one source string into two languages counts twice.
 The `work` object separates `translate`, `retranslate`, `update`, and `propose` counts. Optional
 `outdated` and `outdatedLeft` counts show older-source values in scope and those excluded from the
-run. The estimate includes only work selected by the request's files, strings, and options. Files with
+run; `outdatedAwaitingReview` counts the proofread ones among them whose model proposal already
+waits for review, which a job leaves for a manager and counts neither as work nor as excluded. The estimate includes only work selected by the request's files, strings, and options. Files with
 no work are left out; if no strings need translation, the file breakdown is empty.
 
 ## Translation jobs

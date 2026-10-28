@@ -216,6 +216,10 @@ Release candidates are for deployment and migration testing. The team decides wh
 
 ### Fixed
 
+- Auto-translate's **Update outdated translations** no longer counts outdated proofread
+  translations whose model proposal already waits for review: a job leaves those for a manager, so
+  the count promised work the estimate then showed as nothing. The dialog says how many wait, with
+  a link to the review queue, and the estimate reports them as `outdatedAwaitingReview`.
 - Auto-translate's estimate no longer takes half a minute, or fails with "The project is busy"
   while a job runs: it reads its batches' prompt context eight at a time, and no longer starts
   over when the project changes as it reads (an estimate may mix revisions). Start translation

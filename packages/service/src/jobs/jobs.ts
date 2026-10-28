@@ -250,19 +250,23 @@ function describeScope(scope: StoredScope, total: number): string {
   return parts.join(" ");
 }
 
-function outdatedCounts(ctx: Context, scope: import("./work.ts").WorkScope) {
+type OutdatedCounts = { outdated: number; outdatedAwaitingReview: number; outdatedLeft: number };
+
+function outdatedCounts(ctx: Context, scope: import("./work.ts").WorkScope): OutdatedCounts {
   let outdated = 0;
+  let outdatedAwaitingReview = 0;
   let outdatedLeft = 0;
   for (const language of scope.languages) {
     const statement = outdatedCountStatement(scope, language);
-    const [row] = ctx.sql.query<{ outdated: number; excluded: number }>(
+    const [row] = ctx.sql.query<{ outdated: number; awaiting: number; excluded: number }>(
       statement.sql,
       ...(statement.params ?? []),
     );
     outdated += row.outdated;
+    outdatedAwaitingReview += row.awaiting;
     outdatedLeft += row.excluded;
   }
-  return { outdated, outdatedLeft };
+  return { outdated, outdatedAwaitingReview, outdatedLeft };
 }
 
 /**
@@ -292,10 +296,12 @@ function estimateFromBatches(
   batches: Batch[],
   contexts: PromptContext[],
   settings: ProjectSettings,
-  counts: { outdated: number; outdatedLeft: number },
+  counts: OutdatedCounts,
 ): JobEstimate {
+  const awaiting = counts.outdatedAwaitingReview;
   const result: JobEstimate = {
     ...(counts.outdated > 0 ? { outdated: counts.outdated } : {}),
+    ...(awaiting > 0 ? { outdatedAwaitingReview: awaiting } : {}),
     ...(counts.outdatedLeft > 0 ? { outdatedLeft: counts.outdatedLeft } : {}),
     strings: 0,
     words: 0,

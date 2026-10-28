@@ -112,7 +112,9 @@ Settings requires an administrator.
 
 From Dashboard, choose **Auto-translate**. Its defaults are all languages, all files,
 **Untranslated only**, and **Update outdated translations**. From a language page it
-selects that language; from the editor it also selects the current file or folder.
+selects that language; from the editor it also selects the current file or folder. An outdated
+proofread translation whose proposal already waits in the review queue is not counted there: a
+job leaves it for a manager, and the dialog says how many wait.
 
 Check that the references line names Spanish. Review the per-language estimate and the words
 beside each file and folder. Checking a folder selects the files and folders within it; clearing a child

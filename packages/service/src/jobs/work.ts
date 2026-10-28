@@ -146,6 +146,14 @@ type WorkRow = {
   t_english: string | null;
 };
 
+/**
+ * A pending model proposal for the current source text, `?` being the language: a proofread
+ * translation that has one waits for a manager's review, and a job proposes nothing more.
+ */
+const PROPOSAL_AWAITS_REVIEW = `EXISTS (
+  SELECT 1 FROM suggestions g WHERE g.string_id = s.id AND g.language = ?
+    AND g.kind = 'llm' AND g.status = 'pending' AND g.source_hash = s.source_hash)`;
+
 /** The SQL condition and parameters of the work in one language (after `?` for the language). */
 function condition(
   scope: WorkScope,
@@ -179,9 +187,7 @@ function condition(
   if (scope.updateGreen) needs.push("(t.colour = 'green' AND t.source_hash <> s.source_hash)");
   if (scope.proposeBlue) {
     needs.push(
-      `(t.colour = 'blue' AND t.source_hash <> s.source_hash AND NOT EXISTS (
-         SELECT 1 FROM suggestions g WHERE g.string_id = s.id AND g.language = ?
-           AND g.kind = 'llm' AND g.status = 'pending' AND g.source_hash = s.source_hash))`,
+      `(t.colour = 'blue' AND t.source_hash <> s.source_hash AND NOT ${PROPOSAL_AWAITS_REVIEW})`,
     );
     params.push(language);
   }
@@ -278,15 +284,24 @@ function workCount(scope: WorkScope, language: string): Statement {
   return { sql: `SELECT COUNT(*) AS n FROM ${FROM} WHERE ${where}`, params: [language, ...params] };
 }
 
+/**
+ * The outdated translations in one language: all of them; those already awaiting review, which
+ * no job works on; and those the scope's options exclude.
+ */
 export function outdatedCountStatement(scope: WorkScope, language: string): Statement {
   const { where, params } = condition(scope, language, true);
   const greenIncluded = scope.updateGreen || scope.retranslate;
+  const awaitsReview = `(t.colour = 'blue' AND ${PROPOSAL_AWAITS_REVIEW})`;
   return {
-    sql: `SELECT COUNT(*) AS outdated, COALESCE(SUM(CASE WHEN
+    sql: `SELECT COUNT(*) AS outdated,
+      COALESCE(SUM(CASE WHEN ${awaitsReview} THEN 1 ELSE 0 END), 0) AS awaiting,
+      COALESCE(SUM(CASE WHEN ${awaitsReview} THEN 0 WHEN
       (t.colour = 'green' AND (? = 1 OR (? = 1 AND t.qa_errors > 0))) OR
       (t.colour = 'blue' AND ? = 1) THEN 0 ELSE 1 END), 0) AS excluded
       FROM ${FROM} WHERE ${where}`,
     params: [
+      language,
+      language,
       greenIncluded ? 1 : 0,
       scope.qa ? 1 : 0,
       scope.proposeBlue ? 1 : 0,
@@ -310,6 +325,7 @@ export async function readJobWork(
   total: number;
   batches: Batch[];
   outdated: number;
+  outdatedAwaitingReview: number;
   outdatedLeft: number;
 }> {
   if (!Number.isSafeInteger(llm.batchSize) || llm.batchSize < 1)
@@ -350,18 +366,20 @@ export async function readJobWork(
     if (Number(currentRevision[0].revision) !== revision) continue;
     let total = 0;
     let outdated = 0;
+    let outdatedAwaitingReview = 0;
     let outdatedLeft = 0;
     const batches: Batch[] = [];
     for (const [index, language] of scope.languages.entries()) {
       total += Number(rows[index * 3][0].n);
       const items = workItemsFromRows(rows[index * 3 + 1] as WorkRow[], scope, language);
       outdated += Number(rows[index * 3 + 2][0].outdated);
+      outdatedAwaitingReview += Number(rows[index * 3 + 2][0].awaiting);
       outdatedLeft += Number(rows[index * 3 + 2][0].excluded);
       const room = maxBatches - batches.length;
       for (const batch of batchesOf(items, llm.batchSize).slice(0, Math.max(0, room)))
         batches.push(batch);
     }
-    return { revision, scope, total, batches, outdated, outdatedLeft };
+    return { revision, scope, total, batches, outdated, outdatedAwaitingReview, outdatedLeft };
   }
   throw new ServiceError("unavailable", "The project is busy. Try again shortly.");
 }

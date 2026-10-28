@@ -99,6 +99,9 @@ export function AutoTranslateDialog({
   });
   const modelError = fieldError(start.error, "model");
   const count = estimate.data?.estimate;
+  // Proofread translations whose proposal awaits review are a manager's to settle, not a job's.
+  const awaitingReview = count?.outdatedAwaitingReview ?? 0;
+  const outdatedToUpdate = (count?.outdated ?? 0) - awaitingReview;
   const words = new Map(count?.files.map((entry) => [entry.file, entry.words]) ?? []);
   const references = project.data?.referenceLanguages ?? [];
   return (
@@ -162,13 +165,20 @@ export function AutoTranslateDialog({
               onChange={(e) => setOutdated(e.target.checked)}
               aria-describedby="auto-translate-outdated-hint"
             />
-            Update outdated translations ({count?.outdated ?? 0})
+            Update outdated translations ({outdatedToUpdate})
           </Label>
           <p id="auto-translate-outdated-hint" className="field-hint">
             {outdatedExplanation(project.data?.sourceLanguageName ?? "source text", 2)} Green ones
             are rewritten for the new {project.data?.sourceLanguageName ?? "source text"}; proofread
             ones get a proposal, and stay as they are until a manager accepts it.
           </p>
+          {awaitingReview > 0 && (
+            <p className="field-hint">
+              {formatCount(awaitingReview, "more outdated proofread translation")} already{" "}
+              {awaitingReview === 1 ? "has" : "have"} a proposal waiting in the{" "}
+              <Link to="/review">review queue</Link>.
+            </p>
+          )}
         </div>
         <TextField
           label="Custom instruction (optional)"

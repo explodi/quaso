@@ -713,8 +713,10 @@ export interface JobInfo {
 }
 
 export interface JobEstimate {
-  /** Older-source translations in this scope, and those excluded from the run. */
+  /** Older-source translations in this scope; of them, the proofread ones whose proposal
+   * already awaits review, which no job works on; and those excluded from the run. */
   outdated?: number;
+  outdatedAwaitingReview?: number;
   outdatedLeft?: number;
   strings: number;
   words: number;
