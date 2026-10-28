@@ -269,7 +269,7 @@ export async function runWorkflow(options: WorkflowOptions): Promise<{ job: JobI
     );
     assertStringIncludes(
       await text(page, ".reference-languages"),
-      "Spanish (proofread strings marked)",
+      "Spanish (proofread strings only)",
     );
     assertEquals(
       await page.$eval('[role="tree"][aria-label="Files to translate"] [data-path=""]', (root) =>

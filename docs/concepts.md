@@ -137,7 +137,9 @@ downloads; uploads add any of those languages that the instance does not yet hav
 
 **Reference languages** supply additional translations as context for the LLM. Choosing a reference
 language does not change the source language or replace source text during download. Select them
-in the LLM settings when a second language helps explain the intended meaning.
+in the LLM settings when a second language helps explain the intended meaning. Only proofread
+translations of the current source text are sent: a string without one goes with its source text
+alone. The same holds for the identical strings and the neighbours the prompt shows.
 
 ## Context, reuse, and meaning checks
 

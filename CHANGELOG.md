@@ -216,6 +216,11 @@ Release candidates are for deployment and migration testing. The team decides wh
 
 ### Fixed
 
+- The model reads only proofread translations of the current source text: the reference
+  languages, the identical strings and the neighbours no longer include green translations, which
+  were another model's guesses, and the neighbours no longer include outdated ones. A string with
+  no proofread reference goes with its source text alone. The Auto-translate dialog says
+  "proofread strings only".
 - Auto-translate's estimate no longer takes half a minute, or fails with "The project is busy"
   while a job runs: it reads its batches' prompt context eight at a time, and no longer starts
   over when the project changes as it reads (an estimate may mix revisions). Start translation

@@ -128,7 +128,7 @@ export function AutoTranslateDialog({
         {project.data && (
           <p className="reference-languages">
             {references.length > 0
-              ? `The LLM also sees: ${references.map((tag) => languageName(tag)).join(", ")} (proofread strings marked).`
+              ? `The LLM also sees: ${references.map((tag) => languageName(tag)).join(", ")} (proofread strings only).`
               : "No reference languages."}{" "}
             <Link to="/settings?section=llm#reference-languages">Reference language settings</Link>
           </p>
