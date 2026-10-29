@@ -24,7 +24,11 @@ export default defineConfig({
           exclude: ["**/node_modules/**", "**/dist/**"],
         },
       },
-      { extends: true, test: { name: "e2e", include: ["e2e/**/*.test.ts"] } },
+      {
+        extends: true,
+        // Each file drives its own Chrome: more at once starves them into timeouts.
+        test: { name: "e2e", include: ["e2e/**/*.test.ts"], maxWorkers: 2 },
+      },
       { extends: true, test: { name: "acceptance", include: ["acceptance/**/*.test.ts"] } },
     ],
   },
