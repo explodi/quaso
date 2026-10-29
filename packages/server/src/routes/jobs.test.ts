@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
+import { assert, expect, test } from "vitest";
 /**
  * The LLM routes with the real service and the fake translator, through `createApp`:
  * jobs, their progress and cancelling, usage and models, and who may call them.
  */
-import { assert, assertEquals } from "@std/assert";
 import type { CreateJobResult, JobInfo, JobsResult, UsageResult } from "@quaso/core";
 import { createFakeTranslator, type Service, SYSTEM } from "@quaso/service";
 import type { App } from "../app.ts";
@@ -43,7 +42,7 @@ async function withLlm(fn: (setup: Setup) => Promise<void>, provider = true): Pr
 async function json<T>(response: Promise<Response>, status = 200): Promise<T> {
   const answer = await response;
   const body = await answer.json();
-  assertEquals(answer.status, status, JSON.stringify(body));
+  expect(answer.status, JSON.stringify(body)).toStrictEqual(status);
   return body;
 }
 
@@ -58,8 +57,8 @@ test("jobs routes: dry run, create, follow, list, and cancel", async () => {
         json: { dryRun: true, languages: ["de"], retranslate: true },
       }),
     );
-    assertEquals(dry.job, null);
-    assertEquals(dry.estimate?.languages, [{ language: "de", strings: 2, words: 2 }]);
+    expect(dry.job).toBe(null);
+    expect(dry.estimate?.languages).toStrictEqual([{ language: "de", strings: 2, words: 2 }]);
 
     const created = await json<CreateJobResult>(
       call(app, "/api/v1/jobs", {
@@ -69,15 +68,15 @@ test("jobs routes: dry run, create, follow, list, and cancel", async () => {
       }),
     );
     assert(created.job !== null);
-    assertEquals(created.job.status, "queued");
+    expect(created.job.status).toBe("queued");
     const id = created.job.id;
     const listed = await json<JobsResult>(call(app, "/api/v1/jobs", { key: upload }));
-    assertEquals(listed.jobs.map((job) => job.id).includes(id), true);
+    expect(listed.jobs.map((job) => job.id).includes(id)).toBe(true);
 
     const cancelled = await json<JobInfo>(
       call(app, `/api/v1/jobs/${id}`, { method: "DELETE", key: upload }),
     );
-    assertEquals(cancelled.status, "cancelled");
+    expect(cancelled.status).toBe("cancelled");
 
     const second = await json<CreateJobResult>(
       call(app, "/api/v1/jobs", {
@@ -88,18 +87,18 @@ test("jobs routes: dry run, create, follow, list, and cancel", async () => {
     );
     await service.alarm();
     const done = await json<JobInfo>(call(app, `/api/v1/jobs/${second.job!.id}`, { key: upload }));
-    assertEquals(done.status, "done");
-    assertEquals(done.progress.translated, 2);
+    expect(done.status).toBe("done");
+    expect(done.progress.translated).toBe(2);
     const conflict = await json<{ error: { code: string } }>(
       call(app, `/api/v1/jobs/${second.job!.id}`, { method: "DELETE", key: upload }),
       409,
     );
-    assertEquals(conflict.error.code, "conflict");
+    expect(conflict.error.code).toBe("conflict");
     const missing = await json<{ error: { code: string } }>(
       call(app, "/api/v1/jobs/999", { key: upload }),
       404,
     );
-    assertEquals(missing.error.code, "not_found");
+    expect(missing.error.code).toBe("not_found");
   });
 });
 
@@ -108,16 +107,16 @@ test("jobs routes: usage and models", async () => {
     await service.createJob(SYSTEM, {});
     await service.alarm();
     const usage = await json<UsageResult>(call(app, "/api/v1/usage?period=month", { key: upload }));
-    assertEquals(usage.period, "month");
-    assertEquals(usage.rows.length, 12);
+    expect(usage.period).toBe("month");
+    expect(usage.rows.length).toBe(12);
     assert(usage.rows[11].requests > 0);
-    assertEquals(usage.budget.monthlyTokens, null);
+    expect(usage.budget.monthlyTokens).toBe(null);
     const bad = await json<{ error: { code: string } }>(
       call(app, "/api/v1/usage?period=week", { key: upload }),
       400,
     );
-    assertEquals(bad.error.code, "validation_failed");
-    assertEquals(await json(call(app, "/api/v1/models", { key: upload })), {
+    expect(bad.error.code).toBe("validation_failed");
+    expect(await json(call(app, "/api/v1/models", { key: upload }))).toStrictEqual({
       models: ["fake-translator"],
     });
   });
@@ -126,18 +125,18 @@ test("jobs routes: usage and models", async () => {
 test("jobs routes: active query returns queued jobs and removes completed jobs", async () => {
   await withLlm(async ({ app, service, upload }) => {
     const queued = await json<JobsResult>(call(app, "/api/v1/jobs?active=true", { key: upload }));
-    assertEquals(queued.jobs.length, 1);
-    assertEquals(queued.jobs[0].status, "queued");
+    expect(queued.jobs.length).toBe(1);
+    expect(queued.jobs[0].status).toBe("queued");
     await service.alarm();
     const active = await json<JobsResult>(call(app, "/api/v1/jobs?active=true", { key: upload }));
-    assertEquals(active.jobs, []);
+    expect(active.jobs).toStrictEqual([]);
     const all = await json<JobsResult>(call(app, "/api/v1/jobs?active=false", { key: upload }));
-    assertEquals(all.jobs[0].status, "done");
+    expect(all.jobs[0].status).toBe("done");
     const bad = await json<{ error: { code: string } }>(
       call(app, "/api/v1/jobs?active=yes", { key: upload }),
       400,
     );
-    assertEquals(bad.error.code, "validation_failed");
+    expect(bad.error.code).toBe("validation_failed");
   });
 });
 
@@ -154,12 +153,12 @@ test("jobs routes: anonymous callers and read keys are refused", async () => {
         call(app, `/api/v1${path}`, init),
         401,
       );
-      assertEquals(anonymous.error.code, "unauthorized", path);
+      expect(anonymous.error.code, path).toBe("unauthorized");
       const denied = await json<{ error: { code: string } }>(
         call(app, `/api/v1${path}`, { ...init, key: read }),
         403,
       );
-      assertEquals(denied.error.code, "forbidden", path);
+      expect(denied.error.code, path).toBe("forbidden");
     }
   });
 });
@@ -170,10 +169,10 @@ test("jobs routes: without a provider, 503 with the reason", async () => {
       call(app, "/api/v1/jobs", { method: "POST", key: upload, json: {} }),
       503,
     );
-    assertEquals(off.error, {
+    expect(off.error).toStrictEqual({
       code: "llm_unavailable",
       message: "LLM translation is off: enter a Gemini API key in Settings.",
     });
-    assertEquals(await json(call(app, "/api/v1/models", { key: upload })), { models: [] });
+    expect(await json(call(app, "/api/v1/models", { key: upload }))).toStrictEqual({ models: [] });
   }, false);
 });

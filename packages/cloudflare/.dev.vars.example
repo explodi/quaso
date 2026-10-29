@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
-# Secrets for local runs (deno task cf:dev): copy this file to .dev.vars, which git ignores,
-# and fill it in. Deployed instances get SECRET_KEY and SETUP_KEY from deno task cf:setup;
+# Secrets for local runs (npm run cf:dev): copy this file to .dev.vars, which git ignores,
+# and fill it in. Deployed instances get SECRET_KEY and SETUP_KEY from npm run cf:setup;
 # set others with: wrangler secret put <NAME> --name <worker>
 
 # openssl rand -hex 32

@@ -9,8 +9,10 @@ import { join } from "node:path";
 
 /** Thrown when another process holds the lock. */
 export class LockBusyError extends Error {
-  constructor(readonly dir: string) {
+  readonly dir: string;
+  constructor(dir: string) {
     super(`Another Quaso server is using ${dir}.`);
+    this.dir = dir;
     this.name = "LockBusyError";
   }
 }

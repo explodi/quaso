@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals, assertRejects } from "@std/assert";
+import { expect, test } from "vitest";
 import type { ArgumentDeclaration } from "@quaso/core";
 import { SYSTEM } from "./api.ts";
 import { ServiceError } from "./errors.ts";
@@ -62,8 +61,8 @@ test("an upload gives each string the declared arguments in its scope", async ()
     { "feed.json": FEED },
     { languages: ["es"], arguments: [AUTHOR_GENDER] },
   );
-  assertEquals(argumentsOf(instance, "posts.joined"), RECEIVED);
-  assertEquals(argumentsOf(instance, "menu.title"), null);
+  expect(argumentsOf(instance, "posts.joined")).toStrictEqual(RECEIVED);
+  expect(argumentsOf(instance, "menu.title")).toBe(null);
 });
 
 test("without ICU MessageFormat, an upload keeps the arguments and says they don't apply", async () => {
@@ -73,10 +72,10 @@ test("without ICU MessageFormat, an upload keeps the arguments and says they don
     { "feed.json": FEED },
     { languages: ["es"], arguments: [AUTHOR_GENDER] },
   );
-  assertEquals(result.warnings, [
+  expect(result.warnings).toStrictEqual([
     "The config declares arguments, which only apply with ICU MessageFormat on (Settings → Placeholders); the strings keep them for when it is",
   ]);
-  assertEquals(argumentsOf(instance, "posts.joined"), RECEIVED);
+  expect(argumentsOf(instance, "posts.joined")).toStrictEqual(RECEIVED);
 });
 
 test("an argument that applies to no string is a warning", async () => {
@@ -86,7 +85,7 @@ test("an argument that applies to no string is a warning", async () => {
     { "feed.json": FEED },
     { languages: ["es"], arguments: [{ ...AUTHOR_GENDER, files: ["chat.json"] }] },
   );
-  assertEquals(result.warnings, [
+  expect(result.warnings).toStrictEqual([
     "The argument authorGender applies to no string, so it does nothing: correct its files and keys, or remove it",
   ]);
 });
@@ -100,19 +99,22 @@ test("a translation may vary by a declared argument; without the declaration it 
   );
   write(instance, "feed.json", "posts.joined", "es", UNIDA);
   const qa = () => instance.sql.query("SELECT qa_errors FROM translations")[0].qa_errors;
-  assertEquals(qa(), 0);
+  expect(qa()).toBe(0);
   await uploadJson(instance.service, { "feed.json": FEED });
-  assertEquals(argumentsOf(instance, "posts.joined"), null);
-  assertEquals(qa(), 2, "rechecked: {company} is missing, and the select isn't in the English");
+  expect(argumentsOf(instance, "posts.joined")).toBe(null);
+  expect(qa(), "rechecked: {company} is missing, and the select isn't in the English").toBe(2);
 });
 
 test("an undeclared argument's select is refused on write", async () => {
   using instance = await icuProject();
   await uploadJson(instance.service, { "feed.json": FEED }, { languages: ["es"] });
-  await assertRejects(
-    async () => write(instance, "feed.json", "posts.joined", "es", UNIDA),
-    ServiceError,
-    "Placeholder {company} is missing.",
+  await expect(
+    (async () => write(instance, "feed.json", "posts.joined", "es", UNIDA))(),
+  ).rejects.toThrow(
+    expect.objectContaining({
+      constructor: ServiceError,
+      message: expect.stringContaining("Placeholder {company} is missing."),
+    }),
   );
 });
 
@@ -125,5 +127,5 @@ test("the string's details list its arguments for the editor", async () => {
   );
   const id = stringId(instance.sql, "feed.json", "posts.joined");
   const detail = await instance.service.getString(SYSTEM, { id, language: "es" });
-  assertEquals(detail.arguments, JSON.parse(RECEIVED));
+  expect(detail.arguments).toStrictEqual(JSON.parse(RECEIVED));
 });

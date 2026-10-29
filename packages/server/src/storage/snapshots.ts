@@ -6,6 +6,7 @@ import * as fs from "node:fs/promises";
  */
 import type { DatabaseSync } from "node:sqlite";
 import { basename, dirname, join } from "node:path";
+import { Worker } from "node:worker_threads";
 import { copyDatabase, type SnapshotJob, type SnapshotResult } from "./snapshot_worker.ts";
 
 /** A UTC time for file names, such as `20260924T031500Z`. */
@@ -51,17 +52,15 @@ export async function snapshotInWorker(source: string, path: string): Promise<vo
   const temporary = `${target}.partial`;
   await fs.rm(temporary).catch(ignoreNotFound);
   const job: SnapshotJob = { source: await fs.realpath(source), target: temporary };
-  const worker = new Worker(new URL("./snapshot_worker.ts", import.meta.url).href, {
-    type: "module",
+  const worker = new Worker(new URL("./snapshot_worker.ts", import.meta.url), {
+    workerData: { snapshot: job },
   });
   try {
     const result = await new Promise<SnapshotResult>((resolve, reject) => {
-      worker.onmessage = (event: MessageEvent<SnapshotResult>) => resolve(event.data);
-      worker.onerror = (event) => {
-        event.preventDefault();
-        reject(new Error(`The snapshot worker failed: ${event.message}`));
-      };
-      worker.postMessage(job);
+      worker.once("message", resolve);
+      worker.once("error", (error: Error) => {
+        reject(new Error(`The snapshot worker failed: ${error.message}`, { cause: error }));
+      });
     });
     if (!result.ok) throw new Error(result.message);
     await fs.rename(temporary, target);
@@ -69,7 +68,7 @@ export async function snapshotInWorker(source: string, path: string): Promise<vo
     await fs.rm(temporary).catch(ignoreNotFound);
     throw error;
   } finally {
-    worker.terminate();
+    await worker.terminate();
   }
 }
 

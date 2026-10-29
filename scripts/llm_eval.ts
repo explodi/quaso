@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 import * as fs from "node:fs/promises";
 /**
- * The opt-in LLM evaluation (S0.6, S5.8; design open question 4), `deno task test:llm`:
+ * The opt-in LLM evaluation (S0.6, S5.8; design open question 4), `npm run test:llm`:
  * translates the development fixture's strings (or another project's, with `--project`, in
  * ICU MessageFormat with `--icu`) into German, Polish and Japanese with each model, through the service's own batching, prompts, checks and
  * retries (an in-memory service with the Gemini provider), so the numbers are production's.
@@ -9,9 +9,9 @@ import * as fs from "node:fs/promises";
  * the first try and after the retries, the tokens and the time, and writes the translations
  * to a JSON file for a native speaker's review. It needs GEMINI_API_KEY, and spends tokens.
  *
- *   deno task test:llm [--models gemini-flash-latest,gemini-2.5-pro] [--languages de,pl,ja]
- *                      [--out .quaso/llm-eval.json] [--concurrency 4]
- *                      [--project <folder with quaso.config.json>] [--icu]
+ *   npm run test:llm -- [--models gemini-flash-latest,gemini-2.5-pro] [--languages de,pl,ja]
+ *                         [--out .quaso/llm-eval.json] [--concurrency 4]
+ *                         [--project <folder with quaso.config.json>] [--icu]
  */
 import { dirname } from "node:path";
 import {
@@ -249,7 +249,7 @@ if (import.meta.main) {
   if (!key) {
     console.error(
       "The LLM evaluation needs a Gemini API key, and spends tokens: " +
-        "GEMINI_API_KEY=… deno task test:llm [--models a,b] [--languages de,pl,ja] [--out file]",
+        "GEMINI_API_KEY=… npm run test:llm -- [--models a,b] [--languages de,pl,ja] [--out file]",
     );
     process.exit(1);
   }

@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals, assertStrictEquals } from "@std/assert";
+import { expect, test } from "vitest";
 import { FilePath } from "./api.ts";
 import {
   anchorLinks,
@@ -31,63 +30,71 @@ const ARTICLE = [
 ].join("\n");
 
 test("the document key is the empty key path", () => {
-  assertStrictEquals(DOCUMENT_KEY, entryKey("text", []));
-  assertEquals(isDocumentKey("[]"), true);
-  assertEquals(isDocumentKey('[""]'), false, "a JSON key that is an empty string is a key");
-  assertEquals(isDocumentKey('["title"]'), false);
+  expect(DOCUMENT_KEY).toBe(entryKey("text", []));
+  expect(isDocumentKey("[]")).toBe(true);
+  expect(isDocumentKey('[""]'), "a JSON key that is an empty string is a key").toBe(false);
+  expect(isDocumentKey('["title"]')).toBe(false);
 });
 
 test("the format follows the extension: .json, .md and .markdown; nothing else", () => {
-  assertEquals(formatForPath("common.json"), "json");
-  assertEquals(formatForPath("news/city_founded.md"), "markdown");
-  assertEquals(formatForPath("README.markdown"), "markdown");
-  assertEquals(formatForPath("notes.txt"), undefined);
-  assertEquals(formatForPath("story.MD"), undefined, "extensions are case-sensitive, like paths");
-  assertEquals(isMarkdownFormat(MARKDOWN_FORMAT), true);
-  assertEquals(isMarkdownFormat({ indent: "  ", newline: "\n", finalNewline: true }), false);
+  expect(formatForPath("common.json")).toBe("json");
+  expect(formatForPath("news/city_founded.md")).toBe("markdown");
+  expect(formatForPath("README.markdown")).toBe("markdown");
+  expect(formatForPath("notes.txt")).toBe(undefined);
+  expect(formatForPath("story.MD"), "extensions are case-sensitive, like paths").toStrictEqual(
+    undefined,
+  );
+  expect(isMarkdownFormat(MARKDOWN_FORMAT)).toBe(true);
+  expect(isMarkdownFormat({ indent: "  ", newline: "\n", finalNewline: true })).toStrictEqual(
+    false,
+  );
 });
 
 test("file paths may end in .md or .markdown", () => {
-  assertEquals(validate(FilePath, "news/city_founded.md").ok, true);
-  assertEquals(validate(FilePath, "intro.markdown").ok, true);
-  assertEquals(validate(FilePath, "common.json").ok, true);
-  assertEquals(validate(FilePath, "notes.txt").ok, false);
+  expect(validate(FilePath, "news/city_founded.md").ok).toBe(true);
+  expect(validate(FilePath, "intro.markdown").ok).toBe(true);
+  expect(validate(FilePath, "common.json").ok).toBe(true);
+  expect(validate(FilePath, "notes.txt").ok).toBe(false);
 });
 
 test("normalizeDocument: \\n line endings, no byte order mark, nothing at the end", () => {
-  assertStrictEquals(normalizeDocument("\uFEFFTitle\r\n\r\nBody.  \r\n\n"), "Title\n\nBody.");
-  assertStrictEquals(normalizeDocument("  Indented\n"), "  Indented", "the start is kept");
-  assertStrictEquals(normalizeDocument("\n \n"), "");
+  expect(normalizeDocument("\uFEFFTitle\r\n\r\nBody.  \r\n\n")).toBe("Title\n\nBody.");
+  expect(normalizeDocument("  Indented\n"), "the start is kept").toBe("  Indented");
+  expect(normalizeDocument("\n \n")).toBe("");
 });
 
 test("paragraphs are blocks separated by blank lines, whatever the number of blank lines", () => {
-  assertEquals(paragraphsOf(ARTICLE).length, 3);
-  assertEquals(paragraphsOf("a\n\n\n\nb\n \nc"), ["a", "b", "c"]);
-  assertEquals(paragraphsOf("one line"), ["one line"]);
-  assertEquals(paragraphsOf("a\nb"), ["a\nb"], "a single line break stays inside a paragraph");
-  assertEquals(paragraphCount(""), 0);
-  assertEquals(paragraphCount("\n\n"), 0);
+  expect(paragraphsOf(ARTICLE).length).toBe(3);
+  expect(paragraphsOf("a\n\n\n\nb\n \nc")).toStrictEqual(["a", "b", "c"]);
+  expect(paragraphsOf("one line")).toStrictEqual(["one line"]);
+  expect(paragraphsOf("a\nb"), "a single line break stays inside a paragraph").toStrictEqual([
+    "a\nb",
+  ]);
+  expect(paragraphCount("")).toBe(0);
+  expect(paragraphCount("\n\n")).toBe(0);
 });
 
 test("readSource reads a Markdown file as one text entry with an empty key path", () => {
   const source = readSource(`${ARTICLE}\n`, { file: "news/city_founded.md" });
-  assertEquals(source.format, { type: "markdown" });
-  assertEquals(source.entries, [{ kind: "text", keyPath: [], value: ARTICLE, line: 1 }]);
+  expect(source.format).toStrictEqual({ type: "markdown" });
+  expect(source.entries).toStrictEqual([{ kind: "text", keyPath: [], value: ARTICLE, line: 1 }]);
   const byOption = readSource(ARTICLE, { format: "markdown" });
-  assertEquals(byOption.entries, source.entries, "the format option wins over the extension");
+  expect(byOption.entries, "the format option wins over the extension").toStrictEqual(
+    source.entries,
+  );
 });
 
 test("readSource: a blank Markdown file is a literal, copied rather than translated", () => {
-  assertEquals(readSource("\n\n", { file: "empty.md" }).entries, [
+  expect(readSource("\n\n", { file: "empty.md" }).entries).toStrictEqual([
     { kind: "literal", keyPath: [], raw: '""', line: 1 },
   ]);
 });
 
 test("readSource: a .json file is still JSON, and a document never is", () => {
-  assertEquals(readSource('{"a": "b"}', { file: "x.json" }).entries, [
+  expect(readSource('{"a": "b"}', { file: "x.json" }).entries).toStrictEqual([
     { kind: "text", keyPath: ["a"], value: "b", line: 1 },
   ]);
-  assertEquals(readSource('{"a": "b"}', { file: "x.md" }).entries, [
+  expect(readSource('{"a": "b"}', { file: "x.md" }).entries).toStrictEqual([
     { kind: "text", keyPath: [], value: '{"a": "b"}', line: 1 },
   ]);
 });
@@ -98,18 +105,19 @@ test("readTranslation reads a Markdown translation as the document's value", () 
     language: "de",
     file: "news/city_founded.md",
   });
-  assertEquals(read, {
+  expect(read).toStrictEqual({
     values: new Map([[DOCUMENT_KEY, "Der Moment\n\nText."]]),
     unknownKeys: [],
   });
   const blank = readTranslation("\n", english, { language: "de", format: "markdown" });
-  assertEquals(blank.values, new Map([[DOCUMENT_KEY, ""]]), "a blank file is a blank value");
-  const literal = readSource("", { format: "markdown" }).entries;
-  assertEquals(
-    readTranslation("Text", literal, { language: "de", format: "markdown" }).values,
-    new Map(),
-    "a blank English document has nothing to translate",
+  expect(blank.values, "a blank file is a blank value").toStrictEqual(
+    new Map([[DOCUMENT_KEY, ""]]),
   );
+  const literal = readSource("", { format: "markdown" }).entries;
+  expect(
+    readTranslation("Text", literal, { language: "de", format: "markdown" }).values,
+    "a blank English document has nothing to translate",
+  ).toStrictEqual(new Map());
 });
 
 test("renderFile writes a document's translation with one final newline, byte-stable", () => {
@@ -117,13 +125,10 @@ test("renderFile writes a document's translation with one final newline, byte-st
   const translation = "Der Moment\r\n\r\nText.\r\n\r\n";
   const options = { language: "de", format };
   const rendered = renderFile(entries, new Map([[DOCUMENT_KEY, translation]]), options);
-  assertStrictEquals(rendered, "Der Moment\n\nText.\n");
-  assertStrictEquals(
-    renderFile(entries, new Map([[DOCUMENT_KEY, translation]]), options),
-    rendered,
-  );
+  expect(rendered).toBe("Der Moment\n\nText.\n");
+  expect(renderFile(entries, new Map([[DOCUMENT_KEY, translation]]), options)).toBe(rendered);
   const again = readSource(rendered, { format: "markdown" });
-  assertEquals(again.entries[0], {
+  expect(again.entries[0]).toStrictEqual({
     kind: "text",
     keyPath: [],
     value: "Der Moment\n\nText.",
@@ -133,19 +138,15 @@ test("renderFile writes a document's translation with one final newline, byte-st
 
 test("renderFile: an untranslated document is the English, or nothing with omit", () => {
   const { entries, format } = readSource(ARTICLE, { format: "markdown" });
-  assertStrictEquals(renderFile(entries, new Map(), { language: "de", format }), `${ARTICLE}\n`);
-  assertStrictEquals(
-    renderFile(entries, new Map(), { language: "de", format, untranslated: "omit" }),
-    "",
-  );
+  expect(renderFile(entries, new Map(), { language: "de", format })).toBe(`${ARTICLE}\n`);
+  expect(renderFile(entries, new Map(), { language: "de", format, untranslated: "omit" })).toBe("");
   const omitted = new Set([DOCUMENT_KEY]);
-  assertStrictEquals(
+  expect(
     renderFile(entries, new Map([[DOCUMENT_KEY, "Text"]]), { language: "de", format, omitted }),
-    "",
     "an omitted (outdated) translation leaves no file",
-  );
+  ).toBe("");
   const blank = readSource("", { format: "markdown" });
-  assertStrictEquals(renderFile(blank.entries, new Map(), { language: "de", format }), "");
+  expect(renderFile(blank.entries, new Map(), { language: "de", format })).toBe("");
 });
 
 test("keepUntouchedParagraphs puts back the paragraphs whose English didn't change", () => {
@@ -155,7 +156,7 @@ test("keepUntouchedParagraphs puts back the paragraphs whose English didn't chan
     oldTranslation: "Titel\n\nAlter zweiter.\n\nDritter.",
     newTranslation: "Überschrift\n\nNeuer zweiter.\n\nDer dritte.\n",
   });
-  assertStrictEquals(kept, "Titel\n\nNeuer zweiter.\n\nDritter.");
+  expect(kept).toBe("Titel\n\nNeuer zweiter.\n\nDritter.");
 });
 
 test("keepUntouchedParagraphs keeps the update's blank lines between paragraphs", () => {
@@ -165,7 +166,7 @@ test("keepUntouchedParagraphs keeps the update's blank lines between paragraphs"
     oldTranslation: "Ä\n\nBe",
     newTranslation: "Ah\n\n\nBe zwei",
   });
-  assertStrictEquals(kept, "Ä\n\n\nBe zwei");
+  expect(kept).toBe("Ä\n\n\nBe zwei");
 });
 
 test("keepUntouchedParagraphs returns the update when the paragraphs don't pair up", () => {
@@ -175,65 +176,66 @@ test("keepUntouchedParagraphs returns the update when the paragraphs don't pair 
     oldTranslation: "Ä\n\nBe",
     newTranslation: "Ah\n\nBe\n\nZe\r\n",
   });
-  assertStrictEquals(kept, "Ah\n\nBe\n\nZe");
+  expect(kept).toBe("Ah\n\nBe\n\nZe");
 });
 
 test("blockKind names a paragraph by its first lines", () => {
-  assertStrictEquals(blockKind("## Getting started", false), "a level-2 heading");
-  assertStrictEquals(blockKind("Title\n=====", false), "a level-1 heading");
-  assertStrictEquals(blockKind("Title\n-----", false), "a level-2 heading");
-  assertStrictEquals(blockKind("- one\n- two", false), "a list");
-  assertStrictEquals(blockKind("* one", false), "a list");
-  assertStrictEquals(blockKind("1. one\n2. two", false), "a numbered list");
-  assertStrictEquals(blockKind("> Quoted", false), "a quote");
-  assertStrictEquals(blockKind("| a | b |\n|---|---|", false), "a table");
-  assertStrictEquals(blockKind("a | b\n--- | ---", false), "a table");
-  assertStrictEquals(blockKind("```js\ncode\n```", false), "a code block");
-  assertStrictEquals(blockKind("---\ntitle: News\n---", true), "front matter");
-  assertStrictEquals(blockKind("---", false), "a horizontal rule");
-  assertStrictEquals(blockKind("<details>", false), "HTML");
-  assertStrictEquals(blockKind("    indented", false), "an indented block");
-  assertStrictEquals(blockKind("Just text.\nOn two lines.", false), "a paragraph");
-  assertStrictEquals(blockKind("#hashtag", false), "a paragraph", "a heading needs a space");
+  expect(blockKind("## Getting started", false)).toBe("a level-2 heading");
+  expect(blockKind("Title\n=====", false)).toBe("a level-1 heading");
+  expect(blockKind("Title\n-----", false)).toBe("a level-2 heading");
+  expect(blockKind("- one\n- two", false)).toBe("a list");
+  expect(blockKind("* one", false)).toBe("a list");
+  expect(blockKind("1. one\n2. two", false)).toBe("a numbered list");
+  expect(blockKind("> Quoted", false)).toBe("a quote");
+  expect(blockKind("| a | b |\n|---|---|", false)).toBe("a table");
+  expect(blockKind("a | b\n--- | ---", false)).toBe("a table");
+  expect(blockKind("```js\ncode\n```", false)).toBe("a code block");
+  expect(blockKind("---\ntitle: News\n---", true)).toBe("front matter");
+  expect(blockKind("---", false)).toBe("a horizontal rule");
+  expect(blockKind("<details>", false)).toBe("HTML");
+  expect(blockKind("    indented", false)).toBe("an indented block");
+  expect(blockKind("Just text.\nOn two lines.", false)).toBe("a paragraph");
+  expect(blockKind("#hashtag", false), "a heading needs a space").toBe("a paragraph");
 });
 
 test("verbatimParts: fenced code blocks, whole", () => {
-  assertEquals(verbatimParts("Run it:\n\n```sh\nquaso init\n\nquaso upload\n```\n\nDone."), [
-    "```sh\nquaso init\n\nquaso upload\n```",
-  ]);
+  expect(verbatimParts("Run it:\n\n```sh\nquaso init\n\nquaso upload\n```\n\nDone.")).toStrictEqual(
+    ["```sh\nquaso init\n\nquaso upload\n```"],
+  );
 });
 
 test("verbatimParts: inline code", () => {
-  assertEquals(verbatimParts("Type `quaso init`, then ``a ` b``."), ["`quaso init`", "``a ` b``"]);
+  expect(verbatimParts("Type `quaso init`, then ``a ` b``.")).toStrictEqual([
+    "`quaso init`",
+    "``a ` b``",
+  ]);
 });
 
 test("verbatimParts: link and image destinations, but not their text or title", () => {
-  assertEquals(verbatimParts('[Download](https://example.com/dl "The file") ![Map](map.png)'), [
-    "https://example.com/dl",
-    "map.png",
-  ]);
+  expect(
+    verbatimParts('[Download](https://example.com/dl "The file") ![Map](map.png)'),
+  ).toStrictEqual(["https://example.com/dl", "map.png"]);
 });
 
 test("verbatimParts: reference definitions and autolinks", () => {
-  assertEquals(verbatimParts("See [the wiki][w] or <https://example.com>.\n\n[w]: https://wiki"), [
-    "https://wiki",
-    "https://example.com",
-  ]);
+  expect(
+    verbatimParts("See [the wiki][w] or <https://example.com>.\n\n[w]: https://wiki"),
+  ).toStrictEqual(["https://wiki", "https://example.com"]);
 });
 
 test("verbatimParts: front matter keys, not their values", () => {
-  assertEquals(verbatimParts("---\ntitle: City founded\ndate: 2026-10-15\n---\n\nText."), [
+  expect(verbatimParts("---\ntitle: City founded\ndate: 2026-10-15\n---\n\nText.")).toStrictEqual([
     "title:",
     "date:",
   ]);
 });
 
 test("verbatimParts: links to the file's own headings follow the translation", () => {
-  assertEquals(verbatimParts("[See below](#installation)"), []);
+  expect(verbatimParts("[See below](#installation)")).toStrictEqual([]);
 });
 
 test("verbatimParts: a link inside inline code is code", () => {
-  assertEquals(verbatimParts("Write `[a](b)` for a link."), ["`[a](b)`"]);
+  expect(verbatimParts("Write `[a](b)` for a link.")).toStrictEqual(["`[a](b)`"]);
 });
 
 test("headingAnchors: GitHub's anchors, numbered when repeated, and explicit ones", () => {
@@ -255,8 +257,7 @@ test("headingAnchors: GitHub's anchors, numbered when repeated, and explicit one
     "# not a heading",
     "```",
   ].join("\n");
-  assertEquals(
-    headingAnchors(text),
+  expect(headingAnchors(text)).toStrictEqual(
     new Set([
       "getting-started",
       "install-quaso-on-windows",
@@ -266,12 +267,11 @@ test("headingAnchors: GitHub's anchors, numbered when repeated, and explicit one
       "custom",
     ]),
   );
-  assertEquals(headingAnchors("## Über die Stadt"), new Set(["über-die-stadt"]));
+  expect(headingAnchors("## Über die Stadt")).toStrictEqual(new Set(["über-die-stadt"]));
 });
 
 test("anchorLinks: the anchors of links to the file itself, decoded", () => {
-  assertEquals(anchorLinks("[a](#one) [b](https://x#two) [c](#instalaci%C3%B3n) `[d](#code)`"), [
-    "one",
-    "instalación",
-  ]);
+  expect(
+    anchorLinks("[a](#one) [b](https://x#two) [c](#instalaci%C3%B3n) `[d](#code)`"),
+  ).toStrictEqual(["one", "instalación"]);
 });

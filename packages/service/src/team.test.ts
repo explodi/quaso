@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals, assertMatch, assertRejects } from "@std/assert";
+import { assert, expect, test } from "vitest";
 import { sha256Hex } from "@quaso/core";
 import { ANONYMOUS, SYSTEM } from "./api.ts";
 import { ServiceError } from "./errors.ts";
@@ -10,8 +9,9 @@ import { PASSWORD, projectService, signUp } from "./testing/people.ts";
 const DAY = 24 * 60 * 60 * 1000;
 
 async function rejectsWith(promise: Promise<unknown>, code: string) {
-  const error = await assertRejects(() => promise, ServiceError);
-  assertEquals(error.code, code, error.message);
+  const error = await promise.catch((error: unknown) => error);
+  assert(error instanceof ServiceError);
+  expect(error.code, error.message).toStrictEqual(code);
   return error;
 }
 
@@ -31,7 +31,7 @@ test("team: a volunteer asks, and an administrator approves with language limits
     languages: ["fr", "DE"],
     message: " I speak French. ",
   });
-  assertEquals(asked.volunteerRequest, {
+  expect(asked.volunteerRequest).toStrictEqual({
     status: "pending",
     languages: ["fr", "de"],
     message: "I speak French.",
@@ -44,24 +44,23 @@ test("team: a volunteer asks, and an administrator approves with language limits
 
   await rejectsWith(service.listVolunteerRequests(ada.actor, {}), "forbidden");
   const requests = await service.listVolunteerRequests(admin, {});
-  assertEquals(
-    requests.members.map((member) => [member.displayName, member.role]),
-    [["Ada", "none"]],
-  );
+  expect(requests.members.map((member) => [member.displayName, member.role])).toStrictEqual([
+    ["Ada", "none"],
+  ]);
   // The team lists her too, while she waits.
-  assertEquals(
-    (await service.listMembers(admin, {})).members.map((m) => m.displayName),
-    ["Admin", "Ada"],
-  );
+  expect((await service.listMembers(admin, {})).members.map((m) => m.displayName)).toStrictEqual([
+    "Admin",
+    "Ada",
+  ]);
 
   const approved = await service.reviewVolunteer(admin, {
     userId: ada.user.id,
     approve: true,
     languages: ["fr"],
   });
-  assertEquals([approved.role, approved.languages], ["contributor", ["fr"]]);
-  assertEquals(approved.volunteerRequest?.status, "approved");
-  assertEquals((await service.listVolunteerRequests(admin, {})).members, []);
+  expect([approved.role, approved.languages]).toStrictEqual(["contributor", ["fr"]]);
+  expect(approved.volunteerRequest?.status).toBe("approved");
+  expect((await service.listVolunteerRequests(admin, {})).members).toStrictEqual([]);
   await rejectsWith(
     service.reviewVolunteer(admin, { userId: ada.user.id, approve: true }),
     "not_found",
@@ -70,13 +69,12 @@ test("team: a volunteer asks, and an administrator approves with language limits
   const bea = await signUp(instance, "bea@example.com", "Bea");
   await service.requestVolunteer(bea.actor, { languages: ["de"], message: "" });
   await service.updateMember(admin, { id: bea.user.id, languages: ["de"] });
-  assertEquals(
+  expect(
     (await service.listVolunteerRequests(admin, {})).members.map((m) => m.displayName),
-    ["Bea"],
     "still waiting: languages alone don't answer",
-  );
+  ).toStrictEqual(["Bea"]);
   const member = await service.updateMember(admin, { id: bea.user.id, role: "contributor" });
-  assertEquals([member.role, member.volunteerRequest?.status], ["contributor", "approved"]);
+  expect([member.role, member.volunteerRequest?.status]).toStrictEqual(["contributor", "approved"]);
   // Members don't ask to volunteer.
   await rejectsWith(
     service.requestVolunteer(ada.actor, { languages: ["de"], message: "More" }),
@@ -84,9 +82,9 @@ test("team: a volunteer asks, and an administrator approves with language limits
   );
 
   const activity = await service.getActivity(ANONYMOUS, {});
-  assertEquals(activity.items[0].type, "review");
-  assertEquals(activity.items[0].summary, "Volunteer approved: Ada, as contributor (fr)");
-  assertEquals(activity.items[0].actor.name, "Admin");
+  expect(activity.items[0].type).toBe("review");
+  expect(activity.items[0].summary).toBe("Volunteer approved: Ada, as contributor (fr)");
+  expect(activity.items[0].actor.name).toBe("Admin");
 });
 
 test("team: default volunteer grants refuse languages removed after the request", async () => {
@@ -100,7 +98,7 @@ test("team: default volunteer grants refuse languages removed after the request"
     "bad_request",
   );
   const account = await service.getAccount(ada.actor, {});
-  assertEquals([account.role, account.volunteerRequest?.status], ["none", "pending"]);
+  expect([account.role, account.volunteerRequest?.status]).toStrictEqual(["none", "pending"]);
 });
 
 test("team: an approval defaults to the languages asked for; a rejection can ask again", async () => {
@@ -109,19 +107,18 @@ test("team: an approval defaults to the languages asked for; a rejection can ask
   const bob = await signUp(instance, "bob@example.com", "Bob");
   await service.requestVolunteer(bob.actor, { languages: ["de"], message: "" });
   const rejected = await service.reviewVolunteer(admin, { userId: bob.user.id, approve: false });
-  assertEquals([rejected.role, rejected.volunteerRequest?.status], ["none", "rejected"]);
+  expect([rejected.role, rejected.volunteerRequest?.status]).toStrictEqual(["none", "rejected"]);
   // The activity feed is public: a refusal isn't in it (design §8).
-  assertEquals(
-    (await service.getActivity(ANONYMOUS, {})).items.map((i) => i.type),
-    ["upload"],
-  );
+  expect((await service.getActivity(ANONYMOUS, {})).items.map((i) => i.type)).toStrictEqual([
+    "upload",
+  ]);
   await service.requestVolunteer(bob.actor, { languages: ["de", "fr"], message: "Please" });
   const approved = await service.reviewVolunteer(admin, {
     userId: bob.user.id,
     approve: true,
     role: "manager",
   });
-  assertEquals([approved.role, approved.languages], ["manager", ["de", "fr"]]);
+  expect([approved.role, approved.languages]).toStrictEqual(["manager", ["de", "fr"]]);
   const all = await signUp(instance, "cy@example.com", "Cy");
   await service.requestVolunteer(all.actor, { languages: ["de"], message: "" });
   const unlimited = await service.reviewVolunteer(admin, {
@@ -129,7 +126,7 @@ test("team: an approval defaults to the languages asked for; a rejection can ask
     approve: true,
     languages: null,
   });
-  assertEquals(unlimited.languages, null);
+  expect(unlimited.languages).toBe(null);
 });
 
 test("team: roles and languages change; the last administrator stays", async () => {
@@ -141,9 +138,12 @@ test("team: roles and languages change; the last administrator stays", async () 
     role: "manager",
     languages: ["de"],
   });
-  assertEquals([member.role, member.languages, member.contributions], ["manager", ["de"], 0]);
-  assertEquals(
-    (await service.updateMember(admin, { id: ada.user.id, languages: null })).languages,
+  expect([member.role, member.languages, member.contributions]).toStrictEqual([
+    "manager",
+    ["de"],
+    0,
+  ]);
+  expect((await service.updateMember(admin, { id: ada.user.id, languages: null })).languages).toBe(
     null,
   );
   await rejectsWith(
@@ -162,19 +162,18 @@ test("team: roles and languages change; the last administrator stays", async () 
   // Removing a member takes the role away; the account stays.
   const other = addUser(instance.sql, "contributor", ["fr"], "Other");
   const otherId = other.type === "user" ? other.userId : 0;
-  assertEquals(await service.removeMember(ada.actor, { id: otherId }), { ok: true });
+  expect(await service.removeMember(ada.actor, { id: otherId })).toStrictEqual({ ok: true });
   const [row] = instance.sql.query(
     "SELECT role, languages, deleted_at FROM users WHERE id = ?",
     otherId,
   );
-  assertEquals(row, { role: "none", languages: null, deleted_at: null });
-  assertEquals(
+  expect(row).toStrictEqual({ role: "none", languages: null, deleted_at: null });
+  expect(
     (await service.listMembers(ada.actor, {})).members.map((m) => [m.displayName, m.role]),
-    [
-      ["Ada", "administrator"],
-      ["Admin", "manager"],
-    ],
-  );
+  ).toStrictEqual([
+    ["Ada", "administrator"],
+    ["Admin", "manager"],
+  ]);
 });
 
 test("team: invite links give their role and languages to one new account", async () => {
@@ -189,39 +188,34 @@ test("team: invite links give their role and languages to one new account", asyn
     languages: ["fr"],
     baseUrl: "https://translate.example.com/",
   });
-  assertMatch(invite.url!, /^https:\/\/translate\.example\.com\/signup\?invite=[\w-]{43}$/);
-  assertEquals(invite.expiresAt, clock.now + 7 * DAY);
-  assertEquals([invite.role, invite.languages, invite.usedAt], ["manager", ["fr"], null]);
-  assertEquals(invite.createdBy.name, "Admin");
+  expect(invite.url!).toMatch(/^https:\/\/translate\.example\.com\/signup\?invite=[\w-]{43}$/);
+  expect(invite.expiresAt).toStrictEqual(clock.now + 7 * DAY);
+  expect([invite.role, invite.languages, invite.usedAt]).toStrictEqual(["manager", ["fr"], null]);
+  expect(invite.createdBy.name).toBe("Admin");
   const token = new URL(invite.url!).searchParams.get("invite")!;
-  assertEquals(
-    instance.sql.query("SELECT token_hash FROM invites")[0],
-    { token_hash: sha256Hex(token) },
-    "stored hashed",
-  );
-  assertEquals(await service.checkInvite(ANONYMOUS, { token }), {
+  expect(instance.sql.query("SELECT token_hash FROM invites")[0], "stored hashed").toStrictEqual({
+    token_hash: sha256Hex(token),
+  });
+  expect(await service.checkInvite(ANONYMOUS, { token })).toStrictEqual({
     valid: true,
     role: "manager",
     languages: ["fr"],
   });
   const listed = await service.listInvites(admin, {});
-  assertEquals(
-    listed.invites.map((i) => [i.id, i.url]),
-    [[invite.id, undefined]],
-  );
+  expect(listed.invites.map((i) => [i.id, i.url])).toStrictEqual([[invite.id, undefined]]);
 
   const ada = await signUp(instance, "ada@example.com", "Ada", { invite: token });
-  assertEquals([ada.user.role, ada.user.languages], ["manager", ["fr"]]);
-  assertEquals(await service.checkInvite(ANONYMOUS, { token }), {
+  expect([ada.user.role, ada.user.languages]).toStrictEqual(["manager", ["fr"]]);
+  expect(await service.checkInvite(ANONYMOUS, { token })).toStrictEqual({
     valid: false,
     role: null,
     languages: null,
   });
   const used = (await service.listInvites(admin, {})).invites[0];
-  assertEquals([used.usedAt, used.usedBy?.name], [clock.now, "Ada"]);
+  expect([used.usedAt, used.usedBy?.name]).toStrictEqual([clock.now, "Ada"]);
   // Used once only: the whole sign-up fails, so it can be tried again without.
   await rejectsWith(signUp(instance, "bob@example.com", "Bob", { invite: token }), "bad_request");
-  assertEquals((await signUp(instance, "bob@example.com", "Bob")).user.role, "none");
+  expect((await signUp(instance, "bob@example.com", "Bob")).user.role).toBe("none");
 });
 
 test("team: invites expire and can be revoked", async () => {
@@ -236,18 +230,14 @@ test("team: invites expire and can be revoked", async () => {
     baseUrl: "https://t.example.com",
   });
   const tokenOf = (url: string) => new URL(url).searchParams.get("invite")!;
-  assertEquals(await service.revokeInvite(admin, { id: revoked.id }), { ok: true });
+  expect(await service.revokeInvite(admin, { id: revoked.id })).toStrictEqual({ ok: true });
   await rejectsWith(service.revokeInvite(admin, { id: 999 }), "not_found");
-  assertEquals(
-    (await service.checkInvite(ANONYMOUS, { token: tokenOf(revoked.url!) })).valid,
+  expect((await service.checkInvite(ANONYMOUS, { token: tokenOf(revoked.url!) })).valid).toBe(
     false,
   );
-  assertEquals(
-    (await service.listInvites(admin, {})).invites.map((i) => i.id),
-    [short.id],
-  );
+  expect((await service.listInvites(admin, {})).invites.map((i) => i.id)).toStrictEqual([short.id]);
   clock.advance(7 * DAY);
-  assertEquals((await service.checkInvite(ANONYMOUS, { token: tokenOf(short.url!) })).valid, false);
+  expect((await service.checkInvite(ANONYMOUS, { token: tokenOf(short.url!) })).valid).toBe(false);
   await rejectsWith(
     signUp(instance, "late@example.com", "Late", { invite: tokenOf(short.url!) }),
     "bad_request",
@@ -259,7 +249,7 @@ test("team: invites expire and can be revoked", async () => {
     subject: "42",
     invite: tokenOf(fresh.url!),
   });
-  assertEquals([octo.created, octo.user.role], [true, "contributor"]);
+  expect([octo.created, octo.user.role]).toStrictEqual([true, "contributor"]);
 });
 
 test("team: an administrator's unused invites stop working when they stop being one", async () => {
@@ -286,22 +276,22 @@ test("team: an administrator's unused invites stop working when they stop being 
 
   // Removed from the team (or made a manager): their invites go, and nobody else's.
   await service.removeMember(admin, { id: mallory.user.id });
-  assertEquals(await valid(mine.url!), false);
-  assertEquals(await valid(theirs.url!), true);
+  expect(await valid(mine.url!)).toBe(false);
+  expect(await valid(theirs.url!)).toBe(true);
   await rejectsWith(
     signUp(instance, "evil@example.com", "Evil", { invite: tokenOf(mine.url!) }),
     "bad_request",
   );
   const listed = (await service.listInvites(admin, {})).invites.map((i) => i.id);
-  assertEquals(listed.includes(mine.id), false);
-  assertEquals(listed.includes(used.id), true, "a used invite stays listed");
+  expect(listed.includes(mine.id)).toBe(false);
+  expect(listed.includes(used.id), "a used invite stays listed").toBe(true);
 
   // Deleting one's account revokes them too, whatever the role.
   await service.updateMember(admin, { id: pat.user.id, role: "manager" });
-  assertEquals(await valid(patInvite.url!), false);
+  expect(await valid(patInvite.url!)).toBe(false);
   await service.updateMember(admin, { id: pat.user.id, role: "administrator" });
   const later = await invite(pat.actor);
   await service.deleteAccount(pat.actor, { confirm: "delete", password: PASSWORD });
-  assertEquals(await valid(later.url!), false);
-  assertEquals(await valid(theirs.url!), true);
+  expect(await valid(later.url!)).toBe(false);
+  expect(await valid(theirs.url!)).toBe(true);
 });

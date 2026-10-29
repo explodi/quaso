@@ -11,6 +11,6 @@
   "type": "module",
   "private": true,
   "dependencies": {
-    "@quaso/core": "workspace:*"
+    "@quaso/core": "*"
   }
 }

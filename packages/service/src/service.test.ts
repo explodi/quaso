@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals, assertRejects } from "@std/assert";
+import { assert, expect, test } from "vitest";
 import { openNodeSqlite } from "./adapters/node_sqlite.ts";
 import { type Actor, ANONYMOUS, SYSTEM } from "./api.ts";
 import { getMeta, setMeta } from "./db.ts";
@@ -30,23 +29,23 @@ test("start creates a new instance with the default settings", async () => {
       defaultModel: "gemini-test",
       beforeMigrate: (from, to) => void calls.push([from, to]),
     });
-    assertEquals(await service.start(), {
+    expect(await service.start()).toStrictEqual({
       schemaVersion: { from: 0, to: DATABASE_VERSION },
       created: true,
     });
-    assertEquals(calls, []);
+    expect(calls).toStrictEqual([]);
     const settings = loadSettings({
       sql: database.sql,
       defaultModel: "other",
     });
-    assertEquals(settings.name, "Untitled project");
-    assertEquals(settings.llm.model, "gemini-test");
+    expect(settings.name).toBe("Untitled project");
+    expect(settings.llm.model).toBe("gemini-test");
     const again = createService({
       sql: database.sql,
       scheduler: new FakeScheduler(),
       secretKey: "x",
     });
-    assertEquals(await again.start(), {
+    expect(await again.start()).toStrictEqual({
       schemaVersion: { from: DATABASE_VERSION, to: DATABASE_VERSION },
       created: false,
     });
@@ -57,39 +56,39 @@ test("start creates a new instance with the default settings", async () => {
 
 test("start re-arms the scheduler from the stored wake-up; alarm clears it", async () => {
   using instance = await startTestService();
-  assertEquals(instance.scheduler.scheduled, []);
+  expect(instance.scheduler.scheduled).toStrictEqual([]);
   setMeta(instance.sql, "next_alarm", "1790000000000");
   const scheduler = new FakeScheduler();
   const service = createService({ sql: instance.sql, scheduler, secretKey: "test" });
   await service.start();
-  assertEquals(scheduler.scheduled, [1790000000000]);
+  expect(scheduler.scheduled).toStrictEqual([1790000000000]);
   await service.alarm();
-  assertEquals(getMeta(instance.sql, "next_alarm"), null);
+  expect(getMeta(instance.sql, "next_alarm")).toBe(null);
 });
 
 test("a wake-up is stored before the scheduler is armed, so a restart arms it again", async () => {
   using instance = await startTestService();
   await scheduleWakeUp(instance.sql, instance.scheduler, 1790000000000);
   await scheduleWakeUp(instance.sql, instance.scheduler, 1790000999999);
-  assertEquals(instance.scheduler.scheduled, [1790000000000], "the earlier one stays");
+  expect(instance.scheduler.scheduled, "the earlier one stays").toStrictEqual([1790000000000]);
   await scheduleWakeUp(instance.sql, instance.scheduler, 1780000000000);
-  assertEquals(nextWakeUp(instance.sql), 1780000000000);
+  expect(nextWakeUp(instance.sql)).toBe(1780000000000);
 
   const scheduler = new FakeScheduler();
   const restarted = createService({ sql: instance.sql, scheduler, secretKey: "test" });
   await restarted.start();
-  assertEquals(scheduler.scheduled, [1780000000000]);
+  expect(scheduler.scheduled).toStrictEqual([1780000000000]);
   await restarted.alarm();
-  assertEquals(nextWakeUp(instance.sql), null);
+  expect(nextWakeUp(instance.sql)).toBe(null);
 
   await scheduleWakeUp(instance.sql, scheduler, 1790000000000);
   await cancelWakeUp(instance.sql, scheduler);
-  assertEquals([nextWakeUp(instance.sql), scheduler.cancelled], [null, 1]);
+  expect([nextWakeUp(instance.sql), scheduler.cancelled]).toStrictEqual([null, 1]);
 });
 
 test("getHealth reports the schema version and the revision", async () => {
   using instance = await startTestService();
-  assertEquals(await instance.service.getHealth(ANONYMOUS, {}), {
+  expect(await instance.service.getHealth(ANONYMOUS, {})).toStrictEqual({
     ok: true,
     schemaVersion: DATABASE_VERSION,
     revision: 0,
@@ -97,55 +96,47 @@ test("getHealth reports the schema version and the revision", async () => {
     nextWakeUp: null,
   });
   await uploadJson(instance.service, { "a.json": { a: "A" } });
-  assertEquals((await instance.service.getHealth(ANONYMOUS, {})).revision, 1);
+  expect((await instance.service.getHealth(ANONYMOUS, {})).revision).toBe(1);
 });
 
 test("inputs are validated, with the path of each problem", async () => {
   using instance = await startTestService();
-  const error = await assertRejects(
-    () =>
-      instance.service.listStrings(ANONYMOUS, {
-        language: "not a tag",
-        limit: 0,
-        extra: 1,
-      } as never),
-    ServiceError,
-  );
-  assertEquals(error.code, "validation_failed");
-  assertEquals(error.status, 400);
-  assertEquals(
-    error.details?.map((detail) => detail.path),
-    ["language", "limit", "extra"],
-  );
-  const upload = await assertRejects(
-    () =>
-      instance.service.upload(SYSTEM, {
-        files: [{ path: "../x.json", repoPath: "../x.json", content: "{}" }],
-      }),
-    ServiceError,
-  );
-  assertEquals(
-    upload.details?.map((detail) => detail.path),
-    ["files[0].path", "files[0].repoPath"],
-  );
-  const missing = await assertRejects(
-    () => instance.service.getString(ANONYMOUS, undefined as never),
-    ServiceError,
-  );
-  assertEquals(
-    missing.details?.map((detail) => detail.path),
-    ["id", "language"],
-  );
+  const error = await instance.service
+    .listStrings(ANONYMOUS, {
+      language: "not a tag",
+      limit: 0,
+      extra: 1,
+    } as never)
+    .catch((error: unknown) => error);
+  assert(error instanceof ServiceError);
+  expect(error.code).toBe("validation_failed");
+  expect(error.status).toBe(400);
+  expect(error.details?.map((detail) => detail.path)).toStrictEqual(["language", "limit", "extra"]);
+  const upload = await instance.service
+    .upload(SYSTEM, {
+      files: [{ path: "../x.json", repoPath: "../x.json", content: "{}" }],
+    })
+    .catch((error: unknown) => error);
+  assert(upload instanceof ServiceError);
+  expect(upload.details?.map((detail) => detail.path)).toStrictEqual([
+    "files[0].path",
+    "files[0].repoPath",
+  ]);
+  const missing = await instance.service
+    .getString(ANONYMOUS, undefined as never)
+    .catch((error: unknown) => error);
+  assert(missing instanceof ServiceError);
+  expect(missing.details?.map((detail) => detail.path)).toStrictEqual(["id", "language"]);
 });
 
 test("actors are validated too", async () => {
   using instance = await startTestService();
   for (const actor of [{ type: "root" }, { type: "user" }, { type: "token", tokenId: -1 }]) {
-    const error = await assertRejects(
-      () => instance.service.getProject(actor as Actor, {}),
-      ServiceError,
-    );
-    assertEquals(error.code, "validation_failed");
+    const error = await instance.service
+      .getProject(actor as Actor, {})
+      .catch((error: unknown) => error);
+    assert(error instanceof ServiceError);
+    expect(error.code).toBe("validation_failed");
   }
 });
 
@@ -173,22 +164,20 @@ test("the CLI's methods need an API key with the right scope, or an administrato
     [admin, "ok", "ok", "ok"],
   ];
   for (const [actor, uploads, exports, status] of table) {
-    assertEquals(
+    expect(
       [
         await codeOf(() => instance.service.upload(actor, { files })),
         await codeOf(() => instance.service.exportFiles(actor, {})),
         await codeOf(() => instance.service.getStatus(actor, {})),
       ],
-      [uploads, exports, status],
       JSON.stringify(actor),
-    );
+    ).toStrictEqual([uploads, exports, status]);
   }
-  assertEquals(
+  expect(
     await codeOf(() =>
       instance.service.importTranslations(read.actor, { language: "de", as: "green", files }),
     ),
-    "forbidden",
-  );
+  ).toBe("forbidden");
 });
 
 test("uploads are logged", async () => {
@@ -201,11 +190,8 @@ test("uploads are logged", async () => {
   };
   using instance = await startTestService({ logger });
   await uploadJson(instance.service, { "a.json": { a: "A" } });
-  assertEquals(
-    lines.map(([message]) => message),
-    ["Service started", "Upload"],
-  );
-  assertEquals(lines[1][1]?.added, 1);
+  expect(lines.map(([message]) => message)).toStrictEqual(["Service started", "Upload"]);
+  expect(lines[1][1]?.added).toBe(1);
 });
 
 test("acceptance test 2: after an upload, every string is red in every language", async () => {
@@ -225,27 +211,20 @@ test("acceptance test 2: after an upload, every string is red in every language"
     token.actor,
   );
   const status = await instance.service.getStatus(token.actor, {});
-  assertEquals(
-    status.languages.map((language) => language.tag),
-    ["de", "ja", "pl"],
-  );
+  expect(status.languages.map((language) => language.tag)).toStrictEqual(["de", "ja", "pl"]);
   for (const language of status.languages) {
-    assertEquals(
+    expect(
       [language.strings, language.untranslated, language.green, language.blue],
-      [3, 3, 0, 0],
       language.tag,
-    );
+    ).toStrictEqual([3, 3, 0, 0]);
     const page = await instance.service.listStrings(ANONYMOUS, { language: language.tag });
-    assertEquals(page.total, 3);
-    assertEquals(
-      page.strings.every((string) => string.translation === null),
-      true,
-    );
+    expect(page.total).toBe(3);
+    expect(page.strings.every((string) => string.translation === null)).toBe(true);
     const red = await instance.service.listStrings(ANONYMOUS, {
       language: language.tag,
       state: "untranslated",
     });
-    assertEquals(red.total, 3);
+    expect(red.total).toBe(3);
   }
 });
 
@@ -266,33 +245,27 @@ test("acceptance test 7: changed English makes translations outdated; the old on
     language: "de",
     state: "outdated",
   });
-  assertEquals(
-    outdated.strings.map((string) => [string.key, string.translation?.colour]),
-    [
-      ["title", "green"],
-      ["play", "blue"],
-    ],
-  );
-  assertEquals(
-    outdated.strings.every((string) => string.translation?.outdated),
-    true,
-  );
+  expect(outdated.strings.map((string) => [string.key, string.translation?.colour])).toStrictEqual([
+    ["title", "green"],
+    ["play", "blue"],
+  ]);
+  expect(outdated.strings.every((string) => string.translation?.outdated)).toBe(true);
   const status = await instance.service.getStatus(SYSTEM, { language: "de" });
-  assertEquals([status.languages[0].outdated, status.languages[0].untranslated], [2, 0]);
+  expect([status.languages[0].outdated, status.languages[0].untranslated]).toStrictEqual([2, 0]);
   const download = async () =>
     JSON.parse(
       (await instance.service.exportFiles(SYSTEM, { languages: ["de"] })).files[0].content,
     );
-  assertEquals(await download(), { title: "Wegfahrer", play: "Spielen" });
+  expect(await download()).toStrictEqual({ title: "Wegfahrer", play: "Spielen" });
   write(instance, "common.json", "title", "de", "Wegfahrer II");
-  assertEquals(await download(), { title: "Wegfahrer II", play: "Spielen" });
+  expect(await download()).toStrictEqual({ title: "Wegfahrer II", play: "Spielen" });
   const after = await instance.service.getStatus(SYSTEM, { language: "de" });
-  assertEquals(after.languages[0].outdated, 1);
+  expect(after.languages[0].outdated).toBe(1);
 });
 
 test("extra fields on an actor are ignored", async () => {
   using instance = await startTestService();
   const actor = { type: "system", sessionId: "abc" } as unknown as Actor;
   const created = await instance.service.createApiToken(actor, { name: "x", scope: "read" });
-  assertEquals(created.name, "x");
+  expect(created.name).toBe("x");
 });

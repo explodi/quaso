@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals } from "@std/assert";
+import { expect, test } from "vitest";
 import type { HistoryEntry } from "@quaso/core";
 import { englishWhenTranslated } from "./OutdatedNotice.tsx";
 
@@ -29,10 +28,10 @@ test("the English a translation was made for is the first change after it was wr
     entry({ id: 2, event: "translation_saved", language: "de", after: "Hallo!", createdAt: 200 }),
     entry({ id: 1, before: "Hi!", after: "Hello!", createdAt: 100 }),
   ];
-  assertEquals(englishWhenTranslated(entries, 200), "Hello!");
+  expect(englishWhenTranslated(entries, 200)).toBe("Hello!");
 });
 
 test("without a change to the English after the translation, the history doesn't say", () => {
   const entries = [entry({ before: "Hi!", after: "Hello!", createdAt: 100 })];
-  assertEquals(englishWhenTranslated(entries, 200), null);
+  expect(englishWhenTranslated(entries, 200)).toBe(null);
 });

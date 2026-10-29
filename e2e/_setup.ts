@@ -1,7 +1,4 @@
 // SPDX-License-Identifier: MIT
-import * as fs from "node:fs/promises";
-import { test } from "node:test";
-/// <reference lib="dom" />
 /**
  * Browser tests drive Chromium with Puppeteer and run the real application in-process.
  * Each test gets its own database and serves the built website with real security headers.
@@ -9,14 +6,17 @@ import { test } from "node:test";
  * Every page also collects problems: console errors and warnings, uncaught exceptions,
  * failed requests and CSP violations. Tests end by asserting there were none.
  */
-import { type Browser, launch, type Page } from "puppeteer";
-import { assert } from "@std/assert";
-import { fileURLToPath as fromFileUrl } from "node:url";
+import { spawnSync } from "node:child_process";
+import * as fs from "node:fs/promises";
 import { join } from "node:path";
+import { fileURLToPath as fromFileUrl } from "node:url";
+import { type Browser, launch, type Page } from "puppeteer";
+import { assert, test } from "vitest";
 import type { ProjectInfo, SessionInfo, StringsPage, UploadResult } from "@quaso/core";
 import { type Service, type ServiceOptions, SYSTEM, ANONYMOUS } from "@quaso/service";
 import type { App } from "../packages/server/src/app.ts";
 import type { Env } from "../packages/server/src/config.ts";
+import { serve } from "../packages/server/src/http/serve.ts";
 import { demoDir, readProjectFiles, seedDemo } from "../packages/server/src/dev_seed.ts";
 import { testApp } from "../packages/server/src/testing/helpers.ts";
 import { realService } from "../packages/server/src/testing/real_service.ts";
@@ -43,7 +43,7 @@ async function newestChange(path: string): Promise<number> {
   if (!info) return 0;
   if (!info.isDirectory()) return info.mtime?.getTime() ?? 0;
   let newest = 0;
-  for await (const entry of await fs.readdir(path, { withFileTypes: true })) {
+  for (const entry of await fs.readdir(path, { withFileTypes: true })) {
     newest = Math.max(newest, await newestChange(join(path, entry.name)));
   }
   return newest;
@@ -62,14 +62,12 @@ export function ensureWebsiteBuilt(): Promise<void> {
       ...(await Promise.all(WEB_SOURCES.map((p) => newestChange(join(ROOT, p))))),
     );
     if (built > sources) return;
-    console.log("Building the website (deno task build:web)…");
-    const { success } = await new Deno.Command(Deno.execPath(), {
-      args: ["task", "build:web"],
+    console.log("Building the website (npm run build:web)…");
+    const build = spawnSync("npm", ["run", "build:web"], {
       cwd: ROOT,
-      stdout: "null",
-      stderr: "inherit",
-    }).output();
-    assert(success, "deno task build:web failed");
+      stdio: ["ignore", "ignore", "inherit"],
+    });
+    assert(build.status === 0, "npm run build:web failed");
   })());
 }
 
@@ -194,7 +192,7 @@ export async function startServer(options: ServerOptions = {}): Promise<TestServ
       sourceLanguage: project.sourceLanguage,
     });
   }
-  // The browser's real origin is known once Deno chooses the ephemeral port. Use it for
+  // The browser's real origin is known once the system chooses the ephemeral port. Use it for
   // CSRF checks and one-time links, just as a deployed instance uses PUBLIC_URL.
   const handler: App = async (request, info) => {
     const next = (r: Request) => app(r, info);
@@ -213,10 +211,10 @@ export async function startServer(options: ServerOptions = {}): Promise<TestServ
     }
     return await next(request);
   };
-  const server = Deno.serve({ hostname: "127.0.0.1", port: 0, onListen() {} }, (request, info) =>
+  const server = await serve({ hostname: "127.0.0.1", port: 0 }, (request, info) =>
     handler(request, { remoteAddr: { hostname: info.remoteAddr.hostname } }),
   );
-  const url = `http://127.0.0.1:${server.addr.port}`;
+  const url = `http://127.0.0.1:${server.port}`;
   const { app } = testApp(real.service, { ...options.env, WEB_DIR: WEB_DIST, PUBLIC_URL: url });
   return {
     url,

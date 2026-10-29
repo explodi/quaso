@@ -3,7 +3,7 @@ import * as fs from "node:fs/promises";
 /**
  * The server's commands (design §5.12, §5.13): `serve`, `healthcheck` for Docker's
  * `HEALTHCHECK`, `version`, `token create` for operators, and `seed-dev` for
- * `deno task dev`. Each returns its exit code. The Cloudflare container runs the service
+ * `npm run dev`. Each returns its exit code. The Cloudflare container runs the service
  * on private D1/R2 storage; other deployments use the local data folder.
  */
 import { CreateApiTokenRequest, formatIssue, PublicationTime, validate } from "@quaso/core";
@@ -16,6 +16,7 @@ import { startLocalService } from "./local_service.ts";
 import { startCloudflareService } from "./cloudflare_service.ts";
 import { createLogger } from "./log.ts";
 import { configureSetupKey } from "./setup_key.ts";
+import { serve as listen, type Server } from "./http/serve.ts";
 import { InFlight, stopServer } from "./shutdown.ts";
 import { restoreFile, storedBackupSnapshot } from "./storage/backup_files.ts";
 import { createFolderStore } from "./storage/folder_store.ts";
@@ -34,7 +35,7 @@ Commands:
                             Create an API key and print its secret, once. With local
                             storage, stop the server first: it holds the data folder.
   seed-dev                  Seed the demo project into a new development database
-                            (QUASO_DEV=1; deno task dev runs it)
+                            (QUASO_DEV=1; npm run dev runs it)
   restore <file>            Restore a backup (.sqlite, .json or .json.gz) into a new, empty
                             instance: the data folder (stop the server first), or
                             Cloudflare storage
@@ -149,32 +150,26 @@ async function serve(config: Config): Promise<number> {
       secretKey: storage.secretKey,
     }),
   );
-  let server: Deno.HttpServer;
+  let server: Server;
   try {
-    server = Deno.serve(
-      {
-        port: config.port,
-        onListen: ({ hostname, port }) =>
-          log.info("Listening", {
-            address: `http://${hostname}:${port}`,
-            publicUrl: config.publicUrl,
-            version: VERSION,
-            dev: config.dev || undefined,
-          }),
-      },
-      app,
-    );
+    server = await listen({ port: config.port }, app);
   } catch (error) {
     storage.close();
-    if (!(error instanceof Deno.errors.AddrInUse)) throw error;
+    if ((error as NodeJS.ErrnoException).code !== "EADDRINUSE") throw error;
     log.error(`Port ${config.port} is already in use. Stop what uses it, or set PORT.`);
     return 1;
   }
+  log.info("Listening", {
+    address: `http://${server.hostname}:${server.port}`,
+    publicUrl: config.publicUrl,
+    version: VERSION,
+    dev: config.dev || undefined,
+  });
 
   const stopped = Promise.withResolvers<void>();
   let stopping = false;
   const stop = async (signal: string) => {
-    // `deno run --watch` may signal again after a Ctrl-C: once is enough. The deadline ends a
+    // `node --watch` may signal again after a Ctrl-C: once is enough. The deadline ends a
     // shutdown that hangs, such as on a client that never finishes its request; the exit
     // then closes what is still open.
     if (stopping) return;
@@ -396,7 +391,7 @@ async function seedDev(config: Config, log: Logger): Promise<number> {
   if (!local) return 1;
   try {
     if (!local.created) {
-      console.error(`${config.dataDir} already has a project. To start again: deno task dev:reset`);
+      console.error(`${config.dataDir} already has a project. To start again: npm run dev:reset`);
       return 1;
     }
     const { apiKey, upload, imports } = await seedDemo(local.service, demoDir(), {

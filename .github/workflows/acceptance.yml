@@ -50,20 +50,21 @@ jobs:
       COMPOSE_PROJECT_NAME: quaso-acceptance-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          deno-version-file: .dvmrc
-      - run: deno install --frozen-lockfile
-      - run: deno task e2e:browser
-      - run: deno task build:cli
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run e2e:browser
+      - run: npm run build:cli
       - run: docker compose build quaso
       - run: docker compose up -d --wait --wait-timeout 120 quaso
       - name: Claim the disposable instance and run acceptance checks
         env:
           QUASO_SETUP_KEY: acceptance-only-setup-key-not-for-deployment
-        run: deno task acceptance --url http://127.0.0.1:8000 --compose-dir deploy
+        run: npm run acceptance -- --url http://127.0.0.1:8000 --compose-dir deploy
       - name: Beta 2 workflow on the production image with Gemini stubbed
-        run: deno run -A scripts/docker_workflow.ts quaso:acceptance
+        run: node scripts/docker_workflow.ts quaso:acceptance
       - name: Diagnostic logs (setup links redacted)
         if: failure()
         run: >-
@@ -90,12 +91,13 @@ jobs:
       IMAGE: ${{ vars.DOCKERHUB_IMAGE || format('{0}/quaso', github.repository_owner) }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          deno-version-file: .dvmrc
-      - run: deno install --frozen-lockfile
-      - run: deno task e2e:browser
-      - run: deno task build:cli
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run e2e:browser
+      - run: npm run build:cli
       - name: Restore staging instance configuration
         shell: python
         run: |
@@ -117,8 +119,8 @@ jobs:
           done
           echo "The image for this commit was not published: $image" >&2
           exit 1
-      - run: deno task cf:deploy --env staging --image "$STAGING_IMAGE"
+      - run: npm run cf:deploy -- --env staging --image "$STAGING_IMAGE"
       - name: Wait for the deployed service
         run: curl --fail --retry 12 --retry-all-errors --retry-delay 5 "$STAGING_URL/healthz"
       - name: Run the HTTP, CLI and browser acceptance checks
-        run: deno task acceptance --url "$STAGING_URL"
+        run: npm run acceptance -- --url "$STAGING_URL"

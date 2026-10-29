@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals, assertStringIncludes } from "@std/assert";
+import { expect, test } from "vitest";
 import { ANONYMOUS, SYSTEM } from "@quaso/service";
 import { configureSetupKey } from "./setup_key.ts";
 import { memoryLogger, testConfig } from "./testing/helpers.ts";
@@ -14,10 +13,12 @@ test("setup key: missing and short configuration leaves setup unavailable", asyn
   try {
     await configureSetupKey(service, testConfig({ SETUP_KEY: "" }), log);
     await configureSetupKey(service, testConfig({ SETUP_KEY: "short" }), log);
-    assertEquals(await service.validateSetupToken(SYSTEM, { token: "short" }), { ok: false });
-    assertEquals((await service.getSession(SYSTEM, {})).setupRequired, true);
-    assertStringIncludes(String(log.lines[0].msg), "SETUP_KEY");
-    assertEquals(log.lines.length, 2);
+    expect(await service.validateSetupToken(SYSTEM, { token: "short" })).toStrictEqual({
+      ok: false,
+    });
+    expect((await service.getSession(SYSTEM, {})).setupRequired).toBe(true);
+    expect(String(log.lines[0].msg)).toContain("SETUP_KEY");
+    expect(log.lines.length).toBe(2);
   } finally {
     close();
   }
@@ -28,8 +29,8 @@ test("setup key: installs the operator key without logging it and ignores it aft
   const log = memoryLogger();
   try {
     await configureSetupKey(service, testConfig({ SETUP_KEY: KEY }), log);
-    assertEquals(await service.validateSetupToken(SYSTEM, { token: KEY }), { ok: true });
-    assertEquals(JSON.stringify(log.lines).includes(KEY), false);
+    expect(await service.validateSetupToken(SYSTEM, { token: KEY })).toStrictEqual({ ok: true });
+    expect(JSON.stringify(log.lines).includes(KEY)).toBe(false);
     await service.completeSetup(ANONYMOUS, {
       token: KEY,
       email: "owner@example.com",
@@ -39,8 +40,10 @@ test("setup key: installs the operator key without logging it and ignores it aft
     });
     await configureSetupKey(service, testConfig({ SETUP_KEY: "" }), log);
     await configureSetupKey(service, testConfig({ SETUP_KEY: "replacement-setup-key" }), log);
-    assertEquals(log.lines.length, 1);
-    assertEquals(await service.validateSetupToken(SYSTEM, { token: "replacement-setup-key" }), {
+    expect(log.lines.length).toBe(1);
+    expect(
+      await service.validateSetupToken(SYSTEM, { token: "replacement-setup-key" }),
+    ).toStrictEqual({
       ok: false,
     });
   } finally {

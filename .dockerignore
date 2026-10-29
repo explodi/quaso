@@ -2,7 +2,7 @@
 # Not sent to `docker build`: dependencies and build output (the image builds its own),
 # local data, secrets, git history and internal plans. Local data and secrets are matched in
 # every folder (`**/`): `wrangler deploy` builds the image from the repository's root, next
-# to packages/cloudflare/.dev.vars*. scripts/dockerignore_test.ts checks these rules.
+# to packages/cloudflare/.dev.vars*. scripts/dockerignore.test.ts checks these rules.
 **/node_modules
 **/dist
 **/.quaso

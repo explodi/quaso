@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals, assertRejects } from "@std/assert";
+import { assert, expect, test } from "vitest";
 import { ServiceError, silentLogger } from "@quaso/service";
 import { createHumanCheck, TURNSTILE_VERIFY_URL } from "./human_check.ts";
 
@@ -24,17 +23,19 @@ test("human check: Turnstile verifies the token with the secret", async () => {
     },
   );
   await check("good", "192.0.2.1");
-  assertEquals(forms[0].url, TURNSTILE_VERIFY_URL);
-  assertEquals(Object.fromEntries(forms[0].form), {
+  expect(forms[0].url).toStrictEqual(TURNSTILE_VERIFY_URL);
+  expect(Object.fromEntries(forms[0].form)).toStrictEqual({
     secret: "secret",
     response: "good",
     remoteip: "192.0.2.1",
   });
-  const failed = await assertRejects(() => check("bad", null), ServiceError);
-  assertEquals(failed.code, "bad_request");
-  const missing = await assertRejects(() => check(undefined, null), ServiceError);
-  assertEquals(missing.message, "Complete the human check first.");
-  assertEquals(forms.length, 2, "no request without a token");
+  const failed = await check("bad", null).catch((error: unknown) => error);
+  assert(failed instanceof ServiceError);
+  expect(failed.code).toBe("bad_request");
+  const missing = await check(undefined, null).catch((error: unknown) => error);
+  assert(missing instanceof ServiceError);
+  expect(missing.message).toBe("Complete the human check first.");
+  expect(forms.length, "no request without a token").toBe(2);
 
   const down = createHumanCheck(
     { siteKey: "s", secretKey: "k" },
@@ -43,5 +44,7 @@ test("human check: Turnstile verifies the token with the secret", async () => {
       log: silentLogger,
     },
   );
-  assertEquals((await assertRejects(() => down("x", null), ServiceError)).code, "unavailable");
+  await expect(down("x", null)).rejects.toThrow(
+    expect.objectContaining({ constructor: ServiceError, code: "unavailable" }),
+  );
 });

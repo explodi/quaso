@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
+import { test } from "vitest";
 import { openAsyncSqlite } from "./adapters/node_async_sqlite.ts";
 import { getAdminInfoAsync } from "./admin.ts";
 import { SYSTEM } from "./api.ts";

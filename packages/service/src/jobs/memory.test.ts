@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals } from "@std/assert";
+import { expect, test } from "vitest";
 import { openAsyncSqlite } from "../adapters/node_async_sqlite.ts";
 import { SYSTEM } from "../api.ts";
 import { createAsyncService } from "../service_async.ts";
@@ -32,21 +31,22 @@ async function reuseScenario(service: Service) {
   const created = await service.createJob(SYSTEM, { strings: [strings[1].id] });
   await service.alarm();
   const job = await service.getJob(SYSTEM, { id: created.job!.id });
-  assertEquals(job.progress.reused, 1);
-  assertEquals(job.progress.translated, 0);
-  assertEquals(job.status, "done");
-  assertEquals(job.tokens, { input: 0, output: 0, thinking: 0 });
+  expect(job.progress.reused).toBe(1);
+  expect(job.progress.translated).toBe(0);
+  expect(job.status).toBe("done");
+  expect(job.tokens).toStrictEqual({ input: 0, output: 0, thinking: 0 });
   const second = await service.getString(SYSTEM, { id: strings[1].id, language: "de" });
-  assertEquals(second.translation?.value, "Wähl für mich");
-  assertEquals(second.translation?.colour, "green");
-  assertEquals(second.identicalSources, [{ id: strings[0].id, file: "menu.json", key: "first" }]);
+  expect(second.translation?.value).toBe("Wähl für mich");
+  expect(second.translation?.colour).toBe("green");
+  expect(second.identicalSources).toStrictEqual([
+    { id: strings[0].id, file: "menu.json", key: "first" },
+  ]);
   const history = await service.getHistory(SYSTEM, { id: strings[1].id, language: "de" });
-  assertEquals(history.entries[0].event, "translation_reused");
-  assertEquals(history.entries[0].detail?.fromStringId, strings[0].id);
-  assertEquals(
+  expect(history.entries[0].event).toBe("translation_reused");
+  expect(history.entries[0].detail?.fromStringId).toStrictEqual(strings[0].id);
+  expect(
     (await service.getString(SYSTEM, { id: strings[0].id, language: "de" })).translation?.value,
-    "Wähl für mich",
-  );
+  ).toBe("Wähl für mich");
 }
 
 test("async translation memory copies green matches with history and no provider requests", async () => {
@@ -68,7 +68,7 @@ test("async translation memory copies green matches with history and no provider
     });
     await service.start();
     await reuseScenario(service);
-    assertEquals(requests, 0);
+    expect(requests).toBe(0);
   } finally {
     opened.close();
   }
@@ -104,17 +104,16 @@ test("consistency warnings expose differing renderings across files and clear wh
       ],
     });
     const qa = await service.listStrings(SYSTEM, { language: "de", state: "qa" });
-    assertEquals(qa.total, 2);
-    assertEquals(
+    expect(qa.total).toBe(2);
+    expect(
       (await service.getString(SYSTEM, { id: qa.strings[0].id, language: "de" })).checks[0].check,
-      "consistency",
-    );
+    ).toBe("consistency");
     await service.importTranslations(SYSTEM, {
       language: "de",
       as: "green",
       files: [{ path: "b.json", content: '{"random":"Wähl für mich"}' }],
     });
-    assertEquals((await service.listStrings(SYSTEM, { language: "de", state: "qa" })).total, 0);
+    expect((await service.listStrings(SYSTEM, { language: "de", state: "qa" })).total).toBe(0);
   } finally {
     opened.close();
   }

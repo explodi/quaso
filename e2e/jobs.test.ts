@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
-/// <reference lib="dom" />
-import { assertEquals } from "@std/assert";
+import { expect } from "vitest";
+
 import { ANONYMOUS, createFakeTranslator, SYSTEM, type Service } from "@quaso/service";
 import { browserTest, openTab, waitFor } from "./_setup.ts";
 
@@ -101,12 +101,11 @@ browserTest(
       await waitFor(tab.page, () =>
         document.querySelector(".job-indicator")?.textContent?.includes("50%"),
       );
-      assertEquals(
+      expect(
         await tab.page.$eval(".job-indicator progress", (element) =>
           element.getAttribute("aria-valuetext"),
         ),
-        "50 percent, 1 of 2 strings",
-      );
+      ).toBe("50 percent, 1 of 2 strings");
       await tab.page.reload({ waitUntil: "networkidle0" });
       await waitFor(tab.page, () =>
         document.querySelector(".job-indicator")?.textContent?.includes("50%"),
@@ -120,7 +119,7 @@ browserTest(
         document.dispatchEvent(new Event("visibilitychange"));
       });
       await new Promise((resolve) => setTimeout(resolve, 2400));
-      assertEquals(activeRequests, before, "hidden tabs do not poll active jobs");
+      expect(activeRequests, "hidden tabs do not poll active jobs").toStrictEqual(before);
       await tab.page.evaluate(() => {
         Object.defineProperty(document, "visibilityState", {
           configurable: true,
@@ -142,8 +141,7 @@ browserTest(
     await waitFor(tab.page, () =>
       document.querySelector(".language-row")?.textContent?.includes("100% translated"),
     );
-    assertEquals(
-      await tab.page.$eval(".toasts", (element) => element.getAttribute("aria-live")),
+    expect(await tab.page.$eval(".toasts", (element) => element.getAttribute("aria-live"))).toBe(
       "polite",
     );
     await tab.page.click('.toast a[href^="/jobs#job-"]');
@@ -155,6 +153,6 @@ browserTest(
       tab.page,
       () => !document.querySelector(".toasts")?.textContent?.includes("Translation finished"),
     );
-    assertEquals(tab.problems, []);
+    expect(tab.problems).toStrictEqual([]);
   },
 );

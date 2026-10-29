@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
+import { test } from "vitest";
 import { createMemoryStore } from "./memory_store.ts";
 import { STORE_CASES } from "../testing/store_cases.ts";
 

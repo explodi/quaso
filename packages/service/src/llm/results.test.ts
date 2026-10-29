@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals } from "@std/assert";
+import { expect, test } from "vitest";
 import { checkTranslation, DEFAULT_SYNTAX, type TextValue } from "@quaso/core";
 import { maskString, promptId, type PromptString } from "./prompt.ts";
 import { checkAnswer, NO_TRANSLATION } from "./results.ts";
@@ -68,10 +67,10 @@ test("results: passing answers are unmasked; extra forms and unknown IDs are dro
     masked,
     check,
   );
-  assertEquals(result.failed.size, 0);
-  assertEquals(result.passed.get(1)?.value, "Cześć, {{name}}!");
-  assertEquals(result.passed.get(2)?.value, FORMS);
-  assertEquals(result.passed.get(3)?.value, "$t(common:play) ponownie");
+  expect(result.failed.size).toBe(0);
+  expect(result.passed.get(1)?.value).toBe("Cześć, {{name}}!");
+  expect(result.passed.get(2)?.value).toStrictEqual(FORMS);
+  expect(result.passed.get(3)?.value).toBe("$t(common:play) ponownie");
 });
 
 test("results: missing answers, wrong shapes and failed checks, with reasons", () => {
@@ -86,16 +85,16 @@ test("results: missing answers, wrong shapes and failed checks, with reasons", (
     masked,
     check,
   );
-  assertEquals(result.passed.size, 0);
-  assertEquals(result.failed.get(1), {
+  expect(result.passed.size).toBe(0);
+  expect(result.failed.get(1)).toStrictEqual({
     answer: "Cześć, mój drogi przyjacielu {{name}}!",
     reasons: ["At most 20 characters; this has 38."],
   });
-  assertEquals(result.failed.get(2), {
+  expect(result.failed.get(2)).toStrictEqual({
     answer: null,
     reasons: ["Plural forms (one, few, many, other) were expected, but a text was given."],
   });
-  assertEquals(result.failed.get(3), { answer: null, reasons: [NO_TRANSLATION] });
+  expect(result.failed.get(3)).toStrictEqual({ answer: null, reasons: [NO_TRANSLATION] });
 });
 
 test("results: a dropped placeholder in the Polish few form is a failure that says so", () => {
@@ -107,7 +106,7 @@ test("results: a dropped placeholder in the Polish few form is a failure that sa
     masked,
     check,
   );
-  assertEquals(result.failed.get(2)?.reasons, [
+  expect(result.failed.get(2)?.reasons).toStrictEqual([
     "Placeholder {{count}} is missing from the few form.",
   ]);
 });
@@ -119,7 +118,7 @@ test("results: reasons show references as the model saw them", () => {
     masked,
     check,
   );
-  assertEquals(result.failed.get(3)?.reasons, ["Reference ⟦1⟧ is missing."]);
+  expect(result.failed.get(3)?.reasons).toStrictEqual(["Reference ⟦1⟧ is missing."]);
 });
 
 test("results: a length reason counts as the model does, references masked", () => {
@@ -145,8 +144,8 @@ test("results: a length reason counts as the model does, references masked", () 
     strings.map((string) => [promptId(string.id), maskString(string, "de", DEFAULT_SYNTAX)]),
   );
   // "$t(title)" is 9 characters, "⟦1⟧" 3: the prompt gives the model 40 - 6.
-  assertEquals(masks.get("s4")?.maxLength, 34);
-  assertEquals(masks.get("s5")?.maxLength, 24);
+  expect(masks.get("s4")?.maxLength).toBe(34);
+  expect(masks.get("s5")?.maxLength).toBe(24);
   const long = "⟦1⟧ noch einmal, bitte sehr, liebe Freunde"; // 42 characters
   const result = checkAnswer(
     {
@@ -169,14 +168,18 @@ test("results: a length reason counts as the model does, references masked", () 
         maxLength: string.maxLength,
       }),
   );
-  assertEquals(result.failed.get(4)?.reasons, ["At most 34 characters; this has 42."]);
-  assertEquals(result.failed.get(5)?.reasons, ["At most 24 characters; this has 35 (other form)."]);
+  expect(result.failed.get(4)?.reasons).toStrictEqual(["At most 34 characters; this has 42."]);
+  expect(result.failed.get(5)?.reasons).toStrictEqual([
+    "At most 24 characters; this has 35 (other form).",
+  ]);
 });
 
 test("results: an answer of the wrong shape fails every string", () => {
   for (const answer of [null, "text", { translations: "no" }, { other: [] }]) {
     const result = checkAnswer(answer, STRINGS, masked, check);
-    assertEquals(result.failed.size, 3);
-    assertEquals(result.failed.get(1)?.reasons, ["The answer isn't in the expected JSON shape."]);
+    expect(result.failed.size).toBe(3);
+    expect(result.failed.get(1)?.reasons).toStrictEqual([
+      "The answer isn't in the expected JSON shape.",
+    ]);
   }
 });

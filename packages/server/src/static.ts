@@ -6,9 +6,10 @@ import * as fs from "node:fs/promises";
  * app; a missing build file under `/assets/` stays a 404, and a path that can't be decoded
  * is a 400. Without a build, a placeholder page says how to make one.
  */
+import { createReadStream } from "node:fs";
 import { resolve, sep } from "node:path";
+import { Readable } from "node:stream";
 import { extname, join } from "node:path";
-import { contentType } from "@std/media-types";
 import { errorResponse } from "./http/errors.ts";
 
 /** Serves `GET` and `HEAD` requests for the website. */
@@ -31,12 +32,36 @@ export function createWebHandler(webDir: string): (request: Request) => Promise<
   };
 }
 
+/** The types of the files a Vite build of the website contains. */
+const CONTENT_TYPES: Record<string, string> = {
+  ".html": "text/html; charset=UTF-8",
+  ".js": "text/javascript; charset=UTF-8",
+  ".mjs": "text/javascript; charset=UTF-8",
+  ".css": "text/css; charset=UTF-8",
+  ".json": "application/json; charset=UTF-8",
+  ".webmanifest": "application/manifest+json; charset=UTF-8",
+  ".map": "application/json; charset=UTF-8",
+  ".txt": "text/plain; charset=UTF-8",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".webp": "image/webp",
+  ".avif": "image/avif",
+  ".ico": "image/vnd.microsoft.icon",
+  ".woff": "font/woff",
+  ".woff2": "font/woff2",
+  ".ttf": "font/ttf",
+  ".wasm": "application/wasm",
+};
+
 async function fileResponse(request: Request, path: string): Promise<Response> {
   if (!(await isFile(path))) return new Response(null, { status: 404 });
   const info = await fs.stat(path);
   const etag = `W/"${info.size.toString(16)}-${info.mtimeMs.toString(16)}"`;
   const headers = new Headers({
-    "Content-Type": contentType(extname(path)) ?? "application/octet-stream",
+    "Content-Type": CONTENT_TYPES[extname(path).toLowerCase()] ?? "application/octet-stream",
     "Content-Length": String(info.size),
     ETag: etag,
     "Last-Modified": info.mtime.toUTCString(),
@@ -50,8 +75,8 @@ async function fileResponse(request: Request, path: string): Promise<Response> {
     return new Response(null, { status: 304, headers });
   }
   if (request.method === "HEAD") return new Response(null, { headers });
-  const file = await Deno.open(path);
-  return new Response(file.readable, { headers });
+  const body = Readable.toWeb(createReadStream(path)) as ReadableStream<Uint8Array>;
+  return new Response(body, { headers });
 }
 
 /** Whether a path decodes and has no NUL. */
@@ -88,8 +113,8 @@ function placeholder(): Response {
     <h1>Quaso is running</h1>
     <p>The API works, but this server has no website to show: its folder has no
       <code>index.html</code>.</p>
-    <p>In development, open the address <code>deno task dev</code> printed (Vite serves the
-      website). To serve a build from here, run <code>deno task build:web</code>, or set
+    <p>In development, open the address <code>npm run dev</code> printed (Vite serves the
+      website). To serve a build from here, run <code>npm run build:web</code>, or set
       <code>WEB_DIR</code> to the folder with the built website.</p>
     <p>Meanwhile: <a href="/healthz">/healthz</a> and
       <a href="/api/v1/openapi.json">the API's OpenAPI document</a>.</p>

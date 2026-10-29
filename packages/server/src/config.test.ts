@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
+import { tmpdir } from "node:os";
+import { assert, expect, test } from "vitest";
 import * as fs from "node:fs/promises";
-import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import { join } from "node:path";
 import { type Config, type Env, loadConfig, readEnvironment } from "./config.ts";
 
@@ -18,7 +18,7 @@ function problems(env: Env): string[] {
 }
 
 test("config: the defaults", () => {
-  assertEquals(config({}), {
+  expect(config({})).toStrictEqual({
     dev: false,
     port: 8000,
     dataDir: "/data",
@@ -38,28 +38,28 @@ test("config: the defaults", () => {
 });
 
 test("config: former retention variables cannot override saved settings", () => {
-  assertEquals(config({ BACKUP_RETENTION_DAYS: "invalid", FILE_HISTORY_DAYS: "1" }), config({}));
+  expect(config({ BACKUP_RETENTION_DAYS: "invalid", FILE_HISTORY_DAYS: "1" })).toStrictEqual(
+    config({}),
+  );
 });
 
 test("config: development keeps its data in .quaso, relative to the working directory", () => {
   const dev = config({ QUASO_DEV: "1", PORT: "8123" });
-  assertEquals(dev.dev, true);
-  assertEquals(dev.dataDir, "/srv/quaso/.quaso");
-  assertEquals(dev.publicUrl, "http://localhost:8123");
-  assertEquals(config({ DATA_DIR: "data", WEB_DIR: "site" }).dataDir, "/srv/quaso/data");
-  assertEquals(config({ WEB_DIR: "site" }).webDir, "/srv/quaso/site");
+  expect(dev.dev).toBe(true);
+  expect(dev.dataDir).toBe("/srv/quaso/.quaso");
+  expect(dev.publicUrl).toBe("http://localhost:8123");
+  expect(config({ DATA_DIR: "data", WEB_DIR: "site" }).dataDir).toBe("/srv/quaso/data");
+  expect(config({ WEB_DIR: "site" }).webDir).toBe("/srv/quaso/site");
 });
 
 test("config: PUBLIC_URL defaults to QUASO_DOMAIN over HTTPS", () => {
-  assertEquals(
-    config({ QUASO_DOMAIN: "translate.example.com" }).publicUrl,
+  expect(config({ QUASO_DOMAIN: "translate.example.com" }).publicUrl).toStrictEqual(
     "https://translate.example.com",
   );
-  assertEquals(
+  expect(
     config({ QUASO_DOMAIN: "translate.example.com", PUBLIC_URL: "https://quaso.example.org/" })
       .publicUrl,
-    "https://quaso.example.org",
-  );
+  ).toBe("https://quaso.example.org");
 });
 
 test("config: every value is read and typed", () => {
@@ -80,18 +80,18 @@ test("config: every value is read and typed", () => {
     LOG_LEVEL: "debug",
     CORS_ORIGINS: "https://a.example.com, http://localhost:5173/",
   });
-  assertEquals(all.domain, "translate.example.com");
+  expect(all.domain).toBe("translate.example.com");
 
-  assertEquals(all.github, { clientId: "gh-id", clientSecret: "gh-secret" });
-  assertEquals(all.discord, { clientId: "dc-id", clientSecret: "dc-secret" });
-  assertEquals(all.turnstile, { siteKey: "site", secretKey: "secret" });
-  assertEquals(all.trustProxy, true);
-  assertEquals(all.logLevel, "debug");
-  assertEquals(all.corsOrigins, ["https://a.example.com", "http://localhost:5173"]);
+  expect(all.github).toStrictEqual({ clientId: "gh-id", clientSecret: "gh-secret" });
+  expect(all.discord).toStrictEqual({ clientId: "dc-id", clientSecret: "dc-secret" });
+  expect(all.turnstile).toStrictEqual({ siteKey: "site", secretKey: "secret" });
+  expect(all.trustProxy).toBe(true);
+  expect(all.logLevel).toBe("debug");
+  expect(all.corsOrigins).toStrictEqual(["https://a.example.com", "http://localhost:5173"]);
 });
 
 test("config: empty values count as not set, as in .env.example", () => {
-  assertEquals(config({ PORT: "", SECRET_KEY: "  ", EMAIL_PROVIDER: "" }).port, 8000);
+  expect(config({ PORT: "", SECRET_KEY: "  ", EMAIL_PROVIDER: "" }).port).toBe(8000);
 });
 
 test("config: every problem is reported at once", () => {
@@ -117,18 +117,18 @@ test("config: every problem is reported at once", () => {
     "GITHUB_CLIENT_SECRET",
     "CORS_ORIGINS",
   ]) {
-    assertStringIncludes(text, name);
+    expect(text).toContain(name);
   }
-  assertEquals(found.length, 8);
-  assertStringIncludes(text, 'PORT must be a whole number from 1 to 65535, not "80a".');
+  expect(found.length).toBe(8);
+  expect(text).toContain('PORT must be a whole number from 1 to 65535, not "80a".');
 });
 
 test("config: private Cloudflare storage needs no operator credentials", () => {
-  assertEquals(config({ QUASO_CLOUDFLARE: "1" }).cloudflare, true);
+  expect(config({ QUASO_CLOUDFLARE: "1" }).cloudflare).toBe(true);
 });
 
 test("config: .env fills in what the environment doesn't set", async () => {
-  const dir = await Deno.makeTempDir();
+  const dir = await fs.mkdtemp(join(tmpdir(), "quaso-test-"));
   const name = "QUASO_TEST_FROM_ENVIRONMENT";
   try {
     await fs.writeFile(
@@ -137,9 +137,9 @@ test("config: .env fills in what the environment doesn't set", async () => {
     );
     process.env[name] = "from-environment";
     const env = await readEnvironment(dir);
-    assertEquals(env[name], "from-environment");
-    assertEquals(env.QUASO_TEST_ONLY_IN_FILE, "only in file");
-    assertEquals(process.env["QUASO_TEST_ONLY_IN_FILE"], undefined);
+    expect(env[name]).toBe("from-environment");
+    expect(env.QUASO_TEST_ONLY_IN_FILE).toBe("only in file");
+    expect(process.env["QUASO_TEST_ONLY_IN_FILE"]).toBe(undefined);
   } finally {
     delete process.env[name];
     await fs.rm(dir, { recursive: true });
@@ -147,22 +147,21 @@ test("config: .env fills in what the environment doesn't set", async () => {
 });
 
 test("config: no .env file is fine", async () => {
-  const dir = await Deno.makeTempDir();
+  const dir = await fs.mkdtemp(join(tmpdir(), "quaso-test-"));
   try {
     const env = await readEnvironment(dir);
-    assertEquals(env.PATH, process.env["PATH"]);
+    expect(env.PATH).toStrictEqual(process.env["PATH"]);
   } finally {
     await fs.rmdir(dir);
   }
 });
 
 test("config: former email variables are ignored", () => {
-  assertEquals(
+  expect(
     config({ EMAIL_PROVIDER: "invalid", EMAIL_API_KEY: "ignored", EMAIL_FROM: "invalid" }),
-    config({}),
-  );
+  ).toStrictEqual(config({}));
 });
 
 test("config: the former setup token variable is ignored", () => {
-  assertEquals(config({ SETUP_TOKEN: "old-setup-token" }), config({}));
+  expect(config({ SETUP_TOKEN: "old-setup-token" })).toStrictEqual(config({}));
 });

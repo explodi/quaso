@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals } from "@std/assert";
+import { expect, test } from "vitest";
 import { argumentResolver } from "./config.ts";
 
 const AUTHOR_GENDER = {
@@ -19,24 +18,24 @@ test("argumentResolver: a string in the files and keys receives the argument", (
   const argumentsFor = argumentResolver([
     { ...AUTHOR_GENDER, files: ["feed.json"], keys: ["posts.*"] },
   ]);
-  assertEquals(argumentsFor("feed.json", "posts.welcome"), [IN_SCOPE]);
+  expect(argumentsFor("feed.json", "posts.welcome")).toStrictEqual([IN_SCOPE]);
 });
 
 test("argumentResolver: a string in another file doesn't", () => {
   const argumentsFor = argumentResolver([
     { ...AUTHOR_GENDER, files: ["feed.json"], keys: ["posts.*"] },
   ]);
-  assertEquals(argumentsFor("chat.json", "posts.welcome"), []);
+  expect(argumentsFor("chat.json", "posts.welcome")).toStrictEqual([]);
 });
 
 test("argumentResolver: a string with another key doesn't", () => {
   const argumentsFor = argumentResolver([
     { ...AUTHOR_GENDER, files: ["feed.json"], keys: ["posts.*"] },
   ]);
-  assertEquals(argumentsFor("feed.json", "menu.title"), []);
+  expect(argumentsFor("feed.json", "menu.title")).toStrictEqual([]);
 });
 
 test("argumentResolver: without files and keys, every string receives it", () => {
   const argumentsFor = argumentResolver([AUTHOR_GENDER]);
-  assertEquals(argumentsFor("text/chat.json", "rooms.lobby.welcome"), [IN_SCOPE]);
+  expect(argumentsFor("text/chat.json", "rooms.lobby.welcome")).toStrictEqual([IN_SCOPE]);
 });

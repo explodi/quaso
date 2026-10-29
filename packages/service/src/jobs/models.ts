@@ -21,7 +21,10 @@ export class SettingsModels {
   #known: string[] = [];
   #abandoned: Promise<string[]> | null = null;
 
-  constructor(private readonly models: () => Promise<string[]>) {}
+  private readonly models: () => Promise<string[]>;
+  constructor(models: () => Promise<string[]>) {
+    this.models = models;
+  }
 
   async list(): Promise<string[]> {
     const pending = this.models();

@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals, assertStringIncludes } from "@std/assert";
+import { expect, test } from "vitest";
 import type { SourceFilesResult } from "@quaso/core";
 import { openAsyncSqlite } from "./adapters/node_async_sqlite.ts";
 import { SYSTEM } from "./api.ts";
@@ -23,10 +22,9 @@ test("upload attaches repository descriptions, reports unknown keys and updates 
       descriptions: '{"bridge":"Spans the canal","unknown":"Missing key"}',
     };
     const uploaded = await service.upload(SYSTEM, { files: [file], languages: ["de"] });
-    assertStringIncludes(uploaded.warnings[0], "no source string");
+    expect(uploaded.warnings[0]).toContain("no source string");
     const id = (await service.listStrings(SYSTEM, { language: "de" })).strings[0].id;
-    assertEquals(
-      (await service.getString(SYSTEM, { id, language: "de" })).description,
+    expect((await service.getString(SYSTEM, { id, language: "de" })).description).toStrictEqual(
       "Spans the canal",
     );
     await service.importTranslations(SYSTEM, {
@@ -36,16 +34,15 @@ test("upload attaches repository descriptions, reports unknown keys and updates 
     });
     const revised = { ...file, descriptions: '{"bridge":"A bridge spanning the water"}' };
     await service.upload(SYSTEM, { files: [revised], dryRun: true });
-    assertEquals(
-      (await service.getString(SYSTEM, { id, language: "de" })).description,
+    expect((await service.getString(SYSTEM, { id, language: "de" })).description).toStrictEqual(
       "Spans the canal",
     );
     await service.upload(SYSTEM, { files: [revised] });
     const detail = await service.getString(SYSTEM, { id, language: "de" });
-    assertEquals(detail.description, "A bridge spanning the water");
-    assertEquals(detail.translation?.value, "Über den Kanal");
-    assertEquals(detail.translation?.colour, "blue");
-    assertEquals(detail.translation?.outdated, false);
+    expect(detail.description).toBe("A bridge spanning the water");
+    expect(detail.translation?.value).toBe("Über den Kanal");
+    expect(detail.translation?.colour).toBe("blue");
+    expect(detail.translation?.outdated).toBe(false);
   } finally {
     opened.close();
   }
@@ -72,9 +69,9 @@ test("inline description suffixes stay out of source strings and downloaded game
       ],
     });
     const page = await service.listStrings(SYSTEM, { language: "de" });
-    assertEquals(page.total, 1);
-    assertEquals(page.strings[0].description, "Spans it");
-    assertEquals(JSON.parse((await service.exportFiles(SYSTEM, {})).files[0].content), {
+    expect(page.total).toBe(1);
+    expect(page.strings[0].description).toBe("Spans it");
+    expect(JSON.parse((await service.exportFiles(SYSTEM, {})).files[0].content)).toStrictEqual({
       bridge: "Across the canal",
     });
   } finally {
@@ -112,20 +109,17 @@ test("model ambiguity notes reach job results and the needs-description list, wh
     const id = (await service.listStrings(SYSTEM, { language: "de" })).strings[0].id;
     const created = await service.createJob(SYSTEM, { strings: [id] });
     await service.alarm();
-    assertEquals(
-      (await service.getJob(SYSTEM, { id: created.job!.id })).notes?.[0].kind,
+    expect((await service.getJob(SYSTEM, { id: created.job!.id })).notes?.[0].kind).toStrictEqual(
       "ambiguous",
     );
-    assertEquals(
-      (await service.getString(SYSTEM, { id, language: "de" })).sourceWarnings?.[0].kind,
+    expect((await service.getString(SYSTEM, { id, language: "de" })).sourceWarnings?.[0].kind).toBe(
       "ambiguous",
     );
     const sources = (await service.listFiles(SYSTEM, {})) as SourceFilesResult;
-    assertEquals(sources.ambiguities?.[0].id, id);
-    assertStringIncludes(sources.ambiguities![0].message, "I chose spans");
+    expect(sources.ambiguities?.[0].id).toStrictEqual(id);
+    expect(sources.ambiguities![0].message).toContain("I chose spans");
     await service.updateString(SYSTEM, { id, description: "The bridge spans the canal." });
-    assertEquals(
-      ((await service.listFiles(SYSTEM, {})) as SourceFilesResult).ambiguities,
+    expect(((await service.listFiles(SYSTEM, {})) as SourceFilesResult).ambiguities).toStrictEqual(
       undefined,
     );
   } finally {

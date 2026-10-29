@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals, assertRejects, assertStringIncludes } from "@std/assert";
+import { assert, expect, test } from "vitest";
 import { ServiceError, silentLogger } from "@quaso/service";
 import { createEmailSender, emailLink, escapeHtml, linkEmail } from "./email.ts";
 
@@ -24,9 +23,9 @@ test("email: Resend gets a bearer key and its JSON", async () => {
     { fetch, log: silentLogger },
   )!;
   await sender.send(MESSAGE);
-  assertEquals(requests[0].url, "https://api.resend.com/emails");
-  assertEquals(requests[0].headers.get("Authorization"), "Bearer re_key");
-  assertEquals(requests[0].body, {
+  expect(requests[0].url).toBe("https://api.resend.com/emails");
+  expect(requests[0].headers.get("Authorization")).toBe("Bearer re_key");
+  expect(requests[0].body).toStrictEqual({
     from: "Quaso <quaso@example.com>",
     to: ["ada@example.com"],
     subject: "Hi",
@@ -42,9 +41,9 @@ test("email: Postmark gets its server token and its JSON", async () => {
     { fetch, log: silentLogger },
   )!;
   await sender.send(MESSAGE);
-  assertEquals(requests[0].url, "https://api.postmarkapp.com/email");
-  assertEquals(requests[0].headers.get("X-Postmark-Server-Token"), "pm_key");
-  assertEquals(requests[0].body, {
+  expect(requests[0].url).toBe("https://api.postmarkapp.com/email");
+  expect(requests[0].headers.get("X-Postmark-Server-Token")).toBe("pm_key");
+  expect(requests[0].body).toStrictEqual({
     From: "quaso@example.com",
     To: "ada@example.com",
     Subject: "Hi",
@@ -60,30 +59,27 @@ test("email: a refusal or a network error is `unavailable`; no provider, no send
     { provider: "resend", apiKey: "k", from: "q@example.com" },
     { fetch, log: silentLogger },
   )!;
-  const error = await assertRejects(() => sender.send(MESSAGE), ServiceError);
-  assertEquals(error.code, "unavailable");
+  const error = await sender.send(MESSAGE).catch((error: unknown) => error);
+  assert(error instanceof ServiceError);
+  expect(error.code).toBe("unavailable");
   const offline = createEmailSender(
     { provider: "resend", apiKey: "k", from: "q@example.com" },
     { fetch: () => Promise.reject(new TypeError("offline")), log: silentLogger },
   )!;
-  assertEquals(
-    (await assertRejects(() => offline.send(MESSAGE), ServiceError)).code,
-    "unavailable",
+  await expect(offline.send(MESSAGE)).rejects.toThrow(
+    expect.objectContaining({ constructor: ServiceError, code: "unavailable" }),
   );
-  assertEquals(createEmailSender(null, { log: silentLogger }), null);
+  expect(createEmailSender(null, { log: silentLogger })).toBe(null);
 });
 
 test("email: links go to the website's pages on PUBLIC_URL, in text and escaped HTML", () => {
-  assertEquals(
-    emailLink("https://t.example.com/", "reset", "a-b_c"),
+  expect(emailLink("https://t.example.com/", "reset", "a-b_c")).toStrictEqual(
     "https://t.example.com/reset-password?token=a-b_c",
   );
-  assertEquals(
-    emailLink("https://t.example.com", "verify", "x"),
+  expect(emailLink("https://t.example.com", "verify", "x")).toStrictEqual(
     "https://t.example.com/verify-email?token=x",
   );
-  assertEquals(
-    emailLink("https://t.example.com", "signin", "x"),
+  expect(emailLink("https://t.example.com", "signin", "x")).toStrictEqual(
     "https://t.example.com/signin/link?token=x",
   );
   const message = linkEmail("signin", {
@@ -92,12 +88,11 @@ test("email: links go to the website's pages on PUBLIC_URL, in text and escaped 
     token: "tok",
     projectName: "Quest <Deluxe>",
   });
-  assertEquals(message.subject, "Your sign-in link (Quest <Deluxe>)");
-  assertStringIncludes(message.text, "https://t.example.com/signin/link?token=tok");
-  assertStringIncludes(message.html, "Quest &lt;Deluxe&gt;");
-  assertStringIncludes(message.html, 'href="https://t.example.com/signin/link?token=tok"');
-  assertEquals(
-    escapeHtml(`<a href="x">'&'</a>`),
+  expect(message.subject).toBe("Your sign-in link (Quest <Deluxe>)");
+  expect(message.text).toContain("https://t.example.com/signin/link?token=tok");
+  expect(message.html).toContain("Quest &lt;Deluxe&gt;");
+  expect(message.html).toContain('href="https://t.example.com/signin/link?token=tok"');
+  expect(escapeHtml(`<a href="x">'&'</a>`)).toStrictEqual(
     "&lt;a href=&quot;x&quot;&gt;&#39;&amp;&#39;&lt;/a&gt;",
   );
 });
@@ -118,12 +113,11 @@ test("email: Cloudflare gets an account endpoint, bearer token and recipient", a
     }),
   );
   await createEmailSender(CLOUDFLARE_EMAIL, { fetch, log: silentLogger })!.send(MESSAGE);
-  assertEquals(
-    requests[0].url,
+  expect(requests[0].url).toStrictEqual(
     "https://api.cloudflare.com/client/v4/accounts/0123456789abcdef0123456789abcdef/email/sending/send",
   );
-  assertEquals(requests[0].headers.get("Authorization"), "Bearer cf_token");
-  assertEquals(requests[0].body, { from: "quaso@example.com", ...MESSAGE });
+  expect(requests[0].headers.get("Authorization")).toBe("Bearer cf_token");
+  expect(requests[0].body).toStrictEqual({ from: "quaso@example.com", ...MESSAGE });
 });
 
 test("email: Cloudflare accepts queued delivery", async () => {
@@ -146,19 +140,25 @@ test("email: Cloudflare permanent bounces are unavailable", async () => {
     }),
   );
   const sender = createEmailSender(CLOUDFLARE_EMAIL, { fetch, log: silentLogger })!;
-  assertEquals((await assertRejects(() => sender.send(MESSAGE), ServiceError)).code, "unavailable");
+  await expect(sender.send(MESSAGE)).rejects.toThrow(
+    expect.objectContaining({ constructor: ServiceError, code: "unavailable" }),
+  );
 });
 
 test("email: Cloudflare application errors are unavailable even with HTTP 200", async () => {
   const { fetch } = recordingFetch(200, '{"success":false,"errors":[{"message":"refused"}]}');
   const sender = createEmailSender(CLOUDFLARE_EMAIL, { fetch, log: silentLogger })!;
-  assertEquals((await assertRejects(() => sender.send(MESSAGE), ServiceError)).code, "unavailable");
+  await expect(sender.send(MESSAGE)).rejects.toThrow(
+    expect.objectContaining({ constructor: ServiceError, code: "unavailable" }),
+  );
 });
 
 test("email: Cloudflare invalid JSON is unavailable", async () => {
   const { fetch } = recordingFetch(200, "invalid");
   const sender = createEmailSender(CLOUDFLARE_EMAIL, { fetch, log: silentLogger })!;
-  assertEquals((await assertRejects(() => sender.send(MESSAGE), ServiceError)).code, "unavailable");
+  await expect(sender.send(MESSAGE)).rejects.toThrow(
+    expect.objectContaining({ constructor: ServiceError, code: "unavailable" }),
+  );
 });
 
 test("email: provider responses containing addresses and keys are not logged", async () => {
@@ -173,7 +173,7 @@ test("email: provider responses containing addresses and keys are not logged", a
       },
     },
   })!;
-  await assertRejects(() => sender.send(MESSAGE), ServiceError);
-  assertEquals(JSON.stringify(entries).includes(MESSAGE.to), false);
-  assertEquals(JSON.stringify(entries).includes(CLOUDFLARE_EMAIL.apiKey), false);
+  await expect(sender.send(MESSAGE)).rejects.toThrow(ServiceError);
+  expect(JSON.stringify(entries).includes(MESSAGE.to)).toBe(false);
+  expect(JSON.stringify(entries).includes(CLOUDFLARE_EMAIL.apiKey)).toBe(false);
 });

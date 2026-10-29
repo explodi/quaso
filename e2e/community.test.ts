@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-/// <reference lib="dom" />
 /** LATER-1 to LATER-3 through real accounts, service writes and the rendered website. */
-import { assert, assertEquals, assertStringIncludes } from "@std/assert";
+import { assert, expect } from "vitest";
+
 import type { Page } from "puppeteer";
 import { ANONYMOUS, type Service, SYSTEM } from "@quaso/service";
 import {
@@ -108,13 +108,12 @@ browserTest(
   { prepare },
   async ({ server, browser }) => {
     const tab = await openTab(browser, server, "/glossary");
-    assertStringIncludes(await text(tab.page, "main"), "Start with the words that matter");
-    assertEquals(
+    expect(await text(tab.page, "main")).toContain("Start with the words that matter");
+    expect(
       await tab.page.evaluate(() =>
         [...document.querySelectorAll("main button")].some((b) => b.textContent === "Add term"),
       ),
-      false,
-    );
+    ).toBe(false);
     await signIn(tab.page, server, OWNER);
     await tab.page.goto(`${server.url}/glossary`, { waitUntil: "networkidle0" });
     await click(tab.page, "Add term");
@@ -123,7 +122,7 @@ browserTest(
     await fill(tab.page, "Note (optional)", "Use for the main action");
     await click(tab.page, "Save term");
     await waitFor(tab.page, () => document.querySelector("dialog[open]") === null);
-    assertStringIncludes(await text(tab.page, ".glossary-list"), "Spielen");
+    expect(await text(tab.page, ".glossary-list")).toContain("Spielen");
     await click(tab.page, "Edit term");
     await fill(tab.page, "Note (optional)", "Main menu action");
     await click(tab.page, "Save term");
@@ -148,10 +147,10 @@ browserTest(
       };
     });
     assert(tooltip.focused && tooltip.visible);
-    assertStringIncludes(tooltip.text!, "Spielen");
+    expect(tooltip.text!).toContain("Spielen");
     await press(tab.page, "Escape");
     await click(tab.page, "Glossary", '[role="tablist"]');
-    assertStringIncludes(await text(tab.page, ".glossary-definitions"), "Spielen");
+    expect(await text(tab.page, ".glossary-definitions")).toContain("Spielen");
     await tab.page.evaluate(() => {
       const field = document.querySelector<HTMLTextAreaElement>("[data-translation-input]")!;
       field.focus();
@@ -161,19 +160,18 @@ browserTest(
     await waitFor(tab.page, () =>
       document.querySelector(".checks")?.textContent?.includes("glossary term"),
     );
-    assertEquals(
+    expect(
       await tab.page.evaluate(
         () =>
           [...document.querySelectorAll<HTMLButtonElement>("button")].find(
             (b) => b.textContent?.trim() === "Save",
           )?.disabled ?? false,
       ),
-      false,
-    );
+    ).toBe(false);
     await signOut(tab.page);
     await tab.page.goto(`${server.url}/glossary?q=menu`, { waitUntil: "networkidle0" });
-    assertStringIncludes(await text(tab.page, ".glossary-list"), "Play");
-    assertEquals(tab.problems, []);
+    expect(await text(tab.page, ".glossary-list")).toContain("Play");
+    expect(tab.problems).toStrictEqual([]);
   },
 );
 
@@ -203,15 +201,14 @@ browserTest(
     await tab.page.goto(`${server.url}/translate/de?id=${id}`, { waitUntil: "networkidle0" });
     await click(tab.page, "Comments", '[role="tablist"]');
     await waitFor(tab.page, () => document.querySelector(".comment-record") !== null);
-    assertStringIncludes(await text(tab.page, ".comments-panel"), "Does Play mean start a game?");
-    assertEquals(
-      await tab.page.evaluate(() => document.querySelector(".comment-form") === null),
+    expect(await text(tab.page, ".comments-panel")).toContain("Does Play mean start a game?");
+    expect(await tab.page.evaluate(() => document.querySelector(".comment-form") === null)).toBe(
       true,
     );
     await signIn(tab.page, server, OWNER);
     await tab.page.goto(`${server.url}/issues`, { waitUntil: "networkidle0" });
-    assertStringIncludes(await text(tab.page, ".comment-record"), "common.json · play");
-    assertEquals(
+    expect(await text(tab.page, ".comment-record")).toContain("common.json · play");
+    expect(
       await tab.page.evaluate(
         (id: number) =>
           document
@@ -219,8 +216,7 @@ browserTest(
             ?.href.includes(`id=${id}`),
         id,
       ),
-      true,
-    );
+    ).toBe(true);
     await click(tab.page, "Resolve", ".comment-record");
     await waitFor(tab.page, () =>
       document.querySelector("main")?.textContent?.includes("No unresolved problems"),
@@ -230,8 +226,8 @@ browserTest(
     await waitFor(tab.page, () =>
       document.querySelector(".comment-record")?.textContent?.includes("Resolved by Project Owner"),
     );
-    assertStringIncludes(await text(tab.page, ".comment-record"), "Resolved by Project Owner");
-    assertEquals(tab.problems, []);
+    expect(await text(tab.page, ".comment-record")).toContain("Resolved by Project Owner");
+    expect(tab.problems).toStrictEqual([]);
   },
 );
 
@@ -254,16 +250,15 @@ browserTest(
     await waitFor(tab.page, () =>
       document.querySelector(".request-list")?.textContent?.includes("Portuguese (Brazil)"),
     );
-    assertStringIncludes(await text(tab.page, ".request-list"), "1 vote");
-    assertEquals(
+    expect(await text(tab.page, ".request-list")).toContain("1 vote");
+    expect(
       await tab.page.evaluate(
         () =>
           [...document.querySelectorAll<HTMLButtonElement>(".request-list button")].find(
             (b) => b.textContent === "Voted",
           )?.disabled,
       ),
-      true,
-    );
+    ).toBe(true);
     await click(tab.page, "Request a language");
     await fill(tab.page, "Search languages", "日本語");
     await tab.page.select("dialog[open] select", "ja");
@@ -295,9 +290,9 @@ browserTest(
         ?.textContent?.includes("No language requests"),
     );
     await tab.page.goto(server.url, { waitUntil: "networkidle0" });
-    assertStringIncludes(await text(tab.page, ".language-list"), "Portuguese (Brazil)");
-    assertEquals((await server.service.listLanguageRequests(ANONYMOUS, {})).requests, []);
-    assertEquals(tab.problems, []);
+    expect(await text(tab.page, ".language-list")).toContain("Portuguese (Brazil)");
+    expect((await server.service.listLanguageRequests(ANONYMOUS, {})).requests).toStrictEqual([]);
+    expect(tab.problems).toStrictEqual([]);
   },
 );
 
@@ -307,7 +302,7 @@ browserTest(
   async ({ server, browser }) => {
     const tab = await openTab(browser, server, "/signin");
     await signIn(tab.page, server, OWNER);
-    assertEquals(await tab.page.$(".language-requests"), null);
+    expect(await tab.page.$(".language-requests")).toBe(null);
     await tab.page.goto(`${server.url}/settings?section=requests`, { waitUntil: "networkidle0" });
     await tab.page.click('main input[type="checkbox"]');
     await click(tab.page, "Save changes");
@@ -316,15 +311,14 @@ browserTest(
       () => document.querySelector('[role="status"]')?.textContent === "Saved.",
     );
     await tab.page.goto(server.url, { waitUntil: "networkidle0" });
-    assertStringIncludes(await text(tab.page, ".language-requests"), "Requested languages");
+    expect(await text(tab.page, ".language-requests")).toContain("Requested languages");
     await tab.page.goto(`${server.url}/settings?section=requests`, { waitUntil: "networkidle0" });
-    assertEquals(
+    expect(
       await tab.page.$eval(
         'main input[type="checkbox"]',
         (input) => (input as HTMLInputElement).checked,
       ),
-      true,
-    );
+    ).toBe(true);
     await tab.page.click('main input[type="checkbox"]');
     await click(tab.page, "Save changes");
     await waitFor(
@@ -332,7 +326,7 @@ browserTest(
       () => document.querySelector('[role="status"]')?.textContent === "Saved.",
     );
     await tab.page.goto(server.url, { waitUntil: "networkidle0" });
-    assertEquals(await tab.page.$(".language-requests"), null);
-    assertEquals(tab.problems, []);
+    expect(await tab.page.$(".language-requests")).toBe(null);
+    expect(tab.problems).toStrictEqual([]);
   },
 );

@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assert, assertEquals, assertThrows } from "@std/assert";
+import { assert, expect, test } from "vitest";
 import { SCHEMA_VERSION } from "@quaso/core";
 import { CliError } from "./errors.ts";
 import {
@@ -18,49 +17,48 @@ import {
 import { captured } from "./test_helpers.ts";
 
 test("formatProblem uses the design's format, with local paths", () => {
-  assertEquals(
+  expect(
     formatProblem({
       file: "src/locales/pl/common.json",
       key: "inventory.itemCount",
       language: "pl",
       message: "Placeholder {{total}} is missing.",
     }),
+  ).toStrictEqual(
     "src/locales/pl/common.json › inventory.itemCount (pl): placeholder {{total}} is missing",
   );
-  assertEquals(
+  expect(
     formatProblem({ file: "src/en/a.json", line: 3, column: 19, message: "Trailing comma" }),
-    "src/en/a.json:3:19: trailing comma",
-  );
-  assertEquals(
-    formatProblem({ key: "limits[0].file", message: "must end with .json" }),
+  ).toBe("src/en/a.json:3:19: trailing comma");
+  expect(formatProblem({ key: "limits[0].file", message: "must end with .json" })).toStrictEqual(
     "limits[0].file: must end with .json",
   );
-  assertEquals(formatProblem({ message: "Something." }), "something");
-  assertEquals(formatProblem({ language: "xx", message: "" }), "(xx)");
+  expect(formatProblem({ message: "Something." })).toBe("something");
+  expect(formatProblem({ language: "xx", message: "" })).toBe("(xx)");
 });
 
 test("sentenceFragment keeps acronyms and names", () => {
-  assertEquals(sentenceFragment("The few form is missing."), "the few form is missing");
-  assertEquals(sentenceFragment("QA failed."), "QA failed");
-  assertEquals(sentenceFragment("English is expected..."), "English is expected...");
-  assertEquals(sentenceFragment("JSON syntax"), "JSON syntax");
+  expect(sentenceFragment("The few form is missing.")).toBe("the few form is missing");
+  expect(sentenceFragment("QA failed.")).toBe("QA failed");
+  expect(sentenceFragment("English is expected...")).toBe("English is expected...");
+  expect(sentenceFragment("JSON syntax")).toBe("JSON syntax");
 });
 
 test("colours only on a terminal, never with NO_COLOR, TERM=dumb or --json", () => {
   const tty = { write() {}, isTTY: true };
   const pipe = { write() {}, isTTY: false };
-  assertEquals(useColour(tty, {}, false), true);
-  assertEquals(useColour(pipe, {}, false), false);
-  assertEquals(useColour(tty, { NO_COLOR: "1" }, false), false);
-  assertEquals(useColour(tty, { NO_COLOR: "" }, false), true);
-  assertEquals(useColour(tty, { TERM: "dumb" }, false), false);
-  assertEquals(useColour(tty, {}, true), false);
+  expect(useColour(tty, {}, false)).toBe(true);
+  expect(useColour(pipe, {}, false)).toBe(false);
+  expect(useColour(tty, { NO_COLOR: "1" }, false)).toBe(false);
+  expect(useColour(tty, { NO_COLOR: "" }, false)).toBe(true);
+  expect(useColour(tty, { TERM: "dumb" }, false)).toBe(false);
+  expect(useColour(tty, {}, true)).toBe(false);
   const { output, text } = captured({ tty: true });
   output.print(output.out.red("red"));
-  assertEquals(text.stdout, "\x1b[31mred\x1b[39m\n");
+  expect(text.stdout).toBe("\x1b[31mred\x1b[39m\n");
   const plain = captured({ tty: true, env: { NO_COLOR: "1" } });
   plain.output.print(plain.output.out.red("red"));
-  assertEquals(plain.text.stdout, "red\n");
+  expect(plain.text.stdout).toBe("red\n");
 });
 
 test("results go to stdout, logs and errors to stderr", () => {
@@ -74,9 +72,8 @@ test("results go to stdout, logs and errors to stderr", () => {
       hint: "Fix it.",
     }),
   );
-  assertEquals(text.stdout, "result\n");
-  assertEquals(
-    text.stderr,
+  expect(text.stdout).toBe("result\n");
+  expect(text.stderr).toStrictEqual(
     "progress\nwarning: careful\nerror: 1 source file can't be read.\n" +
       "  src/en/a.json:1:2: unexpected end of file\nFix it.\n",
   );
@@ -98,16 +95,16 @@ test("a closed pipe is ignored on both streams", () => {
     output.raw("stack");
   }
   assert(isClosedPipe({ code: "ERR_STREAM_DESTROYED" }));
-  assertEquals(isClosedPipe(new Error("disk full")), false);
+  expect(isClosedPipe(new Error("disk full"))).toBe(false);
   const broken = closed("Error", "EIO");
   const output = new Output({ stdout: broken, stderr: broken, env: {}, json: false });
-  assertThrows(() => output.print("result"));
+  expect(() => output.print("result")).toThrow();
 });
 
 test("--json: one document with schemaVersion and command; print() is refused", () => {
   const { output, text } = captured({ json: true });
   output.document(resultDocument("status", 7, { languages: [] }));
-  assertEquals(JSON.parse(text.stdout), {
+  expect(JSON.parse(text.stdout)).toStrictEqual({
     schemaVersion: SCHEMA_VERSION,
     command: "status",
     ok: false,
@@ -125,7 +122,7 @@ test("--json: one document with schemaVersion and command; print() is refused", 
     "upload",
     new CliError(3, "QUASO_API_KEY isn't set.", { code: "missing_key", hint: "Set it." }),
   );
-  assertEquals(error, {
+  expect(error).toStrictEqual({
     schemaVersion: SCHEMA_VERSION,
     command: "upload",
     ok: false,
@@ -152,7 +149,7 @@ test("error details are capped in text mode", () => {
 });
 
 test("table pads columns, aligns numbers right, and ignores colour codes", () => {
-  assertEquals(
+  expect(
     table(
       [
         ["Language", "Green"],
@@ -161,20 +158,17 @@ test("table pads columns, aligns numbers right, and ignores colour codes", () =>
       ],
       { right: [1] },
     ),
-    ["Language  Green", "de           \x1b[32m12\x1b[39m", "pt-BR         3"],
-  );
+  ).toStrictEqual(["Language  Green", "de           \x1b[32m12\x1b[39m", "pt-BR         3"]);
 });
 
 test("shellQuote quotes only when needed", () => {
-  assertEquals(
-    shellQuote("common.json:coins#plural=gold#plural"),
+  expect(shellQuote("common.json:coins#plural=gold#plural")).toStrictEqual(
     "common.json:coins#plural=gold#plural",
   );
-  assertEquals(shellQuote('common.json:["a.b"]=c'), `'common.json:["a.b"]=c'`);
-  assertEquals(shellQuote("it's"), `'it'"'"'s'`);
-  assertEquals(shellQuote(""), "''");
-  assertEquals(
-    commandLine(["quaso", "upload", "--rename", "a b=c"]),
+  expect(shellQuote('common.json:["a.b"]=c')).toStrictEqual(`'common.json:["a.b"]=c'`);
+  expect(shellQuote("it's")).toStrictEqual(`'it'"'"'s'`);
+  expect(shellQuote("")).toBe("''");
+  expect(commandLine(["quaso", "upload", "--rename", "a b=c"])).toStrictEqual(
     "quaso upload --rename 'a b=c'",
   );
 });

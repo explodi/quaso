@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assert, assertEquals, assertMatch, assertNotEquals } from "@std/assert";
+import { assert, expect, test } from "vitest";
 import { canonicalValue, hashValue, sha256Hex } from "./hash.ts";
 
 /** SHA-256 through Web Crypto, the reference. */
@@ -21,37 +20,35 @@ function pseudoRandomBytes(length: number, seed: number): Uint8Array {
 }
 
 test("sha256Hex matches the NIST test vectors", () => {
-  assertEquals(sha256Hex(""), "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
-  assertEquals(
-    sha256Hex("abc"),
+  expect(sha256Hex("")).toStrictEqual(
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  );
+  expect(sha256Hex("abc")).toStrictEqual(
     "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
   );
-  assertEquals(
-    sha256Hex("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq"),
+  expect(sha256Hex("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq")).toStrictEqual(
     "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1",
   );
-  assertEquals(
+  expect(
     sha256Hex(
       "abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu",
     ),
-    "cf5b16a778af8380036ce59e7b0492370b249b11e8f07a51afac45037afee9d1",
-  );
-  assertEquals(
-    sha256Hex("a".repeat(1_000_000)),
+  ).toBe("cf5b16a778af8380036ce59e7b0492370b249b11e8f07a51afac45037afee9d1");
+  expect(sha256Hex("a".repeat(1_000_000))).toStrictEqual(
     "cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0",
   );
 });
 
 test("sha256Hex returns 64 lowercase hex characters", () => {
   for (const input of ["", "x", "Play", "a".repeat(1000)]) {
-    assertMatch(sha256Hex(input), /^[0-9a-f]{64}$/);
+    expect(sha256Hex(input)).toMatch(/^[0-9a-f]{64}$/);
   }
 });
 
 test("sha256Hex agrees with Web Crypto for every length from 0 to 300 bytes", async () => {
   for (let length = 0; length <= 300; length++) {
     const bytes = pseudoRandomBytes(length, length + 1);
-    assertEquals(sha256Hex(bytes), await reference(bytes), `length ${length}`);
+    expect(sha256Hex(bytes), `length ${length}`).toStrictEqual(await reference(bytes));
   }
 });
 
@@ -60,10 +57,12 @@ test("sha256Hex agrees with Web Crypto around the padding boundaries", async () 
   for (const length of [55, 56, 57, 63, 64, 65, 119, 120, 127, 128, 129, 1000, 4096, 65_537]) {
     for (const seed of [1, 2, 3]) {
       const bytes = pseudoRandomBytes(length, seed * 7919 + length);
-      assertEquals(sha256Hex(bytes), await reference(bytes), `length ${length}, seed ${seed}`);
+      expect(sha256Hex(bytes), `length ${length}, seed ${seed}`).toStrictEqual(
+        await reference(bytes),
+      );
     }
     const same = new Uint8Array(length).fill(0xff);
-    assertEquals(sha256Hex(same), await reference(same), `length ${length} of 0xff`);
+    expect(sha256Hex(same), `length ${length} of 0xff`).toStrictEqual(await reference(same));
   }
 });
 
@@ -78,7 +77,7 @@ test("sha256Hex reads only the bytes of a view, not its whole buffer", async () 
     [499, 500],
   ]) {
     const view = buffer.subarray(start, end);
-    assertEquals(sha256Hex(view), await reference(view), `bytes ${start} to ${end}`);
+    expect(sha256Hex(view), `bytes ${start} to ${end}`).toStrictEqual(await reference(view));
   }
 });
 
@@ -97,22 +96,22 @@ test("sha256Hex hashes strings as UTF-8", async () => {
   ];
   for (const text of texts) {
     const bytes = encoder.encode(text);
-    assertEquals(sha256Hex(text), sha256Hex(bytes), text);
-    assertEquals(sha256Hex(text), await reference(bytes), text);
+    expect(sha256Hex(text), text).toStrictEqual(sha256Hex(bytes));
+    expect(sha256Hex(text), text).toStrictEqual(await reference(bytes));
   }
 });
 
 test("sha256Hex hashes lone surrogates as U+FFFD, like TextEncoder in every runtime", () => {
-  assertEquals(sha256Hex("a\ud800b"), sha256Hex("a�b"));
-  assertEquals(sha256Hex("\udc00"), sha256Hex("�"));
-  assertNotEquals(sha256Hex("😀"), sha256Hex("��"));
+  expect(sha256Hex("a\ud800b")).toStrictEqual(sha256Hex("a�b"));
+  expect(sha256Hex("\udc00")).toStrictEqual(sha256Hex("�"));
+  expect(sha256Hex("😀")).not.toStrictEqual(sha256Hex("��"));
 });
 
 test("sha256Hex does not modify its input", () => {
   const bytes = pseudoRandomBytes(100, 9);
   const copy = bytes.slice();
   sha256Hex(bytes);
-  assertEquals(bytes, copy);
+  expect(bytes).toStrictEqual(copy);
 });
 
 test("sha256Hex hashes 10 MB in well under a second", async () => {
@@ -120,25 +119,24 @@ test("sha256Hex hashes 10 MB in well under a second", async () => {
   const start = performance.now();
   const hash = sha256Hex(bytes);
   const elapsed = performance.now() - start;
-  assertEquals(hash, await reference(bytes));
+  expect(hash).toStrictEqual(await reference(bytes));
   assert(elapsed < 1000, `took ${elapsed.toFixed(0)} ms`);
 });
 
 test("canonicalValue writes strings as JSON and forms in CLDR order", () => {
-  assertEquals(canonicalValue("Play"), '"Play"');
-  assertEquals(canonicalValue('Say "hi"\n'), '"Say \\"hi\\"\\n"');
-  assertEquals(
+  expect(canonicalValue("Play")).toBe('"Play"');
+  expect(canonicalValue('Say "hi"\n')).toBe('"Say \\"hi\\"\\n"');
+  expect(
     canonicalValue({ other: "{{count}} coins", one: "One coin", few: "{{count}} monety" }),
-    '{"one":"One coin","few":"{{count}} monety","other":"{{count}} coins"}',
-  );
-  assertEquals(canonicalValue({ other: "x", zero: undefined }), '{"other":"x"}');
+  ).toBe('{"one":"One coin","few":"{{count}} monety","other":"{{count}} coins"}');
+  expect(canonicalValue({ other: "x", zero: undefined })).toBe('{"other":"x"}');
 });
 
 test("hashValue ignores the order forms were set in", () => {
   const a = hashValue({ one: "One coin", other: "{{count}} coins" });
   const b = hashValue({ other: "{{count}} coins", one: "One coin" });
-  assertEquals(a, b);
-  assertEquals(a, sha256Hex('{"one":"One coin","other":"{{count}} coins"}'));
-  assertNotEquals(hashValue("Play"), hashValue({ other: "Play" }));
-  assertEquals(hashValue("Play"), sha256Hex('"Play"'));
+  expect(a).toStrictEqual(b);
+  expect(a).toStrictEqual(sha256Hex('{"one":"One coin","other":"{{count}} coins"}'));
+  expect(hashValue("Play")).not.toStrictEqual(hashValue({ other: "Play" }));
+  expect(hashValue("Play")).toStrictEqual(sha256Hex('"Play"'));
 });

@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assert, assertEquals } from "@std/assert";
+import { assert, expect, test } from "vitest";
 import { openAsyncSqlite } from "./adapters/node_async_sqlite.ts";
 import { SYSTEM } from "./api.ts";
 import { createAsyncService } from "./service_async.ts";
@@ -75,32 +74,33 @@ test("terminology bootstrap verifies recurring terms, counts variants, accepts e
     await service.alarm();
     const report = await service.getQualityJob(SYSTEM, { id: created.id });
     assert(report.kind === "terminology");
-    assertEquals(report.status, "done");
-    assertEquals(report.result.length, 1);
-    assertEquals(report.result[0].preferred, "Haltestelle");
-    assertEquals(report.result[0].renderings, [
+    expect(report.status).toBe("done");
+    expect(report.result.length).toBe(1);
+    expect(report.result[0].preferred).toBe("Haltestelle");
+    expect(report.result[0].renderings).toStrictEqual([
       { translation: "Haltestelle", count: 2 },
       { translation: "Straßenbahnhaltestelle", count: 1 },
     ]);
-    assertEquals([report.result[0].count, report.result[0].files, report.flagged], [3, 2, 1]);
+    expect([report.result[0].count, report.result[0].files, report.flagged]).toStrictEqual([
+      3, 2, 1,
+    ]);
     await service.reviewTerminology(SYSTEM, {
       id: report.id,
       index: 0,
       action: "accept",
       translation: "Tramhaltestelle",
     });
-    assertEquals(
-      (await service.listGlossary(SYSTEM, { language: "de" })).terms[0].translation,
+    expect((await service.listGlossary(SYSTEM, { language: "de" })).terms[0].translation).toBe(
       "Tramhaltestelle",
     );
     const accepted = await service.getQualityJob(SYSTEM, { id: report.id });
     assert(accepted.kind === "terminology");
-    assertEquals(accepted.result[0].status, "accepted");
+    expect(accepted.result[0].status).toBe("accepted");
     await service.reviewTerminology(SYSTEM, { id: report.id, index: 0, action: "dismiss" });
     const dismissed = await service.getQualityJob(SYSTEM, { id: report.id });
     assert(dismissed.kind === "terminology");
-    assertEquals(dismissed.result[0].status, "dismissed");
-    assertEquals((await service.listGlossary(SYSTEM, { language: "de" })).terms.length, 1);
+    expect(dismissed.result[0].status).toBe("dismissed");
+    expect((await service.listGlossary(SYSTEM, { language: "de" })).terms.length).toBe(1);
   } finally {
     opened.close();
   }
@@ -160,12 +160,11 @@ test("style drafts sample proofread text and require an explicit language-instru
     await service.alarm();
     const job = await service.getQualityJob(SYSTEM, { id: created.id });
     assert(job.kind === "style_guide");
-    assertEquals(job.result[0].samples, 1);
-    assertEquals((seen[0] as { colour: string }[])[0].colour, "blue");
-    assertEquals((await service.getSettings(SYSTEM, {})).languages[0].instructions, "");
+    expect(job.result[0].samples).toBe(1);
+    expect((seen[0] as { colour: string }[])[0].colour).toBe("blue");
+    expect((await service.getSettings(SYSTEM, {})).languages[0].instructions).toBe("");
     await service.updateLanguage(SYSTEM, { tag: "de", instructions: job.result[0].instructions });
-    assertEquals(
-      (await service.getSettings(SYSTEM, {})).languages[0].instructions,
+    expect((await service.getSettings(SYSTEM, {})).languages[0].instructions).toStrictEqual(
       job.result[0].instructions,
     );
   } finally {

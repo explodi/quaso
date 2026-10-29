@@ -1,41 +1,29 @@
 // SPDX-License-Identifier: MIT
+import { spawn, spawnSync } from "node:child_process";
+import { once } from "node:events";
+import { tmpdir } from "node:os";
 import * as fs from "node:fs/promises";
-import { test } from "node:test";
+import { assert, expect, test } from "vitest";
+import { freePort } from "./http/serve.ts";
 /**
  * The `quaso` commands, run as the real program in a temporary data folder: the start
  * checks, `seed-dev`, `serve` with its lock and graceful shutdown, `healthcheck` and
  * `token create`.
  */
-import { assert, assertEquals, assertMatch, assertStringIncludes } from "@std/assert";
 import { fileURLToPath as fromFileUrl } from "node:url";
 import { join } from "node:path";
 import { healthcheck, parseFlags } from "./commands.ts";
 import { VERSION } from "./version.ts";
 
 const MAIN = fromFileUrl(new URL("../main.ts", import.meta.url));
-const decoder = new TextDecoder();
 
-function command(args: string[], env: Record<string, string>, cwd: string): Deno.Command {
-  return new Deno.Command(Deno.execPath(), {
-    args: ["run", "-A", MAIN, ...args],
-    env: { LOG_LEVEL: "info", ...env },
+function run(args: string[], env: Record<string, string>, cwd: string) {
+  const { status, stdout, stderr } = spawnSync(process.execPath, [MAIN, ...args], {
+    env: { ...process.env, LOG_LEVEL: "info", ...env },
     cwd,
-    stdin: "null",
-    stdout: "piped",
-    stderr: "piped",
+    encoding: "utf8",
   });
-}
-
-async function run(args: string[], env: Record<string, string>, cwd: string) {
-  const { code, stdout, stderr } = await command(args, env, cwd).output();
-  return { code, stdout: decoder.decode(stdout), stderr: decoder.decode(stderr) };
-}
-
-function freePort(): number {
-  const listener = Deno.listen({ hostname: "127.0.0.1", port: 0 });
-  const port = listener.addr.port;
-  listener.close();
-  return port;
+  return { code: status, stdout, stderr };
 }
 
 async function waitForServer(port: string): Promise<void> {
@@ -51,7 +39,7 @@ async function waitForServer(port: string): Promise<void> {
 }
 
 async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {
-  const dir = await Deno.makeTempDir();
+  const dir = await fs.mkdtemp(join(tmpdir(), "quaso-test-"));
   try {
     await fn(dir);
   } finally {
@@ -60,7 +48,7 @@ async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {
 }
 
 test("commands: flags", () => {
-  assertEquals(parseFlags(["--name", "CI", "--scope=read", "--dry-run"]), {
+  expect(parseFlags(["--name", "CI", "--scope=read", "--dry-run"])).toStrictEqual({
     name: "CI",
     scope: "read",
     "dry-run": "",
@@ -69,19 +57,19 @@ test("commands: flags", () => {
 
 test("commands: version, unknown commands and bad settings", () =>
   withTempDir(async (dir) => {
-    assertEquals((await run(["version"], {}, dir)).stdout.trim(), VERSION);
-    assertEquals((await run(["nope"], {}, dir)).code, 2);
+    expect((await run(["version"], {}, dir)).stdout.trim()).toStrictEqual(VERSION);
+    expect((await run(["nope"], {}, dir)).code).toBe(2);
     const bad = await run(["serve"], { PORT: "eighty", LOG_LEVEL: "loud" }, dir);
-    assertEquals(bad.code, 1);
-    assertStringIncludes(bad.stderr, "Quaso can't start, because of its settings:");
-    assertStringIncludes(bad.stderr, 'PORT must be a whole number from 1 to 65535, not "eighty".');
-    assertStringIncludes(bad.stderr, "LOG_LEVEL must be one of");
+    expect(bad.code).toBe(1);
+    expect(bad.stderr).toContain("Quaso can't start, because of its settings:");
+    expect(bad.stderr).toContain('PORT must be a whole number from 1 to 65535, not "eighty".');
+    expect(bad.stderr).toContain("LOG_LEVEL must be one of");
     const cloudflare = await run(["seed-dev"], { QUASO_DEV: "1", QUASO_CLOUDFLARE: "1" }, dir);
-    assertEquals(cloudflare.code, 2);
-    assertStringIncludes(cloudflare.stderr, "seed-dev only seeds local storage");
+    expect(cloudflare.code).toBe(2);
+    expect(cloudflare.stderr).toContain("seed-dev only seeds local storage");
     const token = await run(["token", "create", "--scope", "admin"], { DATA_DIR: dir }, dir);
-    assertEquals(token.code, 2);
-    assertStringIncludes(token.stderr, "--name: is required");
+    expect(token.code).toBe(2);
+    expect(token.stderr).toContain("--name: is required");
   }));
 
 test(
@@ -90,52 +78,58 @@ test(
   () =>
     withTempDir(async (dir) => {
       const dataDir = join(dir, "data");
-      const port = String(freePort());
+      const port = String(await freePort());
       const env = { DATA_DIR: dataDir, PORT: port, WEB_DIR: join(dir, "no-website") };
 
-      assertEquals((await run(["seed-dev"], env, dir)).code, 2);
+      expect((await run(["seed-dev"], env, dir)).code).toBe(2);
       const seeded = await run(["seed-dev"], { ...env, QUASO_DEV: "1" }, dir);
-      assertEquals(seeded.code, 0, seeded.stderr);
-      assertStringIncludes(seeded.stderr, "Seeded the demo project");
+      expect(seeded.code, seeded.stderr).toBe(0);
+      expect(seeded.stderr).toContain("Seeded the demo project");
       const devKey = (await fs.readFile(join(dataDir, "dev-api-key"), "utf8")).trim();
-      assertMatch(devKey, /^qso_/);
+      expect(devKey).toMatch(/^qso_/);
       const again = await run(["seed-dev"], { ...env, QUASO_DEV: "1" }, dir);
-      assertEquals(again.code, 1);
-      assertStringIncludes(again.stderr, "already has a project");
+      expect(again.code).toBe(1);
+      expect(again.stderr).toContain("already has a project");
 
-      const server = command(["serve"], env, dir).spawn();
+      const server = spawn(process.execPath, [MAIN, "serve"], {
+        env: { ...process.env, LOG_LEVEL: "info", ...env },
+        cwd: dir,
+        stdio: ["ignore", "pipe", "ignore"],
+      });
+      let stdout = "";
+      server.stdout.setEncoding("utf8").on("data", (chunk: string) => (stdout += chunk));
+      const exited = once(server, "close");
       try {
         await waitForServer(port);
-        assertEquals(await healthcheck({ PORT: port }), 0);
+        expect(await healthcheck({ PORT: port })).toBe(0);
         const status = await fetch(`http://127.0.0.1:${port}/api/v1/status`, {
           headers: { Authorization: `Bearer ${devKey}` },
         });
-        assertEquals(status.status, 200);
-        assertEquals((await status.json()).languages.length, 6);
+        expect(status.status).toBe(200);
+        expect((await status.json()).languages.length).toBe(6);
 
         const busy = await run(["token", "create", "--name", "CI", "--scope", "read"], env, dir);
-        assertEquals(busy.code, 1);
-        assertStringIncludes(busy.stderr, `Another Quaso server is using ${dataDir}.`);
-        assertStringIncludes(busy.stderr, "Stop it first");
+        expect(busy.code).toBe(1);
+        expect(busy.stderr).toContain(`Another Quaso server is using ${dataDir}.`);
+        expect(busy.stderr).toContain("Stop it first");
       } finally {
         server.kill("SIGTERM");
       }
-      const { code, stdout } = await server.output();
-      assertEquals(code, 0);
-      const logs = decoder
-        .decode(stdout)
+      const [code] = await exited;
+      expect(code).toBe(0);
+      const logs = stdout
         .trim()
         .split("\n")
         .map((line) => JSON.parse(line));
       const messages = logs.map((line) => line.msg);
       assert(messages.includes("Listening"), messages.join(", "));
-      assertEquals(messages.slice(-2), ["Shutting down", "Stopped"]);
+      expect(messages.slice(-2)).toStrictEqual(["Shutting down", "Stopped"]);
       assert(logs.some((line) => line.msg === "request" && line.path === "/api/v1/status"));
-      assertEquals(await healthcheck({ PORT: port }), 1);
+      expect(await healthcheck({ PORT: port })).toBe(1);
 
       const created = await run(["token", "create", "--name", "CI", "--scope", "read"], env, dir);
-      assertEquals(created.code, 0, created.stderr);
-      assertMatch(created.stdout, /^qso_\S+\n$/);
-      assertStringIncludes(created.stderr, 'Created the API key "CI" with the read scope.');
+      expect(created.code, created.stderr).toBe(0);
+      expect(created.stdout).toMatch(/^qso_\S+\n$/);
+      expect(created.stderr).toContain('Created the API key "CI" with the read scope.');
     }),
 );

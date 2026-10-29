@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import { tmpdir } from "node:os";
 import type { Fetch } from "@quaso/core";
 import * as fs from "node:fs/promises";
 /** Helpers for the CLI's tests: temporary projects, captured output and a fake `fetch`. */
@@ -23,7 +24,7 @@ export async function withProject(
   files: Record<string, string | object>,
   fn: (dir: string) => Promise<void>,
 ): Promise<void> {
-  const dir = await Deno.makeTempDir({ prefix: "quaso-cli-test-" });
+  const dir = await fs.mkdtemp(join(tmpdir(), "quaso-cli-test-"));
   try {
     await writeFiles(dir, files);
     await fn(dir);

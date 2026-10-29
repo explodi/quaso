@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals, assertStringIncludes } from "@std/assert";
+import { expect, test } from "vitest";
 import { openAsyncSqlite } from "./adapters/node_async_sqlite.ts";
 import { SYSTEM } from "./api.ts";
 import { refreshContextualChecks } from "./contextual_checks.ts";
@@ -36,22 +35,24 @@ test("duplicate warnings flag both keys, stay nonblocking and disappear after co
       files: [{ path: "buildings.json", content: '{"barn":"Scheune","loft":"scheune"}' }],
     });
     const qa = await service.listStrings(SYSTEM, { language: "de", state: "qa" });
-    assertEquals(qa.total, 2);
+    expect(qa.total).toBe(2);
     const barn = qa.strings[0];
     const detail = await service.getString(SYSTEM, { id: barn.id, language: "de" });
-    assertEquals(detail.checks[0].check, "duplicate_translation");
-    assertEquals(detail.checks[0].severity, "warning");
-    assertStringIncludes(detail.checks[0].message, "loft");
-    assertStringIncludes(detail.checks[0].message, "Hay Loft");
-    assertEquals((await service.getStatus(SYSTEM, {})).languages[0].qa, 2);
+    expect(detail.checks[0].check).toBe("duplicate_translation");
+    expect(detail.checks[0].severity).toBe("warning");
+    expect(detail.checks[0].message).toContain("loft");
+    expect(detail.checks[0].message).toContain("Hay Loft");
+    expect((await service.getStatus(SYSTEM, {})).languages[0].qa).toBe(2);
     await service.importTranslations(SYSTEM, {
       language: "de",
       as: "blue",
       overwrite: true,
       files: [{ path: "buildings.json", content: '{"loft":"Heuboden"}' }],
     });
-    assertEquals((await service.listStrings(SYSTEM, { language: "de", state: "qa" })).total, 0);
-    assertEquals((await service.getString(SYSTEM, { id: barn.id, language: "de" })).checks, []);
+    expect((await service.listStrings(SYSTEM, { language: "de", state: "qa" })).total).toBe(0);
+    expect((await service.getString(SYSTEM, { id: barn.id, language: "de" })).checks).toStrictEqual(
+      [],
+    );
   } finally {
     opened.close();
   }
@@ -91,9 +92,9 @@ test("progress read between a commit and its check refresh isn't served after th
           AND string_id = (SELECT id FROM strings WHERE display_key = 'loft')`,
       },
     ]);
-    assertEquals((await service.getStatus(SYSTEM, {})).languages[0].qa, 0);
+    expect((await service.getStatus(SYSTEM, {})).languages[0].qa).toBe(0);
     await refreshContextualChecks(opened.sql);
-    assertEquals((await service.getStatus(SYSTEM, {})).languages[0].qa, 2);
+    expect((await service.getStatus(SYSTEM, {})).languages[0].qa).toBe(2);
   } finally {
     opened.close();
   }
@@ -157,9 +158,9 @@ test("checks refreshed after each translation save equal a full refresh's", asyn
   try {
     const service = await twoFileProject(opened.sql);
     const afterImports = await storedAndFull(opened.sql);
-    assertEquals(afterImports.stored, afterImports.full);
+    expect(afterImports.stored).toStrictEqual(afterImports.full);
     // menu › open and dialog › open differ in German; both French values are "ouvrir".
-    assertEquals(warned(afterImports.full), ["1 de", "4 de", "4 fr", "5 fr"]);
+    expect(warned(afterImports.full)).toStrictEqual(["1 de", "4 de", "4 fr", "5 fr"]);
 
     await service.importTranslations(SYSTEM, {
       language: "de",
@@ -168,8 +169,15 @@ test("checks refreshed after each translation save equal a full refresh's", asyn
       files: [{ path: "menu.json", content: '{"quit":"beginnen"}' }],
     });
     const afterDuplicate = await storedAndFull(opened.sql);
-    assertEquals(afterDuplicate.stored, afterDuplicate.full);
-    assertEquals(warned(afterDuplicate.full), ["1 de", "2 de", "3 de", "4 de", "4 fr", "5 fr"]);
+    expect(afterDuplicate.stored).toStrictEqual(afterDuplicate.full);
+    expect(warned(afterDuplicate.full)).toStrictEqual([
+      "1 de",
+      "2 de",
+      "3 de",
+      "4 de",
+      "4 fr",
+      "5 fr",
+    ]);
 
     await service.importTranslations(SYSTEM, {
       language: "de",
@@ -178,8 +186,8 @@ test("checks refreshed after each translation save equal a full refresh's", asyn
       files: [{ path: "dialog.json", content: '{"open":"Öffnen"}' }],
     });
     const afterAgreeing = await storedAndFull(opened.sql);
-    assertEquals(afterAgreeing.stored, afterAgreeing.full);
-    assertEquals(warned(afterAgreeing.full), ["2 de", "3 de", "4 fr", "5 fr"]);
+    expect(afterAgreeing.stored).toStrictEqual(afterAgreeing.full);
+    expect(warned(afterAgreeing.full)).toStrictEqual(["2 de", "3 de", "4 fr", "5 fr"]);
   } finally {
     opened.close();
   }
@@ -208,7 +216,7 @@ test("a translation save reads the translations it can affect, not the whole pro
     const whole = reads.filter(
       (sql) => sql.includes("extra_checks") && !sql.includes("WITH scope"),
     );
-    assertEquals([scoped.length, whole.length], [1, 0]);
+    expect([scoped.length, whole.length]).toStrictEqual([1, 0]);
   } finally {
     opened.close();
   }
@@ -227,15 +235,17 @@ test("contextual-check migration keeps existing translations, history, roles and
       INSERT INTO history (string_id, event, after_value, actor_type, created_at) VALUES (1, 'translation_saved', '"Kept"', 'user', 1);
     `);
     await migrate(opened.sql);
-    assertEquals(opened.sql.query("SELECT value, colour, extra_checks FROM translations"), [
+    expect(opened.sql.query("SELECT value, colour, extra_checks FROM translations")).toStrictEqual([
       { value: '"Kept"', colour: "blue", extra_checks: "[]" },
     ]);
-    assertEquals(opened.sql.query("SELECT after_value FROM history"), [{ after_value: '"Kept"' }]);
-    assertEquals(opened.sql.query("SELECT role FROM users"), [{ role: "administrator" }]);
-    assertEquals(opened.sql.query("SELECT data FROM settings"), [
+    expect(opened.sql.query("SELECT after_value FROM history")).toStrictEqual([
+      { after_value: '"Kept"' },
+    ]);
+    expect(opened.sql.query("SELECT role FROM users")).toStrictEqual([{ role: "administrator" }]);
+    expect(opened.sql.query("SELECT data FROM settings")).toStrictEqual([
       { data: '{"name":"Kept project"}' },
     ]);
-    assertEquals(opened.sql.query("SELECT value FROM meta WHERE key = 'schema_version'"), [
+    expect(opened.sql.query("SELECT value FROM meta WHERE key = 'schema_version'")).toStrictEqual([
       { value: String(DATABASE_VERSION) },
     ]);
   } finally {

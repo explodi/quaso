@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals } from "@std/assert";
+import { expect, test } from "vitest";
 import { checkTranslation, DEFAULT_SYNTAX } from "@quaso/core";
 import {
   draftFrom,
@@ -25,52 +24,55 @@ test("chips: placeholders and references of the English, each once, in order", (
     ],
     syntax,
   );
-  assertEquals(masking.enabled, true);
-  assertEquals(masking.references, ["$t(common:play)", "$t(common:back)"]);
-  assertEquals(
-    masking.chips.map((chip) => [chip.kind, chip.insert, chip.english]),
-    [
-      ["reference", "⟦1⟧", "Play"],
-      ["placeholder", "{{name}}", null],
-      ["reference", "⟦2⟧", "Back"],
-      ["placeholder", "{{count}}", null],
-    ],
-  );
+  expect(masking.enabled).toBe(true);
+  expect(masking.references).toStrictEqual(["$t(common:play)", "$t(common:back)"]);
+  expect(masking.chips.map((chip) => [chip.kind, chip.insert, chip.english])).toStrictEqual([
+    ["reference", "⟦1⟧", "Play"],
+    ["placeholder", "{{name}}", null],
+    ["reference", "⟦2⟧", "Back"],
+    ["placeholder", "{{count}}", null],
+  ]);
 });
 
 test("masking numbers references like the English, and unmasking restores them exactly", () => {
   const masking = editorMasking("$t(common:play) again, $t(common:back)", [], syntax);
   const translation = "Noch einmal: $t(common:back) und $t(common:play), $t(common:play)";
   const masked = maskText(translation, masking, syntax);
-  assertEquals(masked, "Noch einmal: ⟦2⟧ und ⟦1⟧, ⟦1⟧");
-  assertEquals(unmaskText(masked, masking), translation);
+  expect(masked).toBe("Noch einmal: ⟦2⟧ und ⟦1⟧, ⟦1⟧");
+  expect(unmaskText(masked, masking)).toStrictEqual(translation);
   // A reference the English doesn't have stays as written, so the checks report it.
-  assertEquals(maskText("$t(other) ⟦1⟧", masking, syntax), "$t(other) ⟦1⟧");
+  expect(maskText("$t(other) ⟦1⟧", masking, syntax)).toBe("$t(other) ⟦1⟧");
 });
 
 test("text that already contains ⟦ switches masking off", () => {
   const masking = editorMasking("$t(common:play) ⟦1⟧", [], syntax);
-  assertEquals(masking.enabled, false);
-  assertEquals(masking.chips[0].insert, "$t(common:play)");
-  assertEquals(maskText("$t(common:play) ⟦1⟧", masking, syntax), "$t(common:play) ⟦1⟧");
-  assertEquals(unmaskText("⟦1⟧", masking), "⟦1⟧");
+  expect(masking.enabled).toBe(false);
+  expect(masking.chips[0].insert).toBe("$t(common:play)");
+  expect(maskText("$t(common:play) ⟦1⟧", masking, syntax)).toBe("$t(common:play) ⟦1⟧");
+  expect(unmaskText("⟦1⟧", masking)).toBe("⟦1⟧");
   const byTranslation = editorMasking("$t(common:play)", [], syntax, "⟦1⟧ $t(common:play)");
-  assertEquals(byTranslation.enabled, false);
+  expect(byTranslation.enabled).toBe(false);
 });
 
 test("Polish plurals need four inputs, with example numbers", () => {
   const source = { one: "{{count}} coin", other: "{{count}} coins" };
   const forms = formsFor("plural", "pl", source, { cardinal: ["one", "few", "many", "other"] });
-  assertEquals(forms, ["one", "few", "many", "other"]);
-  assertEquals(formExamples("one", "plural", "pl", source), "1");
-  assertEquals(formExamples("few", "plural", "pl", source), "2–4, 22–24, 32–34, …");
-  assertEquals(englishFor(source, "few"), "{{count}} coins");
-  assertEquals(englishFor(source, "one"), "{{count}} coin");
+  expect(forms).toStrictEqual(["one", "few", "many", "other"]);
+  expect(formExamples("one", "plural", "pl", source)).toBe("1");
+  expect(formExamples("few", "plural", "pl", source)).toBe("2–4, 22–24, 32–34, …");
+  expect(englishFor(source, "few")).toBe("{{count}} coins");
+  expect(englishFor(source, "one")).toBe("{{count}} coin");
   // The service's categories win over the runtime's.
-  assertEquals(formsFor("plural", "pl", source, { cardinal: ["one", "other"] }), ["one", "other"]);
+  expect(formsFor("plural", "pl", source, { cardinal: ["one", "other"] })).toStrictEqual([
+    "one",
+    "other",
+  ]);
   // An English zero form adds zero in every language.
-  assertEquals(formsFor("plural", "ja", { zero: "none", other: "{{count}}" }), ["zero", "other"]);
-  assertEquals(formsFor("text", "pl", "Play"), ["text"]);
+  expect(formsFor("plural", "ja", { zero: "none", other: "{{count}}" })).toStrictEqual([
+    "zero",
+    "other",
+  ]);
+  expect(formsFor("text", "pl", "Play")).toStrictEqual(["text"]);
 });
 
 test("drafts and values", () => {
@@ -79,18 +81,18 @@ test("drafts and values", () => {
   const unmask = (text: string) => unmaskText(text, masking);
   const forms = ["one", "few", "many", "other"] as const;
   const draft = draftFrom({ one: "$t(common:play) {{count}}", other: "x" }, forms, mask);
-  assertEquals(draft, { one: "⟦1⟧ {{count}}", few: "", many: "", other: "x" });
-  assertEquals(valueFrom({ ...draft, few: "a", many: "b" }, forms, unmask), {
+  expect(draft).toStrictEqual({ one: "⟦1⟧ {{count}}", few: "", many: "", other: "x" });
+  expect(valueFrom({ ...draft, few: "a", many: "b" }, forms, unmask)).toStrictEqual({
     one: "$t(common:play) {{count}}",
     few: "a",
     many: "b",
     other: "x",
   });
-  assertEquals(valueFrom(draftFrom("Graj", ["text"], mask), ["text"], unmask), "Graj");
-  assertEquals(draftFrom(null, ["text"], mask), { text: "" });
-  assertEquals(sameDraft({ text: "a" }, { text: "a" }, ["text"]), true);
-  assertEquals(sameDraft({ one: "a" }, { one: "a", few: "" }, ["one", "few"]), true);
-  assertEquals(sameDraft({ one: "a" }, { one: "b" }, ["one"]), false);
+  expect(valueFrom(draftFrom("Graj", ["text"], mask), ["text"], unmask)).toBe("Graj");
+  expect(draftFrom(null, ["text"], mask)).toStrictEqual({ text: "" });
+  expect(sameDraft({ text: "a" }, { text: "a" }, ["text"])).toBe(true);
+  expect(sameDraft({ one: "a" }, { one: "a", few: "" }, ["one", "few"])).toBe(true);
+  expect(sameDraft({ one: "a" }, { one: "b" }, ["one"])).toBe(false);
 });
 
 test("the checks see the unmasked value", () => {
@@ -102,10 +104,7 @@ test("the checks see the unmasked value", () => {
     translation: value,
     language: "fr",
   });
-  assertEquals(
-    results.filter((r) => r.severity === "error"),
-    [],
-  );
+  expect(results.filter((r) => r.severity === "error")).toStrictEqual([]);
 });
 
 test("chips, ICU: the arguments and # of every case, each once; no chips for block syntax", () => {
@@ -114,11 +113,8 @@ test("chips, ICU: the arguments and # of every case, each once; no chips for blo
     [],
     { ...DEFAULT_SYNTAX, icu: true },
   );
-  assertEquals(
-    masking.chips.map((chip) => [chip.kind, chip.insert, chip.key]),
-    [
-      ["placeholder", "#", "#"],
-      ["placeholder", "{name}", "{name}"],
-    ],
-  );
+  expect(masking.chips.map((chip) => [chip.kind, chip.insert, chip.key])).toStrictEqual([
+    ["placeholder", "#", "#"],
+    ["placeholder", "{name}", "{name}"],
+  ]);
 });

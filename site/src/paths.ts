@@ -8,7 +8,7 @@
  * `https://<org>.github.io/quaso/`.
  *
  * Shared by the pre-renderer (build.ts) and the pages, so that links always match the
- * files the build writes. It runs in Deno and in the browser: no Deno or Node APIs.
+ * files the build writes. It runs in Node and in the browser: no Node APIs.
  */
 
 /** The landing page. */

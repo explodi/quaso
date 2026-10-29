@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { afterEach, beforeEach, describe, test } from "node:test";
-import { expect } from "@std/expect";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import * as fs from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";

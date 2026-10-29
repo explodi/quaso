@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 import * as fs from "node:fs/promises";
 /**
- * `deno task docker:smoke`: acceptance test 1 against the Docker image (S2.10, design
+ * `npm run docker:smoke`: acceptance test 1 against the Docker image (S2.10, design
  * §5.12). On a new volume: an API key from `token create`, a server that becomes healthy,
  * the demo game's English files uploaded with curl, a stop, and a new container on the same
  * volume that still has every string. Also checks that the server runs as a non-root user,
@@ -9,13 +9,15 @@ import * as fs from "node:fs/promises";
  * the same volume refuses to start, and that the log never discloses the configured setup key.
  *
  * Needs Docker and curl. The task builds the image first; to test another one:
- *   deno run -A scripts/docker_smoke.ts --image <namespace>/quaso:latest --port 8124
+ *   node scripts/docker_smoke.ts --image <namespace>/quaso:latest --port 8124
  * Everything it creates (containers, the volume) is removed at the end, pass or fail.
  */
+import { spawn } from "node:child_process";
+import { once } from "node:events";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import type { Progress, StatusResult } from "@quaso/core";
 import { demoDir, readProjectFiles } from "../packages/server/src/dev_seed.ts";
-
-const decoder = new TextDecoder();
 
 function option(name: string, fallback: string): string {
   const index = process.argv.slice(2).indexOf(name);
@@ -41,16 +43,13 @@ interface Output {
 }
 
 async function run(command: string, args: string[], timeoutMs = 120_000): Promise<Output> {
-  const output = await new Deno.Command(command, {
-    args,
-    stdin: "null",
-    signal: AbortSignal.timeout(timeoutMs),
-  }).output();
-  return {
-    code: output.code,
-    stdout: decoder.decode(output.stdout).trim(),
-    stderr: decoder.decode(output.stderr).trim(),
-  };
+  const child = spawn(command, args, { stdio: ["ignore", "pipe", "pipe"], timeout: timeoutMs });
+  let stdout = "";
+  let stderr = "";
+  child.stdout.on("data", (chunk) => (stdout += chunk));
+  child.stderr.on("data", (chunk) => (stderr += chunk));
+  const [code] = await once(child, "close");
+  return { code: code ?? 1, stdout: stdout.trim(), stderr: stderr.trim() };
 }
 
 /** Runs docker; fails with its error output unless `allowFailure`. */
@@ -182,21 +181,22 @@ step("the server process runs as a non-root user", async () => {
     .split("\n")
     .slice(1)
     .map((line) => line.trim().split(/\s+/));
-  const quaso = processes.find(([, , command]) => command === "quaso");
-  check(quaso !== undefined, `no quaso process in:\n${stdout}`);
-  check(quaso[1] !== "0", "quaso runs as root");
+  // Node names its process after its main thread, such as `node-MainThread`.
+  const server = processes.find(([, , command]) => command.startsWith("node"));
+  check(server !== undefined, `no node process in:\n${stdout}`);
+  check(server[1] !== "0", "the server runs as root");
   check(
     processes.every(([, uid]) => uid !== "0"),
     `a process runs as root:\n${stdout}`,
   );
-  return `uid ${quaso[1]}`;
+  return `uid ${server[1]}`;
 });
 
 step("the demo game's English files upload with the key (curl)", async () => {
   const { config, sources } = await readProjectFiles(demoDir());
   languages = config.languages;
   sourceFiles = sources.length;
-  bodyFile = await Deno.makeTempFile({ prefix: "quaso-smoke-", suffix: ".json" });
+  bodyFile = join(await fs.mkdtemp(join(tmpdir(), "quaso-smoke-")), "body.json");
   await fs.writeFile(
     bodyFile,
     JSON.stringify({
@@ -303,7 +303,7 @@ async function cleanUp(): Promise<void> {
     await docker(["rm", "-f", container], { allowFailure: true });
   }
   await docker(["volume", "rm", VOLUME], { allowFailure: true });
-  if (bodyFile) await fs.rm(bodyFile).catch(() => {});
+  if (bodyFile) await fs.rm(dirname(bodyFile), { recursive: true }).catch(() => {});
 }
 
 if (import.meta.main) {

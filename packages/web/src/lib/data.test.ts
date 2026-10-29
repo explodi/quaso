@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals, assertRejects } from "@std/assert";
+import { expect, test } from "vitest";
 import {
   type FetchContext,
   IDLE_AFTER_MS,
@@ -34,11 +33,11 @@ function controlled<T>() {
 }
 
 test("key prefixes", () => {
-  assertEquals(keyStartsWith(["strings", "de", "a.json"], ["strings"]), true);
-  assertEquals(keyStartsWith(["strings", "de", "a.json"], ["strings", "de"]), true);
-  assertEquals(keyStartsWith(["strings", "de"], ["strings", "fr"]), false);
-  assertEquals(keyStartsWith(["strings"], ["strings", "de"]), false);
-  assertEquals(keyStartsWith(["string", 5], []), true);
+  expect(keyStartsWith(["strings", "de", "a.json"], ["strings"])).toBe(true);
+  expect(keyStartsWith(["strings", "de", "a.json"], ["strings", "de"])).toBe(true);
+  expect(keyStartsWith(["strings", "de"], ["strings", "fr"])).toBe(false);
+  expect(keyStartsWith(["strings"], ["strings", "de"])).toBe(false);
+  expect(keyStartsWith(["string", 5], [])).toBe(true);
 });
 
 test("requests for the same key are shared", async () => {
@@ -46,14 +45,14 @@ test("requests for the same key are shared", async () => {
   const source = controlled<string>();
   const a = cache.fetch(["project"], source.fetcher);
   const b = cache.fetch(["project"], source.fetcher);
-  assertEquals(source.calls, 1);
-  assertEquals(cache.get(["project"]).fetching, true);
+  expect(source.calls).toBe(1);
+  expect(cache.get(["project"]).fetching).toBe(true);
   source.resolve(0, "Quaso");
-  assertEquals(await a, "Quaso");
-  assertEquals(await b, "Quaso");
-  assertEquals(cache.get(["project"]).data, "Quaso");
-  assertEquals(cache.get(["project"]).status, "success");
-  assertEquals(cache.get(["project"]).fetching, false);
+  expect(await a).toBe("Quaso");
+  expect(await b).toBe("Quaso");
+  expect(cache.get(["project"]).data).toBe("Quaso");
+  expect(cache.get(["project"]).status).toBe("success");
+  expect(cache.get(["project"]).fetching).toBe(false);
 });
 
 test("the state object stays the same until it changes, and listeners hear changes", async () => {
@@ -62,17 +61,17 @@ test("the state object stays the same until it changes, and listeners hear chang
   let heard = 0;
   const stop = cache.subscribe(["files", "de"], () => heard++);
   const before = cache.get(["files", "de"]);
-  assertEquals(cache.get(["files", "de"]), before);
+  expect(cache.get(["files", "de"])).toStrictEqual(before);
   await cache.fetch(["files", "de"], () => Promise.resolve([1, 2]));
   const after = cache.get(["files", "de"]);
-  assertEquals(after.data, [1, 2]);
-  assertEquals(after.updatedAt, 1000);
-  assertEquals(cache.get(["files", "de"]) === after, true);
-  assertEquals(heard, 2); // fetching, then the data
+  expect(after.data).toStrictEqual([1, 2]);
+  expect(after.updatedAt).toBe(1000);
+  expect(cache.get(["files", "de"]) === after).toBe(true);
+  expect(heard).toBe(2); // fetching, then the data
   stop();
   now = 2000;
   await cache.fetch(["files", "de"], () => Promise.resolve([3]), { force: true });
-  assertEquals(heard, 2);
+  expect(heard).toBe(2);
 });
 
 test("a forced request wins over an older one", async () => {
@@ -80,26 +79,24 @@ test("a forced request wins over an older one", async () => {
   const source = controlled<number>();
   const first = cache.fetch(["n"], source.fetcher);
   const second = cache.fetch(["n"], source.fetcher, { force: true });
-  assertEquals(source.calls, 2);
+  expect(source.calls).toBe(2);
   source.resolve(1, 2);
   await second;
   source.resolve(0, 1);
   await first;
-  assertEquals(cache.get(["n"]).data, 2);
+  expect(cache.get(["n"]).data).toBe(2);
 });
 
 test("an error keeps the data we had", async () => {
   const cache = new QueryCache();
   await cache.fetch(["project"], () => Promise.resolve("old"));
-  await assertRejects(
-    () => cache.fetch(["project"], () => Promise.reject(new Error("offline")), { force: true }),
-    Error,
-    "offline",
-  );
+  await expect(
+    cache.fetch(["project"], () => Promise.reject(new Error("offline")), { force: true }),
+  ).rejects.toThrow("offline");
   const state = cache.get(["project"]);
-  assertEquals(state.data, "old");
-  assertEquals(state.status, "error");
-  assertEquals((state.error as Error).message, "offline");
+  expect(state.data).toBe("old");
+  expect(state.status).toBe("error");
+  expect((state.error as Error).message).toBe("offline");
 });
 
 test("ensure fetches only stale data", async () => {
@@ -110,13 +107,13 @@ test("ensure fetches only stale data", async () => {
   cache.ensure(["activity"], 1000);
   await Promise.resolve();
   await Promise.resolve();
-  assertEquals(calls, 1);
+  expect(calls).toBe(1);
   now = 500;
   cache.ensure(["activity"], 1000);
-  assertEquals(calls, 1);
+  expect(calls).toBe(1);
   now = 1500;
   cache.ensure(["activity"], 1000);
-  assertEquals(calls, 2);
+  expect(calls).toBe(2);
 });
 
 test("invalidate refetches keys in use under the prefix, and marks the others stale", async () => {
@@ -129,12 +126,12 @@ test("invalidate refetches keys in use under the prefix, and marks the others st
   await cache.fetch(["project"], () => Promise.resolve(++projectCalls));
   const stop = cache.subscribe(["strings", "de"], () => {});
   await cache.invalidate(["strings"]);
-  assertEquals([deCalls, frCalls, projectCalls], [2, 1, 1]);
-  assertEquals(cache.get(["strings", "de"]).data, 2);
+  expect([deCalls, frCalls, projectCalls]).toStrictEqual([2, 1, 1]);
+  expect(cache.get(["strings", "de"]).data).toBe(2);
   // Not in use: stale, fetched when next used.
-  assertEquals(cache.get(["strings", "fr"]).updatedAt, 0);
-  assertEquals(cache.get(["strings", "fr"]).data, 1);
-  assertEquals(cache.get(["project"]).updatedAt > 0, true);
+  expect(cache.get(["strings", "fr"]).updatedAt).toBe(0);
+  expect(cache.get(["strings", "fr"]).data).toBe(1);
+  expect(cache.get(["project"]).updatedAt > 0).toBe(true);
   stop();
 });
 
@@ -144,8 +141,8 @@ test("setData and update change data without fetching", async () => {
   cache.setData<number[]>(["list", "de"], (current) => [...(current ?? []), 4]);
   cache.setData(["list", "fr"], [5]);
   cache.update<number[]>(["list"], (list) => list.map((n) => n * 10));
-  assertEquals(cache.get(["list", "de"]).data, [10, 20, 30, 40]);
-  assertEquals(cache.get(["list", "fr"]).data, [50]);
+  expect(cache.get(["list", "de"]).data).toStrictEqual([10, 20, 30, 40]);
+  expect(cache.get(["list", "fr"]).data).toStrictEqual([50]);
   await Promise.resolve();
 });
 
@@ -158,11 +155,11 @@ test("revalidateActive refetches old keys that are on screen", async () => {
   const stop = cache.subscribe(["project"], () => {});
   now = 1000;
   cache.revalidateActive(5000);
-  assertEquals(calls, 1);
+  expect(calls).toBe(1);
   now = 10_000;
   cache.revalidateActive(5000);
   await Promise.resolve();
-  assertEquals(calls, 2);
+  expect(calls).toBe(2);
   stop();
 });
 
@@ -173,9 +170,9 @@ test("unused entries are dropped above the limit, oldest first", async () => {
     now = n;
     await cache.fetch(["n", n], () => Promise.resolve(n));
   }
-  assertEquals(cache.size, 3);
-  assertEquals(cache.get(["n", 1]).data, undefined);
-  assertEquals(cache.get(["n", 4]).data, 4);
+  expect(cache.size).toBe(3);
+  expect(cache.get(["n", 1]).data).toBe(undefined);
+  expect(cache.get(["n", 4]).data).toBe(4);
 });
 
 test("refetches the website knows are needed bypass the HTTP cache; polls don't", async () => {
@@ -194,11 +191,11 @@ test("refetches the website knows are needed bypass the HTTP cache; polls don't"
   now = 10_000;
   cache.revalidateActive(5_000);
   await cache.fetch(["string", 19, "ja"]);
-  assertEquals(seen, [false, false]);
+  expect(seen).toStrictEqual([false, false]);
   // The project's revision changed: invalidate() and forced refreshes must reach the server.
   await cache.invalidate(["string"]);
   await cache.fetch(["string", 19, "ja"], undefined, { force: true });
-  assertEquals(seen, [false, false, true, true]);
+  expect(seen).toStrictEqual([false, false, true, true]);
   stop();
   // An invalidated key nobody shows is fetched fresh when it is next used, once.
   await cache.invalidate(["string"]);
@@ -207,7 +204,7 @@ test("refetches the website knows are needed bypass the HTTP cache; polls don't"
   now = 20_000;
   cache.ensure(["string", 19, "ja"], 5_000);
   await cache.fetch(["string", 19, "ja"]);
-  assertEquals(seen, [false, false, true, true, true, false]);
+  expect(seen).toStrictEqual([false, false, true, true, true, false]);
 });
 
 test("a query can opt out of revalidation on focus", async () => {
@@ -228,10 +225,10 @@ test("a query can opt out of revalidation on focus", async () => {
   now = 60_000;
   cache.revalidateActive(5_000);
   await cache.fetch(["project"]);
-  assertEquals([listCalls, projectCalls], [1, 2]);
+  expect([listCalls, projectCalls]).toStrictEqual([1, 2]);
   // It is still refreshed when told to.
   await cache.invalidate(["strings"]);
-  assertEquals(listCalls, 2);
+  expect(listCalls).toBe(2);
   for (const stop of stops) stop();
 });
 
@@ -245,28 +242,26 @@ test("keepPrevious shows the previous data while loading, but not once the new k
     ...patch,
   });
   const kept = ["unfiltered"];
-  assertEquals(shownData(state({}), kept, true), { data: kept, previous: true });
-  assertEquals(shownData(state({}), kept, false), { data: undefined, previous: false });
-  assertEquals(
+  expect(shownData(state({}), kept, true)).toStrictEqual({ data: kept, previous: true });
+  expect(shownData(state({}), kept, false)).toStrictEqual({ data: undefined, previous: false });
+  expect(
     shownData(state({ status: "error", error: new Error("400"), fetching: false }), kept, true),
-    { data: undefined, previous: false },
-  );
-  assertEquals(shownData(state({ data: ["new"], status: "success" }), kept, true), {
+  ).toStrictEqual({ data: undefined, previous: false });
+  expect(shownData(state({ data: ["new"], status: "success" }), kept, true)).toStrictEqual({
     data: ["new"],
     previous: false,
   });
   // A failed revalidation keeps the key's own data.
-  assertEquals(
+  expect(
     shownData(state({ data: ["own"], status: "error", error: new Error("500") }), kept, true),
-    { data: ["own"], previous: false },
-  );
+  ).toStrictEqual({ data: ["own"], previous: false });
 });
 
 test("polling stops after five minutes without input, and input brings it back", () => {
   noteInput(1_000_000);
-  assertEquals(isIdle(1_000_000 + IDLE_AFTER_MS - 1), false);
-  assertEquals(isIdle(1_000_000 + IDLE_AFTER_MS), true);
-  assertEquals(noteInput(1_000_000 + IDLE_AFTER_MS), true);
-  assertEquals(isIdle(1_000_000 + IDLE_AFTER_MS + 1), false);
-  assertEquals(noteInput(1_000_000 + IDLE_AFTER_MS + 2), false);
+  expect(isIdle(1_000_000 + IDLE_AFTER_MS - 1)).toBe(false);
+  expect(isIdle(1_000_000 + IDLE_AFTER_MS)).toBe(true);
+  expect(noteInput(1_000_000 + IDLE_AFTER_MS)).toBe(true);
+  expect(isIdle(1_000_000 + IDLE_AFTER_MS + 1)).toBe(false);
+  expect(noteInput(1_000_000 + IDLE_AFTER_MS + 2)).toBe(false);
 });

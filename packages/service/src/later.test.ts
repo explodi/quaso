@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
+import { assert, expect, test } from "vitest";
 /** Validation, permission edges, live QA and LLM integration for community features. */
-import { assert, assertEquals, assertRejects, assertStringIncludes } from "@std/assert";
 import { ANONYMOUS, SYSTEM } from "./api.ts";
 import { ServiceError } from "./errors.ts";
 import { glossaryFor } from "./glossary.ts";
@@ -27,9 +26,11 @@ test("later permissions: API keys and deleted accounts cannot publish or vote", 
       () => t.service.addComment(actor, { stringId: id, body: "A note" }),
       () => t.service.requestLanguage(actor, { tag: "fr" }),
     ]) {
-      assertEquals((await assertRejects(operation, ServiceError)).code, "forbidden");
+      await expect(operation()).rejects.toThrow(
+        expect.objectContaining({ constructor: ServiceError, code: "forbidden" }),
+      );
     }
-    assertEquals((await t.service.listComments(actor, { stringId: id })).comments, []);
+    expect((await t.service.listComments(actor, { stringId: id })).comments).toStrictEqual([]);
   }
 });
 
@@ -60,36 +61,27 @@ test("glossary: patch validation, matching language, case and StringDetail paylo
     language: "fr",
     translation: "Jouer",
   });
-  assertEquals(
-    glossaryFor(t.ctx, "de", ["Play Quaso"]).map((g) => g.term),
-    ["Play", "Quaso"],
-  );
-  assertEquals(glossaryFor(t.ctx, "de", ["Replay Quasoline"]), []);
-  assertEquals(
-    glossaryFor(t.ctx, "de", ["play quaso"]).map((g) => g.term),
-    ["Play"],
-  );
+  expect(glossaryFor(t.ctx, "de", ["Play Quaso"]).map((g) => g.term)).toStrictEqual([
+    "Play",
+    "Quaso",
+  ]);
+  expect(glossaryFor(t.ctx, "de", ["Replay Quasoline"])).toStrictEqual([]);
+  expect(glossaryFor(t.ctx, "de", ["play quaso"]).map((g) => g.term)).toStrictEqual(["Play"]);
   const detail = await t.service.getString(ANONYMOUS, {
     id: stringId(t.sql, "common.json", "title"),
     language: "de",
   });
-  assertEquals(
-    detail.glossary.map((g) => g.term),
-    ["Play", "Quaso"],
-  );
-  assertEquals((await t.service.listGlossary(ANONYMOUS, { q: "brand" })).terms.length, 1);
-  await assertRejects(
-    () => t.service.updateGlossaryTerm(SYSTEM, { id: term.id, translation: " " }),
-    ServiceError,
-  );
-  assertEquals(
+  expect(detail.glossary.map((g) => g.term)).toStrictEqual(["Play", "Quaso"]);
+  expect((await t.service.listGlossary(ANONYMOUS, { q: "brand" })).terms.length).toBe(1);
+  await expect(
+    t.service.updateGlossaryTerm(SYSTEM, { id: term.id, translation: " " }),
+  ).rejects.toThrow(ServiceError);
+  expect(
     (await t.service.listGlossary(ANONYMOUS, { language: "de", q: "play" })).terms[0].translation,
-    "Spielen",
-  );
-  assertEquals(
+  ).toBe("Spielen");
+  expect(
     (await t.service.updateGlossaryTerm(SYSTEM, { id: term.id, kind: "keep" })).translation,
-    null,
-  );
+  ).toBe(null);
 });
 
 test("comments: paging, source context, author-only deletion and missing strings", async () => {
@@ -105,35 +97,31 @@ test("comments: paging, source context, author-only deletion and missing strings
     language: "fr",
     sourceIssue: true,
   });
-  assertEquals(first.language, null);
-  assertEquals(first.body, "Typo?");
+  expect(first.language).toBe(null);
+  expect(first.body).toBe("Typo?");
   const second = await t.service.addComment(author, {
     stringId: id,
     body: "German wording",
     language: "de",
   });
   const page = await t.service.listComments(ANONYMOUS, { stringId: id, language: "de", limit: 1 });
-  assertEquals(page.total, 2);
-  assertEquals(page.comments[0].id, second.id);
-  assertEquals(
+  expect(page.total).toBe(2);
+  expect(page.comments[0].id).toStrictEqual(second.id);
+  expect(
     (await t.service.listComments(ANONYMOUS, { stringId: id, cursor: page.nextCursor!, limit: 1 }))
       .comments[0].id,
-    first.id,
-  );
-  await assertRejects(() => t.service.resolveComment(other, { id: first.id }), ServiceError);
+  ).toStrictEqual(first.id);
+  await expect(t.service.resolveComment(other, { id: first.id })).rejects.toThrow(ServiceError);
   await t.service.resolveComment(manager, { id: first.id });
-  assertEquals(
+  expect(
     (await t.service.listComments(manager, { sourceIssue: true, resolved: false })).comments,
-    [],
-  );
-  await assertRejects(() => t.service.deleteComment(manager, { id: second.id }), ServiceError);
+  ).toStrictEqual([]);
+  await expect(t.service.deleteComment(manager, { id: second.id })).rejects.toThrow(ServiceError);
   await t.service.deleteComment(author, { id: second.id });
-  await assertRejects(
-    () => t.service.addComment(author, { stringId: 999, body: "Ghost" }),
+  await expect(t.service.addComment(author, { stringId: 999, body: "Ghost" })).rejects.toThrow(
     ServiceError,
   );
-  await assertRejects(
-    () => t.service.listComments(ANONYMOUS, { stringId: id, cursor: "NaN" }),
+  await expect(t.service.listComments(ANONYMOUS, { stringId: id, cursor: "NaN" })).rejects.toThrow(
     ServiceError,
   );
 });
@@ -144,20 +132,20 @@ test("language requests: rejection permits a new request and votes are personal"
   const user = addUser(t.sql, "none");
   const admin = addUser(t.sql, "administrator");
   const request = await t.service.requestLanguage(user, { tag: "iw", message: "Hebrew please" });
-  assertEquals(request.tag, "he");
-  assertEquals(request.voted, true);
-  assertEquals((await t.service.listLanguageRequests(ANONYMOUS, {})).requests[0].voted, false);
-  assertEquals(
-    (await t.service.reviewLanguageRequest(admin, { id: request.id, action: "reject" })).status,
-    "rejected",
+  expect(request.tag).toBe("he");
+  expect(request.voted).toBe(true);
+  expect((await t.service.listLanguageRequests(ANONYMOUS, {})).requests[0].voted).toStrictEqual(
+    false,
   );
+  expect(
+    (await t.service.reviewLanguageRequest(admin, { id: request.id, action: "reject" })).status,
+  ).toBe("rejected");
   const again = await t.service.requestLanguage(user, { tag: "he" });
   assert(again.id !== request.id);
   await t.service.addLanguage(admin, { tag: "he" });
-  assertEquals(
+  expect(
     (await t.service.reviewLanguageRequest(admin, { id: again.id, action: "approve" })).status,
-    "approved",
-  );
+  ).toBe("approved");
 });
 
 test("LLM: glossary context includes only matching target terms and never-translate terms, and can be disabled", async () => {
@@ -177,8 +165,8 @@ test("LLM: glossary context includes only matching target terms and never-transl
   await t.service.createJob(SYSTEM, { languages: ["de"] });
   await drain(t);
   const prompt = provider.requests.map((r) => r.system + r.prompt).join("\n");
-  assertStringIncludes(prompt, '"translation":"Spielen"');
-  assertStringIncludes(prompt, "Never translate");
+  expect(prompt).toContain('"translation":"Spielen"');
+  expect(prompt).toContain("Never translate");
   assert(!prompt.includes('"term":"absent"'));
   assert(!prompt.includes('"translation":"Jouer"'));
   settings = loadSettings(t.ctx);
@@ -206,9 +194,9 @@ test("uploads expose suggested renames in activity for the management UI", async
     baseRevision: 0,
   });
   const upload = await uploadJson(t.service, { "common.json": { renamed: "Same English" } });
-  assertEquals(upload.renameSuggestions.length, 1);
+  expect(upload.renameSuggestions.length).toBe(1);
   const activity = await t.service.getActivity(ANONYMOUS, {});
-  assertEquals(activity.items[0].detail.renameSuggestions, upload.renameSuggestions);
+  expect(activity.items[0].detail.renameSuggestions).toStrictEqual(upload.renameSuggestions);
 });
 
 test("community privacy: account deletion anonymizes every public attribution and revokes stale writes", async () => {
@@ -244,10 +232,10 @@ test("community privacy: account deletion anonymizes every public attribution an
   const comments = await t.service.listComments(ANONYMOUS, { stringId: string });
   const glossary = await t.service.listGlossary(ANONYMOUS, {});
   const requests = await t.service.listLanguageRequests(ANONYMOUS, {});
-  assertEquals(comments.comments[0].author.name, "Deleted user");
-  assertEquals(comments.comments[0].resolvedBy?.name, "Deleted user");
-  assertEquals(glossary.terms[0].createdBy?.name, "Deleted user");
-  assertEquals(requests.requests[0].requestedBy?.name, "Deleted user");
+  expect(comments.comments[0].author.name).toBe("Deleted user");
+  expect(comments.comments[0].resolvedBy?.name).toBe("Deleted user");
+  expect(glossary.terms[0].createdBy?.name).toBe("Deleted user");
+  expect(requests.requests[0].requestedBy?.name).toBe("Deleted user");
   const publicData = JSON.stringify({ comments, glossary, requests });
   for (const personal of ["private@example.com", "Private Name", "private-avatar.png"]) {
     assert(!publicData.includes(personal));
@@ -259,5 +247,7 @@ test("community privacy: account deletion anonymizes every public attribution an
     () => t.service.updateGlossaryTerm(actor, { id: term.id, note: "Still here" }),
     () => t.service.requestLanguage(actor, { tag: "fr" }),
   ])
-    assertEquals((await assertRejects(operation, ServiceError)).code, "forbidden");
+    await expect(operation()).rejects.toThrow(
+      expect.objectContaining({ constructor: ServiceError, code: "forbidden" }),
+    );
 });

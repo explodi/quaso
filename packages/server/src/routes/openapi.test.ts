@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assert, assertEquals } from "@std/assert";
+import { assert, expect, test } from "vitest";
 import { ERROR_CODES, UploadRequest } from "@quaso/core";
 import type { ServiceApi } from "@quaso/service";
 import { API_ROUTES } from "./api.ts";
@@ -13,23 +12,23 @@ const doc: Json = openApiDocument(API_ROUTES, {
 });
 
 test("openapi: an OpenAPI 3.1 document for the instance", () => {
-  assertEquals(doc.openapi, "3.1.0");
-  assertEquals(doc.info.version, "1.2.3");
-  assertEquals(doc.info.license, { name: "MIT", identifier: "MIT" });
-  assertEquals(doc.servers, [{ url: "https://translate.example.com/api/v1" }]);
-  assertEquals(doc.components.securitySchemes.apiKey, {
+  expect(doc.openapi).toBe("3.1.0");
+  expect(doc.info.version).toBe("1.2.3");
+  expect(doc.info.license).toStrictEqual({ name: "MIT", identifier: "MIT" });
+  expect(doc.servers).toStrictEqual([{ url: "https://translate.example.com/api/v1" }]);
+  expect(doc.components.securitySchemes.apiKey).toStrictEqual({
     type: "http",
     scheme: "bearer",
     description:
       "Personal API keys (qso_…) are created in Account → API keys and limited by scope and the creator's role. Server-created keys use their scope alone.",
   });
-  assertEquals(doc.components.schemas.Error.properties.error.properties.code.enum, [
+  expect(doc.components.schemas.Error.properties.error.properties.code.enum).toStrictEqual([
     ...ERROR_CODES,
   ]);
 });
 
 test("openapi: every route, with path parameters in braces", () => {
-  assertEquals(Object.keys(doc.paths).sort(), [
+  expect(Object.keys(doc.paths).sort()).toStrictEqual([
     "/account",
     "/account/identities/{provider}",
     "/activity",
@@ -104,14 +103,14 @@ test("openapi: every route, with path parameters in braces", () => {
     "/usage",
     "/volunteer-requests",
   ]);
-  assertEquals(Object.keys(doc.paths["/api-tokens"]).sort(), ["get", "post"]);
+  expect(Object.keys(doc.paths["/api-tokens"]).sort()).toStrictEqual(["get", "post"]);
 });
 
 test("openapi: operation IDs are the service's method names", () => {
   const methods: (keyof ServiceApi)[] = API_ROUTES.map(
     (route) => route.operationId as keyof ServiceApi,
   );
-  assertEquals(new Set(methods).size, methods.length);
+  expect(new Set(methods).size).toStrictEqual(methods.length);
   for (const [path, operations] of Object.entries(doc.paths)) {
     for (const operation of Object.values(operations as Json)) {
       assert(methods.includes((operation as Json).operationId), path);
@@ -121,24 +120,35 @@ test("openapi: operation IDs are the service's method names", () => {
 
 test("openapi: query and path parameters from the core schemas", () => {
   const files = doc.paths["/files"].get;
-  assertEquals([files.parameters[0].name, files.parameters[0].required], ["language", false]);
+  expect([files.parameters[0].name, files.parameters[0].required]).toStrictEqual([
+    "language",
+    false,
+  ]);
   const strings = doc.paths["/strings"].get;
   const byName = Object.fromEntries(strings.parameters.map((p: Json) => [p.name, p]));
-  assertEquals(Object.keys(byName), ["language", "file", "state", "q", "ids", "cursor", "limit"]);
-  assertEquals(byName.language.required, true);
-  assertEquals(byName.language.in, "query");
-  assertEquals(byName.limit, {
+  expect(Object.keys(byName)).toStrictEqual([
+    "language",
+    "file",
+    "state",
+    "q",
+    "ids",
+    "cursor",
+    "limit",
+  ]);
+  expect(byName.language.required).toBe(true);
+  expect(byName.language.in).toBe("query");
+  expect(byName.limit).toStrictEqual({
     name: "limit",
     in: "query",
     required: false,
     schema: { type: "integer", minimum: 1, maximum: 500 },
   });
-  assertEquals(byName.ids.style, "form");
-  assertEquals(byName.ids.explode, false);
-  assertEquals(byName.ids.schema.type, "array");
+  expect(byName.ids.style).toBe("form");
+  expect(byName.ids.explode).toBe(false);
+  expect(byName.ids.schema.type).toBe("array");
 
   const detail = doc.paths["/strings/{id}"].get;
-  assertEquals(detail.parameters[0], {
+  expect(detail.parameters[0]).toStrictEqual({
     name: "id",
     in: "path",
     required: true,
@@ -148,31 +158,31 @@ test("openapi: query and path parameters from the core schemas", () => {
 
 test("openapi: bodies, successes, errors and security", () => {
   const upload = doc.paths["/sources"].post;
-  assertEquals(upload.requestBody.content["application/json"].schema, UploadRequest.toJsonSchema());
-  assertEquals(upload.security, [{ apiKey: [] }, { session: [] }]);
-  assertEquals(upload.responses["4XX"], { $ref: "#/components/responses/Error" });
-  assertEquals(Object.keys(doc.paths["/api-tokens"].post.responses)[0], "201");
-  assertEquals(doc.paths["/project"].get.security, [{}, { apiKey: [] }, { session: [] }]);
-  assertEquals(doc.paths["/settings"].patch.security, [{ session: [] }], "people, not keys");
-  assertEquals(doc.paths["/suggestions/review"].post.security, [{ session: [] }]);
-  assertEquals(doc.paths["/restore"].post.security, [{ setupKey: [] }]);
-  assertEquals(doc.components.securitySchemes.setupKey.name, "X-Setup-Key");
-  assertEquals(doc.paths["/export"].get.description.startsWith("Access: An API key"), true);
+  expect(upload.requestBody.content["application/json"].schema).toStrictEqual(
+    UploadRequest.toJsonSchema(),
+  );
+  expect(upload.security).toStrictEqual([{ apiKey: [] }, { session: [] }]);
+  expect(upload.responses["4XX"]).toStrictEqual({ $ref: "#/components/responses/Error" });
+  expect(Object.keys(doc.paths["/api-tokens"].post.responses)[0]).toBe("201");
+  expect(doc.paths["/project"].get.security).toStrictEqual([{}, { apiKey: [] }, { session: [] }]);
+  expect(doc.paths["/settings"].patch.security, "people, not keys").toStrictEqual([
+    { session: [] },
+  ]);
+  expect(doc.paths["/suggestions/review"].post.security).toStrictEqual([{ session: [] }]);
+  expect(doc.paths["/restore"].post.security).toStrictEqual([{ setupKey: [] }]);
+  expect(doc.components.securitySchemes.setupKey.name).toBe("X-Setup-Key");
+  expect(doc.paths["/export"].get.description.startsWith("Access: An API key")).toBe(true);
 });
 
 test("openapi: LLM routes take an upload key or a manager's session", () => {
   const create = doc.paths["/jobs"].post;
-  assertEquals(create.operationId, "createJob");
-  assertEquals(create.security, [{ apiKey: [] }, { session: [] }]);
-  assertEquals(
-    create.description,
+  expect(create.operationId).toBe("createJob");
+  expect(create.security).toStrictEqual([{ apiKey: [] }, { session: [] }]);
+  expect(create.description).toStrictEqual(
     "Access: An API key with the `upload` scope, or a signed-in manager or administrator.",
   );
-  assertEquals(Object.keys(doc.paths["/jobs/{id}"]).sort(), ["delete", "get"]);
+  expect(Object.keys(doc.paths["/jobs/{id}"]).sort()).toStrictEqual(["delete", "get"]);
   const usage = doc.paths["/usage"].get;
-  assertEquals(
-    usage.parameters.map((p: Json) => p.name),
-    ["period", "from", "to"],
-  );
-  assertEquals(usage.parameters[0].schema.enum, ["day", "month"]);
+  expect(usage.parameters.map((p: Json) => p.name)).toStrictEqual(["period", "from", "to"]);
+  expect(usage.parameters[0].schema.enum).toStrictEqual(["day", "month"]);
 });

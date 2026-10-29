@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 import * as fs from "node:fs/promises";
+import { join } from "node:path";
 /**
  * Fails when a dependency has a licence that isn't permissive.
  *
  * npm packages are checked from their installed `package.json`, in every `node_modules`
  * folder of the repository.
  */
-import { walk } from "@std/fs/walk";
 
 const ALLOWED = new Set([
   "MIT",
@@ -51,6 +51,14 @@ export const DEV_TOOL_EXCEPTIONS: {
       "by Wrangler and the Cloudflare tests on a developer's machine or in CI, never " +
       "bundled into the Worker or the image",
   },
+  {
+    root: "node_modules",
+    name: /^@img\/sharp-wasm32$/,
+    license: "Apache-2.0 AND LGPL-3.0-or-later AND MIT",
+    reason:
+      "sharp's WebAssembly build, with libvips inside, which npm installs for Miniflare " +
+      "on every platform: the same Wrangler-only use as @img/sharp-libvips-*",
+  },
 ];
 
 /** Is an SPDX expression such as `(MIT OR Apache-2.0)` allowed? */
@@ -91,20 +99,19 @@ async function checkNpm(problems: string[]): Promise<number> {
     } catch {
       continue;
     }
-    for await (const entry of walk(root, {
-      match: [/package\.json$/],
-      includeDirs: false,
-      followSymlinks: false,
-    })) {
+    const entries = await fs.readdir(root, { recursive: true, withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isFile() || entry.name !== "package.json") continue;
+      const path = join(entry.parentPath, entry.name);
       // Only a package's own manifest: .../node_modules/<name>/package.json or @scope/<name>.
-      const parts = entry.path.split("/");
+      const parts = path.split("/");
       const at = parts.lastIndexOf("node_modules");
       const depth = parts.length - at - 1;
       const scoped = parts[at + 1]?.startsWith("@");
       if (at < 0 || depth !== (scoped ? 3 : 2)) continue;
       let pkg: Record<string, unknown>;
       try {
-        pkg = JSON.parse(await fs.readFile(entry.path, "utf8"));
+        pkg = JSON.parse(await fs.readFile(path, "utf8"));
       } catch {
         continue;
       }

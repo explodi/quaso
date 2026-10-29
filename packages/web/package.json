@@ -6,8 +6,8 @@
   "dependencies": {
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
-    "@quaso/core": "workspace:*",
-    "@quaso/design-system": "workspace:*"
+    "@quaso/core": "*",
+    "@quaso/design-system": "*"
   },
   "devDependencies": {
     "@types/react": "^19.3.0",

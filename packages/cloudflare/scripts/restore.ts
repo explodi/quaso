@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 /** Stream a portable backup into an empty Cloudflare instance through its setup API. */
+import { createReadStream } from "node:fs";
 import * as fs from "node:fs/promises";
 import { resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
+import { Readable } from "node:stream";
 import type { Fetch } from "../../core/mod.ts";
 import { backupFileKind } from "../../server/src/storage/backup_files.ts";
 import { BOOKMARK, restoreTimeTravel } from "./time_travel.ts";
@@ -122,10 +124,12 @@ export async function restore(
         "Content-Length": String(file.size),
         "X-Setup-Key": key,
       },
-      body: (await Deno.open(options.file)).readable,
+      body: Readable.toWeb(createReadStream(options.file)) as ReadableStream<Uint8Array>,
+      // Node's fetch requires it for a streamed body.
+      duplex: "half",
       redirect: "error",
       signal: AbortSignal.timeout(15 * 60_000),
-    },
+    } as RequestInit,
   );
   if (!response.ok) {
     await response.body?.cancel();
@@ -140,7 +144,7 @@ export async function restore(
   return result;
 }
 
-const HELP = `Usage: deno task cf:restore --env staging|production <source> [options]
+const HELP = `Usage: npm run cf:restore -- --env staging|production <source> [options]
 
 Restores SQLite, JSON or gzip JSON into an empty instance before initial setup.
   --file <backup>            Import a portable backup using the setup key.

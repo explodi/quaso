@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals, assertStringIncludes } from "@std/assert";
+import { expect, test } from "vitest";
 import { ANONYMOUS, SYSTEM, createFakeTranslator, type ProviderRequest } from "@quaso/service";
 import { startServer, openBrowser } from "./_setup.ts";
 import { runWorkflow } from "../acceptance/workflow.ts";
@@ -52,17 +51,16 @@ test(
         password: PASSWORD,
         step: console.log,
       });
-      assertEquals(result.job.progress.total, 54);
+      expect(result.job.progress.total).toBe(54);
       const tokens = await server.service.listApiTokens(SYSTEM, {});
-      assertEquals(
+      expect(
         tokens.tokens.filter((token) => token.revokedAt === null).map((token) => token.name),
-        ["Browser tests"],
-      );
-      assertEquals(requests.length, 45);
+      ).toStrictEqual(["Browser tests"]);
+      expect(requests.length).toBe(45);
       for (const request of requests) {
-        assertStringIncludes(request.prompt, '"language":"es"');
-        assertStringIncludes(request.prompt, '"proofread":true');
-        assertStringIncludes(request.prompt, "[es]");
+        expect(request.prompt).toContain('"language":"es"');
+        expect(request.prompt).toContain('"proofread":true');
+        expect(request.prompt).toContain("[es]");
       }
     } finally {
       stopped = true;

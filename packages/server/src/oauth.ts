@@ -14,7 +14,6 @@ import type { Fetch } from "@quaso/core";
  *   `oauth_denied`, `oauth_failed`, `oauth_conflict`, `invite_invalid`, `setup_required`
  *   or `signed_out`.
  */
-import { encodeBase64Url } from "@std/encoding";
 import { type Logger, type ServiceApi, ServiceError, SYSTEM } from "@quaso/service";
 import type { Config } from "./config.ts";
 import type { Handler, RequestContext } from "./http/context.ts";
@@ -167,11 +166,17 @@ class OAuthFlow {
   readonly #now: () => number;
   readonly #publicUrl: string;
 
+  readonly provider: Provider;
+  readonly credentials: { clientId: string; clientSecret: string };
+  readonly options: OAuthOptions;
   constructor(
-    readonly provider: Provider,
-    readonly credentials: { clientId: string; clientSecret: string },
-    readonly options: OAuthOptions,
+    provider: Provider,
+    credentials: { clientId: string; clientSecret: string },
+    options: OAuthOptions,
   ) {
+    this.provider = provider;
+    this.credentials = credentials;
+    this.options = options;
     this.#spec = PROVIDERS[provider];
     this.#fetch = options.fetch ?? ((input, init) => fetch(input, init));
     this.#now = options.now ?? Date.now;
@@ -195,11 +200,8 @@ class OAuthFlow {
       invite: invite && invite.length <= 200 ? invite : null,
       exp: this.#now() + OAUTH_TTL_MS,
     };
-    const challenge = encodeBase64Url(
-      new Uint8Array(
-        await crypto.subtle.digest("SHA-256", new TextEncoder().encode(state.verifier)),
-      ),
-    );
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(state.verifier));
+    const challenge = Buffer.from(digest).toString("base64url");
     const target = new URL(this.#spec.authorizeUrl);
     target.searchParams.set("client_id", this.credentials.clientId);
     target.searchParams.set("redirect_uri", this.redirectUri);
@@ -338,7 +340,7 @@ function redirect(location: string): Response {
 }
 
 function randomString(): string {
-  return encodeBase64Url(crypto.getRandomValues(new Uint8Array(32)));
+  return Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url");
 }
 
 /** Compares two strings in constant time, through their SHA-256 hashes. */

@@ -12,7 +12,7 @@ see the [message format guide](../../docs/file-formats.md#choose-your-message-fo
 ## Quick start
 
 You need a Quaso instance and an API key with the `upload` scope. Create the key while signed in as an administrator,
-in **Account → API keys**. The CLI runs on Node 22 or later and Deno 2.9 or later. Its published
+in **Account → API keys**. The CLI runs on Node 22 or later. Its published
 package contains one JavaScript file with no separate runtime dependencies.
 
 These examples follow current `main`. For a tagged release, use the matching CLI version and its
@@ -39,8 +39,6 @@ npx quaso status --fail-on untranslated
 Translate on the website between upload and download. With a Gemini key configured, use
 `npx quaso translate` to start and wait for a translation job. Upload can also start a job when
 automatic translation is enabled; use `npx quaso upload --wait` to wait for it.
-
-For Deno, replace `npx quaso` with `deno run -A npm:@quaso-i18n/cli@main`.
 
 ## Connecting
 

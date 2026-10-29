@@ -59,8 +59,9 @@ The [quick start](README.md) continues from deployment to your first translation
 
 ## What runs and where data lives
 
-Caddy obtains and renews the HTTPS certificate and proxies requests to Quaso. Quaso is one compiled
-Deno application serving the API and website. Its image runs as user 65532. The supplied Compose
+Caddy obtains and renews the HTTPS certificate and proxies requests to Quaso. Quaso is one Node
+application serving the API and website, on a distroless base image with no shell. Its image runs
+as user 65532. The supplied Compose
 file makes its root filesystem read-only. The named `quaso-data` volume is mounted at `/data`,
 containing `quaso.sqlite` and its write-ahead log, `quaso.lock`, and `store/`, which holds the
 published files and the backups. Compose prefixes volume names with the deployment directory or
@@ -94,8 +95,8 @@ imports and LLM runs. The secret is shown once. A key created in the website is 
 creator’s current role and assigned languages as well as its scope. Create CI upload keys with an
 administrator account.
 
-The following commands use the server binary inside the image, which has different commands from the
-npm CLI. For recovery without the website, stop the server before creating a key:
+The following commands run the server's own commands inside the image, which differ from the npm
+CLI's. For recovery without the website, stop the server before creating a key:
 
 ```sh
 docker compose stop quaso

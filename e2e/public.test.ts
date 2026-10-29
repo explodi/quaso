@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-/// <reference lib="dom" />
+import { assert, expect, test } from "vitest";
 /**
  * The public website in a browser (S7.10): acceptance tests 2 and 11, and every page free
  * of console errors and Content Security Policy violations under the server's real headers.
  */
-import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import type { Page } from "puppeteer";
 import {
   browserTest,
@@ -76,7 +74,7 @@ browserTest(
     const upload = await uploadDemo(server);
     assert(upload.added.length > 0);
     const project = await getProject(server);
-    assertEquals(project.languages.length, 6);
+    expect(project.languages.length).toBe(6);
 
     const tab = await openTab(browser, server, "/");
     const { page } = tab;
@@ -84,11 +82,11 @@ browserTest(
       const rows = [...document.querySelectorAll(".language-row .language-name")];
       return rows.length > 0 ? rows.map((row) => row.firstChild?.textContent ?? "") : null;
     });
-    assertEquals(names!.sort(), project.languages.map((l) => l.name).sort());
+    expect(names!.sort()).toStrictEqual(project.languages.map((l) => l.name).sort());
     const stats = await page.evaluate(() =>
       [...document.querySelectorAll(".language-stats")].map((e) => e.textContent ?? ""),
     );
-    for (const line of stats) assertStringIncludes(line, "0% translated • 0% proofread");
+    for (const line of stats) expect(line).toContain("0% translated • 0% proofread");
 
     // The first language through the website's links, the others by address.
     const first = project.languages[0];
@@ -111,24 +109,22 @@ browserTest(
       if (language !== first) {
         await page.goto(`${server.url}/translate/${language.tag}`, { waitUntil: "networkidle0" });
       }
-      assertEquals(
-        await pagePath(page).then((path) => path.split("?")[0]),
+      expect(await pagePath(page).then((path) => path.split("?")[0])).toStrictEqual(
         `/translate/${language.tag}`,
       );
       await waitForList(page, strings.total);
       const rows = await allRows(page);
-      assertEquals(
+      expect(
         rows.map((row) => row.key),
-        strings.strings.map((s) => s.key),
         language.tag,
-      );
+      ).toStrictEqual(strings.strings.map((s) => s.key));
       for (const row of rows) {
         assert(row.red && !row.translated, `${language.tag}: ${row.key} isn't red`);
       }
       // The filters agree: every string is untranslated.
-      assertStringIncludes(await text(page, ".state-filter"), `Untranslated ${strings.total}`);
+      expect(await text(page, ".state-filter")).toContain(`Untranslated ${strings.total}`);
     }
-    assertEquals(tab.problems, []);
+    expect(tab.problems).toStrictEqual([]);
   },
 );
 
@@ -140,7 +136,7 @@ browserTest(
     const tab = await openTab(browser, server, "/");
     const { page } = tab;
     await waitFor(page, () => document.querySelectorAll(".language-row").length > 0);
-    assertStringIncludes(await text(page, ".header"), "Sign in");
+    expect(await text(page, ".header")).toContain("Sign in");
 
     for (const language of project.languages) {
       const strings = await getStrings(server, language.tag);
@@ -153,7 +149,7 @@ browserTest(
         page,
         () => document.querySelectorAll('[role="treeitem"][aria-selected]').length === 3,
       );
-      assertStringIncludes(await text(page, "main h1"), language.name);
+      expect(await text(page, "main h1")).toContain(language.name);
       // Then the editor, and every string in it.
       await waitFor(page, () =>
         [...document.querySelectorAll("a")].some((a) => a.textContent === "Translate all"),
@@ -206,9 +202,9 @@ browserTest(
         if (document.querySelector(".row-check")) problems.push("selection checkboxes");
         return { problems, seen };
       }, strings.total);
-      assertEquals(browsed.problems, [], language.tag);
-      assertEquals(browsed.seen.toSorted(), strings.strings.map((s) => s.key).toSorted());
-      assertStringIncludes(await text(page, ".signin-prompt"), "Sign in to suggest a translation");
+      expect(browsed.problems, language.tag).toStrictEqual([]);
+      expect(browsed.seen.toSorted()).toStrictEqual(strings.strings.map((s) => s.key).toSorted());
+      expect(await text(page, ".signin-prompt")).toContain("Sign in to suggest a translation");
     }
 
     // The tabs are readable too.
@@ -228,8 +224,8 @@ browserTest(
         [tabName],
       );
     }
-    assertStringIncludes(await text(page, '[role="tabpanel"]'), "German");
-    assertEquals(tab.problems, []);
+    expect(await text(page, '[role="tabpanel"]')).toContain("German");
+    expect(tab.problems).toStrictEqual([]);
   },
 );
 
@@ -244,7 +240,7 @@ test(
         const response = await fetch(`${server.url}/translate/de`);
         await response.body?.cancel();
         const csp = response.headers.get("content-security-policy") ?? "";
-        assertStringIncludes(csp, "script-src 'self'");
+        expect(csp).toContain("script-src 'self'");
         assert(!csp.includes("unsafe-eval"));
         const strings = await getStrings(server, "pl", "&q=coins");
         const paths = [
@@ -266,7 +262,7 @@ test(
           await waitFor(tab.page, () => document.querySelector("main h1") !== null);
           // Give polling and late renders a moment.
           await new Promise((done) => setTimeout(done, 300));
-          assertEquals(tab.problems, [], `${path} (${session ? "manager" : "anonymous"})`);
+          expect(tab.problems, `${path} (${session ? "manager" : "anonymous"})`).toStrictEqual([]);
           await tab.page.close();
         }
       } finally {
@@ -299,10 +295,10 @@ browserTest(
     await page.click(".theme-menu .dropdown-trigger");
     await page.click('.theme-menu input[value="dark"]');
     await waitFor(page, () => document.documentElement.dataset.theme === "dark");
-    assertEquals(await background(), "rgb(38, 18, 48)");
+    expect(await background()).toBe("rgb(38, 18, 48)");
     await page.reload({ waitUntil: "networkidle0" });
     await waitFor(page, () => document.documentElement.dataset.theme === "dark");
-    assertEquals(await background(), "rgb(38, 18, 48)");
-    assertEquals(tab.problems, []);
+    expect(await background()).toBe("rgb(38, 18, 48)");
+    expect(tab.problems).toStrictEqual([]);
   },
 );

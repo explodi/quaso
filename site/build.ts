@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
+import { spawnSync } from "node:child_process";
 import * as fsSync from "node:fs";
 import * as fs from "node:fs/promises";
 /**
- * Builds the project website into site/dist/ (`deno task site:build`).
+ * Builds the project website into site/dist/ (`npm run site:build`).
  *
  * Every page is pre-rendered to static HTML with react-dom/server (src/prerender.tsx), so
  * the pages load fast, work without JavaScript and ship none. That is also why there is no
- * `vite build` step: Vite only runs the development server (`deno task site`).
+ * `vite build` step: Vite only runs the development server (`npm run site`).
  *
  * - The landing page (src/Landing.tsx) becomes index.html.
  * - Each Markdown file in docs/ becomes a page, rendered with marked and Quaso’s documentation
@@ -34,14 +35,13 @@ marked.use(gfmHeadingId());
 const render = (text: string) => marked.parse(text, { async: false });
 import { cp } from "node:fs/promises";
 import { mkdir } from "node:fs/promises";
-import { walk } from "@std/fs/walk";
 import { fileURLToPath as fromFileUrl } from "node:url";
 import { dirname, join, relative, sep as SEPARATOR } from "node:path";
 import * as posix from "node:path/posix";
 import { bundleStylesheet } from "./styles.ts";
 import { NAVIGATION, type NavigationGroup } from "./navigation.ts";
 import type { DocGroup } from "./src/DocPage.tsx";
-import { renderDoc, renderLanding, renderNotFound } from "./src/prerender.tsx";
+import { runnerImport } from "vite";
 import {
   docPagePath,
   DOCS_HOME,
@@ -268,21 +268,17 @@ async function findRepositoryUrl(): Promise<string | undefined> {
   const server = process.env["GITHUB_SERVER_URL"];
   const repository = process.env["GITHUB_REPOSITORY"];
   if (server && repository) return `${server}/${repository}`;
-  try {
-    const output = await new Deno.Command("git", {
-      args: ["remote", "get-url", "origin"],
-      cwd: REPOSITORY,
-      stdout: "piped",
-      stderr: "null",
-    }).output();
-    if (!output.success) return undefined;
-    const remote = new TextDecoder().decode(output.stdout).trim();
-    // git@github.com:org/repo.git or https://github.com/org/repo(.git); never credentials.
-    const match = /github\.com[:/]([\w.-]+)\/([\w.-]+?)(?:\.git)?\/?$/.exec(remote);
-    return match ? `https://github.com/${match[1]}/${match[2]}` : undefined;
-  } catch {
-    return undefined; // No git.
-  }
+  const output = spawnSync("git", ["remote", "get-url", "origin"], {
+    cwd: REPOSITORY,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "ignore"],
+  });
+  // A missing git leaves `status` null, so this covers it too.
+  if (output.status !== 0) return undefined;
+  const remote = output.stdout.trim();
+  // git@github.com:org/repo.git or https://github.com/org/repo(.git); never credentials.
+  const match = /github\.com[:/]([\w.-]+)\/([\w.-]+?)(?:\.git)?\/?$/.exec(remote);
+  return match ? `https://github.com/${match[1]}/${match[2]}` : undefined;
 }
 
 /** The `<base href>` for 404.html, from `BASE_PATH`: `/`, `/quaso/`. */
@@ -349,6 +345,12 @@ export function brokenOutputLinks(pages: Map<string, string>, files: Set<string>
 
 /** Builds the site into site/dist/. Broken internal links fail the build. */
 export async function build(): Promise<string[]> {
+  // Node strips types but doesn't compile JSX: Vite's module runner loads the pages.
+  const { module: prerender } = await runnerImport<typeof import("./src/prerender.tsx")>(
+    join(SITE, "src", "prerender.tsx"),
+    { root: SITE, configFile: false, logLevel: "error" },
+  );
+  const { renderDoc, renderLanding, renderNotFound } = prerender;
   const warnings: string[] = [];
   const repositoryUrl = await findRepositoryUrl();
   const context: LinkContext = { repositoryUrl, kind: kindOf, warn: (m) => warnings.push(m) };
@@ -360,15 +362,15 @@ export async function build(): Promise<string[]> {
 
   // Every file in docs/, except hidden ones: Markdown becomes pages, the rest is copied.
   const docs: Doc[] = [];
-  for await (const entry of walk(DOCS, { includeDirs: false, followSymlinks: false })) {
-    const source = relative(DOCS, entry.path).split(SEPARATOR).join("/");
+  for (const path of await filesIn(DOCS)) {
+    const source = relative(DOCS, path).split(SEPARATOR).join("/");
     if (source.split("/").some((part) => part.startsWith("."))) continue;
     if (/\.md$/i.test(source)) {
-      const markdown = await fs.readFile(entry.path, "utf8");
+      const markdown = await fs.readFile(path, "utf8");
       docs.push({ source, page: docPagePath(source), markdown, title: "", html: "" });
     } else {
       await mkdir(dirname(join(OUT, "docs", source)), { recursive: true });
-      await fs.copyFile(entry.path, join(OUT, "docs", source));
+      await fs.copyFile(path, join(OUT, "docs", source));
     }
   }
   docs.sort((a, b) => a.page.localeCompare(b.page));
@@ -416,10 +418,10 @@ export async function build(): Promise<string[]> {
 
   const pages = new Map<string, string>();
   const files = new Set<string>();
-  for await (const entry of walk(OUT, { includeDirs: false })) {
-    const output = relative(OUT, entry.path).split(SEPARATOR).join("/");
+  for (const path of await filesIn(OUT)) {
+    const output = relative(OUT, path).split(SEPARATOR).join("/");
     files.add(output);
-    if (output.endsWith(".html")) pages.set(output, await fs.readFile(entry.path, "utf8"));
+    if (output.endsWith(".html")) pages.set(output, await fs.readFile(path, "utf8"));
   }
   warnings.push(...brokenOutputLinks(pages, files));
   if (warnings.length > 0) {
@@ -435,4 +437,12 @@ if (import.meta.main) {
     console.warn(`\n${warnings.length} broken links:`);
     for (const warning of warnings) console.warn(`  ${warning}`);
   }
+}
+
+/** The files under `dir`, recursively; symbolic links aren't followed. */
+async function filesIn(dir: string): Promise<string[]> {
+  const entries = await fs.readdir(dir, { recursive: true, withFileTypes: true });
+  return entries
+    .filter((entry) => entry.isFile())
+    .map((entry) => join(entry.parentPath, entry.name));
 }

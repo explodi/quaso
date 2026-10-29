@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assert, assertEquals, assertStringIncludes, assertThrows } from "@std/assert";
+import { assert, expect, test } from "vitest";
 import { demoDir } from "../packages/server/src/dev_seed.ts";
 import { createFakeTranslator } from "../packages/service/mod.ts";
 import { DEFAULT_MODELS, evaluate, parseOptions, report } from "./llm_eval.ts";
 
 test("llm_eval: options, with the default models and languages", () => {
-  assertEquals(parseOptions([]), {
+  expect(parseOptions([])).toStrictEqual({
     models: DEFAULT_MODELS,
     languages: ["de", "pl", "ja"],
     out: ".quaso/llm-eval.json",
@@ -14,16 +13,20 @@ test("llm_eval: options, with the default models and languages", () => {
     project: demoDir(),
     icu: false,
   });
-  assertEquals(parseOptions([], { GEMINI_MODEL: "gemini-x" }).models, [
+  expect(parseOptions([], { GEMINI_MODEL: "gemini-x" }).models).toStrictEqual([
     "gemini-x",
     DEFAULT_MODELS[1],
   ]);
   const options = parseOptions(["--models", "a, b", "--languages=de", "--out", "x.json"]);
-  assertEquals([options.models, options.languages, options.out], [["a", "b"], ["de"], "x.json"]);
+  expect([options.models, options.languages, options.out]).toStrictEqual([
+    ["a", "b"],
+    ["de"],
+    "x.json",
+  ]);
   const icu = parseOptions(["--project", "examples/feed", "--icu"]);
-  assertEquals([icu.project, icu.icu], ["examples/feed", true]);
-  assertThrows(() => parseOptions(["--nope"]), Error, "Unknown argument");
-  assertThrows(() => parseOptions(["--concurrency", "0"]), Error);
+  expect([icu.project, icu.icu]).toStrictEqual(["examples/feed", true]);
+  expect(() => parseOptions(["--nope"])).toThrow("Unknown argument");
+  expect(() => parseOptions(["--concurrency", "0"])).toThrow(Error);
 });
 
 test("llm_eval: the demo through the service, per model and language (fake translator)", async () => {
@@ -38,22 +41,19 @@ test("llm_eval: the demo through the service, per model and language (fake trans
     },
     () => createFakeTranslator(),
   );
-  assertEquals(
-    results.map((result) => [result.model, result.language]),
-    [
-      ["model-a", "de"],
-      ["model-a", "ja"],
-    ],
-  );
+  expect(results.map((result) => [result.model, result.language])).toStrictEqual([
+    ["model-a", "de"],
+    ["model-a", "ja"],
+  ]);
   for (const result of results) {
     assert(result.strings > 20, String(result.strings));
-    assertEquals(result.firstTry, result.strings);
-    assertEquals(result.translated, result.strings);
+    expect(result.firstTry).toStrictEqual(result.strings);
+    expect(result.translated).toStrictEqual(result.strings);
     assert(result.tokens.input > 0 && result.requests > 0);
-    assertEquals(result.translations.length, result.strings);
+    expect(result.translations.length).toStrictEqual(result.strings);
   }
   const table = report(results);
-  assertStringIncludes(table, "first try");
-  assertStringIncludes(table, "model-a  de");
-  assertStringIncludes(table, "100%");
+  expect(table).toContain("first try");
+  expect(table).toContain("model-a  de");
+  expect(table).toContain("100%");
 });

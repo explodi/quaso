@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals, assertInstanceOf, assertThrows } from "@std/assert";
+import { assert, expect, test } from "vitest";
 import { SYSTEM } from "./api.ts";
 import { getRevision, transaction } from "./db.ts";
 import { ServiceError } from "./errors.ts";
@@ -49,21 +48,20 @@ test("a write stores the value, its checks, the revision, search text and histor
   const result = write(instance, "common.json", "greeting", "de", "Hallo, {{name}}!", {
     detail: { request: 1 },
   });
-  assertEquals(result.status, "written");
-  assertEquals(result.revision, before + 1);
-  assertEquals(getRevision(instance.sql), before + 1);
+  expect(result.status).toBe("written");
+  expect(result.revision).toStrictEqual(before + 1);
+  expect(getRevision(instance.sql)).toStrictEqual(before + 1);
   const row = translation(instance, "greeting", "de")!;
-  assertEquals(row.value, '"Hallo, {{name}}!"');
-  assertEquals(row.colour, "green");
-  assertEquals(row.author_type, "llm");
-  assertEquals(row.author_label, "test-model");
-  assertEquals(row.revision, before + 1);
-  assertEquals([row.qa_errors, row.qa_warnings], [0, 0]);
-  assertEquals(
-    instance.sql.query("SELECT search_text FROM translations")[0].search_text,
+  expect(row.value).toBe('"Hallo, {{name}}!"');
+  expect(row.colour).toBe("green");
+  expect(row.author_type).toBe("llm");
+  expect(row.author_label).toBe("test-model");
+  expect(row.revision).toStrictEqual(before + 1);
+  expect([row.qa_errors, row.qa_warnings]).toStrictEqual([0, 0]);
+  expect(instance.sql.query("SELECT search_text FROM translations")[0].search_text).toStrictEqual(
     "hallo, {{name}}!",
   );
-  assertEquals(historyOf(instance, "greeting"), [
+  expect(historyOf(instance, "greeting")).toStrictEqual([
     {
       language: "de",
       event: "translation_llm",
@@ -82,7 +80,7 @@ test("warnings are stored with the translation, not refused", async () => {
   using instance = await project();
   write(instance, "common.json", "title", "de", "Wayfarer");
   const row = translation(instance, "title", "de")!;
-  assertEquals([row.qa_errors, row.qa_warnings], [0, 1]);
+  expect([row.qa_errors, row.qa_warnings]).toStrictEqual([0, 1]);
 });
 
 test("the LLM never writes over a blue translation (LLM-4)", async () => {
@@ -96,11 +94,11 @@ test("the LLM never writes over a blue translation (LLM-4)", async () => {
   const result = write(instance, "common.json", "greeting", "de", "Hallo, {{name}}!", {
     llm: true,
   });
-  assertEquals(result.status, "skipped");
-  assertEquals(result.reason, "blue");
-  assertEquals(translation(instance, "greeting", "de")!.value, '"Servus, {{name}}!"');
-  assertEquals(getRevision(instance.sql), revision);
-  assertEquals(historyOf(instance, "greeting").length, 1);
+  expect(result.status).toBe("skipped");
+  expect(result.reason).toBe("blue");
+  expect(translation(instance, "greeting", "de")!.value).toBe('"Servus, {{name}}!"');
+  expect(getRevision(instance.sql)).toStrictEqual(revision);
+  expect(historyOf(instance, "greeting").length).toBe(1);
 });
 
 test("a write by the LLM follows LLM-4 even without the llm flag", async () => {
@@ -113,14 +111,17 @@ test("a write by the LLM follows LLM-4 even without the llm flag", async () => {
   const result = write(instance, "common.json", "title", "de", "Mein Game", {
     baseRevision: saved.revision,
   });
-  assertEquals(result.status, "skipped");
-  assertEquals(result.reason, "blue");
+  expect(result.status).toBe("skipped");
+  expect(result.reason).toBe("blue");
   const row = translation(instance, "title", "de")!;
-  assertEquals([row.value, row.colour, row.author_type], ['"Mein Spiel"', "blue", "user"]);
-  assertThrows(
-    () => write(instance, "common.json", "greeting", "de", null, { event: "translation_deleted" }),
-    ServiceError,
-    "green",
+  expect([row.value, row.colour, row.author_type]).toStrictEqual(['"Mein Spiel"', "blue", "user"]);
+  expect(() =>
+    write(instance, "common.json", "greeting", "de", null, { event: "translation_deleted" }),
+  ).toThrow(
+    expect.objectContaining({
+      constructor: ServiceError,
+      message: expect.stringContaining("green"),
+    }),
   );
 });
 
@@ -136,22 +137,25 @@ test("the LLM drops its result when a person changed the translation meanwhile",
     llm: true,
     baseRevision: first.revision,
   });
-  assertEquals(late.status, "skipped");
-  assertEquals(late.reason, "changed");
-  assertEquals(translation(instance, "greeting", "de")!.value, '"Moin, {{name}}!"');
+  expect(late.status).toBe("skipped");
+  expect(late.reason).toBe("changed");
+  expect(translation(instance, "greeting", "de")!.value).toBe('"Moin, {{name}}!"');
   const fresh = write(instance, "common.json", "greeting", "de", "Guten Tag, {{name}}!", {
     llm: true,
     baseRevision: translation(instance, "greeting", "de")!.revision,
   });
-  assertEquals(fresh.status, "written");
+  expect(fresh.status).toBe("written");
 });
 
 test("the LLM only writes green", async () => {
   using instance = await project();
-  assertThrows(
-    () => write(instance, "common.json", "title", "de", "Titel", { llm: true, colour: "blue" }),
-    ServiceError,
-    "green",
+  expect(() =>
+    write(instance, "common.json", "title", "de", "Titel", { llm: true, colour: "blue" }),
+  ).toThrow(
+    expect.objectContaining({
+      constructor: ServiceError,
+      message: expect.stringContaining("green"),
+    }),
   );
 });
 
@@ -163,23 +167,22 @@ test("a stale base revision fails with conflict and the current translation", as
     event: "translation_saved",
     baseRevision: 0,
   });
-  assertEquals(saved.status, "written");
-  const error = assertThrows(
-    () =>
-      write(instance, "common.json", "greeting", "de", "Servus, {{name}}!", {
-        colour: "blue",
-        actor: MANAGER,
-        event: "translation_saved",
-        baseRevision: 0,
-      }),
-    ServiceError,
-  );
-  assertEquals(error.code, "conflict");
-  assertEquals(error.status, 409);
-  assertEquals(error.current?.value, "Hallo, {{name}}!");
-  assertEquals(error.current?.colour, "blue");
-  assertEquals(error.current?.revision, saved.revision);
-  assertEquals(error.current?.author, {
+  expect(saved.status).toBe("written");
+  const error = await Promise.try(() =>
+    write(instance, "common.json", "greeting", "de", "Servus, {{name}}!", {
+      colour: "blue",
+      actor: MANAGER,
+      event: "translation_saved",
+      baseRevision: 0,
+    }),
+  ).catch((error: unknown) => error);
+  assert(error instanceof ServiceError);
+  expect(error.code).toBe("conflict");
+  expect(error.status).toBe(409);
+  expect(error.current?.value).toBe("Hallo, {{name}}!");
+  expect(error.current?.colour).toBe("blue");
+  expect(error.current?.revision).toStrictEqual(saved.revision);
+  expect(error.current?.author).toStrictEqual({
     type: "user",
     id: 7,
     name: "Deleted user",
@@ -191,7 +194,7 @@ test("a stale base revision fails with conflict and the current translation", as
     event: "translation_saved",
     baseRevision: saved.revision,
   });
-  assertEquals(ok.status, "written");
+  expect(ok.status).toBe("written");
 });
 
 test("a deleted translation conflicts with a save based on it, with current null", async () => {
@@ -201,29 +204,28 @@ test("a deleted translation conflicts with a save based on it, with current null
     actor: MANAGER,
     event: "translation_deleted",
   });
-  const error = assertThrows(
-    () =>
-      write(instance, "common.json", "title", "de", "Der Titel", {
-        actor: MANAGER,
-        event: "translation_saved",
-        baseRevision: saved.revision,
-      }),
-    ServiceError,
-  );
-  assertEquals(error.code, "conflict");
-  assertEquals(error.current, null);
+  const error = await Promise.try(() =>
+    write(instance, "common.json", "title", "de", "Der Titel", {
+      actor: MANAGER,
+      event: "translation_saved",
+      baseRevision: saved.revision,
+    }),
+  ).catch((error: unknown) => error);
+  assert(error instanceof ServiceError);
+  expect(error.code).toBe("conflict");
+  expect(error.current).toBe(null);
 });
 
 test("values with check errors are refused with qa_failed and details (QA-1)", async () => {
   using instance = await project();
   const revision = getRevision(instance.sql);
-  const error = assertThrows(
-    () => write(instance, "common.json", "greeting", "de", "Hallo!"),
-    ServiceError,
-  );
-  assertEquals(error.code, "qa_failed");
-  assertEquals(error.status, 422);
-  assertEquals(error.details, [
+  const error = await Promise.try(() =>
+    write(instance, "common.json", "greeting", "de", "Hallo!"),
+  ).catch((error: unknown) => error);
+  assert(error instanceof ServiceError);
+  expect(error.code).toBe("qa_failed");
+  expect(error.status).toBe(422);
+  expect(error.details).toStrictEqual([
     {
       file: "common.json",
       key: "greeting",
@@ -233,47 +235,44 @@ test("values with check errors are refused with qa_failed and details (QA-1)", a
       value: "{{name}}",
     },
   ]);
-  assertEquals(translation(instance, "greeting", "de"), undefined);
-  assertEquals(getRevision(instance.sql), revision);
-  assertEquals(count(instance.sql, "history", "language IS NOT NULL"), 0);
+  expect(translation(instance, "greeting", "de")).toBe(undefined);
+  expect(getRevision(instance.sql)).toStrictEqual(revision);
+  expect(count(instance.sql, "history", "language IS NOT NULL")).toBe(0);
 });
 
 test("a Polish plural needs every form; a complete one is stored", async () => {
   using instance = await project();
-  const error = assertThrows(
-    () =>
-      write(instance, "common.json", "coins", "pl", {
-        one: "{{count}} moneta",
-        other: "{{count}} monet",
-      }),
-    ServiceError,
-  );
-  assertEquals(error.code, "qa_failed");
-  assertEquals(
-    error.details!.map((detail) => [detail.check, detail.form]),
-    [
-      ["plural_form_missing", "few"],
-      ["plural_form_missing", "many"],
-    ],
-  );
+  const error = await Promise.try(() =>
+    write(instance, "common.json", "coins", "pl", {
+      one: "{{count}} moneta",
+      other: "{{count}} monet",
+    }),
+  ).catch((error: unknown) => error);
+  assert(error instanceof ServiceError);
+  expect(error.code).toBe("qa_failed");
+  expect(error.details!.map((detail) => [detail.check, detail.form])).toStrictEqual([
+    ["plural_form_missing", "few"],
+    ["plural_form_missing", "many"],
+  ]);
   const forms = {
     other: "{{count}} monety",
     many: "{{count}} monet",
     few: "{{count}} monety",
     one: "Jedna moneta",
   };
-  assertEquals(write(instance, "common.json", "coins", "pl", forms).status, "written");
-  assertEquals(
+  expect(write(instance, "common.json", "coins", "pl", forms).status).toBe("written");
+  expect(
     translation(instance, "coins", "pl")!.value,
-    '{"one":"Jedna moneta","few":"{{count}} monety","many":"{{count}} monet","other":"{{count}} monety"}',
     "stored canonically, in CLDR order",
+  ).toStrictEqual(
+    '{"one":"Jedna moneta","few":"{{count}} monety","many":"{{count}} monet","other":"{{count}} monety"}',
   );
 });
 
 test("allowQaErrors stores a known problem with its error count", async () => {
   using instance = await project();
   write(instance, "common.json", "greeting", "de", "Hallo!", { allowQaErrors: true });
-  assertEquals(translation(instance, "greeting", "de")!.qa_errors, 1);
+  expect(translation(instance, "greeting", "de")!.qa_errors).toBe(1);
 });
 
 test("writing the same value, colour and English changes nothing", async () => {
@@ -282,16 +281,16 @@ test("writing the same value, colour and English changes nothing", async () => {
   const revision = getRevision(instance.sql);
   const history = count(instance.sql, "history");
   const again = write(instance, "common.json", "title", "de", "Titel");
-  assertEquals(again.status, "unchanged");
-  assertEquals(again.revision, revision);
-  assertEquals(getRevision(instance.sql), revision);
-  assertEquals(count(instance.sql, "history"), history);
+  expect(again.status).toBe("unchanged");
+  expect(again.revision).toStrictEqual(revision);
+  expect(getRevision(instance.sql)).toStrictEqual(revision);
+  expect(count(instance.sql, "history")).toStrictEqual(history);
   const deleteNothing = write(instance, "common.json", "title", "pl", null, {
     actor: MANAGER,
     event: "translation_deleted",
   });
-  assertEquals(deleteNothing.status, "unchanged");
-  assertEquals(getRevision(instance.sql), revision, "deleting nothing changes nothing");
+  expect(deleteNothing.status).toBe("unchanged");
+  expect(getRevision(instance.sql), "deleting nothing changes nothing").toStrictEqual(revision);
 });
 
 test("approving keeps the text's author and records the approver", async () => {
@@ -304,26 +303,25 @@ test("approving keeps the text's author and records the approver", async () => {
     event: "translation_approved",
   });
   const row = translation(instance, "title", "de")!;
-  assertEquals([row.colour, row.author_type, row.approver_id], ["blue", "llm", 7]);
+  expect([row.colour, row.author_type, row.approver_id]).toStrictEqual(["blue", "llm", 7]);
   write(instance, "common.json", "title", "de", "Titel", {
     colour: "green",
     actor: MANAGER,
     event: "translation_unapproved",
   });
   const unapproved = translation(instance, "title", "de")!;
-  assertEquals([unapproved.colour, unapproved.approver_id], ["green", null]);
-  assertEquals(
+  expect([unapproved.colour, unapproved.approver_id]).toStrictEqual(["green", null]);
+  expect(
     historyOf(instance, "title").map((entry) => [
       entry.event,
       entry.before_colour,
       entry.after_colour,
     ]),
-    [
-      ["translation_llm", null, "green"],
-      ["translation_approved", "green", "blue"],
-      ["translation_unapproved", "blue", "green"],
-    ],
-  );
+  ).toStrictEqual([
+    ["translation_llm", null, "green"],
+    ["translation_approved", "green", "blue"],
+    ["translation_unapproved", "blue", "green"],
+  ]);
 });
 
 test("deleting makes the string red again and writes history", async () => {
@@ -333,9 +331,9 @@ test("deleting makes the string red again and writes history", async () => {
     actor: MANAGER,
     event: "translation_deleted",
   });
-  assertEquals(result, { status: "written", revision: 0, checks: [] });
-  assertEquals(translation(instance, "title", "de"), undefined);
-  assertEquals(historyOf(instance, "title").at(-1), {
+  expect(result).toStrictEqual({ status: "written", revision: 0, checks: [] });
+  expect(translation(instance, "title", "de")).toBe(undefined);
+  expect(historyOf(instance, "title").at(-1)).toStrictEqual({
     language: "de",
     event: "translation_deleted",
     before_value: '"Titel"',
@@ -350,7 +348,7 @@ test("deleting makes the string red again and writes history", async () => {
     actor: MANAGER,
     event: "translation_deleted",
   });
-  assertEquals(again.status, "unchanged");
+  expect(again.status).toBe("unchanged");
 });
 
 test("outdated is computed by hash, and reverts when the English changes back (STR-4)", async () => {
@@ -364,12 +362,12 @@ test("outdated is computed by hash, and reverts when the English changes back (S
     )[0];
     return row.source_hash !== english.source_hash;
   };
-  assertEquals(outdated(), false);
+  expect(outdated()).toBe(false);
   await uploadJson(instance.service, { "common.json": { ...ENGLISH, title: "Wayfarer 2" } });
-  assertEquals(outdated(), true);
-  assertEquals(translation(instance, "title", "de")!.value, '"Wegfahrer"', "kept");
+  expect(outdated()).toBe(true);
+  expect(translation(instance, "title", "de")!.value, "kept").toBe('"Wegfahrer"');
   await uploadJson(instance.service, { "common.json": ENGLISH });
-  assertEquals(outdated(), false);
+  expect(outdated()).toBe(false);
 });
 
 test("updating an outdated translation makes it current", async () => {
@@ -382,7 +380,7 @@ test("updating an outdated translation makes it current", async () => {
     "SELECT source_hash FROM strings WHERE id = ?",
     row.string_id,
   );
-  assertEquals(row.source_hash, english.source_hash);
+  expect(row.source_hash).toStrictEqual(english.source_hash);
 });
 
 test("the revision goes up once per transaction", async () => {
@@ -406,8 +404,8 @@ test("the revision goes up once per transaction", async () => {
       event: "translation_saved",
     }).revision,
   ]);
-  assertEquals(revisions, [before + 1, before + 1]);
-  assertEquals(getRevision(instance.sql), before + 1);
+  expect(revisions).toStrictEqual([before + 1, before + 1]);
+  expect(getRevision(instance.sql)).toStrictEqual(before + 1);
 });
 
 test("writes to unknown languages, literals and hidden strings are refused", async () => {
@@ -426,21 +424,17 @@ test("writes to unknown languages, literals and hidden strings are refused", asy
       }),
     );
   const titleId = stringId(instance.sql, "common.json", "title");
-  assertEquals(
-    assertThrows(() => run({ stringId: titleId, language: "fr" }), ServiceError).code,
-    "bad_request",
+  expect(() => run({ stringId: titleId, language: "fr" })).toThrow(
+    expect.objectContaining({ constructor: ServiceError, code: "bad_request" }),
   );
-  assertEquals(
-    assertThrows(() => run({ stringId: titleId, language: "en" }), ServiceError).code,
-    "bad_request",
+  expect(() => run({ stringId: titleId, language: "en" })).toThrow(
+    expect.objectContaining({ constructor: ServiceError, code: "bad_request" }),
   );
-  assertEquals(
-    assertThrows(() => run({ stringId: literal, language: "de" }), ServiceError).code,
-    "bad_request",
+  expect(() => run({ stringId: literal, language: "de" })).toThrow(
+    expect.objectContaining({ constructor: ServiceError, code: "bad_request" }),
   );
-  assertEquals(
-    assertThrows(() => run({ stringId: 9999, language: "de" }), ServiceError).code,
-    "not_found",
+  expect(() => run({ stringId: 9999, language: "de" })).toThrow(
+    expect.objectContaining({ constructor: ServiceError, code: "not_found" }),
   );
   const { title: _, ...withoutTitle } = ENGLISH;
   await instance.service.upload(SYSTEM, {
@@ -448,14 +442,19 @@ test("writes to unknown languages, literals and hidden strings are refused", asy
       { path: "common.json", repoPath: "common.json", content: JSON.stringify(withoutTitle) },
     ],
   });
-  const error = assertThrows(() => run({ stringId: titleId, language: "de" }), ServiceError);
-  assertInstanceOf(error, ServiceError);
-  assertEquals(error.code, "not_found");
+  const error = await Promise.try(() => run({ stringId: titleId, language: "de" })).catch(
+    (error: unknown) => error,
+  );
+  assert(error instanceof ServiceError);
+  assert(error instanceof ServiceError);
+  expect(error.code).toBe("not_found");
 });
 
 test("language tags are matched in their canonical form", async () => {
   using instance = await startTestService();
   await uploadJson(instance.service, { "a.json": { hi: "Hi" } }, { languages: ["pt-br"] });
-  assertEquals(write(instance, "a.json", "hi", "PT-BR", "Oi").status, "written");
-  assertEquals(instance.sql.query("SELECT language FROM translations"), [{ language: "pt-BR" }]);
+  expect(write(instance, "a.json", "hi", "PT-BR", "Oi").status).toBe("written");
+  expect(instance.sql.query("SELECT language FROM translations")).toStrictEqual([
+    { language: "pt-BR" },
+  ]);
 });

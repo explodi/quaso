@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
+import { assert, test } from "vitest";
 /**
  * OPS-1 and PROD-4 (design §8, S2.11): upload and download of 3,000 strings in 10 languages
  * take well under 2 seconds each. The 50,000-string smoke test in 30 languages guards
  * against anything quadratic; it runs only with `QUASO_SMOKE=1`, and reports its times.
  */
-import { assert } from "@std/assert";
 import type { UploadRequest } from "@quaso/core";
 import { SYSTEM } from "./api.ts";
 import { startTestService, type TestInstance } from "./test_helpers.ts";

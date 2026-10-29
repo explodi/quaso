@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assert, assertEquals, assertRejects } from "@std/assert";
+import { assert, expect, test } from "vitest";
 import type { ExportResult } from "@quaso/core";
 import { type Actor, ANONYMOUS, SYSTEM } from "./api.ts";
 import { ServiceError } from "./errors.ts";
@@ -9,8 +8,9 @@ import { createFakeTranslator } from "./llm/fake.ts";
 import { ENGLISH, projectService } from "./testing/people.ts";
 
 async function rejectsWith(promise: Promise<unknown>, code: string) {
-  const error = await assertRejects(() => promise, ServiceError);
-  assertEquals(error.code, code, error.message);
+  const error = await promise.catch((error: unknown) => error);
+  assert(error instanceof ServiceError);
+  expect(error.code, error.message).toStrictEqual(code);
   return error;
 }
 
@@ -44,25 +44,32 @@ test("suggestions: a contributor's translation is pending, and never downloaded"
     value: "Jouer",
     baseRevision: 0,
   });
-  assertEquals(
-    [sent.kind, sent.status, sent.value, sent.author.name, sent.current, sent.source],
-    ["translation", "pending", "Jouer", "Camille", null, "Play"],
+  expect([
+    sent.kind,
+    sent.status,
+    sent.value,
+    sent.author.name,
+    sent.current,
+    sent.source,
+  ]).toStrictEqual(["translation", "pending", "Jouer", "Camille", null, "Play"]);
+  expect([sent.file, sent.key, sent.language, sent.baseRevision]).toStrictEqual([
+    "common.json",
+    "play",
+    "fr",
+    0,
+  ]);
+  expect((await frenchDownload(instance)).play, "the English, until approved").toStrictEqual(
+    "Play",
   );
-  assertEquals(
-    [sent.file, sent.key, sent.language, sent.baseRevision],
-    ["common.json", "play", "fr", 0],
-  );
-  assertEquals((await frenchDownload(instance)).play, "Play", "the English, until approved");
   const listed = await service.listStrings(ANONYMOUS, { language: "fr", state: "pending" });
-  assertEquals(
-    listed.strings.map((s) => [s.key, s.pending, s.translation]),
-    [["play", 1, null]],
-  );
+  expect(listed.strings.map((s) => [s.key, s.pending, s.translation])).toStrictEqual([
+    ["play", 1, null],
+  ]);
   const history = await service.getHistory(ANONYMOUS, { id: play, language: "fr" });
-  assertEquals(history.entries[0].event, "suggestion_created");
-  assertEquals(history.entries[0].actor.name, "Camille");
-  assertEquals(history.entries[0].after, "Jouer");
-  assertEquals(history.entries[0].detail, { suggestionId: sent.id, kind: "translation" });
+  expect(history.entries[0].event).toBe("suggestion_created");
+  expect(history.entries[0].actor.name).toBe("Camille");
+  expect(history.entries[0].after).toBe("Jouer");
+  expect(history.entries[0].detail).toStrictEqual({ suggestionId: sent.id, kind: "translation" });
 });
 
 test("suggestions: who may send them, and in which languages (ROLE-3)", async () => {
@@ -82,7 +89,7 @@ test("suggestions: who may send them, and in which languages (ROLE-3)", async ()
   const token = await service.createApiToken(SYSTEM, { name: "CI", scope: "upload" });
   await rejectsWith(service.suggest({ type: "token", tokenId: token.id }, input), "forbidden");
   // Managers may ask for a second opinion too.
-  assertEquals((await service.suggest(manager, input)).status, "pending");
+  expect((await service.suggest(manager, input)).status).toBe("pending");
   await rejectsWith(service.suggest(manager, { ...input, language: "en" }), "bad_request");
   await rejectsWith(service.suggest(manager, { ...input, id: 9999 }), "not_found");
 });
@@ -102,9 +109,9 @@ test("suggestions: the checks run on sending; stale revisions conflict", async (
     }),
     "qa_failed",
   );
-  assertEquals(error.details?.[0].check, "placeholder_missing");
-  assertEquals(error.details?.[0].key, "items");
-  assertEquals(error.details?.[0].language, "fr");
+  expect(error.details?.[0].check).toBe("placeholder_missing");
+  expect(error.details?.[0].key).toBe("items");
+  expect(error.details?.[0].language).toBe("fr");
 
   write(instance, "common.json", "play", "fr", "Jouer");
   const conflict = await rejectsWith(
@@ -117,8 +124,8 @@ test("suggestions: the checks run on sending; stale revisions conflict", async (
     }),
     "conflict",
   );
-  assertEquals(conflict.current?.value, "Jouer");
-  assertEquals(count(instance.sql, "suggestions"), 0);
+  expect(conflict.current?.value).toBe("Jouer");
+  expect(count(instance.sql, "suggestions")).toBe(0);
 });
 
 test('suggestions: corrections, "looks good", and the kind follows the state', async () => {
@@ -135,21 +142,20 @@ test('suggestions: corrections, "looks good", and the kind follows the state', a
     kind: "translation",
     value: "Lancer",
   });
-  assertEquals([correction.kind, correction.current?.value], ["correction", "Jouer"]);
+  expect([correction.kind, correction.current?.value]).toStrictEqual(["correction", "Jouer"]);
   // Repeating the green text is a "looks good".
   const same = await service.suggest(contributor, { ...base, kind: "correction", value: "Jouer" });
-  assertEquals([same.kind, same.value], ["approval", null]);
-  assertEquals(
+  expect([same.kind, same.value]).toStrictEqual(["approval", null]);
+  expect(
     (await service.getString(ANONYMOUS, { id: play, language: "fr" })).suggestions.map((s) => [
       s.id,
       s.status,
     ]),
-    [
-      [same.id, "pending"],
-      [correction.id, "superseded"],
-    ],
     "the author's newer suggestion replaces the older one",
-  );
+  ).toStrictEqual([
+    [same.id, "pending"],
+    [correction.id, "superseded"],
+  ]);
 
   await rejectsWith(
     service.suggest(contributor, { ...base, kind: "approval", value: "x" }),
@@ -196,7 +202,7 @@ test('suggestions: corrections, "looks good", and the kind follows the state', a
     value: "Enregistrer la partie",
     baseRevision: blue.revision,
   });
-  assertEquals([onBlue.kind, onBlue.current?.colour], ["correction", "blue"]);
+  expect([onBlue.kind, onBlue.current?.colour]).toStrictEqual(["correction", "blue"]);
 });
 
 test("suggestions: authors withdraw their pending ones", async () => {
@@ -213,7 +219,7 @@ test("suggestions: authors withdraw their pending ones", async () => {
   await rejectsWith(service.withdrawSuggestion(other, { id: sent.id }), "forbidden");
   await rejectsWith(service.withdrawSuggestion(ANONYMOUS, { id: sent.id }), "unauthorized");
   const withdrawn = await service.withdrawSuggestion(contributor, { id: sent.id });
-  assertEquals([withdrawn.status, withdrawn.reviewedAt], ["withdrawn", instance.clock.now]);
+  expect([withdrawn.status, withdrawn.reviewedAt]).toStrictEqual(["withdrawn", instance.clock.now]);
   await rejectsWith(service.withdrawSuggestion(contributor, { id: sent.id }), "bad_request");
   await rejectsWith(service.withdrawSuggestion(contributor, { id: 999 }), "not_found");
 });
@@ -235,31 +241,44 @@ test("suggestions: managers list everyone's, contributors their own", async () =
   const c = await send(other, "quit", "fr", "Quitter");
 
   const ids = (page: { suggestions: { id: number }[] }) => page.suggestions.map((s) => s.id);
-  assertEquals(ids(await service.listSuggestions(manager, {})), [a.id, b.id, c.id], "oldest first");
-  assertEquals(ids(await service.listSuggestions(manager, { language: "fr" })), [a.id, c.id]);
-  const otherId = other.type === "user" ? other.userId : 0;
-  assertEquals(ids(await service.listSuggestions(manager, { author: String(otherId) })), [
+  expect(ids(await service.listSuggestions(manager, {})), "oldest first").toStrictEqual([
+    a.id,
     b.id,
     c.id,
   ]);
-  assertEquals(ids(await service.listSuggestions(contributor, {})), [a.id]);
-  assertEquals(ids(await service.listSuggestions(contributor, { author: "me" })), [a.id]);
+  expect(ids(await service.listSuggestions(manager, { language: "fr" }))).toStrictEqual([
+    a.id,
+    c.id,
+  ]);
+  const otherId = other.type === "user" ? other.userId : 0;
+  expect(ids(await service.listSuggestions(manager, { author: String(otherId) }))).toStrictEqual([
+    b.id,
+    c.id,
+  ]);
+  expect(ids(await service.listSuggestions(contributor, {}))).toStrictEqual([a.id]);
+  expect(ids(await service.listSuggestions(contributor, { author: "me" }))).toStrictEqual([a.id]);
   await rejectsWith(service.listSuggestions(contributor, { author: String(otherId) }), "forbidden");
   await rejectsWith(service.listSuggestions(ANONYMOUS, {}), "unauthorized");
   await rejectsWith(service.listSuggestions(manager, { author: "someone" }), "bad_request");
 
   const page = await service.listSuggestions(manager, { limit: 2 });
-  assertEquals([page.total, page.nextCursor, page.suggestions.length], [3, "2", 2]);
-  assertEquals(ids(await service.listSuggestions(manager, { cursor: "2" })), [c.id]);
-  assertEquals(ids(await service.listSuggestions(manager, { file: "other.json" })), []);
-  assertEquals(ids(await service.listSuggestions(manager, { kind: "correction" })), []);
+  expect([page.total, page.nextCursor, page.suggestions.length]).toStrictEqual([3, "2", 2]);
+  expect(ids(await service.listSuggestions(manager, { cursor: "2" }))).toStrictEqual([c.id]);
+  expect(ids(await service.listSuggestions(manager, { file: "other.json" }))).toStrictEqual([]);
+  expect(ids(await service.listSuggestions(manager, { kind: "correction" }))).toStrictEqual([]);
 
   await service.withdrawSuggestion(other, { id: b.id });
-  assertEquals(ids(await service.listSuggestions(manager, { status: "withdrawn" })), [b.id]);
-  assertEquals(ids(await service.listSuggestions(manager, { status: "all" })), [c.id, b.id, a.id]);
+  expect(ids(await service.listSuggestions(manager, { status: "withdrawn" }))).toStrictEqual([
+    b.id,
+  ]);
+  expect(ids(await service.listSuggestions(manager, { status: "all" }))).toStrictEqual([
+    c.id,
+    b.id,
+    a.id,
+  ]);
   const detail = (await service.listSuggestions(manager, { language: "fr", limit: 1 }))
     .suggestions[0];
-  assertEquals([detail.source, detail.current, detail.checks], ["Play", null, []]);
+  expect([detail.source, detail.current, detail.checks]).toStrictEqual(["Play", null, []]);
 });
 
 test("review: approving writes blue with author and approver, and supersedes the rest (STR-5)", async () => {
@@ -276,7 +295,7 @@ test("review: approving writes blue with author and approver, and supersedes the
   };
   const mine = await service.suggest(contributor, { ...base, value: "Lancer la partie" });
   const theirs = await service.suggest(other, { ...base, value: "Commencer" });
-  assertEquals((await frenchDownload(instance)).play, "Jouer");
+  expect((await frenchDownload(instance)).play).toBe("Jouer");
 
   await rejectsWith(
     service.reviewSuggestions(contributor, { ids: [mine.id], action: "approve" }),
@@ -287,46 +306,42 @@ test("review: approving writes blue with author and approver, and supersedes the
     action: "approve",
     comment: "Merci !",
   });
-  assertEquals(result.approved, [mine.id]);
-  assertEquals(result.rejected, []);
-  assertEquals(
-    result.failed.map((f) => [f.id, f.code]),
-    [[theirs.id, "conflict"]],
-  );
+  expect(result.approved).toStrictEqual([mine.id]);
+  expect(result.rejected).toStrictEqual([]);
+  expect(result.failed.map((f) => [f.id, f.code])).toStrictEqual([[theirs.id, "conflict"]]);
 
   const detail = await service.getString(ANONYMOUS, { id: play, language: "fr" });
-  assertEquals(detail.translation?.value, "Lancer la partie");
-  assertEquals(detail.translation?.colour, "blue");
-  assertEquals(detail.translation?.author.name, "Camille");
-  assertEquals(detail.translation?.approver?.name, "Morgan");
-  assertEquals(
+  expect(detail.translation?.value).toBe("Lancer la partie");
+  expect(detail.translation?.colour).toBe("blue");
+  expect(detail.translation?.author.name).toBe("Camille");
+  expect(detail.translation?.approver?.name).toBe("Morgan");
+  expect(
     detail.suggestions.map((s) => [s.id, s.status, s.reviewer?.name, s.comment]),
-    [
-      [theirs.id, "superseded", "Morgan", null],
-      [mine.id, "approved", "Morgan", "Merci !"],
-    ],
-  );
-  assertEquals((await frenchDownload(instance)).play, "Lancer la partie");
+  ).toStrictEqual([
+    [theirs.id, "superseded", "Morgan", null],
+    [mine.id, "approved", "Morgan", "Merci !"],
+  ]);
+  expect((await frenchDownload(instance)).play).toBe("Lancer la partie");
 
   const history = await service.getHistory(ANONYMOUS, { id: play, language: "fr" });
   const approved = history.entries.find((e) => e.event === "suggestion_approved")!;
-  assertEquals(approved.actor.name, "Morgan");
-  assertEquals([approved.before, approved.after], ["Jouer", "Lancer la partie"]);
-  assertEquals([approved.beforeColour, approved.afterColour], ["green", "blue"]);
+  expect(approved.actor.name).toBe("Morgan");
+  expect([approved.before, approved.after]).toStrictEqual(["Jouer", "Lancer la partie"]);
+  expect([approved.beforeColour, approved.afterColour]).toStrictEqual(["green", "blue"]);
   const contributorId = contributor.type === "user" ? contributor.userId : 0;
-  assertEquals(approved.detail, {
+  expect(approved.detail).toStrictEqual({
     suggestionId: mine.id,
     kind: "correction",
     author: { type: "user", id: contributorId },
     comment: "Merci !",
   });
   const superseded = history.entries.find((e) => e.event === "suggestion_superseded")!;
-  assertEquals(superseded.detail, { suggestionId: theirs.id, supersededBy: mine.id });
+  expect(superseded.detail).toStrictEqual({ suggestionId: theirs.id, supersededBy: mine.id });
 
   const activity = await service.getActivity(ANONYMOUS, {});
-  assertEquals(activity.items[0].type, "review");
-  assertEquals(activity.items[0].summary, "Review (fr): 1 approved");
-  assertEquals(activity.items[0].actor.name, "Morgan");
+  expect(activity.items[0].type).toBe("review");
+  expect(activity.items[0].summary).toBe("Review (fr): 1 approved");
+  expect(activity.items[0].actor.name).toBe("Morgan");
 });
 
 test("review: rejecting only changes the suggestion", async () => {
@@ -345,26 +360,29 @@ test("review: rejecting only changes the suggestion", async () => {
     action: "reject",
     comment: "Trop court",
   });
-  assertEquals(result, { approved: [], rejected: [sent.id], failed: [] });
+  expect(result).toStrictEqual({ approved: [], rejected: [sent.id], failed: [] });
   const [row] = await service
     .listSuggestions(contributor, { status: "rejected" })
     .then((p) => p.suggestions);
-  assertEquals([row.status, row.comment, row.reviewer?.name], ["rejected", "Trop court", "Morgan"]);
-  assertEquals(
+  expect([row.status, row.comment, row.reviewer?.name]).toStrictEqual([
+    "rejected",
+    "Trop court",
+    "Morgan",
+  ]);
+  expect(
     (await service.getString(ANONYMOUS, { id: idOf(instance, "play"), language: "fr" }))
       .translation,
-    null,
-  );
+  ).toBe(null);
   const history = await service.getHistory(ANONYMOUS, {
     id: idOf(instance, "play"),
     language: "fr",
   });
-  assertEquals(
-    history.entries.map((e) => e.event),
-    ["suggestion_rejected", "suggestion_created", "source_added"],
-  );
-  assertEquals(
-    (await service.getActivity(ANONYMOUS, {})).items[0].summary,
+  expect(history.entries.map((e) => e.event)).toStrictEqual([
+    "suggestion_rejected",
+    "suggestion_created",
+    "source_added",
+  ]);
+  expect((await service.getActivity(ANONYMOUS, {})).items[0].summary).toStrictEqual(
     "Review (fr): 1 rejected",
   );
 });
@@ -393,21 +411,15 @@ test("review: the checks run again against the current English; the rest proceed
     ids: [quit.id, play.id, 999],
     action: "approve",
   });
-  assertEquals(result.approved, [play.id]);
-  assertEquals(
-    result.failed.map((f) => [f.id, f.code]),
-    [
-      [quit.id, "qa_failed"],
-      [999, "not_found"],
-    ],
-  );
-  assertEquals(result.failed[0].checks?.[0].check, "placeholder_missing");
+  expect(result.approved).toStrictEqual([play.id]);
+  expect(result.failed.map((f) => [f.id, f.code])).toStrictEqual([
+    [quit.id, "qa_failed"],
+    [999, "not_found"],
+  ]);
+  expect(result.failed[0].checks?.[0].check).toBe("placeholder_missing");
   const still = (await service.listSuggestions(manager, {})).suggestions;
-  assertEquals(
-    still.map((s) => [s.id, s.status]),
-    [[quit.id, "pending"]],
-  );
-  assertEquals((await frenchDownload(instance)).play, "Jouer");
+  expect(still.map((s) => [s.id, s.status])).toStrictEqual([[quit.id, "pending"]]);
+  expect((await frenchDownload(instance)).play).toBe("Jouer");
 });
 
 test("review: language limits apply per suggestion", async () => {
@@ -433,11 +445,8 @@ test("review: language limits apply per suggestion", async () => {
     ids: [fr.id, de.id],
     action: "approve",
   });
-  assertEquals(result.approved, [de.id]);
-  assertEquals(
-    result.failed.map((f) => [f.id, f.code]),
-    [[fr.id, "forbidden"]],
-  );
+  expect(result.approved).toStrictEqual([de.id]);
+  expect(result.failed.map((f) => [f.id, f.code])).toStrictEqual([[fr.id, "forbidden"]]);
 });
 
 test('review: "looks good" approves the green text as it was, and only that', async () => {
@@ -451,19 +460,21 @@ test('review: "looks good" approves the green text as it was, and only that', as
     kind: "approval",
     baseRevision: green.revision,
   });
-  assertEquals([looksGood.kind, looksGood.value, looksGood.checks], ["approval", null, []]);
+  expect([looksGood.kind, looksGood.value, looksGood.checks]).toStrictEqual(["approval", null, []]);
   const result = await service.reviewSuggestions(manager, {
     ids: [looksGood.id],
     action: "approve",
   });
-  assertEquals(result.approved, [looksGood.id]);
+  expect(result.approved).toStrictEqual([looksGood.id]);
   const translation = (
     await service.getString(ANONYMOUS, { id: idOf(instance, "play"), language: "fr" })
   ).translation!;
-  assertEquals(
-    [translation.value, translation.colour, translation.author.name, translation.approver?.name],
-    ["Jouer", "blue", "test-model", "Morgan"],
-  );
+  expect([
+    translation.value,
+    translation.colour,
+    translation.author.name,
+    translation.approver?.name,
+  ]).toStrictEqual(["Jouer", "blue", "test-model", "Morgan"]);
 
   // Once the text changed, the "looks good" no longer applies.
   const quit = write(instance, "common.json", "quit", "fr", "Quitter");
@@ -475,10 +486,7 @@ test('review: "looks good" approves the green text as it was, and only that', as
   });
   write(instance, "common.json", "quit", "fr", "Sortir");
   const failed = await service.reviewSuggestions(manager, { ids: [stale.id], action: "approve" });
-  assertEquals(
-    failed.failed.map((f) => f.code),
-    ["conflict"],
-  );
+  expect(failed.failed.map((f) => f.code)).toStrictEqual(["conflict"]);
 });
 
 test("review: an LLM proposal for an outdated blue translation, approved in one click", async () => {
@@ -501,14 +509,16 @@ test("review: an LLM proposal for an outdated blue translation, approved in one 
     play,
   );
   const result = await service.reviewSuggestions(manager, { ids: [id], action: "approve" });
-  assertEquals(result.approved, [id]);
+  expect(result.approved).toStrictEqual([id]);
   const translation = (await service.getString(ANONYMOUS, { id: play, language: "fr" }))
     .translation!;
-  assertEquals(
-    [translation.value, translation.colour, translation.author.type, translation.author.name],
-    ["Jouer maintenant", "blue", "llm", "gemini-test"],
-  );
-  assertEquals(translation.approver?.name, "Morgan");
+  expect([
+    translation.value,
+    translation.colour,
+    translation.author.type,
+    translation.author.name,
+  ]).toStrictEqual(["Jouer maintenant", "blue", "llm", "gemini-test"]);
+  expect(translation.approver?.name).toBe("Morgan");
   assert(count(instance.sql, "activity", "type = 'review'") === 1);
 });
 
@@ -542,26 +552,21 @@ test("review: a suggestion a person's edit outgrew leaves the queue, and can't b
     value: "Jouer maintenant",
     baseRevision: (await translation()).revision,
   });
-  assertEquals((await service.listSuggestions(lead, { language: "fr" })).suggestions, []);
+  expect((await service.listSuggestions(lead, { language: "fr" })).suggestions).toStrictEqual([]);
   const mine = await service.listSuggestions(contributor, { author: "me", status: "all" });
-  assertEquals(
-    mine.suggestions.map((s) => s.status),
-    ["superseded"],
-  );
+  expect(mine.suggestions.map((s) => s.status)).toStrictEqual(["superseded"]);
   const result = await service.reviewSuggestions(lead, {
     ids: [correction.id],
     action: "approve",
   });
-  assertEquals(result.approved, []);
-  assertEquals(
-    result.failed.map((f) => [f.id, f.code]),
-    [[correction.id, "conflict"]],
-  );
+  expect(result.approved).toStrictEqual([]);
+  expect(result.failed.map((f) => [f.id, f.code])).toStrictEqual([[correction.id, "conflict"]]);
   const after = await translation();
-  assertEquals(
-    [after.value, after.colour, after.author.name],
-    ["Jouer maintenant", "blue", "Morgan"],
-  );
+  expect([after.value, after.colour, after.author.name]).toStrictEqual([
+    "Jouer maintenant",
+    "blue",
+    "Morgan",
+  ]);
 });
 
 test("review: approving refuses to overwrite a newer blue, but may replace a newer green", async () => {
@@ -600,16 +605,13 @@ test("review: approving refuses to overwrite a newer blue, but may replace a new
     ids: sent.map((s) => s.id),
     action: "approve",
   });
-  assertEquals(result.approved, [sent[0].id], "a person's text replaces the LLM's green");
-  assertEquals(
-    result.failed.map((f) => [f.id, f.code]),
-    [[sent[1].id, "conflict"]],
-  );
-  assertEquals((await translation(play)).value, "Jouer");
-  assertEquals(
-    [(await translation(quit)).value, (await translation(quit)).colour],
-    ["Sortir", "blue"],
-  );
+  expect(result.approved, "a person's text replaces the LLM's green").toStrictEqual([sent[0].id]);
+  expect(result.failed.map((f) => [f.id, f.code])).toStrictEqual([[sent[1].id, "conflict"]]);
+  expect((await translation(play)).value).toBe("Jouer");
+  expect([(await translation(quit)).value, (await translation(quit)).colour]).toStrictEqual([
+    "Sortir",
+    "blue",
+  ]);
 });
 
 test("review: a suggestion made for older English is approved outdated (STR-4)", async () => {
@@ -636,7 +638,7 @@ test("review: a suggestion made for older English is approved outdated (STR-4)",
       languages: ["de", "fr"],
     },
   );
-  assertEquals((await translation(save)).outdated, true);
+  expect((await translation(save)).outdated).toBe(true);
   const looksGood = await service.suggest(contributor, {
     id: save,
     language: "fr",
@@ -648,16 +650,17 @@ test("review: a suggestion made for older English is approved outdated (STR-4)",
     ids: [sent.id, looksGood.id],
     action: "approve",
   });
-  assertEquals(result.approved, [sent.id, looksGood.id]);
+  expect(result.approved).toStrictEqual([sent.id, looksGood.id]);
   // "Jouer" was written for "Play", not "Stop": blue, and still outdated.
   const approved = await translation(play);
-  assertEquals([approved.value, approved.colour, approved.outdated], ["Jouer", "blue", true]);
+  expect([approved.value, approved.colour, approved.outdated]).toStrictEqual([
+    "Jouer",
+    "blue",
+    true,
+  ]);
   const outdated = await service.listStrings(ANONYMOUS, { language: "fr", state: "outdated" });
-  assertEquals(
-    outdated.strings.map((s) => s.key),
-    ["play"],
-  );
+  expect(outdated.strings.map((s) => s.key)).toStrictEqual(["play"]);
   // The "looks good" confirmed the text for the English the contributor saw: current.
   const confirmed = await translation(save);
-  assertEquals([confirmed.colour, confirmed.outdated], ["blue", false]);
+  expect([confirmed.colour, confirmed.outdated]).toStrictEqual(["blue", false]);
 });

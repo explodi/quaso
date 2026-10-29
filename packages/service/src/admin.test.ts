@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assert, assertEquals } from "@std/assert";
+import { assert, expect, test } from "vitest";
 import { SYSTEM } from "./api.ts";
 import { monthStart } from "./admin.ts";
 import { DATABASE_VERSION } from "./migrations.ts";
@@ -10,28 +9,28 @@ test("the admin page: version, setup, database, jobs, LLM, usage and the last ba
   using instance = await startTestService({ version: "1.2.3", setup: "local" });
   const admin = addUser(instance.sql, "administrator");
   const info = await instance.service.getAdminInfo(admin, {});
-  assertEquals(info.version, "1.2.3");
-  assertEquals(info.setup, "local");
-  assertEquals(info.startedAt, START_TIME);
-  assertEquals(info.database.schemaVersion, DATABASE_VERSION);
+  expect(info.version).toBe("1.2.3");
+  expect(info.setup).toBe("local");
+  expect(info.startedAt).toStrictEqual(START_TIME);
+  expect(info.database.schemaVersion).toStrictEqual(DATABASE_VERSION);
   assert(info.database.sizeBytes !== null && info.database.sizeBytes > 0, "node:sqlite's pages");
-  assertEquals(info.database.revision, 0);
-  assertEquals(info.recentErrors, []);
-  assertEquals(info.jobs, { queued: 0, running: 0, paused: 0 });
-  assertEquals(info.llm, {
+  expect(info.database.revision).toBe(0);
+  expect(info.recentErrors).toStrictEqual([]);
+  expect(info.jobs).toStrictEqual({ queued: 0, running: 0, paused: 0 });
+  expect(info.llm).toStrictEqual({
     provider: null,
     model: "gemini-flash-latest",
     lastSuccessAt: null,
     lastError: null,
   });
-  assertEquals(info.usageThisMonth, {
+  expect(info.usageThisMonth).toStrictEqual({
     requests: 0,
     failures: 0,
     inputTokens: 0,
     outputTokens: 0,
     thinkingTokens: 0,
   });
-  assertEquals(info.lastBackup, null);
+  expect(info.lastBackup).toBe(null);
 });
 
 test("the admin page counts jobs and this month's requests, and shows the last error", async () => {
@@ -64,17 +63,20 @@ test("the admin page counts jobs and this month's requests, and shows the last e
   await instance.service.recordBackup(SYSTEM, { at: START_TIME, file: "backups/quaso.json.gz" });
 
   const info = await instance.service.getAdminInfo(admin, {});
-  assertEquals(info.setup, "cloudflare");
-  assertEquals(info.database.sizeBytes, 12345, "the host's size wins");
-  assertEquals(info.jobs, { queued: 2, running: 1, paused: 1 });
-  assertEquals(info.llm.lastSuccessAt, START_TIME - 1000);
-  assertEquals(info.llm.lastError, { at: START_TIME - 2000, message: "429 Too Many Requests" });
-  assertEquals(info.usageThisMonth, {
+  expect(info.setup).toBe("cloudflare");
+  expect(info.database.sizeBytes, "the host's size wins").toBe(12345);
+  expect(info.jobs).toStrictEqual({ queued: 2, running: 1, paused: 1 });
+  expect(info.llm.lastSuccessAt).toStrictEqual(START_TIME - 1000);
+  expect(info.llm.lastError).toStrictEqual({
+    at: START_TIME - 2000,
+    message: "429 Too Many Requests",
+  });
+  expect(info.usageThisMonth).toStrictEqual({
     requests: 3,
     failures: 1,
     inputTokens: 16,
     outputTokens: 32,
     thinkingTokens: 48,
   });
-  assertEquals(info.lastBackup, { at: START_TIME, file: "backups/quaso.json.gz" });
+  expect(info.lastBackup).toStrictEqual({ at: START_TIME, file: "backups/quaso.json.gz" });
 });

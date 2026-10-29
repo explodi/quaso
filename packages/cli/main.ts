@@ -3,11 +3,10 @@
  * @module
  * The `quaso` command (design §5.10): upload the source files of an i18next project to a
  * Quaso instance, download the translations, check progress in CI and import existing
- * translations. It runs on Node ≥ 22 and Deno ≥ 2.9 from one source, with only `node:`
- * built-ins and web APIs.
+ * translations. It runs on Node ≥ 22, with only `node:` built-ins and web APIs.
  *
  * ```sh
- * deno run -A npm:@quaso-i18n/cli upload
+ * npx @quaso-i18n/cli upload
  * npx @quaso-i18n/cli download
  * ```
  *

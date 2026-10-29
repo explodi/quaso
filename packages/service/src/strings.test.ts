@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals, assertRejects } from "@std/assert";
+import { assert, expect, test } from "vitest";
 import { ANONYMOUS, SYSTEM } from "./api.ts";
 import { ServiceError } from "./errors.ts";
 import {
@@ -57,35 +56,35 @@ async function keys(instance: TestInstance, query: Record<string, unknown>): Pro
 test("listStrings lists translatable strings by file and position", async () => {
   using instance = await project();
   const page = await instance.service.listStrings(ANONYMOUS, { language: "de" });
-  assertEquals(page.language, "de");
-  assertEquals(page.total, 9);
-  assertEquals(page.nextCursor, null);
-  assertEquals(
-    page.strings.map((string) => `${string.file}:${string.key}`),
-    [
-      "common.json:title",
-      "common.json:menu.play",
-      "common.json:menu.quit",
-      "common.json:menu.100%",
-      "common.json:coins",
-      "common.json:playAgain",
-      "hud.json:hp",
-      "hud.json:mana",
-      "menus/main.json:main.start",
-    ],
-  );
+  expect(page.language).toBe("de");
+  expect(page.total).toBe(9);
+  expect(page.nextCursor).toBe(null);
+  expect(page.strings.map((string) => `${string.file}:${string.key}`)).toStrictEqual([
+    "common.json:title",
+    "common.json:menu.play",
+    "common.json:menu.quit",
+    "common.json:menu.100%",
+    "common.json:coins",
+    "common.json:playAgain",
+    "hud.json:hp",
+    "hud.json:mana",
+    "menus/main.json:main.start",
+  ]);
   const [title, play, quit] = page.strings;
-  assertEquals(title.translation?.value, "Wegfahrer");
-  assertEquals(title.translation?.colour, "green");
-  assertEquals(title.translation?.author, { type: "llm", id: null, name: "test-model" });
-  assertEquals(play.translation?.colour, "blue");
-  assertEquals(quit.translation, null);
-  assertEquals(page.strings[4].kind, "plural");
-  assertEquals(page.strings[4].source, { one: "{{count}} coin", other: "{{count}} coins" });
-  assertEquals(
-    [title.words, title.maxLength, title.maxLengthLocked, title.pending, title.llmFailure],
-    [1, null, false, 0, null],
-  );
+  expect(title.translation?.value).toBe("Wegfahrer");
+  expect(title.translation?.colour).toBe("green");
+  expect(title.translation?.author).toStrictEqual({ type: "llm", id: null, name: "test-model" });
+  expect(play.translation?.colour).toBe("blue");
+  expect(quit.translation).toBe(null);
+  expect(page.strings[4].kind).toBe("plural");
+  expect(page.strings[4].source).toStrictEqual({ one: "{{count}} coin", other: "{{count}} coins" });
+  expect([
+    title.words,
+    title.maxLength,
+    title.maxLengthLocked,
+    title.pending,
+    title.llmFailure,
+  ]).toStrictEqual([1, null, false, 0, null]);
 });
 
 test("listStrings filters by state", async () => {
@@ -100,35 +99,34 @@ test("listStrings filters by state", async () => {
        author_type, created_at) VALUES (?, 'de', 'translation', '"Beenden"', 'x', 0, 'user', 0)`,
     stringId(instance.sql, "common.json", "menu.quit"),
   );
-  assertEquals(await keys(instance, { state: "green" }), [
+  expect(await keys(instance, { state: "green" })).toStrictEqual([
     "common.json:title",
     "hud.json:hp",
     "hud.json:mana",
   ]);
-  assertEquals(await keys(instance, { state: "blue" }), ["common.json:menu.play"]);
-  assertEquals(await keys(instance, { state: "outdated" }), ["common.json:title"]);
-  assertEquals(await keys(instance, { state: "pending" }), ["common.json:menu.quit"]);
-  assertEquals(await keys(instance, { state: "qa" }), ["hud.json:mana"]);
-  assertEquals((await keys(instance, { state: "untranslated" })).length, 5);
+  expect(await keys(instance, { state: "blue" })).toStrictEqual(["common.json:menu.play"]);
+  expect(await keys(instance, { state: "outdated" })).toStrictEqual(["common.json:title"]);
+  expect(await keys(instance, { state: "pending" })).toStrictEqual(["common.json:menu.quit"]);
+  expect(await keys(instance, { state: "qa" })).toStrictEqual(["hud.json:mana"]);
+  expect((await keys(instance, { state: "untranslated" })).length).toBe(5);
   const quit = await instance.service.listStrings(ANONYMOUS, { language: "de", state: "pending" });
-  assertEquals(quit.strings[0].pending, 1);
-  assertEquals(quit.total, 1);
+  expect(quit.strings[0].pending).toBe(1);
+  expect(quit.total).toBe(1);
 });
 
 test("listStrings searches keys, English and translations", async () => {
   using instance = await project();
-  assertEquals(await keys(instance, { q: "LEBENS" }), ["hud.json:hp"]);
-  assertEquals(await keys(instance, { q: "health" }), ["hud.json:hp"]);
-  assertEquals(await keys(instance, { q: "menu.q" }), ["common.json:menu.quit"]);
-  assertEquals(await keys(instance, { q: "100%" }), ["common.json:menu.100%"]);
-  assertEquals(await keys(instance, { q: "r_u" }), ["common.json:menu.100%"]);
-  assertEquals(await keys(instance, { q: "%" }), ["common.json:menu.100%"]);
-  assertEquals(
-    await keys(instance, { q: "ｐｌａｙ" }),
-    ["common.json:menu.play", "common.json:playAgain"],
-    "NFKC: full-width letters",
-  );
-  assertEquals(await keys(instance, { q: "nothing like it" }), []);
+  expect(await keys(instance, { q: "LEBENS" })).toStrictEqual(["hud.json:hp"]);
+  expect(await keys(instance, { q: "health" })).toStrictEqual(["hud.json:hp"]);
+  expect(await keys(instance, { q: "menu.q" })).toStrictEqual(["common.json:menu.quit"]);
+  expect(await keys(instance, { q: "100%" })).toStrictEqual(["common.json:menu.100%"]);
+  expect(await keys(instance, { q: "r_u" })).toStrictEqual(["common.json:menu.100%"]);
+  expect(await keys(instance, { q: "%" })).toStrictEqual(["common.json:menu.100%"]);
+  expect(await keys(instance, { q: "ｐｌａｙ" }), "NFKC: full-width letters").toStrictEqual([
+    "common.json:menu.play",
+    "common.json:playAgain",
+  ]);
+  expect(await keys(instance, { q: "nothing like it" })).toStrictEqual([]);
 });
 
 test("listStrings searches with long, non-ASCII queries, and backslashes as themselves", async () => {
@@ -144,25 +142,32 @@ test("listStrings searches with long, non-ASCII queries, and backslashes as them
     { languages: ["de"] },
   );
   const q = story.slice(3, 203);
-  assertEquals(q.length, 200);
-  assertEquals(await keys(instance, { q }), ["story.json:intro"]);
-  assertEquals(await keys(instance, { q: `${q.slice(0, 199)}!` }), []);
-  assertEquals(await keys(instance, { q: "c:\\games\\wayfarer\\save_1" }), ["story.json:save"]);
-  assertEquals(await keys(instance, { q: "\\s" }), ["story.json:save"]);
-  assertEquals(await keys(instance, { q: "\\_" }), []);
+  expect(q.length).toBe(200);
+  expect(await keys(instance, { q })).toStrictEqual(["story.json:intro"]);
+  expect(await keys(instance, { q: `${q.slice(0, 199)}!` })).toStrictEqual([]);
+  expect(await keys(instance, { q: "c:\\games\\wayfarer\\save_1" })).toStrictEqual([
+    "story.json:save",
+  ]);
+  expect(await keys(instance, { q: "\\s" })).toStrictEqual(["story.json:save"]);
+  expect(await keys(instance, { q: "\\_" })).toStrictEqual([]);
 });
 
 test("listStrings filters by file, folder and IDs", async () => {
   using instance = await project();
-  assertEquals(await keys(instance, { file: "hud.json" }), ["hud.json:hp", "hud.json:mana"]);
-  assertEquals(await keys(instance, { file: "menus/" }), ["menus/main.json:main.start"]);
-  assertEquals(await keys(instance, { file: "menus" }), []);
+  expect(await keys(instance, { file: "hud.json" })).toStrictEqual([
+    "hud.json:hp",
+    "hud.json:mana",
+  ]);
+  expect(await keys(instance, { file: "menus/" })).toStrictEqual(["menus/main.json:main.start"]);
+  expect(await keys(instance, { file: "menus" })).toStrictEqual([]);
   const ids = [
     stringId(instance.sql, "hud.json", "mana"),
     stringId(instance.sql, "common.json", "title"),
   ];
-  assertEquals(await keys(instance, { ids }), ["common.json:title", "hud.json:mana"]);
-  assertEquals(await keys(instance, { ids, file: "hud.json", state: "qa" }), ["hud.json:mana"]);
+  expect(await keys(instance, { ids })).toStrictEqual(["common.json:title", "hud.json:mana"]);
+  expect(await keys(instance, { ids, file: "hud.json", state: "qa" })).toStrictEqual([
+    "hud.json:mana",
+  ]);
 });
 
 test("the folder filter matches the folder's case exactly", async () => {
@@ -181,11 +186,11 @@ test("the folder filter matches the folder's case exactly", async () => {
     const page = await instance.service.listStrings(ANONYMOUS, { language: "de", file });
     return [page.total, page.strings.map((string) => `${string.file}:${string.key}`)];
   };
-  assertEquals(await folder("UI/"), [1, ["UI/menu.json:play"]]);
-  assertEquals(await folder("ui/"), [1, ["ui/hud.json:hp"]]);
-  assertEquals(await folder("straße/"), [0, []]);
-  assertEquals(await folder("Straße/"), [1, ["Straße/a.json:a"]]);
-  assertEquals(await folder("ui%/"), [0, []]);
+  expect(await folder("UI/")).toStrictEqual([1, ["UI/menu.json:play"]]);
+  expect(await folder("ui/")).toStrictEqual([1, ["ui/hud.json:hp"]]);
+  expect(await folder("straße/")).toStrictEqual([0, []]);
+  expect(await folder("Straße/")).toStrictEqual([1, ["Straße/a.json:a"]]);
+  expect(await folder("ui%/")).toStrictEqual([0, []]);
 });
 
 test("IDs beyond the exact integers are refused, not a server error", async () => {
@@ -196,14 +201,17 @@ test("IDs beyond the exact integers are refused, not a server error", async () =
     () => instance.service.getString(ANONYMOUS, { id: 99999999999999999999, language: "de" }),
     () => instance.service.getHistory(ANONYMOUS, { id: 2 ** 60 }),
   ]) {
-    const error = await assertRejects(call, ServiceError);
-    assertEquals(error.code, "validation_failed");
+    const error = await call().catch((error: unknown) => error);
+    assert(error instanceof ServiceError);
+    expect(error.code).toBe("validation_failed");
   }
-  const error = await assertRejects(
-    () => instance.service.listStrings(ANONYMOUS, { language: "de", ids: [1, 1e20] }),
-    ServiceError,
-  );
-  assertEquals(error.details, [{ path: "ids[1]", message: "must be at most 9007199254740991" }]);
+  const error = await instance.service
+    .listStrings(ANONYMOUS, { language: "de", ids: [1, 1e20] })
+    .catch((error: unknown) => error);
+  assert(error instanceof ServiceError);
+  expect(error.details).toStrictEqual([
+    { path: "ids[1]", message: "must be at most 9007199254740991" },
+  ]);
 });
 
 test("listStrings pages with an opaque cursor", async () => {
@@ -217,25 +225,25 @@ test("listStrings pages with an opaque cursor", async () => {
       limit: 4,
       cursor,
     });
-    assertEquals(page.total, 9);
+    expect(page.total).toBe(9);
     seen.push(...page.strings.map((string) => string.key));
     cursor = page.nextCursor ?? undefined;
     pages++;
   } while (cursor !== undefined);
-  assertEquals(pages, 3);
-  assertEquals(seen.length, 9);
-  assertEquals(new Set(seen).size, 9);
-  const error = await assertRejects(
-    () => instance.service.listStrings(ANONYMOUS, { language: "de", cursor: "nope" }),
-    ServiceError,
-  );
-  assertEquals(error.code, "bad_request");
+  expect(pages).toBe(3);
+  expect(seen.length).toBe(9);
+  expect(new Set(seen).size).toBe(9);
+  const error = await instance.service
+    .listStrings(ANONYMOUS, { language: "de", cursor: "nope" })
+    .catch((error: unknown) => error);
+  assert(error instanceof ServiceError);
+  expect(error.code).toBe("bad_request");
 });
 
 test("hidden strings and files aren't listed", async () => {
   using instance = await project();
   await uploadJson(instance.service, { "hud.json": { hp: "Health points" } });
-  assertEquals(await keys(instance, {}), ["hud.json:hp"]);
+  expect(await keys(instance, {})).toStrictEqual(["hud.json:hp"]);
 });
 
 test("getString gives the translation, other languages, references and checks", async () => {
@@ -243,22 +251,22 @@ test("getString gives the translation, other languages, references and checks", 
   write(instance, "common.json", "title", "fr", "Voyageur", BLUE);
   const id = stringId(instance.sql, "common.json", "title");
   const detail = await instance.service.getString(ANONYMOUS, { id, language: "de" });
-  assertEquals(
-    [detail.language, detail.key, detail.translation?.value],
-    ["de", "title", "Wegfahrer"],
-  );
-  assertEquals(
+  expect([detail.language, detail.key, detail.translation?.value]).toStrictEqual([
+    "de",
+    "title",
+    "Wegfahrer",
+  ]);
+  expect(
     detail.otherLanguages.map((other) => [other.language, other.name, other.translation?.value]),
-    [["fr", "French", "Voyageur"]],
-  );
-  assertEquals(detail.suggestions, []);
-  assertEquals(detail.references, []);
-  assertEquals(detail.checks, []);
+  ).toStrictEqual([["fr", "French", "Voyageur"]]);
+  expect(detail.suggestions).toStrictEqual([]);
+  expect(detail.references).toStrictEqual([]);
+  expect(detail.checks).toStrictEqual([]);
   const again = await instance.service.getString(ANONYMOUS, {
     id: stringId(instance.sql, "common.json", "playAgain"),
     language: "de",
   });
-  assertEquals(again.references, [
+  expect(again.references).toStrictEqual([
     { raw: "$t(menu.play)", english: "Play" },
     { raw: "$t(hud:hp)", english: "Health points" },
     { raw: "$t(nowhere)", english: null },
@@ -267,10 +275,7 @@ test("getString gives the translation, other languages, references and checks", 
     id: stringId(instance.sql, "hud.json", "mana"),
     language: "de",
   });
-  assertEquals(
-    mana.checks.map((check) => check.check),
-    ["empty"],
-  );
+  expect(mana.checks.map((check) => check.check)).toStrictEqual(["empty"]);
 });
 
 test("getString lists pending and recently reviewed suggestions", async () => {
@@ -294,19 +299,18 @@ test("getString lists pending and recently reviewed suggestions", async () => {
   insert("rejected", now - 1000, '"Wanderer"');
   insert("rejected", now - 40 * 24 * 3600 * 1000, '"Alt"');
   const detail = await instance.service.getString(ANONYMOUS, { id, language: "de" });
-  assertEquals(
+  expect(
     detail.suggestions.map((suggestion) => [suggestion.status, suggestion.value]),
-    [
-      ["rejected", "Wanderer"],
-      ["pending", "Reisender"],
-    ],
-  );
+  ).toStrictEqual([
+    ["rejected", "Wanderer"],
+    ["pending", "Reisender"],
+  ]);
   const pending = detail.suggestions[1];
-  assertEquals(pending.author.name, "Volunteer");
-  assertEquals(pending.source, "Wayfarer");
-  assertEquals(pending.current?.value, "Wegfahrer");
-  assertEquals(pending.checks, []);
-  assertEquals(detail.pending, 1);
+  expect(pending.author.name).toBe("Volunteer");
+  expect(pending.source).toBe("Wayfarer");
+  expect(pending.current?.value).toBe("Wegfahrer");
+  expect(pending.checks).toStrictEqual([]);
+  expect(detail.pending).toBe(1);
 });
 
 test("getString of a hidden, literal or unknown string is not found", async () => {
@@ -315,11 +319,11 @@ test("getString of a hidden, literal or unknown string is not found", async () =
     "SELECT id FROM strings WHERE display_key = 'version'",
   )[0].id;
   for (const id of [version, 999]) {
-    const error = await assertRejects(
-      () => instance.service.getString(ANONYMOUS, { id, language: "de" }),
-      ServiceError,
-    );
-    assertEquals(error.code, "not_found");
+    const error = await instance.service
+      .getString(ANONYMOUS, { id, language: "de" })
+      .catch((error: unknown) => error);
+    assert(error instanceof ServiceError);
+    expect(error.code).toBe("not_found");
   }
 });
 
@@ -333,26 +337,23 @@ test("getHistory: newest first, one language's events and the English's", async 
   });
   const id = stringId(instance.sql, "common.json", "title");
   const de = await instance.service.getHistory(ANONYMOUS, { id, language: "de" });
-  assertEquals(
-    de.entries.map((entry) => [entry.event, entry.language]),
-    [
-      ["source_changed", null],
-      ["translation_llm", "de"],
-      ["source_added", null],
-    ],
-  );
-  assertEquals(de.entries[0].before, "Wayfarer");
-  assertEquals(de.entries[0].after, "Wayfarer II");
-  assertEquals(de.entries[0].actor, { type: "system", id: null, name: "System" });
-  assertEquals(typeof de.entries[0].detail?.upload, "number");
-  assertEquals(de.entries[1].afterColour, "green");
+  expect(de.entries.map((entry) => [entry.event, entry.language])).toStrictEqual([
+    ["source_changed", null],
+    ["translation_llm", "de"],
+    ["source_added", null],
+  ]);
+  expect(de.entries[0].before).toBe("Wayfarer");
+  expect(de.entries[0].after).toBe("Wayfarer II");
+  expect(de.entries[0].actor).toStrictEqual({ type: "system", id: null, name: "System" });
+  expect(typeof de.entries[0].detail?.upload).toBe("number");
+  expect(de.entries[1].afterColour).toBe("green");
   const all = await instance.service.getHistory(ANONYMOUS, { id });
-  assertEquals(all.entries.length, 4);
-  const error = await assertRejects(
-    () => instance.service.getHistory(ANONYMOUS, { id: 999 }),
-    ServiceError,
-  );
-  assertEquals(error.code, "not_found");
+  expect(all.entries.length).toBe(4);
+  const error = await instance.service
+    .getHistory(ANONYMOUS, { id: 999 })
+    .catch((error: unknown) => error);
+  assert(error instanceof ServiceError);
+  expect(error.code).toBe("not_found");
 });
 
 test("getActivity: newest first, paged by the last ID", async () => {
@@ -371,26 +372,23 @@ test("getActivity: newest first, paged by the last ID", async () => {
     );
   }
   const first = await instance.service.getActivity(ANONYMOUS, { limit: 3 });
-  assertEquals(first.items.length, 3);
-  assertEquals(first.items[0].type, "upload");
-  assertEquals(first.items[0].actor, { type: "token", id: token.id, name: "CI" });
-  assertEquals(first.items[0].summary, "Upload: 1 changed");
-  assertEquals(first.items[0].detail.changed, 1);
+  expect(first.items.length).toBe(3);
+  expect(first.items[0].type).toBe("upload");
+  expect(first.items[0].actor).toStrictEqual({ type: "token", id: token.id, name: "CI" });
+  expect(first.items[0].summary).toBe("Upload: 1 changed");
+  expect(first.items[0].detail.changed).toBe(1);
   const second = await instance.service.getActivity(ANONYMOUS, {
     limit: 3,
     cursor: first.nextCursor!,
   });
-  assertEquals(
-    second.items.map((item) => item.actor.name),
-    ["System"],
-  );
-  assertEquals(second.nextCursor, null);
-  assertEquals(Number(second.items[0].id) < Number(first.items[2].id), true);
+  expect(second.items.map((item) => item.actor.name)).toStrictEqual(["System"]);
+  expect(second.nextCursor).toBe(null);
+  expect(Number(second.items[0].id) < Number(first.items[2].id)).toBe(true);
 });
 
 test("reads are public, and work the same for every actor", async () => {
   using instance = await project();
   const anonymous = await instance.service.listStrings(ANONYMOUS, { language: "de" });
   const system = await instance.service.listStrings(SYSTEM, { language: "de" });
-  assertEquals(anonymous, system);
+  expect(anonymous).toStrictEqual(system);
 });

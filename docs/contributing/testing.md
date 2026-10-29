@@ -1,41 +1,44 @@
 # Testing
 
-The normal test suite uses local data and a fake translator. Once Deno has cached dependencies, it
-needs no accounts, provider keys or Docker. Start with `deno task check` from the repository root.
+The normal test suite uses local data and a fake translator. Once `npm ci` has installed the
+dependencies, it needs no accounts, provider keys or Docker. Tests run with
+[Vitest](https://vitest.dev/) and assert with its `expect` and `assert`. Start with
+`npm run check` from the repository root.
 
-| Layer                                                                     | Command                  | What it checks                                                                                                                       |
-| ------------------------------------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
-| Core, service, server, CLI, design system, web helpers, and build scripts | `deno task test`         | JSON read/write behavior, plural forms, quality checks, transactions, state rules, permissions, routes, CLI safety and pure UI logic |
-| Full local checks                                                         | `deno task check`        | Formatting, ESLint, React state-rule lint, types, SPDX headers, dependency licenses, runtime portability and the tests above         |
-| Browser                                                                   | `deno task e2e`          | Built React app, actual HTTP server and service, Content Security Policy (CSP), keyboard flow, forms, and visible behavior           |
-| Cloudflare                                                                | `deno task cf:check`     | Generated bindings, fixture, TypeScript, workerd tests and production Worker bundle                                                  |
-| Container                                                                 | `deno task docker:smoke` | Build the actual image, start it, upload, restart and verify persistence                                                             |
-| Project website                                                           | `deno task site:build`   | Render all documentation and reject broken internal links                                                                            |
-| Configuration documentation                                               | `deno task check:config` | Every server variable appears in the environment template and reference                                                              |
+| Layer                                                                     | Command                | What it checks                                                                                                                       |
+| ------------------------------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Core, service, server, CLI, design system, web helpers, and build scripts | `npm test`             | JSON read/write behavior, plural forms, quality checks, transactions, state rules, permissions, routes, CLI safety and pure UI logic |
+| Full local checks                                                         | `npm run check`        | Formatting, ESLint, React state-rule lint, types, SPDX headers, dependency licenses, runtime portability and the tests above         |
+| Browser                                                                   | `npm run e2e`          | Built React app, actual HTTP server and service, Content Security Policy (CSP), keyboard flow, forms, and visible behavior           |
+| Cloudflare                                                                | `npm run cf:check`     | Generated bindings, fixture, TypeScript, workerd tests and production Worker bundle                                                  |
+| Container                                                                 | `npm run docker:smoke` | Build the actual image, start it, upload, restart and verify persistence                                                             |
+| Project website                                                           | `npm run site:build`   | Render all documentation and reject broken internal links                                                                            |
+| Configuration documentation                                               | `npm run check:config` | Every server variable appears in the environment template and reference                                                              |
 
-Tests sit next to their code as `*.test.ts`. To focus a change:
+Tests sit next to their code as `*.test.ts`. `vitest.config.ts` defines three projects: `unit`
+(what `npm test` runs), `e2e` and `acceptance`. To focus a change, run single files:
 
 ```sh
-deno test -A packages/service/src/settings_api.test.ts
-deno test -A packages/server/src/storage/backup_files.test.ts
-deno test -A site/build.test.ts
+npx vitest run packages/service/src/settings_api.test.ts
+npx vitest run packages/server/src/storage/backup_files.test.ts
+npx vitest run site/build.test.ts
 ```
 
 ## The fake translator
 
 The [Beta 2 workflow fixture](../../acceptance/fixtures/workflow/README.md) contains five
 source files, ten languages, nested paths and separate approved/full Crowdin exports.
-`deno test -A acceptance/workflow_fixture.test.ts` checks its import counts, upload changes,
+`npx vitest run acceptance/workflow_fixture.test.ts` checks its import counts, upload changes,
 queue order and Crowdin conversion. Its expected data is for the shared URL-driven
 workflow test; passing this fixture check does not prove Docker or Cloudflare execution.
 
-`deno test -A e2e/workflow.test.ts` runs the full nine-step workflow against
+`npx vitest run e2e/workflow.test.ts` runs the full nine-step workflow against
 a disposable local instance, using the built CLI, public HTTP, and Chromium. The test runner
 captures the LLM stub's requests and checks proofread Spanish references in every prompt.
-Build the CLI first with `deno task build:cli`. The test defines its own three-minute timeout.
+Build the CLI first with `npm run build:cli`. The test defines its own three-minute timeout.
 
 For a dedicated empty instance with a deterministic LLM stub, run
-`deno task workflow --url http://127.0.0.1:8000`. A fresh instance needs
+`npm run workflow -- --url http://127.0.0.1:8000`. A fresh instance needs
 `QUASO_SETUP_KEY`; an already claimed empty instance needs `QUASO_ADMIN_EMAIL` and
 `QUASO_ADMIN_PASSWORD`. The runner refuses an instance containing active source files.
 It revokes its API key and removes its browser page and temporary CLI workspace; the caller must tear
@@ -62,21 +65,21 @@ Choose tests for the behavior your change affects. The newer features have focus
 | Repository descriptions and ambiguous source text             | `packages/service/src/source_context.test.ts`                                                                 |
 | Meaning checks, glossary proposals, and language style guides | `packages/service/src/quality_jobs.test.ts`, `packages/service/src/terminology_bootstrap.test.ts`             |
 
-Run a listed file with `deno test -A PATH`, replacing `PATH` with its repository path. For changes
-to shared database behavior, also run the corresponding D1 cases with `deno task cf:test`.
+Run a listed file with `npx vitest run PATH`, replacing `PATH` with its repository path. For changes
+to shared database behavior, also run the corresponding D1 cases with `npm run cf:test`.
 The fake provider checks how requests and results are handled; it does not establish whether a
 model's translations or meaning judgments are correct.
 
 ## Browser tests
 
 [browser test setup](../../e2e/_setup.ts) starts an in-process server with in-memory SQLite and the real
-security headers. It builds the website when stale. Install Chromium once with `deno task e2e:browser` (it needs Node: Puppeteer's installer stops before extracting under Deno); Puppeteer starts it for each test. Tests collect console errors, failed requests and CSP violations. Use real routes
+security headers. It builds the website when stale. Install Chromium once with `npm run e2e:browser`; Puppeteer starts it for each test. Tests collect console errors, failed requests and CSP violations. Use real routes
 where possible; intercept only behavior that is hard to cause with repeatable results. Browser tests are
 separate from the normal local suite because they start a browser and may need an initial download.
 
 Screenshots in the project website use Quaso Quest's actual French source files, with English
 translations, in light and dark themes. Install the game's dependencies with
-`npm ci --prefix examples/demo-game`, then generate them again with `deno run -A site/screenshots.ts`.
+`npm ci --prefix examples/demo-game`, then generate them again with `node site/screenshots.ts`.
 The script uses disposable in-memory storage and a real signed-in account. It also captures the
 playable game using English files exported from Quaso, without changing the example's deliberately
 empty tracked translation files. Reduce the size of the resulting PNGs without changing their content.
@@ -85,12 +88,13 @@ Include the [accessibility review](#accessibility-review) in release checks.
 
 ## Cloudflare and upgrade fixtures
 
-The optional Cloudflare package runs Vitest in workerd through Deno. Its service tests use D1
+The optional Cloudflare package keeps its own Vitest configuration, which runs the tests in workerd
+with the Workers pool. Its service tests use D1
 through the same handler and SQL adapter as the container. The old Durable Object storage service
 is no longer present. Docker is needed for `cf:dev`, not `cf:test`. Read [Cloudflare development](cloudflare.md) before changing adapters or alarms.
 
-`deno task cf:fixtures` generates the local-service scenario consumed by workerd tests. Commit its
-diff alongside a behavior or schema change. `deno task cf:fixtures --check` fails when it is stale.
+`npm run cf:fixtures` generates the local-service scenario consumed by workerd tests. Commit its
+diff alongside a behavior or schema change. `npm run cf:fixtures -- --check` fails when it is stale.
 For historical schema fixtures, preserve already released inputs unchanged: add the next version's
 fixture and expected upgrade behavior. Validate actual rows and exported files after migration,
 including history, roles and blue translations, and test a newer schema is rejected by an old
@@ -105,7 +109,7 @@ Beta 2 restarted the schema, so the test checks that it refuses them and leaves 
 backwards. Run the upgrade check directly with:
 
 ```sh
-deno test -A packages/service/src/upgrade.test.ts
+npx vitest run packages/service/src/upgrade.test.ts
 ```
 
 For each future supported schema:
@@ -113,7 +117,7 @@ For each future supported schema:
 1. Create a detached worktree at the release tag, for example
    `git worktree add --detach /tmp/quaso-previous v1.0.0`. Use a fresh scratch path and the actual
    tag.
-2. Run that checkout's `seed-dev` command or `deno task dev:reset` to create its demo database.
+2. Run that checkout's `seed-dev` command or `dev:reset` task to create its demo database.
    Upload a changed source file and import translations so history, uploads and activity contain
    data. Add representative roles, suggestions and jobs when that schema supports them. Fixtures
    must contain synthetic data, never real account details or provider keys.
@@ -125,22 +129,22 @@ For each future supported schema:
    service, compare surviving rows, export bytes and status, then exercise an upload, a fake LLM job
    and a reviewed translation. Keep existing fixture files unchanged.
 5. Remove the worktree with `git worktree remove /tmp/quaso-previous` after retaining the artifacts,
-   and run both the upgrade test and `deno task cf:check`. Review binary fixtures and their
+   and run both the upgrade test and `npm run cf:check`. Review binary fixtures and their
    provenance together in the pull request.
 
 ## Acceptance against a running instance
 
-The `acceptance/` suite is separate from `deno task test`. It exercises the public HTTP API, the
+The `acceptance/` suite is separate from `npm test`. It exercises the public HTTP API, the
 bundled CLI and Puppeteer against any reachable instance. Use a disposable development instance or
 a test instance: the suite creates uniquely named source files, translations and accounts. It revokes its
 API key and deletes temporary local files; synthetic source/history records remain on the instance.
 Never point it at production.
 
-Build the CLI first. Against a running `deno task dev` instance, the development login is enough:
+Build the CLI first. Against a running `npm run dev` instance, the development login is enough:
 
 ```sh
-deno task build:cli
-deno task acceptance --url http://localhost:8000
+npm run build:cli
+npm run acceptance -- --url http://localhost:8000
 ```
 
 Against a claimed staging instance, set `QUASO_ADMIN_EMAIL` and `QUASO_ADMIN_PASSWORD` as
@@ -164,7 +168,7 @@ Copy the setup key from that disposable instance's deployment configuration, the
 
 ```sh
 export QUASO_SETUP_KEY='the key from the disposable instance'
-deno task acceptance --url http://127.0.0.1:8134 --compose-dir deploy
+npm run acceptance -- --url http://127.0.0.1:8134 --compose-dir deploy
 docker compose down -v --remove-orphans
 ```
 
@@ -195,11 +199,11 @@ configuration contains resource identifiers, not API keys or passwords. The firs
 only whether the required settings exist, without printing their values.
 
 No GitHub Actions workflow runs on a schedule. Run the large local stress case with
-`QUASO_SMOKE=1 deno task test`. The D1 performance case runs in `deno task cf:test`: 3,000 strings
+`QUASO_SMOKE=1 npm test`. The D1 performance case runs in `npm run cf:test`: 3,000 strings
 in ten languages, 30,000 translations, and 100 exported files. Upload, export, and browsing each
 have a 30-second budget.
 
-To measure staging requests, run `scripts/measure.ts` by hand. Add `--cold-starts 3 --sleep 660`
+To measure staging requests, run `node scripts/measure.ts` by hand. Add `--cold-starts 3 --sleep 660`
 for three measurements, each after an eleven-minute idle period. Keep the container's sleep
 timeout below that interval. Other users or uptime checks can keep it awake; these measurements
 do not establish performance in every region.
@@ -207,8 +211,8 @@ do not establish performance in every region.
 ## Optional external and large tests
 
 ```sh
-QUASO_SMOKE=1 deno task test
-deno task test:llm
+QUASO_SMOKE=1 npm test
+npm run test:llm
 ```
 
 The first enables the 50,000-string / 30-language local stress case. The second needs
@@ -219,9 +223,9 @@ regional latency, cold starts, D1 Time Travel and native-speaker evaluation rema
 
 ## Beta 2 workflow on the production image
 
-Run `deno task docker:smoke` to build and check the image, then `deno task docker:workflow` for
-all nine workflow steps through the compiled server, real browser and CLI. To test another
-local image, run `deno run -A scripts/docker_workflow.ts IMAGE` after `deno task build:cli`.
+Run `npm run docker:smoke` to build and check the image, then `npm run docker:workflow` for
+all nine workflow steps through the image's server, real browser and CLI. To test another
+local image, run `node scripts/docker_workflow.ts IMAGE` after `npm run build:cli`.
 
 The runner starts disposable containers on a dedicated Docker network. A TLS fixture owns
 `generativelanguage.googleapis.com` on that network; the app trusts its temporary certificate
@@ -241,8 +245,8 @@ review instead of treating this list as completed evidence.
 Start with the checks relevant to your change:
 
 ```sh
-deno test -A packages/design-system
-deno test -A e2e/accessibility.test.ts e2e/editor.test.ts e2e/design_system.test.ts
+npx vitest run packages/design-system
+npx vitest run e2e/accessibility.test.ts e2e/editor.test.ts e2e/design_system.test.ts
 ```
 
 These tests cover defined theme contrast pairs, translation-state colours, keyboard behavior,

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
+import { expect, test } from "vitest";
 import * as fs from "node:fs/promises";
-import { assertEquals, assertMatch, assertStringIncludes, assertThrows } from "@std/assert";
 import { releaseNotes } from "./release_notes.ts";
 import { validateVersion } from "./release.ts";
 import { VERSION } from "../packages/core/src/version.ts";
@@ -13,20 +12,20 @@ test("release notes only publish dated entries and include upgrade instructions"
     "# Changes\n\n## [1.2.3] - 2026-10-01\n\n- A fix.\n\n## [1.2.2] - 2026-09-30\n\n- Older.\n",
     "1.2.3",
   );
-  assertStringIncludes(notes, "- A fix.");
-  assertEquals(notes.includes("- Older."), false);
-  assertStringIncludes(notes, "docker compose pull");
-  assertStringIncludes(notes, "cf:deploy --env production");
-  assertThrows(() => releaseNotes("## [1.2.3] - unreleased\n", "1.2.3"));
+  expect(notes).toContain("- A fix.");
+  expect(notes.includes("- Older.")).toBe(false);
+  expect(notes).toContain("docker compose pull");
+  expect(notes).toContain("npm run cf:deploy -- --env production");
+  expect(() => releaseNotes("## [1.2.3] - unreleased\n", "1.2.3")).toThrow();
 });
 
 test("the root package.json holds the only version, and every artifact reports it", async () => {
   const workspace = JSON.parse(
     await fs.readFile(new URL("../package.json", import.meta.url), "utf8"),
   );
-  assertEquals(VERSION, workspace.version);
-  assertEquals(CLI_VERSION, VERSION);
-  assertEquals(SERVER_VERSION, VERSION);
+  expect(VERSION).toStrictEqual(workspace.version);
+  expect(CLI_VERSION).toStrictEqual(VERSION);
+  expect(SERVER_VERSION).toStrictEqual(VERSION);
   for (const path of [
     "packages/core/package.json",
     "packages/service/package.json",
@@ -37,7 +36,7 @@ test("the root package.json holds the only version, and every artifact reports i
     "site/package.json",
   ]) {
     const file = new URL(`../${path}`, import.meta.url);
-    assertEquals(JSON.parse(await fs.readFile(file, "utf8")).version, undefined, path);
+    expect(JSON.parse(await fs.readFile(file, "utf8")).version, path).toBe(undefined);
   }
 });
 
@@ -52,8 +51,8 @@ test("the example pins its CLI independently with a matching lockfile", async ()
     await fs.readFile(new URL("../examples/demo-game/package-lock.json", import.meta.url), "utf8"),
   );
   const pinned = example.devDependencies[cli.name];
-  assertEquals(validateVersion(pinned), pinned);
-  assertEquals(lock.packages[""].devDependencies[cli.name], pinned);
-  assertEquals(lock.packages[`node_modules/${cli.name}`].version, pinned);
-  assertMatch(lock.packages[`node_modules/${cli.name}`].integrity, /^sha512-/);
+  expect(validateVersion(pinned)).toStrictEqual(pinned);
+  expect(lock.packages[""].devDependencies[cli.name]).toStrictEqual(pinned);
+  expect(lock.packages[`node_modules/${cli.name}`].version).toStrictEqual(pinned);
+  expect(lock.packages[`node_modules/${cli.name}`].integrity).toMatch(/^sha512-/);
 });

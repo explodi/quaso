@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
+import { expect, test } from "vitest";
 import * as fs from "node:fs/promises";
-import { assertEquals, assertStringIncludes } from "@std/assert";
 import { join, relative } from "node:path";
 import type { ImportRequest, ImportResult } from "@quaso/core";
 import { CONFIG, fakeFetch, jsonResponse, runCli, withProject } from "../test_helpers.ts";
@@ -59,8 +58,8 @@ test("import needs --as", async () => {
       env: ENV,
       fetch: fakeFetch(() => jsonResponse({})),
     });
-    assertEquals(run.code, 2);
-    assertStringIncludes(run.stderr, "--as is required");
+    expect(run.code).toBe(2);
+    expect(run.stderr).toContain("--as is required");
   });
 });
 
@@ -80,22 +79,21 @@ test("import --from reads a separate nested export without changing either folde
             fetch,
           },
         );
-        assertEquals(run.code, 0, run.stderr);
-        assertEquals(await fetch.imports()[0].json(), {
+        expect(run.code, run.stderr).toBe(0);
+        expect(await fetch.imports()[0].json()).toStrictEqual({
           language: "de",
           as: "blue",
           files: [{ path: "menus.json", content: '{ "quit": "Approved" }\n' }],
         });
-        assertEquals(JSON.parse(run.stdout).result.languages[0].files, [
+        expect(JSON.parse(run.stdout).result.languages[0].files).toStrictEqual([
           { file: "menus.json", path },
         ]);
-        assertEquals(await fs.readFile(path, "utf8"), '{ "quit": "Approved" }\n');
-        assertEquals((await fs.stat(path)).mtimeMs, before.mtimeMs);
-        assertEquals(
-          await fs.readFile(join(dir, "src/locales/de/menus.json"), "utf8"),
+        expect(await fs.readFile(path, "utf8")).toBe('{ "quit": "Approved" }\n');
+        expect((await fs.stat(path)).mtimeMs).toStrictEqual(before.mtimeMs);
+        expect(await fs.readFile(join(dir, "src/locales/de/menus.json"), "utf8")).toStrictEqual(
           PROJECT["src/locales/de/menus.json"],
         );
-        assertEquals(await fs.readdir(exportDir), ["src"]);
+        expect(await fs.readdir(exportDir)).toStrictEqual(["src"]);
       },
     );
   });
@@ -109,16 +107,16 @@ test("import --from requires an existing directory before sending requests", asy
       env: ENV,
       fetch,
     });
-    assertEquals(missing.code, 2);
-    assertStringIncludes(missing.stderr, "--from missing");
+    expect(missing.code).toBe(2);
+    expect(missing.stderr).toContain("--from missing");
     const file = await runCli(["import", "--as", "green", "--from", "quaso.config.json"], {
       cwd: dir,
       env: ENV,
       fetch,
     });
-    assertEquals(file.code, 2);
-    assertStringIncludes(file.stderr, "not a folder");
-    assertEquals(fetch.requests.length, 0);
+    expect(file.code).toBe(2);
+    expect(file.stderr).toContain("not a folder");
+    expect(fetch.requests.length).toBe(0);
   });
 });
 
@@ -134,9 +132,9 @@ test("import --from refuses symlinks in the export before sending requests", asy
         env: ENV,
         fetch,
       });
-      assertEquals(run.code, 2);
-      assertStringIncludes(run.stderr, "src/locales/de/menus.json is a symbolic link");
-      assertEquals(fetch.requests.length, 0);
+      expect(run.code).toBe(2);
+      expect(run.stderr).toContain("src/locales/de/menus.json is a symbolic link");
+      expect(fetch.requests.length).toBe(0);
     });
   });
 });
@@ -148,10 +146,10 @@ test("import sends each language's existing files, with the options", async () =
       ["import", "--as", "blue", "--overwrite", "--keep-identical", "--dry-run"],
       { cwd: dir, env: ENV, fetch },
     );
-    assertEquals(run.code, 0, run.stderr);
-    assertEquals(fetch.imports().length, 1, "pl has no files, so only de is sent");
+    expect(run.code, run.stderr).toBe(0);
+    expect(fetch.imports().length, "pl has no files, so only de is sent").toBe(1);
     const body: ImportRequest = await fetch.imports()[0].json();
-    assertEquals(body, {
+    expect(body).toStrictEqual({
       language: "de",
       files: [
         { path: "common.json", content: '{ "total": "{{count}} von" }\n' },
@@ -162,9 +160,9 @@ test("import sends each language's existing files, with the options", async () =
       keepIdentical: true,
       dryRun: true,
     });
-    assertStringIncludes(run.stdout, "Dry run: nothing was saved.");
-    assertStringIncludes(run.stdout, "de     2 to import as blue");
-    assertStringIncludes(run.stdout, "No translation files for pl.");
+    expect(run.stdout).toContain("Dry run: nothing was saved.");
+    expect(run.stdout).toContain("de     2 to import as blue");
+    expect(run.stdout).toContain("No translation files for pl.");
   });
 });
 
@@ -197,17 +195,18 @@ test("import lists refused values with local paths and exits with code 6", async
       env: ENV,
       fetch,
     });
-    assertEquals(run.code, 6);
-    assertStringIncludes(
-      run.stdout,
+    expect(run.code).toBe(6);
+    expect(run.stdout).toContain(
       "src/locales/de/common.json › total (de): placeholder {{total}} is missing",
     );
-    assertEquals(run.stdout.includes("numbers differ"), false, "only the checks that refused it");
-    assertStringIncludes(run.stdout, "src/locales/de/menus.json › old (de): not in the English");
+    expect(run.stdout.includes("numbers differ"), "only the checks that refused it").toStrictEqual(
+      false,
+    );
+    expect(run.stdout).toContain("src/locales/de/menus.json › old (de): not in the English");
     const json = await runCli(["import", "--as", "green", "--json"], { cwd: dir, env: ENV, fetch });
     const document = JSON.parse(json.stdout);
-    assertEquals(document.exitCode, 6);
-    assertEquals(document.result.refused, [
+    expect(document.exitCode).toBe(6);
+    expect(document.result.refused).toStrictEqual([
       {
         file: "src/locales/de/common.json",
         key: "total",
@@ -241,11 +240,8 @@ test("import: a translation file with a syntax error is exit code 5, named local
       ),
     );
     const run = await runCli(["import", "--as", "green"], { cwd: dir, env: ENV, fetch });
-    assertEquals(run.code, 5);
-    assertStringIncludes(
-      run.stdout,
-      "src/locales/de/menus.json:1:40 (de): expected a property name",
-    );
+    expect(run.code).toBe(5);
+    expect(run.stdout).toContain("src/locales/de/menus.json:1:40 (de): expected a property name");
   });
 });
 
@@ -257,12 +253,9 @@ test("import --file takes translation paths too", async () => {
       env: ENV,
       fetch,
     });
-    assertEquals(run.code, 0, run.stderr);
+    expect(run.code, run.stderr).toBe(0);
     const body: ImportRequest = await fetch.imports()[0].json();
-    assertEquals(
-      body.files.map((file) => file.path),
-      ["menus.json"],
-    );
+    expect(body.files.map((file) => file.path)).toStrictEqual(["menus.json"]);
   });
 });
 
@@ -282,18 +275,17 @@ test("import --file with a translation path imports that language only", async (
         ["import", "--as", "green", "--file", "src/locales/fr/common.json", "--json"],
         { cwd: dir, env: ENV, fetch },
       );
-      assertEquals(run.code, 0, run.stderr);
+      expect(run.code, run.stderr).toBe(0);
       const bodies: ImportRequest[] = await Promise.all(fetch.imports().map((r) => r.json()));
-      assertEquals(
-        bodies.map((body) => [body.language, body.files.map((f) => f.path)]),
-        [["fr", ["common.json"]]],
-      );
+      expect(bodies.map((body) => [body.language, body.files.map((f) => f.path)])).toStrictEqual([
+        ["fr", ["common.json"]],
+      ]);
       const conflict = await runCli(
         ["import", "--as", "green", "--language", "de", "--file", "src/locales/fr/common.json"],
         { cwd: dir, env: ENV, fetch },
       );
-      assertEquals(conflict.code, 2);
-      assertEquals(fetch.imports().length, 1);
+      expect(conflict.code).toBe(2);
+      expect(fetch.imports().length).toBe(1);
     },
   );
 });
@@ -314,15 +306,14 @@ test("import checks the instance's languages before importing any", async () => 
         env: ENV,
         fetch,
       });
-      assertEquals(run.code, 2);
-      assertEquals(fetch.imports().length, 0, "nothing is imported");
+      expect(run.code).toBe(2);
+      expect(fetch.imports().length, "nothing is imported").toBe(0);
       const document = JSON.parse(run.stdout);
-      assertEquals(document.error.code, "unknown_language");
-      assertEquals(
-        document.error.message,
+      expect(document.error.code).toBe("unknown_language");
+      expect(document.error.message).toStrictEqual(
         "The instance has no language ko, so nothing was imported.",
       );
-      assertStringIncludes(document.error.hint, "quaso upload adds the languages");
+      expect(document.error.hint).toContain("quaso upload adds the languages");
     },
   );
 });
@@ -349,14 +340,14 @@ test("import: when a language fails after others were imported, the summary says
         env: ENV,
         fetch: failing(),
       });
-      assertEquals(run.code, 6, run.stderr);
+      expect(run.code, run.stderr).toBe(6);
       const document = JSON.parse(run.stdout);
-      assertEquals(document.exitCode, 6);
-      assertEquals(
-        document.result.languages.map((l: { language: string }) => l.language),
-        ["de", "pl"],
-      );
-      assertEquals(document.result.failed, [
+      expect(document.exitCode).toBe(6);
+      expect(document.result.languages.map((l: { language: string }) => l.language)).toStrictEqual([
+        "de",
+        "pl",
+      ]);
+      expect(document.result.failed).toStrictEqual([
         {
           language: "fr",
           code: "bad_request",
@@ -369,8 +360,8 @@ test("import: when a language fails after others were imported, the summary says
         env: ENV,
         fetch: failing(),
       });
-      assertStringIncludes(text.stdout, "Languages not imported (1):");
-      assertStringIncludes(text.stdout, "  fr: not today");
+      expect(text.stdout).toContain("Languages not imported (1):");
+      expect(text.stdout).toContain("  fr: not today");
 
       // A failure on the first language is the command's error: nothing was imported.
       const first = instance(
@@ -382,8 +373,8 @@ test("import: when a language fails after others were imported, the summary says
         env: ENV,
         fetch: first,
       });
-      assertEquals(failed.code, 3);
-      assertEquals(first.imports().length, 1);
+      expect(failed.code).toBe(3);
+      expect(first.imports().length).toBe(1);
     },
   );
 });
@@ -405,12 +396,11 @@ test("import refuses to read through a link that leads outside the project", asy
           env: ENV,
           fetch,
         });
-        assertEquals(run.code, 2);
-        assertStringIncludes(
-          run.stderr,
+        expect(run.code).toBe(2);
+        expect(run.stderr).toContain(
           "Refusing to read src/locales/de/common.json: src/locales/de is a symbolic link",
         );
-        assertEquals(fetch.requests.length, 0);
+        expect(fetch.requests.length).toBe(0);
       },
     );
   });

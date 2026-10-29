@@ -39,7 +39,7 @@ the same preference to custom presentations.
 
 Import the shared stylesheet once, before the app or site's layout styles. Use named CSS
 variables such as `--surface`, `--fg`, `--space-4`, and `--heading-2` in app or site layouts.
-Update colors in `src/styles/tokens.ts`, then run `deno task design:tokens` from the repository
+Update colors in `src/styles/tokens.ts`, then run `npm run design:tokens` from the repository
 root to generate again the checked-in theme CSS.
 
 Control components pass through normal HTML attributes and browser behavior. Shared styles and

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
-/// <reference lib="dom" />
-import { assertEquals, assertStringIncludes } from "@std/assert";
+import { expect } from "vitest";
+
 import { ANONYMOUS, SYSTEM, type Service } from "@quaso/service";
 import { browserTest, openTab, press, text, waitFor } from "./_setup.ts";
 
@@ -74,13 +74,13 @@ browserTest(
       await press(page, "Enter", ["Control"]);
     };
     await panel("k01");
-    assertEquals(await text(page, ".queue-navigation [role=status]"), "1 / 23");
+    expect(await text(page, ".queue-navigation [role=status]")).toBe("1 / 23");
     await save("k01");
     await save("k02");
     await save("k03");
     await panel("k04");
-    assertEquals(await text(page, ".queue-navigation [role=status]"), "4 / 23");
-    assertStringIncludes(await text(page, '[data-index="0"] .row-key'), "k01");
+    expect(await text(page, ".queue-navigation [role=status]")).toBe("4 / 23");
+    expect(await text(page, '[data-index="0"] .row-key')).toContain("k01");
     await press(page, "ArrowUp", ["Alt", "Shift"]);
     await panel("k04");
     await press(page, "ArrowDown", ["Alt", "Shift"]);
@@ -95,7 +95,7 @@ browserTest(
     await waitFor(page, () =>
       document.querySelector('[data-index="0"] .row-key')?.textContent?.includes("k04"),
     );
-    assertEquals(await text(page, ".queue-navigation [role=status]"), "1 / 20");
+    expect(await text(page, ".queue-navigation [role=status]")).toBe("1 / 20");
     for (const key of keys.slice(3)) await save(key);
     await waitFor(
       page,
@@ -108,16 +108,15 @@ browserTest(
     await page.click("#files-toggle");
     await page.click(".pane-files [data-path='queue.json'] .tree-name");
     await waitFor(page, () => new URLSearchParams(location.search).get("file") === "queue.json");
-    assertEquals(
-      await page.evaluate(() => new URLSearchParams(location.search).get("order")),
+    expect(await page.evaluate(() => new URLSearchParams(location.search).get("order"))).toBe(
       "file",
     );
     await page.click(".editor-bar-end button:last-child");
     await waitFor(page, () =>
       document.querySelector("dialog[open]")?.textContent?.includes("Next string to do"),
     );
-    assertStringIncludes(await text(page, "dialog[open]"), "Previous string to do");
-    assertEquals(problems, []);
+    expect(await text(page, "dialog[open]")).toContain("Previous string to do");
+    expect(problems).toStrictEqual([]);
   },
 );
 
@@ -161,9 +160,9 @@ browserTest(
     await waitFor(page, () => document.querySelector(".panel-key code")?.textContent === "k200");
     await press(page, "ArrowDown", ["Alt", "Shift"]);
     await waitFor(page, () => document.querySelector(".panel-key code")?.textContent === "k401");
-    assertEquals(await text(page, ".queue-navigation [role=status]"), "401 / 401");
+    expect(await text(page, ".queue-navigation [role=status]")).toBe("401 / 401");
     await press(page, "ArrowUp", ["Alt", "Shift"]);
     await waitFor(page, () => document.querySelector(".panel-key code")?.textContent === "k200");
-    assertEquals(problems, []);
+    expect(problems).toStrictEqual([]);
   },
 );

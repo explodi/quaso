@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 /** Deploy a named instance using temporary Wrangler configuration from operator settings. */
+import { spawnSync } from "node:child_process";
 import * as fs from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -52,7 +53,7 @@ export function deployOptions(args: readonly string[]) {
       wrangler.push(arg, value);
       continue;
     }
-    throw new Error(`Unknown deployment option ${arg}. See deno task cf:deploy --help.`);
+    throw new Error(`Unknown deployment option ${arg}. See npm run cf:deploy -- --help.`);
   }
   return { environment, configPath, image, wrangler };
 }
@@ -101,17 +102,14 @@ export async function withDeploymentConfig<T>(
 }
 
 async function runWrangler(args: string[]): Promise<number> {
-  const { code } = await new Deno.Command(Deno.execPath(), {
-    args: ["run", "-A", "npm:wrangler", ...args],
+  const { status } = spawnSync("npx", ["wrangler", ...args], {
     cwd: new URL("../", import.meta.url),
-    stdin: "inherit",
-    stdout: "inherit",
-    stderr: "inherit",
-  }).spawn().status;
-  return code;
+    stdio: "inherit",
+  });
+  return status ?? 1;
 }
 
-const HELP = `Usage: deno task cf:deploy --env staging|production [options]
+const HELP = `Usage: npm run cf:deploy -- --env staging|production [options]
 
 Reads quaso.cloudflare.jsonc at the repository root.
   --instance-config <file>     Use another operator configuration file.

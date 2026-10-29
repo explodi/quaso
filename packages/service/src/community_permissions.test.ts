@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
+import { assert, expect, test } from "vitest";
 /** Community features must preserve the same access and publication boundaries as translations. */
-import { assert, assertEquals, assertRejects } from "@std/assert";
 import { ANONYMOUS } from "./api.ts";
 import { ServiceError } from "./errors.ts";
 import { addUser, stringId, uploadJson } from "./test_helpers.ts";
 import { projectService } from "./testing/people.ts";
 
 async function denied(promise: Promise<unknown>, code = "forbidden") {
-  const error = await assertRejects(() => promise, ServiceError);
-  assertEquals(error.code, code);
+  const error = await promise.catch((error: unknown) => error);
+  assert(error instanceof ServiceError);
+  expect(error.code).toStrictEqual(code);
 }
 
 test("community glossary: scope applies to both the old and new language, including global terms", async () => {
@@ -32,7 +32,7 @@ test("community glossary: scope applies to both the old and new language, includ
   });
   await denied(service.updateGlossaryTerm(manager, { id: french.id, language: "de" }));
   await denied(service.deleteGlossaryTerm(manager, { id: french.id }));
-  assertEquals((await service.listGlossary(ANONYMOUS, { language: "de" })).terms.length, 1);
+  expect((await service.listGlossary(ANONYMOUS, { language: "de" })).terms.length).toBe(1);
   const global = await service.createGlossaryTerm(admin, { term: "Quaso", kind: "keep" });
   await denied(service.createGlossaryTerm(admin, { term: "QUASO", kind: "keep" }), "conflict");
   await service.deleteGlossaryTerm(admin, { id: global.id });
@@ -63,25 +63,22 @@ test("community glossary: whole words filter editor context and edits recompute 
   });
   const detail = await service.getString(ANONYMOUS, { id, language: "de" });
   assert(detail.checks.some((check) => check.check === "glossary"));
-  assertEquals(detail.translation?.qa.warnings, 1);
-  assertEquals(
+  expect(detail.translation?.qa.warnings).toBe(1);
+  expect(
     (await service.listGlossary(ANONYMOUS, { language: "de", stringId: id })).terms.length,
-    1,
-  );
-  assertEquals(
+  ).toBe(1);
+  expect(
     (
       await service.listGlossary(ANONYMOUS, {
         language: "de",
         stringId: stringId(sql, "common.json", "other"),
       })
     ).terms.length,
-    0,
-  );
+  ).toBe(0);
   await service.deleteGlossaryTerm(admin, { id: term.id });
-  assertEquals(
+  expect(
     (await service.getString(ANONYMOUS, { id, language: "de" })).translation?.qa.warnings,
-    0,
-  );
+  ).toBe(0);
 });
 
 test("community comments: pending volunteers, language grants, resolution and soft deletion", async () => {
@@ -110,23 +107,20 @@ test("community comments: pending volunteers, language grants, resolution and so
   await service.resolveComment(germanManager, { id: comment.id });
   await denied(service.deleteComment(germanManager, { id: comment.id }));
   await service.deleteComment(contributor, { id: comment.id });
-  assertEquals(
+  expect(
     (await service.listComments(ANONYMOUS, { stringId: id })).comments.map((row) => row.id),
-    [pending.id],
-  );
-  assertEquals(
+  ).toStrictEqual([pending.id]);
+  expect(
     sql.query<{ deleted_at: number | null }>(
       "SELECT deleted_at FROM comments WHERE id = ?",
       comment.id,
     )[0].deleted_at !== null,
-    true,
-  );
+  ).toBe(true);
   await denied(service.listComments(ANONYMOUS, { sourceIssue: true }), "unauthorized");
   await service.resolveComment(visitor, { id: pending.id });
-  assertEquals(
+  expect(
     (await service.listComments(admin, { sourceIssue: true, resolved: false })).comments.length,
-    0,
-  );
+  ).toBe(0);
   await denied(service.addComment(contributor, { stringId: id, body: "   " }), "bad_request");
 });
 
@@ -142,16 +136,16 @@ test("community language requests: canonical tags, one vote per person, and atom
     tag: "pt-br",
     message: "Brazilian community",
   });
-  assertEquals(first.tag, "pt-BR");
-  assertEquals(first.votes, 1);
+  expect(first.tag).toBe("pt-BR");
+  expect(first.votes).toBe(1);
   const again = await service.requestLanguage(visitor, { tag: "pt-BR" });
-  assertEquals(again.id, first.id);
-  assertEquals(again.votes, 1);
-  assertEquals((await service.requestLanguage(second, { tag: "pt-br" })).votes, 2);
+  expect(again.id).toStrictEqual(first.id);
+  expect(again.votes).toBe(1);
+  expect((await service.requestLanguage(second, { tag: "pt-br" })).votes).toBe(2);
   await denied(service.reviewLanguageRequest(manager, { id: first.id, action: "approve" }));
   const approved = await service.reviewLanguageRequest(admin, { id: first.id, action: "approve" });
-  assertEquals(approved.status, "approved");
-  assertEquals((await service.listLanguageRequests(ANONYMOUS, {})).requests.length, 0);
+  expect(approved.status).toBe("approved");
+  expect((await service.listLanguageRequests(ANONYMOUS, {})).requests.length).toBe(0);
   assert(
     (await service.getProject(ANONYMOUS, {})).languages.some(
       (language) => language.tag === "pt-BR",
@@ -161,6 +155,6 @@ test("community language requests: canonical tags, one vote per person, and atom
     service.reviewLanguageRequest(admin, { id: first.id, action: "reject" }),
     "conflict",
   );
-  await assertRejects(() => service.requestLanguage(visitor, { tag: "pt-BR" }), ServiceError);
+  await expect(service.requestLanguage(visitor, { tag: "pt-BR" })).rejects.toThrow(ServiceError);
   await denied(service.requestLanguage(visitor, { tag: "en" }), "bad_request");
 });

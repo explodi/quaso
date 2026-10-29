@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
+import { spawnSync } from "node:child_process";
+import { tmpdir } from "node:os";
 import * as fs from "node:fs/promises";
-import { test } from "node:test";
+import { expect, test } from "vitest";
 /**
  * `quaso restore <file>` with local storage, run as the real program: a SQLite snapshot and
  * gzip-compressed JSON into new data folders, and the refusals.
  */
-import { assertEquals, assertStringIncludes } from "@std/assert";
 import { fileURLToPath as fromFileUrl } from "node:url";
 import { join } from "node:path";
 import { backupJsonStream, silentLogger, SYSTEM } from "@quaso/service";
@@ -14,19 +15,15 @@ import { testConfig } from "./testing/helpers.ts";
 import { backupKey } from "../../service/src/stored_backups.ts";
 
 const MAIN = fromFileUrl(new URL("../main.ts", import.meta.url));
-const decoder = new TextDecoder();
 const SECRET_KEY = "r".repeat(64);
 
-async function run(args: string[], env: Record<string, string>, cwd: string) {
-  const { code, stderr } = await new Deno.Command(Deno.execPath(), {
-    args: ["run", "-A", MAIN, ...args],
-    env: { SECRET_KEY, ...env },
+function run(args: string[], env: Record<string, string>, cwd: string) {
+  const { status, stderr } = spawnSync(process.execPath, [MAIN, ...args], {
+    env: { ...process.env, SECRET_KEY, ...env },
     cwd,
-    stdin: "null",
-    stdout: "piped",
-    stderr: "piped",
-  }).output();
-  return { code, stderr: decoder.decode(stderr) };
+    encoding: "utf8",
+  });
+  return { code: status, stderr };
 }
 
 /** A local instance with a project, and its export, for comparing. */
@@ -73,7 +70,7 @@ test(
   "restore: a SQLite snapshot and gzip JSON into new data folders; never over a project",
   { skip: process.platform === "win32" },
   async () => {
-    const dir = await fs.realpath(await Deno.makeTempDir());
+    const dir = await fs.realpath(await fs.mkdtemp(join(tmpdir(), "quaso-test-")));
     try {
       const source = await sourceInstance(join(dir, "source"));
       const snapshot = join(dir, "backup.sqlite");
@@ -95,20 +92,19 @@ test(
       ]) {
         const env = { DATA_DIR: join(dir, target) };
         const restored = await run(["restore", file], env, dir);
-        assertEquals(restored.code, 0, restored.stderr);
-        assertStringIncludes(restored.stderr, "Restored");
-        assertStringIncludes(
-          restored.stderr,
+        expect(restored.code, restored.stderr).toBe(0);
+        expect(restored.stderr).toContain("Restored");
+        expect(restored.stderr).toContain(
           "Enter these credentials again in Settings: gemini_api_key.",
         );
-        assertEquals(await exportOf(env.DATA_DIR), expected);
+        expect(await exportOf(env.DATA_DIR)).toStrictEqual(expected);
 
         const again = await run(["restore", file], env, dir);
-        assertEquals(again.code, 1);
-        assertStringIncludes(again.stderr, "only restores into an empty instance");
+        expect(again.code).toBe(1);
+        expect(again.stderr).toContain("only restores into an empty instance");
       }
 
-      assertEquals((await run(["restore"], { DATA_DIR: join(dir, "c") }, dir)).code, 2);
+      expect((await run(["restore"], { DATA_DIR: join(dir, "c") }, dir)).code).toBe(2);
       const missing = await run(
         ["restore", join(dir, "nope.json")],
         {
@@ -116,8 +112,8 @@ test(
         },
         dir,
       );
-      assertEquals(missing.code, 1);
-      assertStringIncludes(missing.stderr, "There is no backup file");
+      expect(missing.code).toBe(1);
+      expect(missing.stderr).toContain("There is no backup file");
     } finally {
       await fs.rm(dir, { recursive: true });
     }
@@ -125,7 +121,7 @@ test(
 );
 
 test("snapshots record the last backup for the admin page", async () => {
-  const dir = await fs.realpath(await Deno.makeTempDir());
+  const dir = await fs.realpath(await fs.mkdtemp(join(tmpdir(), "quaso-test-")));
   try {
     const local = await startLocalService(testConfig({ DATA_DIR: dir, SECRET_KEY }), silentLogger);
     try {
@@ -133,10 +129,10 @@ test("snapshots record the last backup for the admin page", async () => {
         "INSERT INTO users (email, display_name, role, created_at) VALUES ('a@b.c', 'A', 'administrator', 1) RETURNING id",
       );
       const admin = { type: "user" as const, userId: row.id };
-      assertEquals((await local.service.getAdminInfo(admin, {})).lastBackup, null);
+      expect((await local.service.getAdminInfo(admin, {})).lastBackup).toBe(null);
       const file = await local.storage.snapshot();
       const info = await local.service.getAdminInfo(admin, {});
-      assertEquals(info.lastBackup?.file, `backups/${file}`);
+      expect(info.lastBackup?.file).toStrictEqual(`backups/${file}`);
     } finally {
       local.storage.close();
     }
@@ -146,7 +142,7 @@ test("snapshots record the last backup for the admin page", async () => {
 });
 
 test("backup extraction works without opening the live database and refuses to overwrite an output", async () => {
-  const dir = await Deno.makeTempDir();
+  const dir = await fs.mkdtemp(join(tmpdir(), "quaso-test-"));
   const dataDir = join(dir, "source");
   const source = await sourceInstance(dataDir);
   const expected = (await source.service.exportFiles(SYSTEM, {})).files;
@@ -160,12 +156,12 @@ test("backup extraction works without opening the live database and refuses to o
     source.storage.close();
     await fs.writeFile(join(dataDir, "quaso.sqlite"), "an unreadable live database");
     const named = join(dir, "named.sqlite");
-    assertEquals((await run(["backup", key, named], { DATA_DIR: dataDir }, dir)).code, 0);
-    assertEquals(new Uint8Array(await fs.readFile(named)), bytes);
-    assertEquals((await run(["backup", key, named], { DATA_DIR: dataDir }, dir)).code, 1);
-    assertEquals(new Uint8Array(await fs.readFile(named)), bytes);
+    expect((await run(["backup", key, named], { DATA_DIR: dataDir }, dir)).code).toBe(0);
+    expect(new Uint8Array(await fs.readFile(named))).toStrictEqual(bytes);
+    expect((await run(["backup", key, named], { DATA_DIR: dataDir }, dir)).code).toBe(1);
+    expect(new Uint8Array(await fs.readFile(named))).toStrictEqual(bytes);
     const timed = join(dir, "timed.sqlite");
-    assertEquals(
+    expect(
       (
         await run(
           ["backup", "--at", new Date(storedAt + 1000).toISOString(), timed],
@@ -173,12 +169,11 @@ test("backup extraction works without opening the live database and refuses to o
           dir,
         )
       ).code,
-      0,
-    );
-    assertEquals(new Uint8Array(await fs.readFile(timed)), bytes);
-    assertEquals((await run(["restore", timed], { DATA_DIR: join(dir, "restored") }, dir)).code, 0);
-    assertEquals(await exportOf(join(dir, "restored")), expected);
-    assertEquals(
+    ).toBe(0);
+    expect(new Uint8Array(await fs.readFile(timed))).toStrictEqual(bytes);
+    expect((await run(["restore", timed], { DATA_DIR: join(dir, "restored") }, dir)).code).toBe(0);
+    expect(await exportOf(join(dir, "restored"))).toStrictEqual(expected);
+    expect(
       (
         await run(
           ["backup", "--at", "invalid", join(dir, "bad.sqlite")],
@@ -186,9 +181,8 @@ test("backup extraction works without opening the live database and refuses to o
           dir,
         )
       ).code,
-      2,
-    );
-    assertEquals(
+    ).toBe(2);
+    expect(
       (
         await run(
           ["backup", "published/de/common.json", join(dir, "bad.sqlite")],
@@ -196,8 +190,7 @@ test("backup extraction works without opening the live database and refuses to o
           dir,
         )
       ).code,
-      1,
-    );
+    ).toBe(1);
   } finally {
     source.storage.close();
     await fs.rm(dir, { recursive: true });

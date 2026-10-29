@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 import * as fs from "node:fs/promises";
 /**
- * `deno task cli <command>` (design §5.13): the CLI from source, against the development
- * server of `deno task dev`. It sets `QUASO_HOSTNAME=http://localhost:8000` and
+ * `npm run cli <command>` (design §5.13): the CLI from source, against the development
+ * server of `npm run dev`. It sets `QUASO_HOSTNAME=http://localhost:8000` and
  * `QUASO_API_KEY` from `.quaso/dev-api-key` when they aren't set, and runs the CLI in this
  * process with the remaining arguments.
  *
- * Tasks run in the repository's root, so the CLI runs where `deno task` was started
+ * npm scripts run in the repository's root, so the CLI runs where `npm run` was started
  * (`INIT_CWD`). Without a `quaso.config.json` there or in a parent folder, and without
- * `--cwd` or `--config`, it uses the development seed fixture: `deno task cli status` works from the
- * repository's root.
+ * `--cwd` or `--config`, it uses the development seed fixture: `npm run cli status` works from
+ * the repository's root. Options need npm's separator: `npm run cli -- upload --dry-run`.
  */
 import { fileURLToPath as fromFileUrl } from "node:url";
 import { join, relative } from "node:path";

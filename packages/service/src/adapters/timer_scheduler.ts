@@ -23,9 +23,18 @@ export class TimerScheduler implements Scheduler {
   #timer: ReturnType<typeof setTimeout> | undefined;
   #stopped = false;
 
+  readonly onAlarm: () => Promise<void>;
+  readonly options: {
+    now?: () => number;
+    onError?: (error: unknown) => void;
+    /** The longest single timer, in milliseconds; tests lower it. */
+    maxDelay?: number;
+    /** The waits before each retry of a failed alarm. Default: `RETRY_DELAYS`. */
+    retryDelays?: readonly number[];
+  };
   constructor(
-    readonly onAlarm: () => Promise<void>,
-    readonly options: {
+    onAlarm: () => Promise<void>,
+    options: {
       now?: () => number;
       onError?: (error: unknown) => void;
       /** The longest single timer, in milliseconds; tests lower it. */
@@ -33,7 +42,10 @@ export class TimerScheduler implements Scheduler {
       /** The waits before each retry of a failed alarm. Default: `RETRY_DELAYS`. */
       retryDelays?: readonly number[];
     } = {},
-  ) {}
+  ) {
+    this.onAlarm = onAlarm;
+    this.options = options;
+  }
 
   schedule(at: number): void {
     this.cancel();

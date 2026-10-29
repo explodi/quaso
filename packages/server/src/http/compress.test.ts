@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals } from "@std/assert";
+import { expect, test } from "vitest";
 import { acceptsGzip, compress, MIN_COMPRESS_SIZE } from "./compress.ts";
 
 function request(acceptEncoding?: string): Request {
@@ -21,14 +20,14 @@ async function gunzip(stream: ReadableStream<Uint8Array>): Promise<string> {
 const BIG = JSON.stringify({ files: "x".repeat(MIN_COMPRESS_SIZE * 4) });
 
 test("compress: Accept-Encoding with gzip, a wildcard, or q=0", () => {
-  assertEquals(acceptsGzip(request()), false);
-  assertEquals(acceptsGzip(request("gzip")), true);
-  assertEquals(acceptsGzip(request("br, gzip;q=0.8")), true);
-  assertEquals(acceptsGzip(request("GZIP")), true);
-  assertEquals(acceptsGzip(request("*")), true);
-  assertEquals(acceptsGzip(request("br")), false);
-  assertEquals(acceptsGzip(request("gzip;q=0")), false);
-  assertEquals(acceptsGzip(request("identity")), false);
+  expect(acceptsGzip(request())).toBe(false);
+  expect(acceptsGzip(request("gzip"))).toBe(true);
+  expect(acceptsGzip(request("br, gzip;q=0.8"))).toBe(true);
+  expect(acceptsGzip(request("GZIP"))).toBe(true);
+  expect(acceptsGzip(request("*"))).toBe(true);
+  expect(acceptsGzip(request("br"))).toBe(false);
+  expect(acceptsGzip(request("gzip;q=0"))).toBe(false);
+  expect(acceptsGzip(request("identity"))).toBe(false);
 });
 
 test("compress: JSON for a client that accepts gzip, with a weak ETag", async () => {
@@ -39,19 +38,19 @@ test("compress: JSON for a client that accepts gzip, with a weak ETag", async ()
     Vary: "Authorization, Cookie",
   });
   const compressed = compress(request("gzip, deflate, br"), 200, headers, body(BIG))!;
-  assertEquals(headers.get("Content-Encoding"), "gzip");
-  assertEquals(headers.has("Content-Length"), false);
-  assertEquals(headers.get("ETag"), 'W/"abc"');
-  assertEquals(headers.get("Vary"), "Authorization, Cookie, Accept-Encoding");
-  assertEquals(await gunzip(compressed), BIG);
+  expect(headers.get("Content-Encoding")).toBe("gzip");
+  expect(headers.has("Content-Length")).toBe(false);
+  expect(headers.get("ETag")).toBe('W/"abc"');
+  expect(headers.get("Vary")).toBe("Authorization, Cookie, Accept-Encoding");
+  expect(await gunzip(compressed)).toStrictEqual(BIG);
 });
 
 test("compress: unchanged without gzip, but Vary names Accept-Encoding", async () => {
   const headers = new Headers({ "Content-Type": "text/html; charset=utf-8" });
   const plain = compress(request(), 200, headers, body(BIG))!;
-  assertEquals(headers.has("Content-Encoding"), false);
-  assertEquals(headers.get("Vary"), "Accept-Encoding");
-  assertEquals(await new Response(plain).text(), BIG);
+  expect(headers.has("Content-Encoding")).toBe(false);
+  expect(headers.get("Vary")).toBe("Accept-Encoding");
+  expect(await new Response(plain).text()).toStrictEqual(BIG);
 });
 
 test("compress: small, binary, encoded, partial and empty responses stay as they are", () => {
@@ -65,7 +64,9 @@ test("compress: small, binary, encoded, partial and empty responses stay as they
   for (const [status, init, stream] of cases) {
     const headers = new Headers(init);
     const result = compress(request("gzip"), status, headers, stream);
-    assertEquals(result, stream);
-    assertEquals(headers.get("Content-Encoding"), new Headers(init).get("Content-Encoding"));
+    expect(result).toStrictEqual(stream);
+    expect(headers.get("Content-Encoding")).toStrictEqual(
+      new Headers(init).get("Content-Encoding"),
+    );
   }
 });

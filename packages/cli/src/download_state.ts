@@ -11,11 +11,14 @@ const decoder = new TextDecoder("utf-8", { fatal: true });
 
 export class DownloadState {
   private changed = false;
-  private constructor(
-    private project: Project,
-    private server: string,
-    private files: Record<string, string>,
-  ) {}
+  private project: Project;
+  private server: string;
+  private files: Record<string, string>;
+  private constructor(project: Project, server: string, files: Record<string, string>) {
+    this.project = project;
+    this.server = server;
+    this.files = files;
+  }
 
   static async load(project: Project, sources: Sources, server: string): Promise<DownloadState> {
     await new RealPathGuard(project, sources).check(STATE_PATH, "download state");

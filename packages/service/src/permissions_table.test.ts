@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
+import { expect, test } from "vitest";
 /**
  * The whole permission table (design §5.8, ROLE-2, ROLE-3): every action, for every kind
  * of actor, with no language, a language the person is limited to, and another one, for
  * people limited to French and for people with every language. A new action fails here
  * until it has its row.
  */
-import { assertEquals } from "@std/assert";
 import { type Actor, ANONYMOUS, SYSTEM } from "./api.ts";
 import { type Action, ACTIONS, can } from "./permissions.ts";
 import { addUser, createToken, startTestService } from "./test_helpers.ts";
@@ -125,7 +124,9 @@ test("permissions: the whole table, every action for every actor and language li
       }
     }
   }
-  assertEquals(problems, []);
-  assertEquals(checked, ACTIONS.length * 14 * 3);
-  assertEquals(Object.keys(TABLE).sort(), [...ACTIONS].sort(), "no rows for unknown actions");
+  expect(problems).toStrictEqual([]);
+  expect(checked).toStrictEqual(ACTIONS.length * 14 * 3);
+  expect(Object.keys(TABLE).sort(), "no rows for unknown actions").toStrictEqual(
+    [...ACTIONS].sort(),
+  );
 });

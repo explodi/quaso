@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals } from "@std/assert";
+import { expect, test } from "vitest";
 import { parseTheme, readStoredTheme, storeTheme } from "./theme.ts";
 
 class MemoryStorage {
@@ -17,15 +16,15 @@ class MemoryStorage {
 }
 
 test("the theme follows the system unless a choice is remembered", () => {
-  assertEquals(parseTheme("dark"), "dark");
-  assertEquals(parseTheme("purple"), "system");
-  assertEquals(parseTheme(null), "system");
+  expect(parseTheme("dark")).toBe("dark");
+  expect(parseTheme("purple")).toBe("system");
+  expect(parseTheme(null)).toBe("system");
   const storage = new MemoryStorage();
-  assertEquals(readStoredTheme(storage), "system");
+  expect(readStoredTheme(storage)).toBe("system");
   storeTheme("dark", storage);
-  assertEquals(readStoredTheme(storage), "dark");
+  expect(readStoredTheme(storage)).toBe("dark");
   storeTheme("system", storage);
-  assertEquals(storage.values.size, 0);
+  expect(storage.values.size).toBe(0);
 });
 
 test("storage that refuses access doesn't break the theme", () => {
@@ -40,7 +39,7 @@ test("storage that refuses access doesn't break the theme", () => {
       throw new DOMException("denied", "SecurityError");
     },
   };
-  assertEquals(readStoredTheme(refusing), "system");
+  expect(readStoredTheme(refusing)).toBe("system");
   storeTheme("light", refusing);
-  assertEquals(readStoredTheme(undefined), "system");
+  expect(readStoredTheme(undefined)).toBe("system");
 });

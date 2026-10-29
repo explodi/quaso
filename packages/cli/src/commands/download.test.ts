@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 import * as fs from "node:fs/promises";
-import { test } from "node:test";
-import { assert, assertEquals, assertStringIncludes } from "@std/assert";
+import { assert, expect, test } from "vitest";
 import { join } from "node:path";
 import { type ExportFile, type ExportResult, sha256Hex } from "@quaso/core";
 import { CONFIG, fakeFetch, jsonResponse, runCli, withProject } from "../test_helpers.ts";
@@ -53,16 +52,16 @@ test("download reports outdated keys in normal, dry-run and JSON output", async 
   await withProject(PROJECT, async (dir) => {
     const fetch = server([old]);
     const dry = await runCli(["download", "--dry-run"], { cwd: dir, env: ENV, fetch });
-    assertStringIncludes(dry.stdout, "outdated     de  common.json › play");
-    assertStringIncludes(dry.stderr, "older source");
-    assertEquals(await exists(dir, "src/locales/de/common.json"), false);
+    expect(dry.stdout).toContain("outdated     de  common.json › play");
+    expect(dry.stderr).toContain("older source");
+    expect(await exists(dir, "src/locales/de/common.json")).toBe(false);
     const json = await runCli(["download", "--json"], { cwd: dir, env: ENV, fetch });
-    assertEquals(JSON.parse(json.stdout).result.outdated, [
+    expect(JSON.parse(json.stdout).result.outdated).toStrictEqual([
       { file: "common.json", language: "de", key: "play", sourceRevision: 1035 },
     ]);
     const unchanged = await runCli(["download"], { cwd: dir, env: ENV, fetch });
-    assertStringIncludes(unchanged.stdout, "Source file changed in revision 1035");
-    assertStringIncludes(unchanged.stderr, "quaso translate");
+    expect(unchanged.stdout).toContain("Source file changed in revision 1035");
+    expect(unchanged.stderr).toContain("quaso translate");
   });
 });
 
@@ -72,8 +71,8 @@ test("download passes the independent outdated omission policy", async () => {
     async (dir) => {
       const fetch = server(FILES);
       const result = await runCli(["download"], { cwd: dir, env: ENV, fetch });
-      assertEquals(result.code, 0, result.stderr);
-      assertEquals(new URL(fetch.requests[0].url).searchParams.get("outdated"), "omit");
+      expect(result.code, result.stderr).toBe(0);
+      expect(new URL(fetch.requests[0].url).searchParams.get("outdated")).toBe("omit");
     },
   );
 });
@@ -84,26 +83,24 @@ test("download writes changed files only, creating folders", async () => {
     async (dir) => {
       const fetch = server(FILES);
       const first = await runCli(["download", "--json"], { cwd: dir, env: ENV, fetch });
-      assertEquals(first.code, 0, first.stderr);
-      assertEquals(new URL(fetch.requests[0].url).searchParams.get("languages"), "de,pl");
+      expect(first.code, first.stderr).toBe(0);
+      expect(new URL(fetch.requests[0].url).searchParams.get("languages")).toBe("de,pl");
       const result = JSON.parse(first.stdout).result;
-      assertEquals(
-        result.written.map((f: { path: string }) => f.path),
-        [
-          "src/locales/de/common.json",
-          "src/locales/de/menus/main.json",
-          "src/locales/pl/menus/main.json",
-        ],
+      expect(result.written.map((f: { path: string }) => f.path)).toStrictEqual([
+        "src/locales/de/common.json",
+        "src/locales/de/menus/main.json",
+        "src/locales/pl/menus/main.json",
+      ]);
+      expect(result.unchanged.map((f: { path: string }) => f.path)).toStrictEqual([
+        "src/locales/pl/common.json",
+      ]);
+      expect(await read(dir, "src/locales/de/menus/main.json")).toStrictEqual(
+        '{ "quit": "Beenden" }\n',
       );
-      assertEquals(
-        result.unchanged.map((f: { path: string }) => f.path),
-        ["src/locales/pl/common.json"],
-      );
-      assertEquals(await read(dir, "src/locales/de/menus/main.json"), '{ "quit": "Beenden" }\n');
 
       const second = await runCli(["download"], { cwd: dir, env: ENV, fetch });
-      assertEquals(second.code, 0);
-      assertStringIncludes(second.stdout, "Everything is up to date (4 files).");
+      expect(second.code).toBe(0);
+      expect(second.stdout).toContain("Everything is up to date (4 files).");
     },
   );
 });
@@ -115,10 +112,10 @@ test("download --dry-run writes nothing", async () => {
       env: ENV,
       fetch: server(FILES),
     });
-    assertEquals(run.code, 0);
-    assertStringIncludes(run.stdout, "would create src/locales/de/common.json");
-    assertStringIncludes(run.stdout, "Would write 4 files, 0 unchanged.");
-    assertEquals(await exists(dir, "src/locales/de"), false);
+    expect(run.code).toBe(0);
+    expect(run.stdout).toContain("would create src/locales/de/common.json");
+    expect(run.stdout).toContain("Would write 4 files, 0 unchanged.");
+    expect(await exists(dir, "src/locales/de")).toBe(false);
   });
 });
 
@@ -129,12 +126,12 @@ test("download --language and --file narrow the request", async () => {
       ["download", "--language", "de", "--file", "src/locales/en/common.json"],
       { cwd: dir, env: ENV, fetch },
     );
-    assertEquals(run.code, 0, run.stderr);
+    expect(run.code, run.stderr).toBe(0);
     const url = new URL(fetch.requests[0].url);
-    assertEquals(url.searchParams.get("languages"), "de");
-    assertEquals(url.searchParams.get("files"), "common.json");
+    expect(url.searchParams.get("languages")).toBe("de");
+    expect(url.searchParams.get("files")).toBe("common.json");
     const source = await runCli(["download", "--language", "en"], { cwd: dir, env: ENV, fetch });
-    assertEquals(source.code, 2);
+    expect(source.code).toBe(2);
   });
 });
 
@@ -143,13 +140,13 @@ test("download asks to leave untranslated strings out when the config says so", 
   await withProject(omitting, async (dir) => {
     const fetch = server(FILES);
     const run = await runCli(["download"], { cwd: dir, env: ENV, fetch });
-    assertEquals(run.code, 0, run.stderr);
-    assertEquals(new URL(fetch.requests[0].url).searchParams.get("untranslated"), "omit");
+    expect(run.code, run.stderr).toBe(0);
+    expect(new URL(fetch.requests[0].url).searchParams.get("untranslated")).toBe("omit");
   });
   await withProject(PROJECT, async (dir) => {
     const fetch = server(FILES);
     await runCli(["download"], { cwd: dir, env: ENV, fetch });
-    assertEquals(new URL(fetch.requests[0].url).searchParams.get("untranslated"), null);
+    expect(new URL(fetch.requests[0].url).searchParams.get("untranslated")).toBe(null);
   });
 });
 
@@ -162,21 +159,20 @@ test("download --file with a translation path downloads that language only", asy
       env: ENV,
       fetch,
     });
-    assertEquals(run.code, 0, run.stderr);
+    expect(run.code, run.stderr).toBe(0);
     const url = new URL(fetch.requests[0].url);
-    assertEquals(url.searchParams.get("languages"), "pl");
-    assertEquals(url.searchParams.get("files"), "common.json");
-    assertEquals(
+    expect(url.searchParams.get("languages")).toBe("pl");
+    expect(url.searchParams.get("files")).toBe("common.json");
+    expect(
       JSON.parse(run.stdout).result.written.map((f: { path: string }) => f.path),
-      ["src/locales/pl/common.json"],
-    );
+    ).toStrictEqual(["src/locales/pl/common.json"]);
     const conflict = await runCli(
       ["download", "--language", "de", "--file", "src/locales/pl/common.json"],
       { cwd: dir, env: ENV, fetch },
     );
-    assertEquals(conflict.code, 2);
-    assertStringIncludes(conflict.stderr, "is a translation file of pl, but --language is de");
-    assertEquals(fetch.requests.length, 1);
+    expect(conflict.code).toBe(2);
+    expect(conflict.stderr).toContain("is a translation file of pl, but --language is de");
+    expect(fetch.requests.length).toBe(1);
   });
 });
 
@@ -203,14 +199,11 @@ test("download refuses languages and files it didn't ask for, and writes nothing
           file("en.json", ".vscode/settings", "{}\n"),
         ]),
       });
-      assertEquals(run.code, 4);
-      assertStringIncludes(
-        run.stderr,
-        "The instance sent en.json (package), which wasn't asked for.",
-      );
-      assertEquals(await read(dir, "package.json"), '{ "name": "game" }\n');
-      assertEquals(await exists(dir, "de.json"), false, "nothing is written");
-      assertEquals(await exists(dir, ".vscode"), false);
+      expect(run.code).toBe(4);
+      expect(run.stderr).toContain("The instance sent en.json (package), which wasn't asked for.");
+      expect(await read(dir, "package.json")).toBe('{ "name": "game" }\n');
+      expect(await exists(dir, "de.json"), "nothing is written").toBe(false);
+      expect(await exists(dir, ".vscode")).toBe(false);
     },
   );
   await withProject(PROJECT, async (dir) => {
@@ -219,16 +212,16 @@ test("download refuses languages and files it didn't ask for, and writes nothing
       env: ENV,
       fetch: server([FILES[0], FILES[1]]),
     });
-    assertEquals(extraFile.code, 4);
-    assertStringIncludes(extraFile.stderr, "menus/main.json (de), which wasn't asked for");
+    expect(extraFile.code).toBe(4);
+    expect(extraFile.stderr).toContain("menus/main.json (de), which wasn't asked for");
     const odd = await runCli(["download", "--language", "de"], {
       cwd: dir,
       env: ENV,
       fetch: server([FILES[0], file("common.json", "a b/c", "{}\n")]),
     });
-    assertEquals(odd.code, 4);
-    assertEquals(await exists(dir, "src/locales/de"), false);
-    assertEquals(await exists(dir, "src/locales/a b"), false);
+    expect(odd.code).toBe(4);
+    expect(await exists(dir, "src/locales/de")).toBe(false);
+    expect(await exists(dir, "src/locales/a b")).toBe(false);
   });
 });
 
@@ -245,8 +238,8 @@ test("download writes to the folder of the language asked for, whatever the serv
         env: ENV,
         fetch: server([file("common.json", "PT-br", "{}\n")]),
       });
-      assertEquals(run.code, 0, run.stderr);
-      assertEquals(JSON.parse(run.stdout).result.written, [
+      expect(run.code, run.stderr).toBe(0);
+      expect(JSON.parse(run.stdout).result.written).toStrictEqual([
         {
           path: "src/locales/pt/common.json",
           file: "common.json",
@@ -275,13 +268,12 @@ test("download --file with a comma in the name asks for every file and keeps tha
         ["download", "--language", "de", "--file", "items,weapons.json", "--json"],
         { cwd: dir, env: ENV, fetch },
       );
-      assertEquals(run.code, 0, run.stderr);
-      assertEquals(new URL(fetch.requests[0].url).searchParams.has("files"), false);
-      assertEquals(
+      expect(run.code, run.stderr).toBe(0);
+      expect(new URL(fetch.requests[0].url).searchParams.has("files")).toBe(false);
+      expect(
         JSON.parse(run.stdout).result.written.map((f: { path: string }) => f.path),
-        ["src/locales/de/items,weapons.json"],
-      );
-      assertEquals(await exists(dir, "src/locales/de/common.json"), false);
+      ).toStrictEqual(["src/locales/de/items,weapons.json"]);
+      expect(await exists(dir, "src/locales/de/common.json")).toBe(false);
     },
   );
 });
@@ -294,10 +286,10 @@ test("download never writes the source language, and writes nothing when one pat
       env: ENV,
       fetch: server([FILES[0], file("common.json", "en", '{ "play": "Hacked" }\n')]),
     });
-    assertEquals(run.code, 4);
-    assertStringIncludes(run.stderr, "common.json (en), which wasn't asked for");
-    assertEquals(await read(dir, "src/locales/en/common.json"), before);
-    assertEquals(await exists(dir, "src/locales/de/common.json"), false);
+    expect(run.code).toBe(4);
+    expect(run.stderr).toContain("common.json (en), which wasn't asked for");
+    expect(await read(dir, "src/locales/en/common.json")).toStrictEqual(before);
+    expect(await exists(dir, "src/locales/de/common.json")).toBe(false);
   });
 });
 
@@ -309,10 +301,10 @@ test("download refuses a path through a file, as a usage error", async () => {
       env: ENV,
       fetch: server(FILES.slice(0, 2)),
     });
-    assertEquals(run.code, 2, run.stderr);
-    assertStringIncludes(run.stderr, "src/locales/de is a file, not a folder");
-    assertEquals(run.stderr.includes("a bug in quaso"), false);
-    assertEquals(await read(dir, "src/locales/de"), "not a folder");
+    expect(run.code, run.stderr).toBe(2);
+    expect(run.stderr).toContain("src/locales/de is a file, not a folder");
+    expect(run.stderr.includes("a bug in quaso")).toBe(false);
+    expect(await read(dir, "src/locales/de")).toBe("not a folder");
   });
 });
 
@@ -342,9 +334,9 @@ test("download refuses to write where a source glob would find the file", async 
           file("special.json", "de", '{ "boss": "Boss" }\n'),
         ]),
       });
-      assertEquals(run.code, 2, run.stderr);
-      assertStringIncludes(run.stderr, "Refusing to write b/de/special.json (de): files[1].source");
-      assertEquals(await exists(dir, "b"), false, "nothing is written");
+      expect(run.code, run.stderr).toBe(2);
+      expect(run.stderr).toContain("Refusing to write b/de/special.json (de): files[1].source");
+      expect(await exists(dir, "b"), "nothing is written").toBe(false);
     },
   );
 });
@@ -359,9 +351,9 @@ test("download refuses a linked folder that leads outside", async () => {
         env: ENV,
         fetch: server(FILES.slice(0, 2)),
       });
-      assertEquals(run.code, 2);
-      assertStringIncludes(run.stderr, "src/locales/de is a symbolic link");
-      assertEquals(await exists(outside, "common.json"), false);
+      expect(run.code).toBe(2);
+      expect(run.stderr).toContain("src/locales/de is a symbolic link");
+      expect(await exists(outside, "common.json")).toBe(false);
     });
   });
 });
@@ -387,13 +379,12 @@ test(
           env: ENV,
           fetch: server(FILES.slice(0, 2)),
         });
-        assertEquals(run.code, 2);
-        assertStringIncludes(
-          run.stderr,
+        expect(run.code).toBe(2);
+        expect(run.stderr).toContain(
           "Refusing to write src/locales/de/common.json (de): " +
             "src/locales/de/common.json is a symbolic link",
         );
-        assertEquals(await read(dir, ".git/hooks/pre-commit"), "#!/bin/sh\n");
+        expect(await read(dir, ".git/hooks/pre-commit")).toBe("#!/bin/sh\n");
       },
     );
   },
@@ -410,9 +401,9 @@ test(
         env: ENV,
         fetch: server(FILES.slice(0, 2)),
       });
-      assertEquals(run.code, 2);
-      assertStringIncludes(run.stderr, "src/locales/de is a symbolic link");
-      assertEquals(await exists(dir, ".git/hooks/common.json"), false);
+      expect(run.code).toBe(2);
+      expect(run.stderr).toContain("src/locales/de is a symbolic link");
+      expect(await exists(dir, ".git/hooks/common.json")).toBe(false);
     });
   },
 );
@@ -430,9 +421,9 @@ test(
           env: ENV,
           fetch: server(FILES.slice(0, 1)),
         });
-        assertEquals(run.code, 2);
-        assertStringIncludes(run.stderr, "a linked folder makes it a source file");
-        assertEquals(await read(dir, "src/locales/de/common.json"), '{ "play": "Play" }\n');
+        expect(run.code).toBe(2);
+        expect(run.stderr).toContain("a linked folder makes it a source file");
+        expect(await read(dir, "src/locales/de/common.json")).toBe('{ "play": "Play" }\n');
       },
     );
   },
@@ -445,8 +436,8 @@ test("download: a damaged file is exit code 4 and nothing is written", async () 
       env: ENV,
       fetch: server([FILES[0], file("common.json", "pl", "{}\n", "0".repeat(64))]),
     });
-    assertEquals(run.code, 4);
-    assertEquals(await exists(dir, "src/locales/de/common.json"), false);
+    expect(run.code).toBe(4);
+    expect(await exists(dir, "src/locales/de/common.json")).toBe(false);
   });
 });
 
@@ -457,12 +448,11 @@ test("download skips files that no local source file maps to", async () => {
       env: ENV,
       fetch: server([file("../../../escape.json", "de", "{}"), file("gone.json", "de", "{}")]),
     });
-    assertEquals(run.code, 0);
-    assertEquals(
+    expect(run.code).toBe(0);
+    expect(
       JSON.parse(run.stdout).result.skipped.map((s: { file: string }) => s.file),
-      ["../../../escape.json", "gone.json"],
-    );
-    assertEquals(await exists(dir, "src/locales/de"), false);
+    ).toStrictEqual(["../../../escape.json", "gone.json"]);
+    expect(await exists(dir, "src/locales/de")).toBe(false);
   });
 });
 
@@ -477,8 +467,8 @@ test("download: a pattern without {path} can't take several files", async () => 
     },
     async (dir) => {
       const run = await runCli(["download"], { cwd: dir, env: ENV, fetch: server(FILES) });
-      assertEquals(run.code, 2);
-      assertStringIncludes(run.stderr, "would both be written to src/locales/de.json");
+      expect(run.code).toBe(2);
+      expect(run.stderr).toContain("would both be written to src/locales/de.json");
     },
   );
 });
@@ -501,17 +491,17 @@ test("download --prune deletes only translation files whose source is gone", asy
         env: ENV,
         fetch,
       });
-      assertEquals(dry.code, 0, dry.stderr);
-      assertEquals(JSON.parse(dry.stdout).result.pruned, [
+      expect(dry.code, dry.stderr).toBe(0);
+      expect(JSON.parse(dry.stdout).result.pruned).toStrictEqual([
         { path: "src/locales/de/menus/old.json", language: "de" },
         { path: "src/locales/de/old.json", language: "de" },
       ]);
       assert(await exists(dir, "src/locales/de/old.json"));
       const run = await runCli(["download", "--prune"], { cwd: dir, env: ENV, fetch });
-      assertEquals(run.code, 0);
-      assertStringIncludes(run.stdout, "deleted      src/locales/de/old.json");
-      assertEquals(await exists(dir, "src/locales/de/old.json"), false);
-      assertEquals(await exists(dir, "src/locales/de/menus/old.json"), false);
+      expect(run.code).toBe(0);
+      expect(run.stdout).toContain("deleted      src/locales/de/old.json");
+      expect(await exists(dir, "src/locales/de/old.json")).toBe(false);
+      expect(await exists(dir, "src/locales/de/menus/old.json")).toBe(false);
       assert(await exists(dir, "src/locales/de/notes.txt"), "not a file the pattern writes");
       assert(await exists(dir, "src/locales/fr/old.json"), "fr isn't a configured language");
       assert(await exists(dir, "src/locales/pl/.hidden/old.json"), "dot folders are left alone");
@@ -521,7 +511,7 @@ test("download --prune deletes only translation files whose source is gone", asy
         env: ENV,
         fetch,
       });
-      assertEquals(withFile.code, 2);
+      expect(withFile.code).toBe(2);
     },
   );
 });
@@ -552,8 +542,8 @@ test("download --prune only deletes what the source glob could have matched", as
         env: ENV,
         fetch,
       });
-      assertEquals(run.code, 0, run.stderr);
-      assertEquals(JSON.parse(run.stdout).result.pruned, [
+      expect(run.code, run.stderr).toBe(0);
+      expect(JSON.parse(run.stdout).result.pruned).toStrictEqual([
         {
           path: "i18n/de/old.json",
           language: "de",
@@ -573,20 +563,20 @@ test("download preserves hand edits, reports conflicts in dry-run/JSON, and requ
     const changed = server([file("common.json", "de", '{ "play": "Spiele" }\n')]);
     const baseline = await read(dir, ".quaso/download-state");
     const dry = await runCli(["download", "--dry-run"], { cwd: dir, env: ENV, fetch: changed });
-    assertEquals(dry.code, 0);
-    assertStringIncludes(dry.stdout, "local edit   de  common.json › play");
-    assertEquals(await read(dir, ".quaso/download-state"), baseline);
+    expect(dry.code).toBe(0);
+    expect(dry.stdout).toContain("local edit   de  common.json › play");
+    expect(await read(dir, ".quaso/download-state")).toStrictEqual(baseline);
     const refused = await runCli(["download", "--json"], { cwd: dir, env: ENV, fetch: changed });
-    assertEquals(refused.code, 6);
-    assertEquals(JSON.parse(refused.stdout).result.localEdits[0].key, "play");
-    assertEquals(await read(dir, "src/locales/de/common.json"), manual);
+    expect(refused.code).toBe(6);
+    expect(JSON.parse(refused.stdout).result.localEdits[0].key).toBe("play");
+    expect(await read(dir, "src/locales/de/common.json")).toStrictEqual(manual);
     const overwritten = await runCli(["download", "--overwrite-local"], {
       cwd: dir,
       env: ENV,
       fetch: changed,
     });
-    assertEquals(overwritten.code, 0);
-    assertEquals(await read(dir, "src/locales/de/common.json"), '{ "play": "Spiele" }\n');
+    expect(overwritten.code).toBe(0);
+    expect(await read(dir, "src/locales/de/common.json")).toBe('{ "play": "Spiele" }\n');
   });
 });
 
@@ -595,8 +585,8 @@ test("download accepts server updates and identical local fixes but preserves un
     { ...PROJECT, "src/locales/de/common.json": '{"play":"Human wording"}' },
     async (dir) => {
       const refused = await runCli(["download"], { cwd: dir, env: ENV, fetch: server([FILES[0]]) });
-      assertEquals(refused.code, 6);
-      assertStringIncludes(refused.stderr, "quaso import --as blue");
+      expect(refused.code).toBe(6);
+      expect(refused.stderr).toContain("quaso import --as blue");
       await runCli(["download", "--overwrite-local"], {
         cwd: dir,
         env: ENV,
@@ -604,14 +594,14 @@ test("download accepts server updates and identical local fixes but preserves un
       });
       const update = file("common.json", "de", '{"play":"Spiele"}\n');
       const updated = await runCli(["download"], { cwd: dir, env: ENV, fetch: server([update]) });
-      assertEquals(updated.code, 0);
+      expect(updated.code).toBe(0);
       await fs.writeFile(join(dir, "src/locales/de/common.json"), '{"play":"Los"}\n');
       const identical = await runCli(["download"], {
         cwd: dir,
         env: ENV,
         fetch: server([file("common.json", "de", '{"play":"Los"}\n')]),
       });
-      assertEquals(identical.code, 0);
+      expect(identical.code).toBe(0);
     },
   );
 });
@@ -622,8 +612,8 @@ test("download refuses a baseline folder linked outside the project before writi
     try {
       await fs.symlink(outside, join(dir, ".quaso"), "dir");
       const refused = await runCli(["download"], { cwd: dir, env: ENV, fetch: server([FILES[0]]) });
-      assertEquals(refused.code, 2);
-      assertEquals(await exists(dir, "src/locales/de/common.json"), false);
+      expect(refused.code).toBe(2);
+      expect(await exists(dir, "src/locales/de/common.json")).toBe(false);
     } finally {
       await fs.rm(outside, { recursive: true, force: true });
     }

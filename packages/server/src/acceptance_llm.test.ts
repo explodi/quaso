@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { assert, expect, test } from "vitest";
 import * as fs from "node:fs/promises";
 /**
  * The LLM acceptance tests through the HTTP API (sprint plan, "Acceptance tests"):
@@ -11,7 +13,6 @@ import * as fs from "node:fs/promises";
  *   to the model with the reason; a string that fails every retry stays untranslated, with
  *   its failure on the job and on the string. (The person path is in `accounts.test.ts`.)
  */
-import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import type { JobInfo, JobsResult, StatusResult, StringsPage, UploadResult } from "@quaso/core";
 import {
   createFakeTranslator,
@@ -32,7 +33,7 @@ const TEN_LANGUAGES = ["de", "fr", "it", "es", "pt-BR", "pl", "tr", "ja", "ko", 
 async function json<T>(response: Promise<Response>, status = 200): Promise<T> {
   const answer = await response;
   const body = await answer.json();
-  assertEquals(answer.status, status, JSON.stringify(body));
+  expect(answer.status, JSON.stringify(body)).toStrictEqual(status);
   return body;
 }
 
@@ -48,7 +49,7 @@ async function settled(app: App, key: string, timeoutMs = 30_000): Promise<JobIn
 }
 
 test("acceptance test 3 through the API: a new string is green in every language within a minute", async () => {
-  const dataDir = await Deno.makeTempDir({ prefix: "quaso-acceptance-3-" });
+  const dataDir = await fs.mkdtemp(join(tmpdir(), "quaso-acceptance-3-"));
   const config = testConfig({ QUASO_DEV: "1", DATA_DIR: dataDir });
   const log = memoryLogger();
   // What `serve` does: local storage, its timers, and the LLM (the fake translator here).
@@ -90,16 +91,16 @@ test("acceptance test 3 through the API: a new string is green in every language
     // 10 requests, 4 at a time, 300 ms each: about a second.
     assert(seconds < 10, `${seconds} s: well within a minute`);
     const job = await json<JobInfo>(call(app, `/api/v1/jobs/${second.job.id}`, { key }));
-    assertEquals(job.status, "done");
-    assertEquals(job.progress.translated, TEN_LANGUAGES.length);
+    expect(job.status).toBe("done");
+    expect(job.progress.translated).toStrictEqual(TEN_LANGUAGES.length);
     for (const language of ["pl", "ja"]) {
       const page = await json<StringsPage>(
         call(app, `/api/v1/strings?language=${language}&q=quest`),
       );
       const [quest] = page.strings;
-      assertEquals(quest.translation?.colour, "green");
-      assertStringIncludes(quest.translation?.value as string, "{{name}}");
-      assertEquals(quest.translation?.author.type, "llm");
+      expect(quest.translation?.colour).toBe("green");
+      expect(quest.translation?.value as string).toContain("{{name}}");
+      expect(quest.translation?.author.type).toBe("llm");
     }
     await settled(app, key);
   } finally {
@@ -176,43 +177,49 @@ async function withPolish(
 test("acceptance test 9 through the API, the LLM path: an answer that drops {{count}} is retried with the reason", async () => {
   const provider = droppingCount(1);
   await withPolish(provider, async ({ app, key, job }) => {
-    assertEquals(provider.requests.length, 2, "the first answer, then the retry");
-    assertStringIncludes(
-      provider.requests[1].prompt,
+    expect(provider.requests.length, "the first answer, then the retry").toBe(2);
+    expect(provider.requests[1].prompt).toContain(
       "Placeholder {{count}} is missing from the few form.",
     );
     const info = await json<JobInfo>(call(app, `/api/v1/jobs/${job}`, { key }));
-    assertEquals([info.status, info.progress.translated, info.progress.failed], ["done", 2, 0]);
+    expect([info.status, info.progress.translated, info.progress.failed]).toStrictEqual([
+      "done",
+      2,
+      0,
+    ]);
     const page = await json<StringsPage>(call(app, "/api/v1/strings?language=pl&q=coin"));
     const [coins] = page.strings;
-    assertEquals(coins.translation?.colour, "green");
-    assertStringIncludes((coins.translation?.value as Record<string, string>).few, "{{count}}");
-    assertEquals(coins.llmFailure, null);
+    expect(coins.translation?.colour).toBe("green");
+    expect((coins.translation?.value as Record<string, string>).few).toContain("{{count}}");
+    expect(coins.llmFailure).toBe(null);
   });
 });
 
 test("acceptance test 9 through the API, the LLM path: a string that keeps dropping {{count}} stays untranslated", async () => {
   const provider = droppingCount(Infinity);
   await withPolish(provider, async ({ app, key, job }) => {
-    assertEquals(provider.requests.length, 3, "the first try and 2 retries");
+    expect(provider.requests.length, "the first try and 2 retries").toBe(3);
     const info = await json<JobInfo>(call(app, `/api/v1/jobs/${job}`, { key }));
-    assertEquals([info.status, info.progress.translated, info.progress.failed], ["done", 1, 1]);
-    assertEquals(
-      info.failures.map((failure) => [failure.key, failure.language]),
-      [["coins", "pl"]],
-    );
-    assertStringIncludes(info.failures[0].reason, "{{count}}");
+    expect([info.status, info.progress.translated, info.progress.failed]).toStrictEqual([
+      "done",
+      1,
+      1,
+    ]);
+    expect(info.failures.map((failure) => [failure.key, failure.language])).toStrictEqual([
+      ["coins", "pl"],
+    ]);
+    expect(info.failures[0].reason).toContain("{{count}}");
     const page = await json<StringsPage>(call(app, "/api/v1/strings?language=pl&q=coin"));
     const [coins] = page.strings;
-    assertEquals(coins.translation, null, "refused: nothing is written");
-    assertStringIncludes(coins.llmFailure ?? "", "{{count}}");
+    expect(coins.translation, "refused: nothing is written").toBe(null);
+    expect(coins.llmFailure ?? "").toContain("{{count}}");
     // The download has the English for it (acceptance test 5), never the refused text.
     const exported = await json<{ files: { language: string; content: string }[] }>(
       call(app, "/api/v1/export?languages=pl", { key }),
     );
     const [polish] = exported.files;
-    assertEquals(polish.language, "pl");
-    assertEquals(JSON.parse(polish.content).coins_few, "{{count}} coins");
+    expect(polish.language).toBe("pl");
+    expect(JSON.parse(polish.content).coins_few).toBe("{{count}} coins");
     assert(!polish.content.includes("kilka monet"), polish.content);
   });
 });

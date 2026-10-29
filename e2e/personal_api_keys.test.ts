@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
-/// <reference lib="dom" />
-import { assert, assertEquals, assertMatch, assertStringIncludes } from "@std/assert";
+import { assert, expect } from "vitest";
+
 import { ANONYMOUS, SYSTEM, type Service } from "@quaso/service";
 import { browserTest, openTab, press, text, waitFor } from "./_setup.ts";
 
@@ -37,11 +37,10 @@ browserTest(
     await waitFor(page, () =>
       document.querySelector(".account-keys")?.textContent?.includes("You have no API keys yet."),
     );
-    assertStringIncludes(
-      await text(page, ".account-keys"),
+    expect(await text(page, ".account-keys")).toContain(
       "Your role doesn't allow downloading, uploading or translating with the CLI yet.",
     );
-    assertEquals((await text(page, ".account-keys")).includes("Browser tests"), false);
+    expect((await text(page, ".account-keys")).includes("Browser tests")).toBe(false);
 
     await page.type(".account-keys input", "My laptop");
     await page.select(".account-keys select", "read");
@@ -55,27 +54,27 @@ browserTest(
       "dialog[open] .secret-value",
       (input) => (input as HTMLTextAreaElement).value,
     );
-    assertMatch(secret, /^qso_/);
+    expect(secret).toMatch(/^qso_/);
     const key = (await server.service.listApiTokens(SYSTEM, {})).tokens.find(
       (token) => token.name === "My laptop",
     );
     assert(key);
-    assertEquals(key.scope, "read");
+    expect(key.scope).toBe("read");
     await waitFor(
       page,
       () => document.querySelector(".account-keys .record-card h3")?.textContent === "My laptop",
     );
-    assertStringIncludes(await text(page, ".account-keys .record-card"), key.prefix);
-    assertEquals((await text(page, ".account-keys .record-card")).includes(secret), false);
+    expect(await text(page, ".account-keys .record-card")).toContain(key.prefix);
+    expect((await text(page, ".account-keys .record-card")).includes(secret)).toBe(false);
 
     const authorized = await fetch(`${server.url}/api/v1/project`, {
       headers: { Authorization: `Bearer ${secret}` },
     });
-    assertEquals(authorized.status, 200);
+    expect(authorized.status).toBe(200);
     await authorized.arrayBuffer();
     await page.click("dialog[open] .dialog-footer button");
     await waitFor(page, () => document.querySelector("dialog[open]") === null);
-    assertEquals(
+    expect(
       await page.evaluate(
         (value: string) =>
           document.body.textContent?.includes(value) ||
@@ -84,8 +83,7 @@ browserTest(
           ].some((input) => input.value === value),
         secret,
       ),
-      false,
-    );
+    ).toBe(false);
 
     await page.setViewport({ width: 320, height: 760 });
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
@@ -98,9 +96,9 @@ browserTest(
     const revoked = await fetch(`${server.url}/api/v1/project`, {
       headers: { Authorization: `Bearer ${secret}` },
     });
-    assertEquals(revoked.status, 401);
+    expect(revoked.status).toBe(401);
     await revoked.arrayBuffer();
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
-    assertEquals(problems, []);
+    expect(problems).toStrictEqual([]);
   },
 );

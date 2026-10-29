@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals, assertRejects } from "@std/assert";
+import { expect, test } from "vitest";
 import { hasRunningSaves, saveInBackground, saveState, unsavedEdit } from "./backgroundSaves.ts";
 
 const edit = { draft: { other: "Bonjour" }, baseRevision: 3 };
@@ -14,25 +13,25 @@ test("a save shows as saving until the saved text is loaded", async () => {
     () => loaded,
   );
   await Promise.resolve();
-  assertEquals(saveState("fr:1"), "saving");
-  assertEquals(hasRunningSaves(), true);
+  expect(saveState("fr:1")).toBe("saving");
+  expect(hasRunningSaves()).toBe(true);
   load();
   await saving;
-  assertEquals(saveState("fr:1"), null);
-  assertEquals(hasRunningSaves(), false);
+  expect(saveState("fr:1")).toBe(null);
+  expect(hasRunningSaves()).toBe(false);
 });
 
 test("a failed save keeps the edit with the error", async () => {
   const refused = new Error("refused");
-  await assertRejects(() =>
+  await expect(
     saveInBackground(
       "fr:2",
       edit,
       () => Promise.reject(refused),
       () => Promise.resolve(),
     ),
-  );
-  assertEquals(saveState("fr:2"), "failed");
-  assertEquals(unsavedEdit("fr:2"), { ...edit, error: refused });
-  assertEquals(hasRunningSaves(), false);
+  ).rejects.toThrow();
+  expect(saveState("fr:2")).toBe("failed");
+  expect(unsavedEdit("fr:2")).toStrictEqual({ ...edit, error: refused });
+  expect(hasRunningSaves()).toBe(false);
 });

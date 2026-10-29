@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals } from "@std/assert";
+import { expect, test } from "vitest";
 import {
   CACHE,
   CONTENT_SECURITY_POLICY,
@@ -25,57 +24,66 @@ function cache(
 
 test("cache: anonymous API reads are public for 30 seconds, and vary on credentials", () => {
   const headers = cache("/api/v1/project");
-  assertEquals(headers.get("Cache-Control"), "public, max-age=30, stale-while-revalidate=300");
-  assertEquals(headers.get("Vary"), "Authorization, Cookie");
-  assertEquals(cache("/api/v1/project", { method: "HEAD" }).get("Cache-Control"), CACHE.api);
+  expect(headers.get("Cache-Control")).toStrictEqual(
+    "public, max-age=30, stale-while-revalidate=300",
+  );
+  expect(headers.get("Vary")).toBe("Authorization, Cookie");
+  expect(cache("/api/v1/project", { method: "HEAD" }).get("Cache-Control")).toStrictEqual(
+    CACHE.api,
+  );
 });
 
 test("cache: credentials, writes and errors are private, no-store", () => {
-  assertEquals(cache("/api/v1/project", { credentials: true }).get("Cache-Control"), CACHE.none);
-  assertEquals(cache("/api/v1/sources", { method: "POST" }).get("Cache-Control"), CACHE.none);
-  assertEquals(cache("/api/v1/strings/9", { status: 404 }).get("Cache-Control"), CACHE.none);
-  assertEquals(cache("/api/v1/export", { status: 401 }).get("Cache-Control"), CACHE.none);
-  assertEquals(CACHE.none, "private, no-store");
-  assertEquals(
-    cache("/api/v1/project", { headers: { Vary: "Accept-Encoding" } }).get("Vary"),
+  expect(cache("/api/v1/project", { credentials: true }).get("Cache-Control")).toStrictEqual(
+    CACHE.none,
+  );
+  expect(cache("/api/v1/sources", { method: "POST" }).get("Cache-Control")).toStrictEqual(
+    CACHE.none,
+  );
+  expect(cache("/api/v1/strings/9", { status: 404 }).get("Cache-Control")).toStrictEqual(
+    CACHE.none,
+  );
+  expect(cache("/api/v1/export", { status: 401 }).get("Cache-Control")).toStrictEqual(CACHE.none);
+  expect(CACHE.none).toBe("private, no-store");
+  expect(cache("/api/v1/project", { headers: { Vary: "Accept-Encoding" } }).get("Vary")).toBe(
     "Accept-Encoding, Authorization, Cookie",
   );
 });
 
 test("cache: hashed build files for a year, the HTML shell for five minutes", () => {
-  assertEquals(
-    cache("/assets/index-CMi84CGp.js").get("Cache-Control"),
+  expect(cache("/assets/index-CMi84CGp.js").get("Cache-Control")).toStrictEqual(
     "public, max-age=31536000, immutable",
   );
-  assertEquals(
+  expect(
     cache("/assets/index-CMi84CGp.js", { credentials: true }).get("Cache-Control"),
-    CACHE.immutable,
+  ).toStrictEqual(CACHE.immutable);
+  expect(cache("/").get("Cache-Control")).toStrictEqual(
+    "public, max-age=300, stale-while-revalidate=600",
   );
-  assertEquals(cache("/").get("Cache-Control"), "public, max-age=300, stale-while-revalidate=600");
-  assertEquals(cache("/strings/5").get("Cache-Control"), CACHE.shell);
-  assertEquals(cache("/config.json").get("Cache-Control"), CACHE.shell);
-  assertEquals(cache("/assets/missing.js", { status: 404 }).get("Cache-Control"), CACHE.none);
-  assertEquals(cache("/healthz").get("Cache-Control"), CACHE.none);
-  assertEquals(
-    cache("/", { headers: { "Cache-Control": "no-store" } }).get("Cache-Control"),
+  expect(cache("/strings/5").get("Cache-Control")).toStrictEqual(CACHE.shell);
+  expect(cache("/config.json").get("Cache-Control")).toStrictEqual(CACHE.shell);
+  expect(cache("/assets/missing.js", { status: 404 }).get("Cache-Control")).toStrictEqual(
+    CACHE.none,
+  );
+  expect(cache("/healthz").get("Cache-Control")).toStrictEqual(CACHE.none);
+  expect(cache("/", { headers: { "Cache-Control": "no-store" } }).get("Cache-Control")).toBe(
     "no-store",
   );
-  assertEquals(cache("/").get("Vary"), null);
+  expect(cache("/").get("Vary")).toBe(null);
 });
 
 test("security headers: on every response, and the CSP on HTML", () => {
   const json = new Headers({ "Content-Type": "application/json; charset=utf-8" });
   setSecurityHeaders(json);
-  assertEquals(json.get("X-Content-Type-Options"), "nosniff");
-  assertEquals(json.get("Referrer-Policy"), "strict-origin-when-cross-origin");
-  assertEquals(json.get("X-Frame-Options"), "DENY");
-  assertEquals(json.get("Content-Security-Policy"), null);
+  expect(json.get("X-Content-Type-Options")).toBe("nosniff");
+  expect(json.get("Referrer-Policy")).toBe("strict-origin-when-cross-origin");
+  expect(json.get("X-Frame-Options")).toBe("DENY");
+  expect(json.get("Content-Security-Policy")).toBe(null);
 
   const html = new Headers({ "Content-Type": "text/html; charset=UTF-8" });
   setSecurityHeaders(html);
-  assertEquals(html.get("Content-Security-Policy"), CONTENT_SECURITY_POLICY);
-  assertEquals(
-    CONTENT_SECURITY_POLICY,
+  expect(html.get("Content-Security-Policy")).toStrictEqual(CONTENT_SECURITY_POLICY);
+  expect(CONTENT_SECURITY_POLICY).toStrictEqual(
     "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; " +
       "script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; " +
       "form-action 'self'",
@@ -84,7 +92,7 @@ test("security headers: on every response, and the CSP on HTML", () => {
 
 test("credentials: an Authorization header or a cookie", () => {
   const url = "http://quaso.test/";
-  assertEquals(hasCredentials(new Request(url)), false);
-  assertEquals(hasCredentials(new Request(url, { headers: { Authorization: "Bearer x" } })), true);
-  assertEquals(hasCredentials(new Request(url, { headers: { Cookie: "a=b" } })), true);
+  expect(hasCredentials(new Request(url))).toBe(false);
+  expect(hasCredentials(new Request(url, { headers: { Authorization: "Bearer x" } }))).toBe(true);
+  expect(hasCredentials(new Request(url, { headers: { Cookie: "a=b" } }))).toBe(true);
 });

@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals, assertRejects } from "@std/assert";
+import { assert, expect, test } from "vitest";
 import { sha256Hex } from "@quaso/core";
 import { SYSTEM } from "./api.ts";
 import { ServiceError } from "./errors.ts";
@@ -44,18 +43,19 @@ test("export renders every file in every language, with SHA-256, byte-stable", a
   using instance = await project();
   write(instance, "common.json", "title", "de", "Wegfahrer");
   const first = await instance.service.exportFiles(SYSTEM, {});
-  assertEquals(first.schemaVersion, 1);
-  assertEquals(first.sourceLanguage, "en");
-  assertEquals(first.revision, 2);
-  assertEquals(
-    first.files.map((file) => `${file.language}/${file.path}`),
-    ["de/common.json", "de/hud.json", "pl/common.json", "pl/hud.json"],
-  );
-  for (const file of first.files) assertEquals(file.sha256, sha256Hex(file.content));
+  expect(first.schemaVersion).toBe(1);
+  expect(first.sourceLanguage).toBe("en");
+  expect(first.revision).toBe(2);
+  expect(first.files.map((file) => `${file.language}/${file.path}`)).toStrictEqual([
+    "de/common.json",
+    "de/hud.json",
+    "pl/common.json",
+    "pl/hud.json",
+  ]);
+  for (const file of first.files) expect(file.sha256).toStrictEqual(sha256Hex(file.content));
   const second = await instance.service.exportFiles(SYSTEM, {});
-  assertEquals(second, first);
-  assertEquals(
-    first.files[0].content,
+  expect(second).toStrictEqual(first);
+  expect(first.files[0].content).toStrictEqual(
     [
       "{",
       '  "title": "Wegfahrer",',
@@ -80,8 +80,8 @@ test("export renders every file in every language, with SHA-256, byte-stable", a
 test("untranslated strings fall back to the English (FMT-2)", async () => {
   using instance = await project();
   const files = content(await instance.service.exportFiles(SYSTEM, { languages: ["de"] }));
-  assertEquals(files["de/common.json"], COMMON);
-  assertEquals(files["de/hud.json"], { hp: "HP" });
+  expect(files["de/common.json"]).toStrictEqual(COMMON);
+  expect(files["de/hud.json"]).toStrictEqual({ hp: "HP" });
 });
 
 test("untranslated omit leaves the English out; published versions can't", async () => {
@@ -89,18 +89,18 @@ test("untranslated omit leaves the English out; published versions can't", async
   write(instance, "common.json", "menu.play", "de", "Spielen");
   const query = { languages: ["de"], untranslated: "omit" as const };
   const files = content(await instance.service.exportFiles(SYSTEM, query));
-  assertEquals(files["de/common.json"], {
+  expect(files["de/common.json"]).toStrictEqual({
     menu: { play: "Spielen" },
     back: "$t(menu.quit)",
     version: 3,
   });
-  assertEquals(files["de/hud.json"], {});
+  expect(files["de/hud.json"]).toStrictEqual({});
   const at = new Date().toISOString().slice(0, 16) + "Z";
-  const error = await assertRejects(
-    () => instance.service.exportFiles(SYSTEM, { ...query, at }),
-    ServiceError,
-  );
-  assertEquals(error.code, "bad_request");
+  const error = await instance.service
+    .exportFiles(SYSTEM, { ...query, at })
+    .catch((error: unknown) => error);
+  assert(error instanceof ServiceError);
+  expect(error.code).toBe("bad_request");
 });
 
 test("a Polish plural gets one, few, many and other", async () => {
@@ -113,16 +113,17 @@ test("a Polish plural gets one, few, many and other", async () => {
   });
   const files = content(await instance.service.exportFiles(SYSTEM, { languages: ["pl"] }));
   const common = files["pl/common.json"];
-  assertEquals(
-    Object.keys(common).filter((key) => key.startsWith("coins")),
-    ["coins_one", "coins_few", "coins_many", "coins_other"],
-  );
-  assertEquals(common.coins_few, "{{count}} monety");
+  expect(Object.keys(common).filter((key) => key.startsWith("coins"))).toStrictEqual([
+    "coins_one",
+    "coins_few",
+    "coins_many",
+    "coins_other",
+  ]);
+  expect(common.coins_few).toBe("{{count}} monety");
   const untranslated = content(await instance.service.exportFiles(SYSTEM, { languages: ["de"] }));
-  assertEquals(
+  expect(
     Object.keys(untranslated["de/common.json"]).filter((key) => key.startsWith("coins")),
-    ["coins_one", "coins_other"],
-  );
+  ).toStrictEqual(["coins_one", "coins_other"]);
 });
 
 test("a language's plural override decides its forms", async () => {
@@ -132,10 +133,9 @@ test("a language's plural override decides its forms", async () => {
     JSON.stringify({ cardinal: ["one", "few", "other"] }),
   );
   const files = content(await instance.service.exportFiles(SYSTEM, { languages: ["de"] }));
-  assertEquals(
+  expect(
     Object.keys(files["de/common.json"]).filter((key) => key.startsWith("coins")),
-    ["coins_one", "coins_few", "coins_other"],
-  );
+  ).toStrictEqual(["coins_one", "coins_few", "coins_other"]);
 });
 
 test("pending suggestions are never exported", async () => {
@@ -147,7 +147,7 @@ test("pending suggestions are never exported", async () => {
     stringId(instance.sql, "common.json", "title"),
   );
   const files = content(await instance.service.exportFiles(SYSTEM, { languages: ["de"] }));
-  assertEquals(files["de/common.json"].title, "Wegfahrer");
+  expect(files["de/common.json"].title).toBe("Wegfahrer");
 });
 
 test("hidden strings and hidden files are never exported", async () => {
@@ -155,15 +155,13 @@ test("hidden strings and hidden files are never exported", async () => {
   write(instance, "common.json", "menu.quit", "de", "Beenden");
   await uploadJson(instance.service, { "common.json": { ...COMMON, menu: { play: "Play" } } });
   const result = await instance.service.exportFiles(SYSTEM, { languages: ["de"] });
-  assertEquals(
-    result.files.map((file) => file.path),
-    ["common.json"],
-  );
-  assertEquals(content(result)["de/common.json"].menu, { play: "Play" });
-  await assertRejects(
-    () => instance.service.exportFiles(SYSTEM, { files: ["hud.json"] }),
-    ServiceError,
-    "hud.json",
+  expect(result.files.map((file) => file.path)).toStrictEqual(["common.json"]);
+  expect(content(result)["de/common.json"].menu).toStrictEqual({ play: "Play" });
+  await expect(instance.service.exportFiles(SYSTEM, { files: ["hud.json"] })).rejects.toThrow(
+    expect.objectContaining({
+      constructor: ServiceError,
+      message: expect.stringContaining("hud.json"),
+    }),
   );
 });
 
@@ -175,7 +173,7 @@ test("outdated translations are still exported (STR-4)", async () => {
     "hud.json": { hp: "HP" },
   });
   const files = content(await instance.service.exportFiles(SYSTEM, { languages: ["de"] }));
-  assertEquals(files["de/common.json"].title, "Wegfahrer");
+  expect(files["de/common.json"].title).toBe("Wegfahrer");
 });
 
 test("the English file's format is kept: tabs and CRLF", async () => {
@@ -191,7 +189,9 @@ test("the English file's format is kept: tabs and CRLF", async () => {
     languages: ["fr"],
   });
   const [file] = (await instance.service.exportFiles(SYSTEM, {})).files;
-  assertEquals(file.content, '{\r\n\t"a": "A",\r\n\t"b": {\r\n\t\t"c": "C"\r\n\t}\r\n}\r\n');
+  expect(file.content).toStrictEqual(
+    '{\r\n\t"a": "A",\r\n\t"b": {\r\n\t\t"c": "C"\r\n\t}\r\n}\r\n',
+  );
 });
 
 test("languages and files can be chosen; unknown ones fail", async () => {
@@ -200,29 +200,26 @@ test("languages and files can be chosen; unknown ones fail", async () => {
     languages: ["pl"],
     files: ["hud.json"],
   });
-  assertEquals(
-    some.files.map((file) => `${file.language}/${file.path}`),
-    ["pl/hud.json"],
-  );
-  const unknown = await assertRejects(
-    () => instance.service.exportFiles(SYSTEM, { languages: ["fr"] }),
-    ServiceError,
-  );
-  assertEquals([unknown.code, unknown.details], ["bad_request", [{ language: "fr" }]]);
-  const source = await assertRejects(
-    () => instance.service.exportFiles(SYSTEM, { languages: ["en"] }),
-    ServiceError,
-  );
-  assertEquals(source.code, "bad_request");
-  const file = await assertRejects(
-    () => instance.service.exportFiles(SYSTEM, { files: ["nope.json"] }),
-    ServiceError,
-  );
-  assertEquals(file.code, "not_found");
+  expect(some.files.map((file) => `${file.language}/${file.path}`)).toStrictEqual(["pl/hud.json"]);
+  const unknown = await instance.service
+    .exportFiles(SYSTEM, { languages: ["fr"] })
+    .catch((error: unknown) => error);
+  assert(unknown instanceof ServiceError);
+  expect([unknown.code, unknown.details]).toStrictEqual(["bad_request", [{ language: "fr" }]]);
+  const source = await instance.service
+    .exportFiles(SYSTEM, { languages: ["en"] })
+    .catch((error: unknown) => error);
+  assert(source instanceof ServiceError);
+  expect(source.code).toBe("bad_request");
+  const file = await instance.service
+    .exportFiles(SYSTEM, { files: ["nope.json"] })
+    .catch((error: unknown) => error);
+  assert(file instanceof ServiceError);
+  expect(file.code).toBe("not_found");
 });
 
 test("an instance without languages exports nothing", async () => {
   using instance = await startTestService();
   await uploadJson(instance.service, { "a.json": { a: "A" } });
-  assertEquals((await instance.service.exportFiles(SYSTEM, {})).files, []);
+  expect((await instance.service.exportFiles(SYSTEM, {})).files).toStrictEqual([]);
 });

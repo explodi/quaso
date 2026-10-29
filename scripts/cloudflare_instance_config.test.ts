@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
-import { exists } from "@std/fs/exists";
-import { describe, test } from "node:test";
-import { expect } from "@std/expect";
+import { existsSync } from "node:fs";
+import { describe, expect, test } from "vitest";
 import * as fs from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, isAbsolute, resolve } from "node:path";
@@ -139,21 +138,21 @@ describe("Cloudflare instance configuration", () => {
           return 0;
         }),
       ).toBe(0);
-      expect(await exists(dirname(generatedPath))).toBe(false);
+      expect(existsSync(dirname(generatedPath))).toBe(false);
       await expect(
         deploy(["--env", "staging", "--instance-config", path], async (args) => {
           generatedPath = args[2];
           throw new Error("Wrangler failed");
         }),
       ).rejects.toThrow("Wrangler failed");
-      expect(await exists(dirname(generatedPath))).toBe(false);
+      expect(existsSync(dirname(generatedPath))).toBe(false);
       expect(
         await deploy(["--env", "staging", "--instance-config", path], async (args) => {
           generatedPath = args[2];
           return 7;
         }),
       ).toBe(7);
-      expect(await exists(dirname(generatedPath))).toBe(false);
+      expect(existsSync(dirname(generatedPath))).toBe(false);
       await expect(readInstanceConfig(join(directory, "missing.jsonc"))).rejects.toThrow(
         "cf:setup",
       );

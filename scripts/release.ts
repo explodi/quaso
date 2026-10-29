@@ -92,7 +92,7 @@ export async function prepareRelease(
 
 if (import.meta.main) {
   if (process.argv.slice(2).length !== 1) {
-    console.error("Usage: deno task release <version> (for example, 1.0.0-rc.1)");
+    console.error("Usage: npm run release <version> (for example, 1.0.0-rc.1)");
     process.exit(2);
   }
   try {

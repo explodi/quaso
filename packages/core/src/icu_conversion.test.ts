@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals } from "@std/assert";
+import { expect, test } from "vitest";
 import { checkTranslation } from "./checks.ts";
 import { icuSyntaxError, type IcuNode, parseIcu, unquoteIcu } from "./icu.ts";
 import { sourceFileToIcu, valueToIcu } from "./icu_conversion.ts";
@@ -25,7 +24,7 @@ function plural(forms: PluralForms, language = "en") {
  * as apps have them, must read it too.
  */
 function shown(message: string): string {
-  assertEquals(icuSyntaxError(message), null);
+  expect(icuSyntaxError(message)).toBe(null);
   return showNodes(message, parseIcu(message), false);
 }
 
@@ -44,15 +43,15 @@ function showNodes(message: string, nodes: IcuNode[], inPlural: boolean): string
 }
 
 test("ICU conversion: {{name}} and {{- name}} become {name}", () => {
-  assertEquals(text("Hello {{name}}"), { ok: true, value: "Hello {name}", escapes: 0 });
-  assertEquals(text("Hello {{- name}}"), { ok: true, value: "Hello {name}", escapes: 0 });
-  assertEquals(text("Hello {{ name }}"), { ok: true, value: "Hello {name}", escapes: 0 });
-  assertEquals(shown("Hello {name}"), "Hello <name>");
+  expect(text("Hello {{name}}")).toStrictEqual({ ok: true, value: "Hello {name}", escapes: 0 });
+  expect(text("Hello {{- name}}")).toStrictEqual({ ok: true, value: "Hello {name}", escapes: 0 });
+  expect(text("Hello {{ name }}")).toStrictEqual({ ok: true, value: "Hello {name}", escapes: 0 });
+  expect(shown("Hello {name}")).toBe("Hello <name>");
 });
 
 test("ICU conversion: the project's own prefix and suffix become braces", () => {
   const underscores = { prefix: "__", suffix: "__" };
-  assertEquals(text("Hello __name__, {score}", underscores), {
+  expect(text("Hello __name__, {score}", underscores)).toStrictEqual({
     ok: true,
     value: "Hello {name}, '{'score'}'",
     escapes: 2,
@@ -61,17 +60,21 @@ test("ICU conversion: the project's own prefix and suffix become braces", () => 
 
 test("ICU conversion: placeholders in extra { and } delimiters stay as written", () => {
   const converted = text("{ companyName } hired {{name}}", BRACES);
-  assertEquals(converted, { ok: true, value: "{ companyName } hired {name}", escapes: 0 });
-  assertEquals(shown("{ companyName } hired {name}"), "<companyName> hired <name>");
+  expect(converted).toStrictEqual({ ok: true, value: "{ companyName } hired {name}", escapes: 0 });
+  expect(shown("{ companyName } hired {name}")).toBe("<companyName> hired <name>");
 });
 
 test("ICU conversion: placeholders in other extra delimiters become {name}", () => {
   const brackets = { ...I18NEXT, extra: [{ prefix: "[[", suffix: "]]" }] };
-  assertEquals(text("Ask [[advisor]]", brackets), { ok: true, value: "Ask {advisor}", escapes: 0 });
+  expect(text("Ask [[advisor]]", brackets)).toStrictEqual({
+    ok: true,
+    value: "Ask {advisor}",
+    escapes: 0,
+  });
 });
 
 test("ICU conversion: an extra-delimiter placeholder ICU can't name is refused", () => {
-  assertEquals(text("{company name} hired you", BRACES), {
+  expect(text("{company name} hired you", BRACES)).toStrictEqual({
     ok: false,
     problems: ["{company name} can't become an ICU argument: names are letters, digits and _ only"],
   });
@@ -79,66 +82,68 @@ test("ICU conversion: an extra-delimiter placeholder ICU can't name is refused",
 
 test("ICU conversion: literal braces are quoted, so they still show", () => {
   const converted = text("Press {Enter} or }");
-  assertEquals(converted, { ok: true, value: "Press '{'Enter'}' or '}'", escapes: 3 });
-  assertEquals(shown("Press '{'Enter'}' or '}'"), "Press {Enter} or }");
+  expect(converted).toStrictEqual({ ok: true, value: "Press '{'Enter'}' or '}'", escapes: 3 });
+  expect(shown("Press '{'Enter'}' or '}'")).toBe("Press {Enter} or }");
 });
 
 test("ICU conversion: a blank placeholder, which i18next shows, stays text", () => {
-  assertEquals(text("{{ }} empty"), { ok: true, value: "'{{' '}}' empty", escapes: 4 });
-  assertEquals(shown("'{{' '}}' empty"), "{{ }} empty");
+  expect(text("{{ }} empty")).toStrictEqual({ ok: true, value: "'{{' '}}' empty", escapes: 4 });
+  expect(shown("'{{' '}}' empty")).toBe("{{ }} empty");
 });
 
 test("ICU conversion: an apostrophe before an argument is doubled", () => {
-  assertEquals(text("qu'{{article}} maire"), {
+  expect(text("qu'{{article}} maire")).toStrictEqual({
     ok: true,
     value: "qu''{article} maire",
     escapes: 1,
   });
-  assertEquals(shown("qu''{article} maire"), "qu'<article> maire");
+  expect(shown("qu''{article} maire")).toBe("qu'<article> maire");
 });
 
 test("ICU conversion: an apostrophe before other text stays single", () => {
-  assertEquals(text("l'alcalde d'{{city}}'s"), {
+  expect(text("l'alcalde d'{{city}}'s")).toStrictEqual({
     ok: true,
     value: "l'alcalde d''{city}'s",
     escapes: 1,
   });
-  assertEquals(shown("l'alcalde d''{city}'s"), "l'alcalde d'<city>'s");
+  expect(shown("l'alcalde d''{city}'s")).toBe("l'alcalde d'<city>'s");
 });
 
 test("ICU conversion: apostrophes next to braces and apostrophes stay text", () => {
-  assertEquals(text("'{' and {'s and ''"), {
+  expect(text("'{' and {'s and ''")).toStrictEqual({
     ok: true,
     value: "'''{''' and '{'''s and '''",
     escapes: 6,
   });
-  assertEquals(shown("'''{''' and '{'''s and '''"), "'{' and {'s and ''");
+  expect(shown("'''{''' and '{'''s and '''")).toBe("'{' and {'s and ''");
 });
 
 test("ICU conversion: # is text outside a plural case", () => {
-  assertEquals(text("Room #{{number}}"), { ok: true, value: "Room #{number}", escapes: 0 });
+  expect(text("Room #{{number}}")).toStrictEqual({ ok: true, value: "Room #{number}", escapes: 0 });
 });
 
 test("ICU conversion: plural forms become one plural block with {count}", () => {
   const converted = plural({ one: "{{count}} coin", other: "{{count}} coins" });
   const block = "{count, plural, one {{count} coin} other {{count} coins}}";
-  assertEquals(converted, { ok: true, value: block, escapes: 0 });
-  assertEquals(shown(block), "[count plural: one(<count> coin) other(<count> coins)]");
-  assertEquals(formatIcu(block, { count: 1000 }, "en"), "1000 coins", "as i18next prints it");
+  expect(converted).toStrictEqual({ ok: true, value: block, escapes: 0 });
+  expect(shown(block)).toBe("[count plural: one(<count> coin) other(<count> coins)]");
+  expect(formatIcu(block, { count: 1000 }, "en"), "as i18next prints it").toStrictEqual(
+    "1000 coins",
+  );
 });
 
 test("ICU conversion: # and an apostrophe ending a plural case are quoted", () => {
   const converted = plural({ one: "Player #1's", other: "{{count}} players'" });
   const block = "{count, plural, one {Player '#'1's} other {{count} players''}}";
-  assertEquals(converted, { ok: true, value: block, escapes: 2 });
-  assertEquals(shown(block), "[count plural: one(Player #1's) other(<count> players')]");
+  expect(converted).toStrictEqual({ ok: true, value: block, escapes: 2 });
+  expect(shown(block)).toBe("[count plural: one(Player #1's) other(<count> players')]");
 });
 
 test("ICU conversion: an apostrophe before # in a plural case is doubled", () => {
   const converted = plural({ one: "'#1", other: "'#{{count}}" });
   const block = "{count, plural, one {'''#'1} other {'''#'{count}}}";
-  assertEquals(converted, { ok: true, value: block, escapes: 4 });
-  assertEquals(shown(block), "[count plural: one('#1) other('#<count>)]");
+  expect(converted).toStrictEqual({ ok: true, value: block, escapes: 4 });
+  expect(shown(block)).toBe("[count plural: one('#1) other('#<count>)]");
 });
 
 test("ICU conversion: Polish keeps its four forms as cases", () => {
@@ -148,7 +153,7 @@ test("ICU conversion: Polish keeps its four forms as cases", () => {
     many: "{{count}} monet",
     other: "{{count}} monety",
   };
-  assertEquals(plural(forms, "pl"), {
+  expect(plural(forms, "pl")).toStrictEqual({
     ok: true,
     value:
       "{count, plural, one {{count} moneta} few {{count} monety} many {{count} monet} other {{count} monety}}",
@@ -157,7 +162,7 @@ test("ICU conversion: Polish keeps its four forms as cases", () => {
 });
 
 test("ICU conversion: Japanese keeps its one form", () => {
-  assertEquals(plural({ other: "{{count}}枚" }, "ja"), {
+  expect(plural({ other: "{{count}}枚" }, "ja")).toStrictEqual({
     ok: true,
     value: "{count, plural, other {{count}枚}}",
     escapes: 0,
@@ -167,13 +172,13 @@ test("ICU conversion: Japanese keeps its one form", () => {
 test("ICU conversion: a zero form becomes the exact case =0", () => {
   const converted = plural({ zero: "No coins", one: "One coin", other: "{{count}} coins" });
   const block = "{count, plural, =0 {No coins} one {One coin} other {{count} coins}}";
-  assertEquals(converted, { ok: true, value: block, escapes: 0 });
-  assertEquals(formatIcu(block, { count: 0 }, "en"), "No coins");
+  expect(converted).toStrictEqual({ ok: true, value: block, escapes: 0 });
+  expect(formatIcu(block, { count: 0 }, "en")).toBe("No coins");
 });
 
 test("ICU conversion: a language with a zero category keeps a zero case too", () => {
   const converted = plural({ zero: "{{count}} monētu", one: "{{count}} monēta", other: "x" }, "lv");
-  assertEquals(converted, {
+  expect(converted).toStrictEqual({
     ok: true,
     value:
       "{count, plural, =0 {{count} monētu} zero {{count} monētu} one {{count} monēta} other {x}}",
@@ -181,7 +186,9 @@ test("ICU conversion: a language with a zero category keeps a zero case too", ()
   });
   const block =
     "{count, plural, =0 {{count} monētu} zero {{count} monētu} one {{count} monēta} other {x}}";
-  assertEquals(formatIcu(block, { count: 10 }, "lv"), "10 monētu", "Latvian's zero has 10–20");
+  expect(formatIcu(block, { count: 10 }, "lv"), "Latvian's zero has 10–20").toStrictEqual(
+    "10 monētu",
+  );
 });
 
 test("ICU conversion: ordinal forms become a selectordinal block", () => {
@@ -191,7 +198,7 @@ test("ICU conversion: ordinal forms become a selectordinal block", () => {
     few: "{{count}}rd",
     other: "{{count}}th",
   };
-  assertEquals(valueToIcu("ordinal", forms, { syntax: I18NEXT, language: "en" }), {
+  expect(valueToIcu("ordinal", forms, { syntax: I18NEXT, language: "en" })).toStrictEqual({
     ok: true,
     value:
       "{count, selectordinal, one {{count}st} two {{count}nd} few {{count}rd} other {{count}th}}",
@@ -200,7 +207,7 @@ test("ICU conversion: ordinal forms become a selectordinal block", () => {
 });
 
 test("ICU conversion: an i18next format is refused", () => {
-  assertEquals(text("Costs {{price, number}}"), {
+  expect(text("Costs {{price, number}}")).toStrictEqual({
     ok: false,
     problems: [
       "{{price, number}} has an i18next format, which ICU MessageFormat writes differently",
@@ -209,35 +216,35 @@ test("ICU conversion: an i18next format is refused", () => {
 });
 
 test("ICU conversion: a nesting reference is refused", () => {
-  assertEquals(text("$t(common:back) now"), {
+  expect(text("$t(common:back) now")).toStrictEqual({
     ok: false,
     problems: ["$t(common:back) is an i18next nesting reference; ICU MessageFormat has no nesting"],
   });
 });
 
 test("ICU conversion: a name ICU can't hold is refused", () => {
-  assertEquals(text("Hi {{user.name}}"), {
+  expect(text("Hi {{user.name}}")).toStrictEqual({
     ok: false,
     problems: ["{{user.name}} can't become an ICU argument: names are letters, digits and _ only"],
   });
 });
 
 test("ICU conversion: a problem in several forms is reported once", () => {
-  assertEquals(plural({ one: "{{n, number}} coin", other: "{{n, number}} coins" }), {
+  expect(plural({ one: "{{n, number}} coin", other: "{{n, number}} coins" })).toStrictEqual({
     ok: false,
     problems: ["{{n, number}} has an i18next format, which ICU MessageFormat writes differently"],
   });
 });
 
 test("ICU conversion: a value of the wrong shape is refused", () => {
-  assertEquals(valueToIcu("text", { other: "x" }, { syntax: I18NEXT, language: "en" }), {
+  expect(valueToIcu("text", { other: "x" }, { syntax: I18NEXT, language: "en" })).toStrictEqual({
     ok: false,
     problems: ["It has plural forms, but its string is a text"],
   });
 });
 
 test("ICU conversion: a value already in ICU stays as it is", () => {
-  assertEquals(text("qu''{article} '{'", ICU), {
+  expect(text("qu''{article} '{'", ICU)).toStrictEqual({
     ok: true,
     value: "qu''{article} '{'",
     escapes: 0,
@@ -273,12 +280,12 @@ test("ICU conversion: a JSON file keeps its formatting, with plural groups merge
     "}",
     "",
   ].join("\n");
-  assertEquals(converted, { text: expected, merged: ["coins"], escapes: 2, refusals: [] });
+  expect(converted).toStrictEqual({ text: expected, merged: ["coins"], escapes: 2, refusals: [] });
 });
 
 test("ICU conversion: a file with nothing to convert stays byte for byte", () => {
   const file = '{ "play" :   "Play",\r\n "count": 3 }';
-  assertEquals(sourceFileToIcu(file, { syntax: I18NEXT, language: "en" }), {
+  expect(sourceFileToIcu(file, { syntax: I18NEXT, language: "en" })).toStrictEqual({
     text: file,
     merged: [],
     escapes: 0,
@@ -289,7 +296,7 @@ test("ICU conversion: a file with nothing to convert stays byte for byte", () =>
 test("ICU conversion: a plural group whose base is another key is refused", () => {
   const file =
     '{"coins": "Coins", "coins_one": "{{count}} coin", "coins_other": "{{count}} coins"}';
-  assertEquals(sourceFileToIcu(file, { syntax: I18NEXT, language: "en" }), {
+  expect(sourceFileToIcu(file, { syntax: I18NEXT, language: "en" })).toStrictEqual({
     text: file,
     merged: [],
     escapes: 0,
@@ -306,7 +313,7 @@ test("ICU conversion: a plural group whose base is another key is refused", () =
 test("ICU conversion: a plural and an ordinal group with the same base are refused", () => {
   const file =
     '{"place_one": "{{count}} place", "place_other": "{{count}} places", "place_ordinal_one": "{{count}}st", "place_ordinal_other": "{{count}}th"}';
-  assertEquals(sourceFileToIcu(file, { syntax: I18NEXT, language: "en" }), {
+  expect(sourceFileToIcu(file, { syntax: I18NEXT, language: "en" })).toStrictEqual({
     text: file,
     merged: [],
     escapes: 0,
@@ -322,7 +329,7 @@ test("ICU conversion: a plural and an ordinal group with the same base are refus
 
 test("ICU conversion: refusals in a file are listed by key, and nothing changes", () => {
   const file = '{"back": "$t(common:back)", "price": "{{price, number}}", "fine": "{{name}}"}';
-  assertEquals(sourceFileToIcu(file, { syntax: I18NEXT, language: "en" }), {
+  expect(sourceFileToIcu(file, { syntax: I18NEXT, language: "en" })).toStrictEqual({
     text: file,
     merged: [],
     escapes: 0,
@@ -347,26 +354,27 @@ test("ICU conversion: descriptions of keys stay as written", () => {
     language: "en",
     descriptionSuffix: "_note",
   });
-  assertEquals(converted.text, '{"title":"{name}","title_note":"Use {{name}} as is"}');
+  expect(converted.text).toBe('{"title":"{name}","title_note":"Use {{name}} as is"}');
 });
 
 test("ICU conversion: a Markdown document is converted whole, its line endings kept", () => {
   const document = "# {{cityName}}\r\n\r\nCode: `{ a: 1 }`\r\n";
-  assertEquals(sourceFileToIcu(document, { file: "news.md", syntax: I18NEXT, language: "en" }), {
+  expect(
+    sourceFileToIcu(document, { file: "news.md", syntax: I18NEXT, language: "en" }),
+  ).toStrictEqual({
     text: "# {cityName}\r\n\r\nCode: `'{' a: 1 '}'`\r\n",
     merged: [],
     escapes: 2,
     refusals: [],
   });
-  assertEquals(
-    shown("# {cityName}\r\n\r\nCode: `'{' a: 1 '}'`\r\n"),
+  expect(shown("# {cityName}\r\n\r\nCode: `'{' a: 1 '}'`\r\n")).toStrictEqual(
     "# <cityName>\r\n\r\nCode: `{ a: 1 }`\r\n",
   );
 });
 
 test("ICU conversion: converting a converted file again changes nothing", () => {
   const once = sourceFileToIcu(FILE, { syntax: I18NEXT, language: "en" }).text;
-  assertEquals(sourceFileToIcu(once, { syntax: ICU, language: "en" }).text, once);
+  expect(sourceFileToIcu(once, { syntax: ICU, language: "en" }).text).toStrictEqual(once);
 });
 
 test("ICU conversion: converted Polish forms pass the ICU checks", () => {
@@ -378,7 +386,7 @@ test("ICU conversion: converted Polish forms pass the ICU checks", () => {
     language: "pl",
     syntax: ICU,
   });
-  assertEquals(results, []);
+  expect(results).toStrictEqual([]);
 });
 
 test("ICU conversion: converted Latvian forms with a zero form pass the ICU checks", () => {
@@ -390,5 +398,5 @@ test("ICU conversion: converted Latvian forms with a zero form pass the ICU chec
     language: "lv",
     syntax: ICU,
   });
-  assertEquals(results, []);
+  expect(results).toStrictEqual([]);
 });

@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assert, assertEquals, assertRejects, assertStringIncludes } from "@std/assert";
+import { assert, expect, test } from "vitest";
 import { hasPluralRules, PROMPT_PLACEHOLDERS } from "@quaso/core";
 import { type Actor, ANONYMOUS, SYSTEM } from "./api.ts";
 import { getRevision } from "./db.ts";
@@ -36,30 +35,30 @@ async function project(): Promise<TestInstance & { admin: Actor }> {
 }
 
 async function rejects(promise: Promise<unknown>, code: string, text?: string) {
-  const error = await assertRejects(() => promise, ServiceError);
-  assertEquals(error.code, code, error.message);
-  if (text !== undefined) assertStringIncludes(error.message, text);
+  const error = await promise.catch((error: unknown) => error);
+  assert(error instanceof ServiceError);
+  expect(error.code, error.message).toStrictEqual(code);
+  if (text !== undefined) expect(error.message).toContain(text);
   return error;
 }
 
 test("getSettings: the settings, the default template, languages, files and models", async () => {
   using instance = await project();
   const result = await instance.service.getSettings(instance.admin, {});
-  assertEquals(result.settings.name, "Untitled project");
-  assertEquals(result.defaultPromptTemplate, DEFAULT_PROMPT_TEMPLATE);
-  assertEquals(
-    result.languages.map((language) => language.tag),
-    ["de", "pl"],
-  );
+  expect(result.settings.name).toBe("Untitled project");
+  expect(result.defaultPromptTemplate).toStrictEqual(DEFAULT_PROMPT_TEMPLATE);
+  expect(result.languages.map((language) => language.tag)).toStrictEqual(["de", "pl"]);
   const pl = result.languages[1];
-  assertEquals(pl.name, "Polish");
-  assertEquals(pl.direction, "ltr");
-  assertEquals(pl.pluralOverride, null);
-  assertEquals(pl.categories.cardinal, ["one", "few", "many", "other"]);
-  assertEquals(pl.categories.ordinal, ["other"]);
-  assertEquals(result.files, [{ id: 1, path: "common.json", context: "", generatedContext: null }]);
-  assertEquals(result.models, []);
-  assertEquals(result.llmAvailable, false);
+  expect(pl.name).toBe("Polish");
+  expect(pl.direction).toBe("ltr");
+  expect(pl.pluralOverride).toBe(null);
+  expect(pl.categories.cardinal).toStrictEqual(["one", "few", "many", "other"]);
+  expect(pl.categories.ordinal).toStrictEqual(["other"]);
+  expect(result.files).toStrictEqual([
+    { id: 1, path: "common.json", context: "", generatedContext: null },
+  ]);
+  expect(result.models).toStrictEqual([]);
+  expect(result.llmAvailable).toBe(false);
 });
 
 test("only administrators see and change the settings; managers may write file context", async () => {
@@ -84,7 +83,7 @@ test("only administrators see and change the settings; managers may write file c
     await rejects(service.backupInfo(actor, {}), "forbidden");
   }
   const file = await service.updateFile(manager, { id: 1, context: "The main menu." });
-  assertEquals(file.context, "The main menu.");
+  expect(file.context).toBe("The main menu.");
   await rejects(service.updateFile(contributor, { id: 1, context: "x" }), "forbidden");
   await rejects(service.updateFile(key.actor, { id: 1, context: "x" }), "forbidden");
   await rejects(service.updateFile(ANONYMOUS, { id: 1, context: "x" }), "unauthorized");
@@ -97,12 +96,12 @@ test("mergeSettings: top-level fields replace; llm and llm.context merge one lev
     links: [{ label: "Site", url: "https://example.com" }],
     llm: { model: "gemini-pro", context: { glossary: false } },
   });
-  assertEquals(merged.name, "Wayfarer");
-  assertEquals(merged.links, [{ label: "Site", url: "https://example.com" }]);
-  assertEquals(merged.llm.model, "gemini-pro");
-  assertEquals(merged.llm.batchSize, current.llm.batchSize);
-  assertEquals(merged.llm.context, { ...current.llm.context, glossary: false });
-  assertEquals(current.llm.context.glossary, true, "the current settings are unchanged");
+  expect(merged.name).toBe("Wayfarer");
+  expect(merged.links).toStrictEqual([{ label: "Site", url: "https://example.com" }]);
+  expect(merged.llm.model).toBe("gemini-pro");
+  expect(merged.llm.batchSize).toStrictEqual(current.llm.batchSize);
+  expect(merged.llm.context).toStrictEqual({ ...current.llm.context, glossary: false });
+  expect(current.llm.context.glossary, "the current settings are unchanged").toBe(true);
 });
 
 test("updateSettings stores the merged settings; the Activity page doesn't list it", async () => {
@@ -113,25 +112,22 @@ test("updateSettings stores the merged settings; the Activity page doesn't list 
     description: "A game",
     llm: { autoTranslate: false, context: { otherLanguages: ["pt-br"] } },
   });
-  assertEquals(result.settings.name, "Wayfarer");
-  assertEquals(result.settings.llm.autoTranslate, false);
-  assertEquals(result.settings.llm.updateOutdated, true);
-  assertEquals(result.settings.llm.context.otherLanguages, ["pt-BR"]);
-  assertEquals(result.settings.llm.context.identicalStrings, true);
-  assertEquals(getRevision(instance.sql), revision + 1);
+  expect(result.settings.name).toBe("Wayfarer");
+  expect(result.settings.llm.autoTranslate).toBe(false);
+  expect(result.settings.llm.updateOutdated).toBe(true);
+  expect(result.settings.llm.context.otherLanguages).toStrictEqual(["pt-BR"]);
+  expect(result.settings.llm.context.identicalStrings).toBe(true);
+  expect(getRevision(instance.sql)).toStrictEqual(revision + 1);
   const info = await instance.service.getProject(ANONYMOUS, {});
-  assertEquals(info.name, "Wayfarer");
+  expect(info.name).toBe("Wayfarer");
   // The Activity page shows uploads, jobs, reviews, imports and renames (design §6), in
   // the types the API knows: settings changes go to the log.
   const activity = (await instance.service.getActivity(ANONYMOUS, {})).items;
-  assertEquals(
-    activity.map((item) => item.type),
-    ["upload"],
-  );
+  expect(activity.map((item) => item.type)).toStrictEqual(["upload"]);
 
   // The same values again: nothing changes.
   await instance.service.updateSettings(instance.admin, { name: "Wayfarer" });
-  assertEquals(getRevision(instance.sql), revision + 1);
+  expect(getRevision(instance.sql)).toStrictEqual(revision + 1);
 });
 
 test("updateSettings validates the result", async () => {
@@ -162,11 +158,11 @@ test("the prompt template must send %strings% and use known placeholders", async
     "bad_request",
     "unknown placeholders: %gameName%, %foo%",
   );
-  assertStringIncludes(error.message, PROMPT_PLACEHOLDERS.join(", "));
+  expect(error.message).toContain(PROMPT_PLACEHOLDERS.join(", "));
   const ok = await service.updateSettings(admin, {
     llm: { promptTemplate: "Into %targetLanguage%, 100% of: %strings%" },
   });
-  assertEquals(ok.settings.llm.promptTemplate, "Into %targetLanguage%, 100% of: %strings%");
+  expect(ok.settings.llm.promptTemplate).toBe("Into %targetLanguage%, 100% of: %strings%");
   // Notes (%% lines) are never sent: %strings% there doesn't count, other names don't matter.
   await rejects(
     service.updateSettings(admin, { llm: { promptTemplate: "%% then %strings%\nTranslate." } }),
@@ -180,13 +176,13 @@ test("the prompt template must send %strings% and use known placeholders", async
   );
   const noted = "%% %myNote% is only for us\n%strings%";
   const withNote = await service.updateSettings(admin, { llm: { promptTemplate: noted } });
-  assertEquals(withNote.settings.llm.promptTemplate, noted);
+  expect(withNote.settings.llm.promptTemplate).toStrictEqual(noted);
 });
 
 test("the model for suggestions is a model name, or blank to follow the project's", async () => {
   using instance = await project();
   const { service, admin } = instance;
-  assertEquals((await service.getSettings(admin, {})).settings.llm.suggestionModel, "");
+  expect((await service.getSettings(admin, {})).settings.llm.suggestionModel).toBe("");
   await rejects(
     service.updateSettings(admin, { llm: { suggestionModel: "../v1/files" } }),
     "bad_request",
@@ -195,9 +191,9 @@ test("the model for suggestions is a model name, or blank to follow the project'
   const named = await service.updateSettings(admin, {
     llm: { suggestionModel: "gemini-3.6-flash" },
   });
-  assertEquals(named.settings.llm.suggestionModel, "gemini-3.6-flash");
+  expect(named.settings.llm.suggestionModel).toBe("gemini-3.6-flash");
   const blank = await service.updateSettings(admin, { llm: { suggestionModel: "" } });
-  assertEquals(blank.settings.llm.suggestionModel, "");
+  expect(blank.settings.llm.suggestionModel).toBe("");
 });
 
 test("the source language can't change once there are strings", async () => {
@@ -211,8 +207,8 @@ test("the source language can't change once there are strings", async () => {
   const admin = addUser(empty.sql, "administrator");
   await empty.service.addLanguage(admin, { tag: "de" });
   const result = await empty.service.updateSettings(admin, { sourceLanguage: "de" });
-  assertEquals(result.settings.sourceLanguage, "de");
-  assertEquals(result.languages, [], "the new source language is no longer a target");
+  expect(result.settings.sourceLanguage).toBe("de");
+  expect(result.languages, "the new source language is no longer a target").toStrictEqual([]);
 });
 
 test("a new placeholder syntax runs the checks again on every translation", async () => {
@@ -223,9 +219,9 @@ test("a new placeholder syntax runs the checks again on every translation", asyn
   // A German text without the placeholder, stored as it could be from before the change.
   instance.sql.run("UPDATE translations SET value = ?", JSON.stringify("Hallo!"));
   await instance.service.updateSettings(instance.admin, { syntax: { prefix: "%", suffix: "%" } });
-  assertEquals(qa(), 0, "with %…%, {{name}} is plain text, so nothing is missing");
+  expect(qa(), "with %…%, {{name}} is plain text, so nothing is missing").toBe(0);
   await instance.service.updateSettings(instance.admin, { syntax: { prefix: "{{", suffix: "}}" } });
-  assertEquals(qa(), 1, "with {{…}}, {{name}} is missing");
+  expect(qa(), "with {{…}}, {{name}} is missing").toBe(1);
 });
 
 test("extra placeholder delimiters are saved and check the app's own placeholders", async () => {
@@ -239,11 +235,11 @@ test("extra placeholder delimiters are saved and check the app's own placeholder
   write(instance, "jobs.json", "hiring", "de", "{Firma} stellt ein");
   const qa = () =>
     instance.sql.query<{ qa_errors: number }>("SELECT qa_errors FROM translations")[0].qa_errors;
-  assertEquals(qa(), 0, "without extra delimiters, {company} is plain text");
+  expect(qa(), "without extra delimiters, {company} is plain text").toBe(0);
   const syntax = { prefix: "{{", suffix: "}}", extra: [{ prefix: "{", suffix: "}" }] };
   const result = await instance.service.updateSettings(admin, { syntax });
-  assertEquals(result.settings.syntax, { ...syntax, optional: [], icu: false });
-  assertEquals(qa(), 2, "{company} is missing and {Firma} isn't in the English");
+  expect(result.settings.syntax).toStrictEqual({ ...syntax, optional: [], icu: false });
+  expect(qa(), "{company} is missing and {Firma} isn't in the English").toBe(2);
 });
 
 test("models come from the provider, kept for ten minutes", async () => {
@@ -258,14 +254,14 @@ test("models come from the provider, kept for ten minutes", async () => {
   using instance = await startTestService({ provider } as never);
   const admin = addUser(instance.sql, "administrator");
   const first = await instance.service.getSettings(admin, {});
-  assertEquals(first.models, ["gemini-flash", "gemini-pro"]);
-  assertEquals(first.llmAvailable, true);
+  expect(first.models).toStrictEqual(["gemini-flash", "gemini-pro"]);
+  expect(first.llmAvailable).toBe(true);
   await instance.service.getSettings(admin, {});
-  assertEquals(calls, 1);
+  expect(calls).toBe(1);
   instance.clock.advance(10 * 60_000);
   await instance.service.getSettings(admin, {});
-  assertEquals(calls, 2);
-  assertEquals((await instance.service.getAdminInfo(admin, {})).llm.provider, "gemini");
+  expect(calls).toBe(2);
+  expect((await instance.service.getAdminInfo(admin, {})).llm.provider).toBe("gemini");
 });
 
 test("a provider that can't list its models gives none, and is asked again a minute later", async () => {
@@ -279,13 +275,13 @@ test("a provider that can't list its models gives none, and is asked again a min
   };
   using instance = await startTestService({ provider } as never);
   const admin = addUser(instance.sql, "administrator");
-  assertEquals((await instance.service.getSettings(admin, {})).models, []);
-  assertEquals((await instance.service.updateSettings(admin, { name: "Game" })).models, []);
-  assertEquals((await instance.service.listModels(admin, {})).models, []);
-  assertEquals(calls, 1, "the failure is kept: callers don't each wait for the provider");
+  expect((await instance.service.getSettings(admin, {})).models).toStrictEqual([]);
+  expect((await instance.service.updateSettings(admin, { name: "Game" })).models).toStrictEqual([]);
+  expect((await instance.service.listModels(admin, {})).models).toStrictEqual([]);
+  expect(calls, "the failure is kept: callers don't each wait for the provider").toBe(1);
   instance.clock.advance(MODELS_FAILURE_TTL_MS);
   await instance.service.getSettings(admin, {});
-  assertEquals(calls, 2);
+  expect(calls).toBe(2);
 });
 
 test("settings never wait for a provider that doesn't answer", async () => {
@@ -298,39 +294,35 @@ test("settings never wait for a provider that doesn't answer", async () => {
   const saved = instance.service.updateSettings(admin, { name: "New name" });
   // Stored before the provider is even asked.
   await Promise.resolve();
-  assertEquals((await instance.service.getProject(ANONYMOUS, {})).name, "New name");
-  assertEquals((await saved).settings.name, "New name");
-  assertEquals((await saved).models, []);
+  expect((await instance.service.getProject(ANONYMOUS, {})).name).toBe("New name");
+  expect((await saved).settings.name).toBe("New name");
+  expect((await saved).models).toStrictEqual([]);
   assert(performance.now() - started < 5000);
   // The request it gave up on isn't waited for again.
   const again = performance.now();
-  assertEquals((await instance.service.getSettings(admin, {})).models, []);
-  assertEquals(
-    (await instance.service.updateSettings(admin, { name: "Other" })).settings.name,
+  expect((await instance.service.getSettings(admin, {})).models).toStrictEqual([]);
+  expect((await instance.service.updateSettings(admin, { name: "Other" })).settings.name).toBe(
     "Other",
   );
   assert(performance.now() - again < 500, "no second wait");
-  assertEquals(calls, 1);
+  expect(calls).toBe(1);
 });
 
 test("addLanguage: canonical tags; never the source language; conflict when it exists", async () => {
   using instance = await project();
   const { service, admin } = instance;
   const added = await service.addLanguage(admin, { tag: "pt-br" });
-  assertEquals(added.language.tag, "pt-BR");
-  assertEquals(added.language.name, "Portuguese (Brazil)");
-  assertEquals(added.warnings, []);
+  expect(added.language.tag).toBe("pt-BR");
+  expect(added.language.name).toBe("Portuguese (Brazil)");
+  expect(added.warnings).toStrictEqual([]);
   await rejects(service.addLanguage(admin, { tag: "pt-BR" }), "conflict");
   await rejects(service.addLanguage(admin, { tag: "en" }), "bad_request", "source language");
   const status = await service.getStatus(SYSTEM, {});
-  assertEquals(
-    status.languages.map((language) => language.tag),
-    ["de", "pl", "pt-BR"],
-  );
+  expect(status.languages.map((language) => language.tag)).toStrictEqual(["de", "pl", "pt-BR"]);
   await service.removeLanguage(admin, { tag: "pl" });
   await service.updateLanguage(admin, { tag: "de", instructions: "Formal." });
   const types = (await service.getActivity(ANONYMOUS, {})).items.map((item) => item.type);
-  assertEquals(types, ["upload"], "only the types the API knows");
+  expect(types, "only the types the API knows").toStrictEqual(["upload"]);
 });
 
 test("addLanguage warns when the runtime has no plural rules for the language", async () => {
@@ -338,8 +330,8 @@ test("addLanguage warns when the runtime has no plural rules for the language", 
   const tag = ["cv", "kok", "sgs", "ie"].find((candidate) => !hasPluralRules(candidate));
   if (tag === undefined) return; // This runtime knows them all.
   const added = await instance.service.addLanguage(instance.admin, { tag });
-  assertEquals(added.warnings.length, 1);
-  assertStringIncludes(added.warnings[0], "plural override");
+  expect(added.warnings.length).toBe(1);
+  expect(added.warnings[0]).toContain("plural override");
 });
 
 test("removeLanguage keeps translations and history; they come back with the language", async () => {
@@ -349,26 +341,23 @@ test("removeLanguage keeps translations and history; they come back with the lan
   const id = stringId(instance.sql, "common.json", "title");
   await service.removeLanguage(admin, { tag: "de" });
   const info = await service.getProject(ANONYMOUS, {});
-  assertEquals(
-    info.languages.map((language) => language.tag),
-    ["pl"],
-  );
+  expect(info.languages.map((language) => language.tag)).toStrictEqual(["pl"]);
   const exported = await service.exportFiles(SYSTEM, {});
-  assertEquals(new Set(exported.files.map((file) => file.language)), new Set(["pl"]));
+  expect(new Set(exported.files.map((file) => file.language))).toStrictEqual(new Set(["pl"]));
   await rejects(service.listStrings(ANONYMOUS, { language: "de" }), "not_found");
   await rejects(service.removeLanguage(admin, { tag: "de" }), "not_found");
-  assertEquals(count(instance.sql, "translations", "language = 'de'"), 1);
+  expect(count(instance.sql, "translations", "language = 'de'")).toBe(1);
 
   await service.addLanguage(admin, { tag: "de" });
   const detail = await service.getString(ANONYMOUS, { id, language: "de" });
-  assertEquals(detail.translation?.value, "Wanderer");
+  expect(detail.translation?.value).toBe("Wanderer");
   const history = await service.getHistory(ANONYMOUS, { id, language: "de" });
-  assertEquals(
-    history.entries.map((entry) => entry.event),
-    ["translation_llm", "source_added"],
-  );
+  expect(history.entries.map((entry) => entry.event)).toStrictEqual([
+    "translation_llm",
+    "source_added",
+  ]);
   const again = await service.exportFiles(SYSTEM, { languages: ["de"] });
-  assertStringIncludes(again.files[0].content, "Wanderer");
+  expect(again.files[0].content).toContain("Wanderer");
 });
 
 test("a removed language's pending suggestions leave the review queue, and come back with it", async () => {
@@ -383,22 +372,22 @@ test("a removed language's pending suggestions leave the review queue, and come 
     value: "Wanderer",
     baseRevision: 0,
   });
-  assertEquals((await service.listSuggestions(admin, {})).total, 1);
+  expect((await service.listSuggestions(admin, {})).total).toBe(1);
   await service.removeLanguage(admin, { tag: "de" });
   const queue = await service.listSuggestions(admin, {});
-  assertEquals([queue.total, queue.suggestions.length], [0, 0]);
-  assertEquals((await service.listSuggestions(contributor, {})).total, 0);
+  expect([queue.total, queue.suggestions.length]).toStrictEqual([0, 0]);
+  expect((await service.listSuggestions(contributor, {})).total).toBe(0);
   // Still there, and in the full list.
-  assertEquals((await service.listSuggestions(admin, { status: "all" })).total, 1);
+  expect((await service.listSuggestions(admin, { status: "all" })).total).toBe(1);
 
   await service.addLanguage(admin, { tag: "de" });
   const back = await service.listSuggestions(admin, {});
-  assertEquals(back.total, 1);
+  expect(back.total).toBe(1);
   const review = await service.reviewSuggestions(admin, {
     ids: back.suggestions.map((suggestion) => suggestion.id),
     action: "approve",
   });
-  assertEquals(review.failed, []);
+  expect(review.failed).toStrictEqual([]);
 });
 
 test("updateLanguage: instructions, and a plural override that must include other", async () => {
@@ -414,15 +403,15 @@ test("updateLanguage: instructions, and a plural override that must include othe
     instance.sql.query<{ qa_errors: number }>(
       "SELECT qa_errors FROM translations WHERE language = 'pl'",
     )[0].qa_errors;
-  assertEquals(qa(), 0);
+  expect(qa()).toBe(0);
   const updated = await service.updateLanguage(admin, {
     tag: "PL",
     instructions: "Informal.",
     pluralOverride: { cardinal: ["one", "other"] },
   });
-  assertEquals(updated.instructions, "Informal.");
-  assertEquals(updated.pluralOverride, { cardinal: ["one", "other"] });
-  assertEquals(updated.categories.cardinal, ["one", "other"]);
+  expect(updated.instructions).toBe("Informal.");
+  expect(updated.pluralOverride).toStrictEqual({ cardinal: ["one", "other"] });
+  expect(updated.categories.cardinal).toStrictEqual(["one", "other"]);
   assert(qa() > 0, "few and many are now extra forms");
   await rejects(
     service.updateLanguage(admin, { tag: "pl", pluralOverride: { cardinal: ["one"] } }),
@@ -430,9 +419,9 @@ test("updateLanguage: instructions, and a plural override that must include othe
     "must include other",
   );
   const cleared = await service.updateLanguage(admin, { tag: "pl", pluralOverride: null });
-  assertEquals(cleared.pluralOverride, null);
-  assertEquals(cleared.categories.cardinal, ["one", "few", "many", "other"]);
-  assertEquals(qa(), 0);
+  expect(cleared.pluralOverride).toBe(null);
+  expect(cleared.categories.cardinal).toStrictEqual(["one", "few", "many", "other"]);
+  expect(qa()).toBe(0);
   await rejects(service.updateLanguage(admin, { tag: "fr", instructions: "" }), "not_found");
 });
 
@@ -440,7 +429,7 @@ test("updateFile writes the context and clears nothing else", async () => {
   using instance = await project();
   instance.sql.run("UPDATE files SET generated_context = 'Generated.'");
   const file = await instance.service.updateFile(instance.admin, { id: 1, context: "Menus." });
-  assertEquals(file, {
+  expect(file).toStrictEqual({
     id: 1,
     path: "common.json",
     context: "Menus.",
@@ -459,19 +448,18 @@ test("updateString: description and limit; a limit from the CLI config is locked
     description: "The game's title",
     maxLength: 8,
   });
-  assertEquals(result, {
+  expect(result).toStrictEqual({
     id,
     description: "The game's title",
     maxLength: 8,
     maxLengthLocked: false,
   });
   const detail = await service.getString(ANONYMOUS, { id, language: "de" });
-  assertEquals(detail.description, "The game's title");
-  assertEquals(detail.translation?.qa.errors, 1, "11 characters over a limit of 8");
+  expect(detail.description).toBe("The game's title");
+  expect(detail.translation?.qa.errors, "11 characters over a limit of 8").toBe(1);
   const cleared = await service.updateString(admin, { id, maxLength: null });
-  assertEquals(cleared.maxLength, null);
-  assertEquals(
-    (await service.getString(ANONYMOUS, { id, language: "de" })).translation?.qa.errors,
+  expect(cleared.maxLength).toBe(null);
+  expect((await service.getString(ANONYMOUS, { id, language: "de" })).translation?.qa.errors).toBe(
     0,
   );
 
@@ -489,7 +477,12 @@ test("updateString: description and limit; a limit from the CLI config is locked
     "set by the CLI config",
   );
   const same = await service.updateString(admin, { id: play, maxLength: 10, description: "Menu" });
-  assertEquals(same, { id: play, description: "Menu", maxLength: 10, maxLengthLocked: true });
+  expect(same).toStrictEqual({
+    id: play,
+    description: "Menu",
+    maxLength: 10,
+    maxLengthLocked: true,
+  });
   await rejects(service.updateString(admin, { id: 999, description: "x" }), "not_found");
 });
 
@@ -520,17 +513,17 @@ test("a website rename after the upload's LLM job: the old key's translations re
   const upload = await uploadJson(service, {
     "common.json": { menu: { start: "Play", exit: "Quit" } },
   });
-  assertEquals(
-    upload.renameSuggestions.map((rename) => rename.to),
-    ["menu.start", "menu.exit"],
-  );
+  expect(upload.renameSuggestions.map((rename) => rename.to)).toStrictEqual([
+    "menu.start",
+    "menu.exit",
+  ]);
   assert(upload.job !== null);
   await drain(instance);
   const start = stringId(instance.sql, "common.json", "menu.start");
   const exit = stringId(instance.sql, "common.json", "menu.exit");
   for (const id of [start, exit]) {
     const { translation } = await service.getString(ANONYMOUS, { id, language: "de" });
-    assertEquals(translation?.colour, "green", "the job translated the new keys first");
+    expect(translation?.colour, "the job translated the new keys first").toBe("green");
   }
   // Someone corrected the LLM's text of menu.exit meanwhile: that one stays.
   write(instance, "common.json", "menu.exit", "de", "Verlassen", {
@@ -543,26 +536,27 @@ test("a website rename after the upload's LLM job: the old key's translations re
     "bad_request",
     "a person made or reviewed (de)",
   );
-  assertEquals(refused.details?.[0].language, "de");
-  assertEquals(
+  expect(refused.details?.[0].language).toBe("de");
+  expect(
     (await service.getString(ANONYMOUS, { id: exit, language: "de" })).translation?.value,
-    "Verlassen",
-  );
+  ).toBe("Verlassen");
 
   const result = await service.renameKey(admin, upload.renameSuggestions[0]);
-  assertEquals(result.renamed, [{ file: "common.json", from: "menu.play", to: "menu.start" }]);
+  expect(result.renamed).toStrictEqual([
+    { file: "common.json", from: "menu.play", to: "menu.start" },
+  ]);
   const { translation } = await service.getString(ANONYMOUS, { id: start, language: "de" });
-  assertEquals([translation?.value, translation?.colour], ["Spielen", "blue"]);
+  expect([translation?.value, translation?.colour]).toStrictEqual(["Spielen", "blue"]);
   const history = await service.getHistory(ANONYMOUS, { id: start, language: "de" });
   const replaced = history.entries.find((entry) => entry.event === "translation_deleted");
-  assertEquals(replaced?.actor.type, "user");
-  assertEquals(replaced?.afterColour, null);
-  assertEquals(replaced?.detail?.reason, "rename");
+  expect(replaced?.actor.type).toBe("user");
+  expect(replaced?.afterColour).toBe(null);
+  expect(replaced?.detail?.reason).toBe("rename");
   assert(
     history.entries.some((entry) => entry.event === "translation_saved"),
     "the old history",
   );
-  assertEquals(count(instance.sql, "translations", `string_id = ${start}`), 1);
+  expect(count(instance.sql, "translations", `string_id = ${start}`)).toBe(1);
 });
 
 test("upload --rename after the LLM translated the new key: the old key's translation wins too", async () => {
@@ -585,19 +579,16 @@ test("upload --rename after the LLM translated the new key: the old key's transl
       renames: [{ from: "play", to: "start" }],
     },
   );
-  assertEquals(upload.renamed, [{ file: "a.json", from: "play", to: "start" }]);
+  expect(upload.renamed).toStrictEqual([{ file: "a.json", from: "play", to: "start" }]);
   const id = stringId(instance.sql, "a.json", "start");
   const values = instance.sql.query<{ language: string; value: string; colour: string }>(
     "SELECT language, value, colour FROM translations WHERE string_id = ? ORDER BY language",
     id,
   );
-  assertEquals(
-    values.map((row) => ({ ...row })),
-    [
-      { language: "de", value: '"Spielen"', colour: "blue" },
-      { language: "fr", value: '"Jouer"', colour: "green" },
-    ],
-  );
+  expect(values.map((row) => ({ ...row }))).toStrictEqual([
+    { language: "de", value: '"Spielen"', colour: "blue" },
+    { language: "fr", value: '"Jouer"', colour: "green" },
+  ]);
 });
 
 test("renameKey moves translations and history, as upload --rename does (S10.1)", async () => {
@@ -606,33 +597,32 @@ test("renameKey moves translations and history, as upload --rename does (S10.1)"
   write(instance, "common.json", "menu.play", "de", "Spielen");
   const renamedEnglish = { ...COMMON, menu: { start: "Play", quit: "Quit" } };
   const upload = await uploadJson(service, { "common.json": renamedEnglish });
-  assertEquals(upload.renameSuggestions, [
+  expect(upload.renameSuggestions).toStrictEqual([
     { file: "common.json", from: "menu.play", to: "menu.start" },
   ]);
   const revision = getRevision(instance.sql);
   const result = await service.renameKey(admin, upload.renameSuggestions[0]);
-  assertEquals(result, {
+  expect(result).toStrictEqual({
     renamed: [{ file: "common.json", from: "menu.play", to: "menu.start" }],
     revision: revision + 1,
   });
   const id = stringId(instance.sql, "common.json", "menu.start");
   const detail = await service.getString(ANONYMOUS, { id, language: "de" });
-  assertEquals(detail.translation?.value, "Spielen");
+  expect(detail.translation?.value).toBe("Spielen");
   const history = await service.getHistory(ANONYMOUS, { id });
-  assertEquals(history.entries[0].event, "source_renamed");
-  assertEquals(history.entries[0].actor.type, "user");
-  assertEquals(
+  expect(history.entries[0].event).toBe("source_renamed");
+  expect(history.entries[0].actor.type).toBe("user");
+  expect(
     history.entries.map((entry) => entry.event).includes("translation_llm"),
-    true,
     "the old key's history follows",
-  );
+  ).toBe(true);
   const [item] = (await service.getActivity(ANONYMOUS, {})).items;
-  assertEquals(item.type, "rename");
-  assertEquals(item.summary, "Renamed menu.play to menu.start in common.json");
+  expect(item.type).toBe("rename");
+  expect(item.summary).toBe("Renamed menu.play to menu.start in common.json");
 
   // Again: already made, nothing changes.
   const again = await service.renameKey(admin, upload.renameSuggestions[0]);
-  assertEquals(again, { renamed: [], revision: revision + 1 });
+  expect(again).toStrictEqual({ renamed: [], revision: revision + 1 });
 
   await rejects(
     service.renameKey(admin, { file: "common.json", from: "menu.quit", to: "menu.start" }),

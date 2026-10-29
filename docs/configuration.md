@@ -10,7 +10,7 @@ server variables. Restart the server after changing its environment. For Docker 
 `docker compose up -d` to apply changes to `.env`; `docker compose restart` does not load a changed
 environment.
 
-In the tables, **Docker** also includes a local binary or development server. **Both** means local
+In the tables, **Docker** also includes a server run with Node from a checkout, or the development server. **Both** means local
 storage and Cloudflare; on Cloudflare set credentials as Worker secrets, and the Worker passes them
 to the server in the container. Do not put secrets in git. See [Docker](deploy-docker.md) and
 [Cloudflare](deploy-cloudflare.md) setup.

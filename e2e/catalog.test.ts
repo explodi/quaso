@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
-import { assert, assertEquals } from "@std/assert";
+import { assert, expect } from "vitest";
+
 import { browserTest, openTab, press, waitFor } from "./_setup.ts";
 
 browserTest("catalog controls have comfortable touch targets", {}, async ({ server, browser }) => {
@@ -18,12 +19,11 @@ browserTest("catalog controls have comfortable touch targets", {}, async ({ serv
         height: control.offsetHeight,
       }));
   });
-  assertEquals(undersized, []);
-  assertEquals(
+  expect(undersized).toStrictEqual([]);
+  expect(
     await page.$eval(".field .select", (node) => node.getBoundingClientRect().height),
-    await page.$eval(".field .input", (node) => node.getBoundingClientRect().height),
-  );
-  assertEquals(problems, []);
+  ).toStrictEqual(await page.$eval(".field .input", (node) => node.getBoundingClientRect().height));
+  expect(problems).toStrictEqual([]);
 });
 
 browserTest(
@@ -37,12 +37,11 @@ browserTest(
         if (/\/(api\/|config.json)/.test(request.url())) apiRequests.push(request.url());
       });
     });
-    assertEquals(await page.title(), "Design system · Quaso");
+    expect(await page.title()).toBe("Design system · Quaso");
     assert(await page.evaluate(() => document.fonts.check('400 32px "Jersey 25"')));
     await page.click('[role="switch"][aria-label="Dark mode"]');
-    assertEquals(await page.evaluate(() => document.documentElement.dataset.theme), "dark");
-    assertEquals(
-      await page.evaluate(() => getComputedStyle(document.body).backgroundColor),
+    expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe("dark");
+    expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe(
       "rgb(38, 18, 48)",
     );
     await page.reload({ waitUntil: "networkidle0" });
@@ -50,9 +49,11 @@ browserTest(
       await page.$eval('[aria-label="Dark mode"]', (node) => (node as HTMLInputElement).checked),
     );
     await page.click('[role="switch"][aria-label="Dark mode"]');
-    assertEquals(await page.evaluate(() => document.documentElement.dataset.theme), "light");
-    assertEquals(apiRequests, []);
-    assertEquals(problems, []);
+    expect(await page.evaluate(() => document.documentElement.dataset.theme)).toStrictEqual(
+      "light",
+    );
+    expect(apiRequests).toStrictEqual([]);
+    expect(problems).toStrictEqual([]);
   },
 );
 
@@ -71,8 +72,7 @@ browserTest(
     );
     await page.focus('[role="tab"]');
     await press(page, "ArrowRight");
-    assertEquals(
-      await page.$eval('[role="tab"][aria-selected="true"]', (node) => node.textContent),
+    expect(await page.$eval('[role="tab"][aria-selected="true"]', (node) => node.textContent)).toBe(
       "Context",
     );
     await page.evaluate(() =>
@@ -83,8 +83,7 @@ browserTest(
     await press(page, "Enter");
     await waitFor(page, () => Boolean(document.querySelector("dialog[open]")));
     await press(page, "Escape");
-    assertEquals(
-      await page.evaluate(() => document.activeElement?.textContent),
+    expect(await page.evaluate(() => document.activeElement?.textContent)).toStrictEqual(
       "Open example dialog",
     );
     await page.type('textarea[aria-label="German translation"]', " Willkommen.");
@@ -95,15 +94,13 @@ browserTest(
     );
     await press(page, "Enter");
     await waitFor(page, () => document.querySelector(".catalog-workspace .badge-blue") !== null);
-    assertEquals(
+    expect(
       await page.$eval(".catalog-workspace .textarea", (node) => getComputedStyle(node).transform),
-      "none",
-    );
-    assertEquals(
+    ).toBe("none");
+    expect(
       await page.$eval(".tree-selected > .tree-row", (node) => getComputedStyle(node).boxShadow),
-      "none",
-    );
-    assertEquals(problems, []);
+    ).toBe("none");
+    expect(problems).toStrictEqual([]);
   },
 );
 
@@ -131,6 +128,6 @@ browserTest(
       await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
       "Enlarged text should not scroll horizontally",
     );
-    assertEquals(problems, []);
+    expect(problems).toStrictEqual([]);
   },
 );

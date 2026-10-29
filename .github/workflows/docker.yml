@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
-# Every push to main: builds the official image (deploy/Dockerfile, the `deno compile`
-# binary on distroless), runs the Docker smoke test against the amd64 build, and only then
+# Every push to main: builds the official image (deploy/Dockerfile, the server on
+# distroless Node), runs the Docker smoke test against the amd64 build, and only then
 # pushes it for amd64 and arm64 to Docker Hub as <image>:latest and <image>:sha-<commit>.
 # Pull requests build and test the image without pushing it.
 #
@@ -33,10 +33,11 @@ jobs:
       PUBLISH: ${{ github.event_name == 'push' && secrets.DOCKERHUB_TOKEN != '' }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          deno-version-file: .dvmrc
-      - run: deno install --frozen-lockfile
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
       - name: Build the amd64 image to test
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
@@ -49,7 +50,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Smoke test (acceptance test 1) on the image
-        run: deno run -A scripts/docker_smoke.ts --image quaso:candidate
+        run: node scripts/docker_smoke.ts --image quaso:candidate
       - id: version
         name: The image reports the version in package.json
         run: |

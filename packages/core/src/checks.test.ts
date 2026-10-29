@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assert, assertEquals, assertFalse, assertThrows } from "@std/assert";
+import { assert, expect, test } from "vitest";
 import {
   type CheckInput,
   type CheckResult,
@@ -68,10 +67,10 @@ const RUSSIAN: PluralForms = {
 };
 
 test("acceptance test 9: a Polish form that drops {{count}} is refused", () => {
-  assertEquals(plural("pl", COINS, POLISH), []);
+  expect(plural("pl", COINS, POLISH)).toStrictEqual([]);
   for (const form of ["few", "many", "other"] as const) {
     const results = plural("pl", COINS, { ...POLISH, [form]: "Kilka monet" });
-    assertEquals(results, [
+    expect(results).toStrictEqual([
       {
         check: "placeholder_missing",
         severity: "error",
@@ -85,12 +84,12 @@ test("acceptance test 9: a Polish form that drops {{count}} is refused", () => {
 });
 
 test("acceptance test 9: Polish one covers only 1, so it may leave out {{count}}", () => {
-  assertEquals(plural("pl", COINS, { ...POLISH, one: "Jedna moneta" }), []);
+  expect(plural("pl", COINS, { ...POLISH, one: "Jedna moneta" })).toStrictEqual([]);
 });
 
 test("acceptance test 9: Russian one covers 1, 21, 31, …, so it keeps {{count}}", () => {
-  assertEquals(plural("ru", COINS, RUSSIAN), []);
-  assertEquals(plural("ru", COINS, { ...RUSSIAN, one: "Одна монета" }), [
+  expect(plural("ru", COINS, RUSSIAN)).toStrictEqual([]);
+  expect(plural("ru", COINS, { ...RUSSIAN, one: "Одна монета" })).toStrictEqual([
     {
       check: "placeholder_missing",
       severity: "error",
@@ -103,7 +102,7 @@ test("acceptance test 9: Russian one covers 1, 21, 31, …, so it keeps {{count}
 
 test("acceptance test 9: a text translation that drops {{count}} is refused", () => {
   const results = text("You have {{count}} coins", "Du hast Münzen");
-  assertEquals(results, [
+  expect(results).toStrictEqual([
     {
       check: "placeholder_missing",
       severity: "error",
@@ -112,16 +111,20 @@ test("acceptance test 9: a text translation that drops {{count}} is refused", ()
     },
   ]);
   assert(hasErrors(results));
-  assertEquals(text("You have {{count}} coins", "Du hast {{count}} Münzen"), []);
+  expect(text("You have {{count}} coins", "Du hast {{count}} Münzen")).toStrictEqual([]);
 });
 
 test("{{count}}: only categories that cover exactly one number may leave it out", () => {
   // French one covers 0, 1 and 1.5; Japanese other covers every number.
   const french = { one: "Une pièce", many: "{{count}} pièces", other: "{{count}} pièces" };
-  assertEquals(summary(plural("fr", COINS, french)), ["placeholder_missing:one"]);
-  assertEquals(summary(plural("ja", COINS, { other: "コイン" })), ["placeholder_missing:other"]);
+  expect(summary(plural("fr", COINS, french))).toStrictEqual(["placeholder_missing:one"]);
+  expect(summary(plural("ja", COINS, { other: "コイン" }))).toStrictEqual([
+    "placeholder_missing:other",
+  ]);
   // English one covers only 1 (1.5 is other).
-  assertEquals(plural("en-GB", COINS, { one: "One coin", other: "{{count}} gold coins" }), []);
+  expect(plural("en-GB", COINS, { one: "One coin", other: "{{count}} gold coins" })).toStrictEqual(
+    [],
+  );
   // Arabic zero, one and two cover one number each; few, many and other don't.
   const arabic = {
     zero: "لا عملات",
@@ -131,8 +134,8 @@ test("{{count}}: only categories that cover exactly one number may leave it out"
     many: "{{count}} عملة",
     other: "{{count}} عملة",
   };
-  assertEquals(plural("ar", COINS, arabic), []);
-  assertEquals(summary(plural("ar", COINS, { ...arabic, few: "عملات" })), [
+  expect(plural("ar", COINS, arabic)).toStrictEqual([]);
+  expect(summary(plural("ar", COINS, { ...arabic, few: "عملات" }))).toStrictEqual([
     "placeholder_missing:few",
   ]);
   // Welsh few is only 3 and many only 6.
@@ -144,8 +147,8 @@ test("{{count}}: only categories that cover exactly one number may leave it out"
     many: "Chwe darn",
     other: "{{count}} darn",
   };
-  assertEquals(plural("cy", COINS, welsh), []);
-  assertEquals(summary(plural("cy", COINS, { ...welsh, other: "Darnau" })), [
+  expect(plural("cy", COINS, welsh)).toStrictEqual([]);
+  expect(summary(plural("cy", COINS, { ...welsh, other: "Darnau" }))).toStrictEqual([
     "placeholder_missing:other",
   ]);
 });
@@ -158,9 +161,9 @@ test("{{count}}: any placeholder named count, and only that name", () => {
     many: "{{count, number}} monet",
     other: "{{count, number}} monety",
   };
-  assertEquals(plural("pl", formatted, polish), []);
+  expect(plural("pl", formatted, polish)).toStrictEqual([]);
   const unescaped = { one: "{{- count}} coin", other: "{{- count}} coins" };
-  assertEquals(plural("pl", unescaped, { ...polish, few: "{{- count}} monety" }), [
+  expect(plural("pl", unescaped, { ...polish, few: "{{- count}} monety" })).toStrictEqual([
     {
       check: "placeholder_missing",
       severity: "error",
@@ -198,7 +201,7 @@ test("{{count}}: any placeholder named count, and only that name", () => {
     many: "{{name}} ma {{count}} monet",
     other: "{{name}} ma {{count}} monety",
   });
-  assertEquals(messages(results), ["Placeholder {{name}} is missing from the one form."]);
+  expect(messages(results)).toStrictEqual(["Placeholder {{name}} is missing from the one form."]);
   // A placeholder called Count is not count.
   const capital = { one: "{{Count}} coin", other: "{{Count}} coins" };
   const withoutCapital = {
@@ -207,11 +210,11 @@ test("{{count}}: any placeholder named count, and only that name", () => {
     many: "{{Count}}",
     other: "{{Count}}",
   };
-  assertEquals(summary(plural("pl", capital, withoutCapital)), ["placeholder_missing:one"]);
+  expect(summary(plural("pl", capital, withoutCapital))).toStrictEqual(["placeholder_missing:one"]);
 });
 
 test("invalid_value: forms for a text string and text for a plural", () => {
-  assertEquals(text("Play", { other: "Spielen" }), [
+  expect(text("Play", { other: "Spielen" })).toStrictEqual([
     {
       check: "invalid_value",
       severity: "error",
@@ -225,15 +228,15 @@ test("invalid_value: forms for a text string and text for a plural", () => {
       message: "Plural forms are expected.",
     },
   ];
-  assertEquals(plural("pl", COINS, "{{count}} monet"), expected);
-  assertEquals(ordinal("en", COINS, "{{count}}th"), expected);
-  assertEquals(plural("pl", COINS, null as unknown as TextValue), expected);
-  assertEquals(plural("pl", COINS, ["{{count}}"] as unknown as TextValue), expected);
+  expect(plural("pl", COINS, "{{count}} monet")).toStrictEqual(expected);
+  expect(ordinal("en", COINS, "{{count}}th")).toStrictEqual(expected);
+  expect(plural("pl", COINS, null as unknown as TextValue)).toStrictEqual(expected);
+  expect(plural("pl", COINS, ["{{count}}"] as unknown as TextValue)).toStrictEqual(expected);
 });
 
 test("invalid_value: a form that isn't text", () => {
   const forms = { ...POLISH, few: 3 } as unknown as PluralForms;
-  assertEquals(plural("pl", COINS, forms), [
+  expect(plural("pl", COINS, forms)).toStrictEqual([
     {
       check: "invalid_value",
       severity: "error",
@@ -246,15 +249,15 @@ test("invalid_value: a form that isn't text", () => {
 test("empty: empty text, white space and line breaks", () => {
   const expected = [{ check: "empty", severity: "error", message: "The translation is empty." }];
   for (const empty of ["", " ", "\t", "\r\n", "\n\n", "\u00a0", "\u3000", " \u2003 "]) {
-    assertEquals(text("Play", empty), expected, JSON.stringify(empty));
+    expect(text("Play", empty), JSON.stringify(empty)).toStrictEqual(expected);
   }
-  assertEquals(text("Play", "\u200b"), [], "a zero-width space isn't white space");
+  expect(text("Play", "\u200b"), "a zero-width space isn't white space").toStrictEqual([]);
 });
 
 test("empty: an empty value is reported once, without other checks", () => {
   const english = "{{count}} coins, $t(common:back), 3 left";
-  assertEquals(summary(text(english, "  ", { maxLength: 1 })), ["empty"]);
-  assertEquals(plural("pl", COINS, { ...POLISH, many: " \r\n" }), [
+  expect(summary(text(english, "  ", { maxLength: 1 }))).toStrictEqual(["empty"]);
+  expect(plural("pl", COINS, { ...POLISH, many: " \r\n" })).toStrictEqual([
     {
       check: "empty",
       severity: "error",
@@ -265,7 +268,7 @@ test("empty: an empty value is reported once, without other checks", () => {
 });
 
 test("placeholder_missing: missing, or appearing less often", () => {
-  assertEquals(text("{{current}}/{{total}}", "{{current}}"), [
+  expect(text("{{current}}/{{total}}", "{{current}}")).toStrictEqual([
     {
       check: "placeholder_missing",
       severity: "error",
@@ -273,7 +276,7 @@ test("placeholder_missing: missing, or appearing less often", () => {
       value: "{{total}}",
     },
   ]);
-  assertEquals(text("{{a}} and {{a}}", "{{a}} und"), [
+  expect(text("{{a}} and {{a}}", "{{a}} und")).toStrictEqual([
     {
       check: "placeholder_missing",
       severity: "error",
@@ -281,7 +284,7 @@ test("placeholder_missing: missing, or appearing less often", () => {
       value: "{{a}}",
     },
   ]);
-  assertEquals(
+  expect(
     messages(
       plural(
         "pl",
@@ -294,20 +297,16 @@ test("placeholder_missing: missing, or appearing less often", () => {
         },
       ),
     ),
-    ["Placeholder {{a}} appears less often than in the English (few form)."],
-  );
+  ).toStrictEqual(["Placeholder {{a}} appears less often than in the English (few form)."]);
 });
 
 test("placeholder_missing: one result per placeholder, in the English order", () => {
   const results = text("{{b}} {{a}} {{b}} {{c}}", "Nichts");
-  assertEquals(
-    results.map((result) => result.value),
-    ["{{b}}", "{{a}}", "{{c}}"],
-  );
+  expect(results.map((result) => result.value)).toStrictEqual(["{{b}}", "{{a}}", "{{c}}"]);
 });
 
 test("placeholder_extra: not in the English, or more often", () => {
-  assertEquals(text("Hello {{name}}", "Hallo {{name}} {{user}}"), [
+  expect(text("Hello {{name}}", "Hallo {{name}} {{user}}")).toStrictEqual([
     {
       check: "placeholder_extra",
       severity: "error",
@@ -315,7 +314,7 @@ test("placeholder_extra: not in the English, or more often", () => {
       value: "{{user}}",
     },
   ]);
-  assertEquals(text("Hello {{name}}", "Hallo {{name}}, {{name}}"), [
+  expect(text("Hello {{name}}", "Hallo {{name}}, {{name}}")).toStrictEqual([
     {
       check: "placeholder_extra",
       severity: "error",
@@ -324,17 +323,14 @@ test("placeholder_extra: not in the English, or more often", () => {
     },
   ]);
   const results = text("Hi", "{{z}} {{y}} {{z}} {{x}}");
-  assertEquals(
-    results.map((result) => result.value),
-    ["{{z}}", "{{y}}", "{{x}}"],
-  );
+  expect(results.map((result) => result.value)).toStrictEqual(["{{z}}", "{{y}}", "{{x}}"]);
 });
 
 test("placeholders: compared by placeholderKey", () => {
-  assertEquals(text("{{count}} coins", "{{ count }} Münzen"), []);
-  assertEquals(text("{{ count , number }}", "{{count, number}} Stück"), []);
-  assertEquals(text("{{-html}} ok", "{{- html}} gut"), []);
-  assertEquals(text("{{date, datetime}}", "Am {{date}}"), [
+  expect(text("{{count}} coins", "{{ count }} Münzen")).toStrictEqual([]);
+  expect(text("{{ count , number }}", "{{count, number}} Stück")).toStrictEqual([]);
+  expect(text("{{-html}} ok", "{{- html}} gut")).toStrictEqual([]);
+  expect(text("{{date, datetime}}", "Am {{date}}")).toStrictEqual([
     {
       check: "placeholder_missing",
       severity: "error",
@@ -348,30 +344,33 @@ test("placeholders: compared by placeholderKey", () => {
       value: "{{date}}",
     },
   ]);
-  assertEquals(summary(text("{{- html}}", "{{html}}")), [
+  expect(summary(text("{{- html}}", "{{html}}"))).toStrictEqual([
     "placeholder_missing",
     "placeholder_extra",
   ]);
-  assertEquals(summary(text("{{name}}", "{{Name}}")), ["placeholder_missing", "placeholder_extra"]);
+  expect(summary(text("{{name}}", "{{Name}}"))).toStrictEqual([
+    "placeholder_missing",
+    "placeholder_extra",
+  ]);
 });
 
 test("placeholders: text that only looks like a placeholder is text", () => {
-  assertEquals(text("{{ }} and {{, x}} and {{open", "und"), []);
-  assertEquals(text("Braces {{ like this", "Klammern"), []);
-  assertEquals(text("Broken {{\nname}}", "Kaputt {{\nName}}"), []);
+  expect(text("{{ }} and {{, x}} and {{open", "und")).toStrictEqual([]);
+  expect(text("Braces {{ like this", "Klammern")).toStrictEqual([]);
+  expect(text("Broken {{\nname}}", "Kaputt {{\nName}}")).toStrictEqual([]);
 });
 
 test("placeholders: those i18next doesn't fill in don't count as the English ones", () => {
   // Regression: "{{ - html }}" was taken for "{{- html}}", which i18next doesn't unescape.
   for (const translation of ["Hallo {{ - html }}!", "Hallo {{ -html}}!"]) {
-    assertEquals(summary(text("Hi {{- html}}!", translation)), [
+    expect(summary(text("Hi {{- html}}!", translation))).toStrictEqual([
       "placeholder_missing",
       "placeholder_extra",
     ]);
   }
-  assertEquals(text("Hi {{- html}}!", "Hallo {{-html}}!"), []);
+  expect(text("Hi {{- html}}!", "Hallo {{-html}}!")).toStrictEqual([]);
   // Regression: after an empty {{}}, i18next reads "{{}} {{count}}" as one placeholder.
-  assertEquals(text("You have {{count}} coins", "Du hast {{}} {{count}} Münzen"), [
+  expect(text("You have {{count}} coins", "Du hast {{}} {{count}} Münzen")).toStrictEqual([
     {
       check: "placeholder_missing",
       severity: "error",
@@ -387,7 +386,7 @@ test("placeholders: those i18next doesn't fill in don't count as the English one
   ]);
   // Regression: a placeholder can't span lines.
   for (const translation of ["Du hast {{\ncount\n}} Münzen", "Du hast {{count\r\n}} Münzen"]) {
-    assertEquals(summary(text("You have {{count}} coins", translation)), [
+    expect(summary(text("You have {{count}} coins", translation))).toStrictEqual([
       "placeholder_missing",
       "whitespace",
     ]);
@@ -396,17 +395,18 @@ test("placeholders: those i18next doesn't fill in don't count as the English one
 
 test("placeholders: formats compare as i18next reads them", () => {
   // Regression: format names are case-insensitive and options are trimmed in i18next.
-  assertEquals(text("Total: {{val, number}}", "Summe: {{val, Number}}"), []);
-  assertEquals(
+  expect(text("Total: {{val, number}}", "Summe: {{val, Number}}")).toStrictEqual([]);
+  expect(
     text(
       "{{val, number(minimumFractionDigits: 2)}} left",
       "{{val, number(minimumFractionDigits:2)}} übrig",
     ),
+  ).toStrictEqual([]);
+  expect(text("{{val, number, uppercase}} left", "{{val, number,uppercase}} übrig")).toStrictEqual(
     [],
   );
-  assertEquals(text("{{val, number, uppercase}} left", "{{val, number,uppercase}} übrig"), []);
   // Messages show the normalized placeholder.
-  assertEquals(messages(text("{{val, number}} left", "{{val, Currency( EUR )}} übrig")), [
+  expect(messages(text("{{val, number}} left", "{{val, Currency( EUR )}} übrig"))).toStrictEqual([
     "Placeholder {{val, number}} is missing.",
     "Placeholder {{val, currency(EUR)}} isn't in the English.",
   ]);
@@ -414,8 +414,8 @@ test("placeholders: formats compare as i18next reads them", () => {
 
 test("placeholders: those in a reference's options belong to the reference", () => {
   const english = 'You have $t(coins, {"count": {{n}}})';
-  assertEquals(text(english, 'Du hast $t(coins, {"count": {{n}}})'), []);
-  assertEquals(text(english, "Du hast {{n}}"), [
+  expect(text(english, 'Du hast $t(coins, {"count": {{n}}})')).toStrictEqual([]);
+  expect(text(english, "Du hast {{n}}")).toStrictEqual([
     {
       check: "placeholder_extra",
       severity: "error",
@@ -433,54 +433,52 @@ test("placeholders: those in a reference's options belong to the reference", () 
 
 test("placeholders: a placeholder of any English form may appear in any form", () => {
   const english = { one: "{{name}} has one coin", other: "{{count}} coins" };
-  assertEquals(
+  expect(
     plural("pl", english, {
       one: "{{name}} ma jedną monetę",
       few: "{{name}} ma {{count}} monety",
       many: "{{count}} monet",
       other: "{{count}} monety",
     }),
-    [],
-  );
-  assertEquals(
+  ).toStrictEqual([]);
+  expect(
     plural("pl", english, {
       one: "Jedna",
       few: "{{count}} {{count}}",
       many: "{{count}} {{name}} {{name}}",
       other: "{{count}} {{total}}",
     }),
-    [
-      {
-        check: "placeholder_extra",
-        severity: "error",
-        message: "Placeholder {{count}} appears more often than in the English (few form).",
-        form: "few",
-        value: "{{count}}",
-      },
-      {
-        check: "placeholder_extra",
-        severity: "error",
-        message: "Placeholder {{name}} appears more often than in the English (many form).",
-        form: "many",
-        value: "{{name}}",
-      },
-      {
-        check: "placeholder_extra",
-        severity: "error",
-        message: "Placeholder {{total}} isn't in the English (other form).",
-        form: "other",
-        value: "{{total}}",
-      },
-    ],
-  );
+  ).toStrictEqual([
+    {
+      check: "placeholder_extra",
+      severity: "error",
+      message: "Placeholder {{count}} appears more often than in the English (few form).",
+      form: "few",
+      value: "{{count}}",
+    },
+    {
+      check: "placeholder_extra",
+      severity: "error",
+      message: "Placeholder {{name}} appears more often than in the English (many form).",
+      form: "many",
+      value: "{{name}}",
+    },
+    {
+      check: "placeholder_extra",
+      severity: "error",
+      message: "Placeholder {{total}} isn't in the English (other form).",
+      form: "other",
+      value: "{{total}}",
+    },
+  ]);
 });
 
 test("placeholders: Unicode names, emoji and surrogate pairs", () => {
-  assertEquals(text("Hello {{名前}}", "こんにちは{{名前}}さん"), []);
-  assertEquals(text("{{😀}} 👍", "👍{{😀}}👍"), []);
-  assertEquals(messages(text("{{😀}} 👍", "👍")), ["Placeholder {{😀}} is missing."]);
+  expect(text("Hello {{名前}}", "こんにちは{{名前}}さん")).toStrictEqual([]);
+  expect(text("{{😀}} 👍", "👍{{😀}}👍")).toStrictEqual([]);
+  expect(messages(text("{{😀}} 👍", "👍"))).toStrictEqual(["Placeholder {{😀}} is missing."]);
   // A placeholder name in NFD is a different variable from the same name in NFC.
-  assertEquals(summary(text("{{café}}", "{{cafe\u0301}}")), [
+  expect(summary(text("{{café}}", "{{cafe\u0301}}"))).toStrictEqual([
     "placeholder_missing",
     "placeholder_extra",
   ]);
@@ -488,8 +486,10 @@ test("placeholders: Unicode names, emoji and surrogate pairs", () => {
 
 test("custom interpolation syntax", () => {
   const syntax = { prefix: "__", suffix: "__" };
-  assertEquals(text("You have __count__ coins", "Du hast __count__ Münzen", { syntax }), []);
-  assertEquals(text("You have __count__ coins", "Du hast Münzen", { syntax }), [
+  expect(text("You have __count__ coins", "Du hast __count__ Münzen", { syntax })).toStrictEqual(
+    [],
+  );
+  expect(text("You have __count__ coins", "Du hast Münzen", { syntax })).toStrictEqual([
     {
       check: "placeholder_missing",
       severity: "error",
@@ -498,22 +498,21 @@ test("custom interpolation syntax", () => {
     },
   ]);
   // {{count}} is plain text in this syntax.
-  assertEquals(text("{{count}} coins", "Münzen", { syntax }), []);
-  assertEquals(text("__ count __ coins", "__count__ Münzen", { syntax }), []);
+  expect(text("{{count}} coins", "Münzen", { syntax })).toStrictEqual([]);
+  expect(text("__ count __ coins", "__count__ Münzen", { syntax })).toStrictEqual([]);
 
   const icu = { prefix: "{", suffix: "}" };
-  assertEquals(messages(text("Hi {name}", "Hallo {name} {- extra, uppercase}", { syntax: icu })), [
-    "Placeholder {- extra, uppercase} isn't in the English.",
-  ]);
-  assertEquals(
-    text("Hi {name}", "Hallo {name} {- extra}", { syntax: icu })[0].value,
+  expect(
+    messages(text("Hi {name}", "Hallo {name} {- extra, uppercase}", { syntax: icu })),
+  ).toStrictEqual(["Placeholder {- extra, uppercase} isn't in the English."]);
+  expect(text("Hi {name}", "Hallo {name} {- extra}", { syntax: icu })[0].value).toStrictEqual(
     "{{- extra}}",
   );
 
   const english = { one: "%{count} coin", other: "%{count} coins" };
   const percent = { syntax: { prefix: "%{", suffix: "}" } };
   const polish = { one: "Jedna moneta", few: "monety", many: "%{count} monet", other: "%{count}" };
-  assertEquals(plural("pl", english, polish, percent), [
+  expect(plural("pl", english, polish, percent)).toStrictEqual([
     {
       check: "placeholder_missing",
       severity: "error",
@@ -525,7 +524,7 @@ test("custom interpolation syntax", () => {
 });
 
 test("reference_missing: missing, or appearing less often", () => {
-  assertEquals(text("$t(common:back) to the menu", "Zum Menü"), [
+  expect(text("$t(common:back) to the menu", "Zum Menü")).toStrictEqual([
     {
       check: "reference_missing",
       severity: "error",
@@ -533,7 +532,7 @@ test("reference_missing: missing, or appearing less often", () => {
       value: "$t(common:back)",
     },
   ]);
-  assertEquals(text("$t(a) or $t(a)", "$t(a)"), [
+  expect(text("$t(a) or $t(a)", "$t(a)")).toStrictEqual([
     {
       check: "reference_missing",
       severity: "error",
@@ -542,11 +541,11 @@ test("reference_missing: missing, or appearing less often", () => {
     },
   ]);
   // References may move.
-  assertEquals(text("$t(a) then $t(b)", "$t(b), dann $t(a)"), []);
+  expect(text("$t(a) then $t(b)", "$t(b), dann $t(a)")).toStrictEqual([]);
 });
 
 test("reference_extra: changed or repeated", () => {
-  assertEquals(text("Press $t(keys.jump)", "Drücke $t(keys.run)"), [
+  expect(text("Press $t(keys.jump)", "Drücke $t(keys.run)")).toStrictEqual([
     {
       check: "reference_missing",
       severity: "error",
@@ -560,7 +559,7 @@ test("reference_extra: changed or repeated", () => {
       value: "$t(keys.run)",
     },
   ]);
-  assertEquals(text("Press $t(a)", "$t(a) $t(a)"), [
+  expect(text("Press $t(a)", "$t(a) $t(a)")).toStrictEqual([
     {
       check: "reference_extra",
       severity: "error",
@@ -571,19 +570,22 @@ test("reference_extra: changed or repeated", () => {
 });
 
 test("references: compared by their raw text", () => {
-  assertEquals(summary(text("$t(a)", "$t( a )")), ["reference_missing", "reference_extra"]);
+  expect(summary(text("$t(a)", "$t( a )"))).toStrictEqual(["reference_missing", "reference_extra"]);
   const english = '$t(coins, {"count": {{n}}})';
-  assertEquals(summary(text(english, '$t(coins, { "count": {{n}} })')), [
+  expect(summary(text(english, '$t(coins, { "count": {{n}} })'))).toStrictEqual([
     "reference_missing",
     "reference_extra",
   ]);
-  assertEquals(summary(text("$t(ns:key)", "$t(key)")), ["reference_missing", "reference_extra"]);
+  expect(summary(text("$t(ns:key)", "$t(key)"))).toStrictEqual([
+    "reference_missing",
+    "reference_extra",
+  ]);
   // `$t(` without its `)` is text.
-  assertEquals(text("Costs $t(", "Kostet"), []);
+  expect(text("Costs $t(", "Kostet")).toStrictEqual([]);
 });
 
 test("references: masked references left in the translation are extra", () => {
-  assertEquals(text("Press $t(a)", "Drücke $t(a) ⟦2⟧"), [
+  expect(text("Press $t(a)", "Drücke $t(a) ⟦2⟧")).toStrictEqual([
     {
       check: "reference_extra",
       severity: "error",
@@ -592,28 +594,25 @@ test("references: masked references left in the translation are extra", () => {
     },
   ]);
   // A translation that was never unmasked.
-  assertEquals(summary(text("Press $t(a)", "Drücke ⟦1⟧")), [
+  expect(summary(text("Press $t(a)", "Drücke ⟦1⟧"))).toStrictEqual([
     "reference_missing",
     "reference_extra",
   ]);
   // Brackets without a number are text, and an English that has the text keeps it.
-  assertEquals(text("Press ⟦x⟧", "Drücke ⟦x⟧"), []);
-  assertEquals(text("Slot ⟦1⟧", "Platz ⟦1⟧"), []);
+  expect(text("Press ⟦x⟧", "Drücke ⟦x⟧")).toStrictEqual([]);
+  expect(text("Slot ⟦1⟧", "Platz ⟦1⟧")).toStrictEqual([]);
 });
 
 test("references: an LLM result, unmasked, then checked", () => {
   const english = "$t(common:back) or $t(common:next), then {{count}} more";
   const { text: masked, references } = maskReferences(english);
-  assertEquals(masked, "⟦1⟧ or ⟦2⟧, then {{count}} more");
+  expect(masked).toBe("⟦1⟧ or ⟦2⟧, then {{count}} more");
   const good = unmaskReferences("⟦2⟧ oder ⟦1⟧, dann {{count}} mehr", references);
-  assertEquals(text(english, good), []);
+  expect(text(english, good)).toStrictEqual([]);
   const repeated = unmaskReferences("⟦1⟧ ⟦1⟧ dann {{count}}", references);
-  assertEquals(summary(text(english, repeated)), ["reference_missing", "reference_extra"]);
+  expect(summary(text(english, repeated))).toStrictEqual(["reference_missing", "reference_extra"]);
   const invented = unmaskReferences("⟦1⟧ ⟦2⟧ ⟦3⟧ {{count}} mehr", references);
-  assertEquals(
-    text(english, invented).map((result) => result.value),
-    ["⟦3⟧"],
-  );
+  expect(text(english, invented).map((result) => result.value)).toStrictEqual(["⟦3⟧"]);
 });
 
 test("references: plural forms are compared with English other", () => {
@@ -624,7 +623,7 @@ test("references: plural forms are compared with English other", () => {
     many: "$t(icon) {{count}} monet",
     other: "$t(icon) $t(icon) {{count}} monety",
   };
-  assertEquals(plural("pl", english, polish), [
+  expect(plural("pl", english, polish)).toStrictEqual([
     {
       check: "reference_missing",
       severity: "error",
@@ -650,13 +649,13 @@ test("references: plural forms are compared with English other", () => {
       other: "$t(a) $t(a)",
     },
   );
-  assertEquals(messages(fewer), [
+  expect(messages(fewer)).toStrictEqual([
     "Reference $t(a) appears less often than in the English (many form).",
   ]);
 });
 
 test("max_length: grapheme clusters, placeholders and references included", () => {
-  assertEquals(text("Play", "Spielen", { maxLength: 4 }), [
+  expect(text("Play", "Spielen", { maxLength: 4 })).toStrictEqual([
     {
       check: "max_length",
       severity: "error",
@@ -665,19 +664,21 @@ test("max_length: grapheme clusters, placeholders and references included", () =
       length: 7,
     },
   ]);
-  assertEquals(text("Play", "Spielen", { maxLength: 7 }), []);
-  assertEquals(text("Play", "Spielen", { maxLength: null }), []);
-  assertEquals(text("Play", "Spielen", { maxLength: undefined }), []);
-  assertEquals(messages(text("Play", "Go", { maxLength: 1 })), [
+  expect(text("Play", "Spielen", { maxLength: 7 })).toStrictEqual([]);
+  expect(text("Play", "Spielen", { maxLength: null })).toStrictEqual([]);
+  expect(text("Play", "Spielen", { maxLength: undefined })).toStrictEqual([]);
+  expect(messages(text("Play", "Go", { maxLength: 1 }))).toStrictEqual([
     "At most 1 character; this has 2.",
   ]);
-  assertEquals(messages(text("Play", "Go", { maxLength: 0 })), [
+  expect(messages(text("Play", "Go", { maxLength: 0 }))).toStrictEqual([
     "At most 0 characters; this has 2.",
   ]);
   // "{{count}} Münzen" is 16 characters; "$t(a) Ja" is 8.
-  assertEquals(text("{{count}} coins", "{{count}} Münzen", { maxLength: 16 }), []);
-  assertEquals(text("{{count}} coins", "{{count}} Münzen", { maxLength: 15 })[0].length, 16);
-  assertEquals(text("$t(a) Yes", "$t(a) Ja", { maxLength: 7 })[0].length, 8);
+  expect(text("{{count}} coins", "{{count}} Münzen", { maxLength: 16 })).toStrictEqual([]);
+  expect(text("{{count}} coins", "{{count}} Münzen", { maxLength: 15 })[0].length).toStrictEqual(
+    16,
+  );
+  expect(text("$t(a) Yes", "$t(a) Ja", { maxLength: 7 })[0].length).toBe(8);
 });
 
 test("max_length: emoji, flags, combining marks and CRLF count as one", () => {
@@ -692,25 +693,21 @@ test("max_length: emoji, flags, combining marks and CRLF count as one", () => {
     ["Hello\nthere", "One\nTwo", 7],
   ];
   for (const [english, translation, length] of cases) {
-    assertEquals(text(english, translation, { maxLength: length }), [], translation);
-    assertEquals(
-      text(english, translation, { maxLength: length - 1 }),
-      [
-        {
-          check: "max_length",
-          severity: "error",
-          message: `At most ${length - 1} character${length === 2 ? "" : "s"}; this has ${length}.`,
-          limit: length - 1,
-          length,
-        },
-      ],
-      translation,
-    );
+    expect(text(english, translation, { maxLength: length }), translation).toStrictEqual([]);
+    expect(text(english, translation, { maxLength: length - 1 }), translation).toStrictEqual([
+      {
+        check: "max_length",
+        severity: "error",
+        message: `At most ${length - 1} character${length === 2 ? "" : "s"}; this has ${length}.`,
+        limit: length - 1,
+        length,
+      },
+    ]);
   }
 });
 
 test("max_length: every form is checked", () => {
-  assertEquals(plural("pl", COINS, POLISH, { maxLength: 15 }), [
+  expect(plural("pl", COINS, POLISH, { maxLength: 15 })).toStrictEqual([
     {
       check: "max_length",
       severity: "error",
@@ -740,31 +737,33 @@ test("max_length: every form is checked", () => {
 
 test("identical: a warning when the English has letters", () => {
   const results = text("Options", "Options");
-  assertEquals(results, [
+  expect(results).toStrictEqual([
     {
       check: "identical",
       severity: "warning",
       message: "Identical to the English.",
     },
   ]);
-  assertFalse(hasErrors(results));
-  assertEquals(summary(text("OK", "OK")), ["identical"]);
-  assertEquals(summary(text("東京", "東京", { language: "ja" })), ["identical"]);
-  assertEquals(summary(text("{{name}}: OK", "{{name}}: OK")), ["identical"]);
-  assertEquals(text("Options", "Optionen"), []);
-  assertEquals(summary(text("Options", "Options ")), ["whitespace"], "spaces make a difference");
-  assertEquals(text("A\r\nB", "A\nB"), [], "so do line endings");
+  expect(hasErrors(results)).toBeFalsy();
+  expect(summary(text("OK", "OK"))).toStrictEqual(["identical"]);
+  expect(summary(text("東京", "東京", { language: "ja" }))).toStrictEqual(["identical"]);
+  expect(summary(text("{{name}}: OK", "{{name}}: OK"))).toStrictEqual(["identical"]);
+  expect(text("Options", "Optionen")).toStrictEqual([]);
+  expect(summary(text("Options", "Options ")), "spaces make a difference").toStrictEqual([
+    "whitespace",
+  ]);
+  expect(text("A\r\nB", "A\nB"), "so do line endings").toStrictEqual([]);
 });
 
 test("identical: skipped when the English has no letters", () => {
   for (const english of ["{{current}}/{{total}}", "$t(a) / $t(b)", "2024", "{{count}} × 2", "…"]) {
-    assertEquals(text(english, english), [], english);
+    expect(text(english, english), english).toStrictEqual([]);
   }
 });
 
 test("identical: canonically equivalent text is identical", () => {
-  assertEquals(summary(text("Café", "Cafe\u0301")), ["identical"]);
-  assertEquals(summary(text("Cafe\u0301", "Café")), ["identical"]);
+  expect(summary(text("Café", "Cafe\u0301"))).toStrictEqual(["identical"]);
+  expect(summary(text("Cafe\u0301", "Café"))).toStrictEqual(["identical"]);
 });
 
 test("identical: forms compared with the same category, or other", () => {
@@ -774,7 +773,7 @@ test("identical: forms compared with the same category, or other", () => {
     many: "{{count}} coin",
     other: "{{count}} coins",
   });
-  assertEquals(results, [
+  expect(results).toStrictEqual([
     {
       check: "identical",
       severity: "warning",
@@ -795,12 +794,12 @@ test("identical: forms compared with the same category, or other", () => {
     },
   ]);
   const noLetters = { one: "{{count}}", other: "{{count}}" };
-  assertEquals(plural("ja", noLetters, { other: "{{count}}" }), []);
+  expect(plural("ja", noLetters, { other: "{{count}}" })).toStrictEqual([]);
 });
 
 test("numbers_differ: a warning naming the first number that differs", () => {
   const results = text("3 lives left", "Noch 5 Leben");
-  assertEquals(results, [
+  expect(results).toStrictEqual([
     {
       check: "numbers_differ",
       severity: "warning",
@@ -808,21 +807,21 @@ test("numbers_differ: a warning naming the first number that differs", () => {
       value: "3",
     },
   ]);
-  assertFalse(hasErrors(results));
-  assertEquals(text("Lives left", "Noch 5 Leben")[0].value, "5");
-  assertEquals(text("1 or 1", "1 oder 2")[0].value, "1");
-  assertEquals(text("1 or 2", "1, 2 oder 2")[0].value, "2");
-  assertEquals(text("Level 12", "Stufe 1 2")[0].value, "12");
+  expect(hasErrors(results)).toBeFalsy();
+  expect(text("Lives left", "Noch 5 Leben")[0].value).toBe("5");
+  expect(text("1 or 1", "1 oder 2")[0].value).toBe("1");
+  expect(text("1 or 2", "1, 2 oder 2")[0].value).toBe("2");
+  expect(text("Level 12", "Stufe 1 2")[0].value).toBe("12");
 });
 
 test("numbers_differ: order doesn't matter, values do", () => {
-  assertEquals(text("From 1 to 10", "Von 10 bis 1"), []);
-  assertEquals(text("Mission 07", "Mission 7"), []);
-  assertEquals(text("Room 0", "Raum 000"), []);
-  assertEquals(text("1,000 coins", "1.000 Münzen"), []);
-  assertEquals(text("1,000 coins", "1\u202f000 pièces", { language: "fr" }), []);
-  assertEquals(text("Version 1.5", "Version 1,5"), []);
-  assertEquals(summary(text("1,000 coins", "1000 Münzen")), ["numbers_differ"]);
+  expect(text("From 1 to 10", "Von 10 bis 1")).toStrictEqual([]);
+  expect(text("Mission 07", "Mission 7")).toStrictEqual([]);
+  expect(text("Room 0", "Raum 000")).toStrictEqual([]);
+  expect(text("1,000 coins", "1.000 Münzen")).toStrictEqual([]);
+  expect(text("1,000 coins", "1\u202f000 pièces", { language: "fr" })).toStrictEqual([]);
+  expect(text("Version 1.5", "Version 1,5")).toStrictEqual([]);
+  expect(summary(text("1,000 coins", "1000 Münzen"))).toStrictEqual(["numbers_differ"]);
 });
 
 test("numbers_differ: digits of other scripts count by their value", () => {
@@ -837,11 +836,11 @@ test("numbers_differ: digits of other scripts count by their value", () => {
     ["en", "Level 𝟹 of 𝟷𝟸"], // mathematical monospace, the last run
   ];
   for (const [language, translation] of cases) {
-    assertEquals(text("Level 3 of 12", translation, { language }), [], translation);
+    expect(text("Level 3 of 12", translation, { language }), translation).toStrictEqual([]);
   }
   // The value is the number as written: the English one that is missing, or the extra one.
-  assertEquals(text("Level 3 of 12", "المستوى ٤ من ١٢", { language: "ar" })[0].value, "3");
-  assertEquals(text("Level 12", "المستوى ٤ من ١٢", { language: "ar" })[0].value, "٤");
+  expect(text("Level 3 of 12", "المستوى ٤ من ١٢", { language: "ar" })[0].value).toBe("3");
+  expect(text("Level 12", "المستوى ٤ من ١٢", { language: "ar" })[0].value).toBe("٤");
 });
 
 test("numbers_differ: agrees with the runtime's digits in every numbering system", () => {
@@ -852,25 +851,27 @@ test("numbers_differ: agrees with the runtime's digits in every numbering system
     if (format.resolvedOptions().numberingSystem !== system) continue;
     const digits = format.format(1234567890);
     if (!/^\p{Nd}+$/u.test(digits)) continue; // Not a decimal system, such as roman.
-    assertEquals(text("Number 1234567890", `Zahl ${digits}`), [], system);
+    expect(text("Number 1234567890", `Zahl ${digits}`), system).toStrictEqual([]);
     checked++;
   }
   assert(checked >= 20, `${checked} numbering systems`);
 });
 
 test("numbers_differ: only text counts, not placeholders or references", () => {
-  assertEquals(text("{{item1}} and $t(level2)", "{{item1}} und $t(level2)"), []);
-  assertEquals(summary(text("{{count}} coins", "3 Münzen")), [
+  expect(text("{{item1}} and $t(level2)", "{{item1}} und $t(level2)")).toStrictEqual([]);
+  expect(summary(text("{{count}} coins", "3 Münzen"))).toStrictEqual([
     "placeholder_missing",
     "numbers_differ",
   ]);
-  assertEquals(summary(text("¹ note", "Hinweis")), [], "superscripts aren't decimal digits");
-  assertEquals(summary(text("Chapter Ⅳ", "Kapitel 4")), ["numbers_differ"]);
+  expect(summary(text("¹ note", "Hinweis")), "superscripts aren't decimal digits").toStrictEqual(
+    [],
+  );
+  expect(summary(text("Chapter Ⅳ", "Kapitel 4"))).toStrictEqual(["numbers_differ"]);
 });
 
 test("numbers_differ: forms compared with the same category, or other", () => {
   const english = { one: "1 coin", other: "{{count}} coins" };
-  assertEquals(plural("pl", english, { ...POLISH, one: "Jedna moneta" }), [
+  expect(plural("pl", english, { ...POLISH, one: "Jedna moneta" })).toStrictEqual([
     {
       check: "numbers_differ",
       severity: "warning",
@@ -879,11 +880,10 @@ test("numbers_differ: forms compared with the same category, or other", () => {
       value: "1",
     },
   ]);
-  assertEquals(plural("pl", english, { ...POLISH, one: "1 moneta" }), []);
-  assertEquals(
+  expect(plural("pl", english, { ...POLISH, one: "1 moneta" })).toStrictEqual([]);
+  expect(
     summary(plural("pl", english, { ...POLISH, one: "1 moneta", few: "{{count}} monety (2)" })),
-    ["numbers_differ:few"],
-  );
+  ).toStrictEqual(["numbers_differ:few"]);
 });
 
 test("ordinals: French first may leave out {{count}}; English ordinals may not", () => {
@@ -893,13 +893,15 @@ test("ordinals: French first may leave out {{count}}; English ordinals may not",
     few: "{{count}}rd place",
     other: "{{count}}th place",
   };
-  assertEquals(ordinal("fr", english, { one: "Première place", other: "{{count}}e place" }), []);
-  assertEquals(summary(ordinal("fr", english, { one: "{{count}}re place" })), [
+  expect(
+    ordinal("fr", english, { one: "Première place", other: "{{count}}e place" }),
+  ).toStrictEqual([]);
+  expect(summary(ordinal("fr", english, { one: "{{count}}re place" }))).toStrictEqual([
     "plural_form_missing:other",
   ]);
   // English ordinal one covers 1, 21, 31, …; two covers 2, 22, 32, ….
   const british = { one: "First", two: "Second", few: "{{count}}rd", other: "{{count}}th" };
-  assertEquals(summary(ordinal("en-GB", english, british)), [
+  expect(summary(ordinal("en-GB", english, british))).toStrictEqual([
     "placeholder_missing:one",
     "placeholder_missing:two",
   ]);
@@ -912,8 +914,8 @@ test("ordinals: the language's ordinal categories, not its cardinal ones", () =>
     few: "{{count}}rd",
     other: "{{count}}th",
   };
-  assertEquals(ordinal("pl", english, { other: "{{count}}." }), []);
-  assertEquals(ordinal("pl", english, { one: "{{count}}.", other: "{{count}}." }), [
+  expect(ordinal("pl", english, { other: "{{count}}." })).toStrictEqual([]);
+  expect(ordinal("pl", english, { one: "{{count}}.", other: "{{count}}." })).toStrictEqual([
     {
       check: "plural_form_unexpected",
       severity: "error",
@@ -923,19 +925,18 @@ test("ordinals: the language's ordinal categories, not its cardinal ones", () =>
   ]);
   // No zero form for ordinals, even when English has one.
   const withZero = { zero: "Unranked", ...english };
-  assertEquals(summary(ordinal("fr", withZero, { one: "1re", other: "{{count}}e" })), [
+  expect(summary(ordinal("fr", withZero, { one: "1re", other: "{{count}}e" }))).toStrictEqual([
     "numbers_differ:one",
   ]);
-  assertEquals(
+  expect(
     messages(
       ordinal("fr", withZero, { zero: "Non classé", one: "{{count}}re", other: "{{count}}e" }),
     ),
-    ["The zero form isn't used in French."],
-  );
+  ).toStrictEqual(["The zero form isn't used in French."]);
 });
 
 test("plural_form_missing and plural_form_unexpected", () => {
-  assertEquals(plural("pl", COINS, { one: "Jedna moneta", other: "{{count}} monety" }), [
+  expect(plural("pl", COINS, { one: "Jedna moneta", other: "{{count}} monety" })).toStrictEqual([
     {
       check: "plural_form_missing",
       severity: "error",
@@ -949,7 +950,7 @@ test("plural_form_missing and plural_form_unexpected", () => {
       form: "many",
     },
   ]);
-  assertEquals(plural("ja", COINS, { one: "1枚", other: "{{count}}枚" }), [
+  expect(plural("ja", COINS, { one: "1枚", other: "{{count}}枚" })).toStrictEqual([
     {
       check: "plural_form_unexpected",
       severity: "error",
@@ -957,7 +958,7 @@ test("plural_form_missing and plural_form_unexpected", () => {
       form: "one",
     },
   ]);
-  assertEquals(
+  expect(
     messages(
       plural("pt-BR", COINS, {
         one: "{{count}} moeda",
@@ -966,9 +967,8 @@ test("plural_form_missing and plural_form_unexpected", () => {
         other: "{{count}} moedas",
       }),
     ),
-    ["The two form isn't used in Portuguese (Brazil)."],
-  );
-  assertEquals(summary(plural("pl", COINS, {})), [
+  ).toStrictEqual(["The two form isn't used in Portuguese (Brazil)."]);
+  expect(summary(plural("pl", COINS, {}))).toStrictEqual([
     "plural_form_missing:one",
     "plural_form_missing:few",
     "plural_form_missing:many",
@@ -977,12 +977,12 @@ test("plural_form_missing and plural_form_unexpected", () => {
 });
 
 test("plural forms: undefined is absent, and unknown names are unexpected", () => {
-  assertEquals(plural("pl", COINS, { ...POLISH, two: undefined }), []);
-  assertEquals(summary(plural("pl", COINS, { ...POLISH, few: undefined })), [
+  expect(plural("pl", COINS, { ...POLISH, two: undefined })).toStrictEqual([]);
+  expect(summary(plural("pl", COINS, { ...POLISH, few: undefined }))).toStrictEqual([
     "plural_form_missing:few",
   ]);
   const unknown = { ...POLISH, plural: "x", few_: "y" } as PluralForms;
-  assertEquals(plural("pl", COINS, unknown), [
+  expect(plural("pl", COINS, unknown)).toStrictEqual([
     {
       check: "plural_form_unexpected",
       severity: "error",
@@ -1000,7 +1000,7 @@ test("plural forms: undefined is absent, and unknown names are unexpected", () =
 
 test("zero: every language gets a zero form when English has one", () => {
   const english = { zero: "No coins", one: "One coin", other: "{{count}} coins" };
-  assertEquals(plural("pl", english, { ...POLISH, one: "Jedna moneta" }), [
+  expect(plural("pl", english, { ...POLISH, one: "Jedna moneta" })).toStrictEqual([
     {
       check: "plural_form_missing",
       severity: "error",
@@ -1009,17 +1009,17 @@ test("zero: every language gets a zero form when English has one", () => {
     },
   ]);
   // An added zero form covers only 0, so it may leave out {{count}}.
-  assertEquals(plural("pl", english, { zero: "Brak monet", ...POLISH }), []);
-  assertEquals(plural("ja", english, { zero: "コインなし", other: "{{count}}枚" }), []);
+  expect(plural("pl", english, { zero: "Brak monet", ...POLISH })).toStrictEqual([]);
+  expect(plural("ja", english, { zero: "コインなし", other: "{{count}}枚" })).toStrictEqual([]);
   // Latvian's own zero covers 0, 10–20, 30, …, so it keeps {{count}}.
   const latvian = { zero: "Nav monētu", one: "{{count}} monēta", other: "{{count}} monētas" };
-  assertEquals(summary(plural("lv", english, latvian)), ["placeholder_missing:zero"]);
+  expect(summary(plural("lv", english, latvian))).toStrictEqual(["placeholder_missing:zero"]);
   // The zero form is compared with the English zero form.
-  assertEquals(summary(plural("ja", english, { zero: "No coins", other: "{{count}}枚" })), [
+  expect(summary(plural("ja", english, { zero: "No coins", other: "{{count}}枚" }))).toStrictEqual([
     "identical:zero",
   ]);
   // Without an English zero form, a zero form is unexpected in Polish.
-  assertEquals(messages(plural("pl", COINS, { zero: "Brak monet", ...POLISH })), [
+  expect(messages(plural("pl", COINS, { zero: "Brak monet", ...POLISH }))).toStrictEqual([
     "The zero form isn't used in Polish.",
   ]);
 });
@@ -1029,66 +1029,64 @@ test("zero: with a zero form, 0 leaves the other categories", () => {
   // a zero form, so it may leave out {{count}}, as Polish one may.
   const english = { zero: "No coins", one: "{{count}} coin", other: "{{count}} coins" };
   for (const language of ["pa", "ln", "ak", "mg", "ti"]) {
-    assertEquals(
+    expect(
       plural(language, english, { zero: "ZERO", one: "ONE", other: "{{count}} OTHER" }),
-      [],
       language,
-    );
+    ).toStrictEqual([]);
     // Without an English zero form, one covers 0 and 1, and keeps {{count}}.
-    assertEquals(
+    expect(
       summary(plural(language, COINS, { one: "ONE", other: "{{count}} OTHER" })),
-      ["placeholder_missing:one"],
       language,
-    );
+    ).toStrictEqual(["placeholder_missing:one"]);
   }
   // French one still covers 1 and 1.5 without 0.
-  assertEquals(
+  expect(
     summary(plural("fr", english, { zero: "Z", one: "UN", many: "{{count}}", other: "{{count}}" })),
-    ["placeholder_missing:one"],
-  );
+  ).toStrictEqual(["placeholder_missing:one"]);
 });
 
 test("empty: a form may stay empty where the English one is empty", () => {
   // Regression: English "left_zero": "" made every translation fail, empty or not.
   const english = { zero: "", one: "{{count}} left", other: "{{count}} left" };
   const german = { zero: "", one: "{{count}} übrig", other: "{{count}} übrig" };
-  assertEquals(plural("de", english, german), []);
-  assertEquals(summary(plural("de", english, { ...german, zero: " " })), ["whitespace:zero"]);
-  assertEquals(plural("de", english, { ...german, zero: "Nichts mehr übrig" }), []);
-  assertEquals(summary(plural("de", english, { one: german.one, other: german.other })), [
+  expect(plural("de", english, german)).toStrictEqual([]);
+  expect(summary(plural("de", english, { ...german, zero: " " }))).toStrictEqual([
+    "whitespace:zero",
+  ]);
+  expect(plural("de", english, { ...german, zero: "Nichts mehr übrig" })).toStrictEqual([]);
+  expect(summary(plural("de", english, { one: german.one, other: german.other }))).toStrictEqual([
     "plural_form_missing:zero",
   ]);
-  assertEquals(summary(plural("de", english, { ...german, one: "" })), ["empty:one"]);
+  expect(summary(plural("de", english, { ...german, one: "" }))).toStrictEqual(["empty:one"]);
   // Categories English lacks compare with English other.
   const blankOther = { one: "One left", other: "" };
-  assertEquals(summary(plural("pl", blankOther, { one: "Jeden", few: "", many: " ", other: "" })), [
-    "whitespace:many",
-  ]);
+  expect(
+    summary(plural("pl", blankOther, { one: "Jeden", few: "", many: " ", other: "" })),
+  ).toStrictEqual(["whitespace:many"]);
   // A blank English text allows a blank translation.
-  assertEquals(summary(text(" ", "")), ["whitespace"]);
-  assertEquals(summary(text("Play", "")), ["empty"]);
+  expect(summary(text(" ", ""))).toStrictEqual(["whitespace"]);
+  expect(summary(text("Play", ""))).toStrictEqual(["empty"]);
 });
 
 test("pluralOverride replaces the language's categories", () => {
   const pluralOverride = { cardinal: ["one", "few", "other"] as PluralCategory[] };
   const { many: _, ...withoutMany } = POLISH;
-  assertEquals(plural("pl", COINS, withoutMany, { pluralOverride }), []);
-  assertEquals(summary(plural("pl", COINS, POLISH, { pluralOverride })), [
+  expect(plural("pl", COINS, withoutMany, { pluralOverride })).toStrictEqual([]);
+  expect(summary(plural("pl", COINS, POLISH, { pluralOverride }))).toStrictEqual([
     "plural_form_unexpected:many",
   ]);
   // An ordinal override leaves cardinal strings alone.
   const ordinalOnly = { ordinal: ["other"] as PluralCategory[] };
-  assertEquals(plural("pl", COINS, POLISH, { pluralOverride: ordinalOnly }), []);
+  expect(plural("pl", COINS, POLISH, { pluralOverride: ordinalOnly })).toStrictEqual([]);
   // A category the runtime doesn't have is assumed to cover many numbers.
   const withTwo = { cardinal: ["one", "two", "few", "many", "other"] as PluralCategory[] };
-  assertEquals(
+  expect(
     summary(plural("pl", COINS, { ...POLISH, two: "Dwie" }, { pluralOverride: withTwo })),
-    ["placeholder_missing:two"],
-  );
+  ).toStrictEqual(["placeholder_missing:two"]);
 });
 
 test("tags_differ: a warning naming the first missing tag, else the first extra one", () => {
-  assertEquals(text("Press <b>Start</b>", "Drücke Start"), [
+  expect(text("Press <b>Start</b>", "Drücke Start")).toStrictEqual([
     {
       check: "tags_differ",
       severity: "warning",
@@ -1096,98 +1094,95 @@ test("tags_differ: a warning naming the first missing tag, else the first extra 
       value: "<b>",
     },
   ]);
-  assertEquals(messages(text("Press <1>Start</1>", "Drücke <1>Start</1><br/>")), [
+  expect(messages(text("Press <1>Start</1>", "Drücke <1>Start</1><br/>"))).toStrictEqual([
     "Tag <br/> isn't in the English, or is repeated.",
   ]);
-  assertEquals(
+  expect(
     summary(plural("en-GB", COINS, { one: "<b>One</b> coin", other: "{{count}} gold coins" })),
-    ["tags_differ:one"],
-  );
+  ).toStrictEqual(["tags_differ:one"]);
 });
 
 test("tags_differ: attributes, letter case and order don't matter", () => {
-  assertEquals(
+  expect(
     text('Read <a href="/rules">the rules</a>', 'Lies <A href="/regeln">die Regeln</A>'),
-    [],
-  );
-  assertEquals(text("<b>Big</b> <i>news</i>", "<i>Große</i> <b>Neuigkeiten</b>"), []);
-  assertEquals(text("One<br />two", "Eins<br/>zwei"), []);
-  assertEquals(text("1 < 2 and 3 > 2", "1 < 2 und 3 > 2"), [], "comparisons aren't tags");
+  ).toStrictEqual([]);
+  expect(text("<b>Big</b> <i>news</i>", "<i>Große</i> <b>Neuigkeiten</b>")).toStrictEqual([]);
+  expect(text("One<br />two", "Eins<br/>zwei")).toStrictEqual([]);
+  expect(text("1 < 2 and 3 > 2", "1 < 2 und 3 > 2"), "comparisons aren't tags").toStrictEqual([]);
 });
 
 test("whitespace: a line break or space at either end that the English doesn't have", () => {
-  assertEquals(text("Play", "Spielen\n"), [
+  expect(text("Play", "Spielen\n")).toStrictEqual([
     {
       check: "whitespace",
       severity: "error",
       message: "The translation ends with a line break; the English doesn't.",
     },
   ]);
-  assertEquals(messages(text("Play\n", "Spielen")), [
+  expect(messages(text("Play\n", "Spielen"))).toStrictEqual([
     "The English ends with a line break; the translation doesn't.",
   ]);
-  assertEquals(messages(text(" Play", "  Spielen")), [
+  expect(messages(text(" Play", "  Spielen"))).toStrictEqual([
     "The translation starts with 2 spaces; the English with a space.",
   ]);
-  assertEquals(messages(text("Play\n\n", "Spielen \n")), [
+  expect(messages(text("Play\n\n", "Spielen \n"))).toStrictEqual([
     "The translation ends with a line break; the English with 2 line breaks.",
   ]);
-  assertEquals(
+  expect(
     summary(plural("en-GB", COINS, { one: "One coin ", other: "{{count}} gold coins" })),
-    ["whitespace:one"],
-  );
+  ).toStrictEqual(["whitespace:one"]);
 });
 
 test("whitespace: the same whitespace, in any line ending, is fine", () => {
-  assertEquals(text("Play\r\n", "Spielen\n"), []);
-  assertEquals(text("  Play ", "  Spielen "), []);
+  expect(text("Play\r\n", "Spielen\n")).toStrictEqual([]);
+  expect(text("  Play ", "  Spielen ")).toStrictEqual([]);
 });
 
 test("whitespace: compares the line breaks inside the text", () => {
-  assertEquals(text("Game over.\nTry again?", "Spiel vorbei. Nochmal?"), [
+  expect(text("Game over.\nTry again?", "Spiel vorbei. Nochmal?")).toStrictEqual([
     {
       check: "whitespace",
       severity: "error",
       message: "The English has 1 line break inside; the translation has 0.",
     },
   ]);
-  assertEquals(text("Game over.\r\nTry again?", "Spiel vorbei.\nNochmal?"), []);
+  expect(text("Game over.\r\nTry again?", "Spiel vorbei.\nNochmal?")).toStrictEqual([]);
 });
 
 test("double_space: two spaces in a row inside the text", () => {
-  assertEquals(text("New game", "Neues  Spiel"), [
+  expect(text("New game", "Neues  Spiel")).toStrictEqual([
     { check: "double_space", severity: "warning", message: "Two spaces in a row." },
   ]);
-  assertEquals(summary(text("Score:  {{n}}", "Punkte:  {{n}}")), ["double_space"]);
+  expect(summary(text("Score:  {{n}}", "Punkte:  {{n}}"))).toStrictEqual(["double_space"]);
 });
 
 test("end_punctuation: a different question mark, exclamation mark, ellipsis or colon", () => {
-  assertEquals(text("Quit?", "Beenden"), [
+  expect(text("Quit?", "Beenden")).toStrictEqual([
     {
       check: "end_punctuation",
       severity: "warning",
       message: "The English ends with a question mark; the translation doesn't.",
     },
   ]);
-  assertEquals(messages(text("Save as", "Speichern unter…")), [
+  expect(messages(text("Save as", "Speichern unter…"))).toStrictEqual([
     "The translation ends with an ellipsis; the English doesn't.",
   ]);
-  assertEquals(messages(text("You win!", "Du gewinnst?")), [
+  expect(messages(text("You win!", "Du gewinnst?"))).toStrictEqual([
     "The translation ends with a question mark; the English with an exclamation mark.",
   ]);
-  assertEquals(messages(text("Name:", "Name")), [
+  expect(messages(text("Name:", "Name"))).toStrictEqual([
     "The English ends with a colon; the translation doesn't.",
   ]);
 });
 
 test("end_punctuation: each script's own marks count", () => {
-  assertEquals(text("Quit?", "終了しますか？", { language: "ja" }), []);
-  assertEquals(text("Quit?", "هل تريد الخروج؟", { language: "ar" }), []);
-  assertEquals(text("Quit?", "Έξοδος;", { language: "el" }), []);
-  assertEquals(text("Loading...", "Wird geladen…"), []);
-  assertEquals(text("Name:", "名前：", { language: "ja" }), []);
-  assertEquals(text("Nice!", "Super !", { language: "fr" }), []);
-  assertEquals(text("Game over.", "Spiel vorbei"), [], "full stops aren't compared");
+  expect(text("Quit?", "終了しますか？", { language: "ja" })).toStrictEqual([]);
+  expect(text("Quit?", "هل تريد الخروج؟", { language: "ar" })).toStrictEqual([]);
+  expect(text("Quit?", "Έξοδος;", { language: "el" })).toStrictEqual([]);
+  expect(text("Loading...", "Wird geladen…")).toStrictEqual([]);
+  expect(text("Name:", "名前：", { language: "ja" })).toStrictEqual([]);
+  expect(text("Nice!", "Super !", { language: "fr" })).toStrictEqual([]);
+  expect(text("Game over.", "Spiel vorbei"), "full stops aren't compared").toStrictEqual([]);
 });
 
 test("results: errors first, then in CHECKS order, then by form in CLDR order", () => {
@@ -1203,7 +1198,7 @@ test("results: errors first, then in CHECKS order, then by form in CLDR order", 
     },
     { maxLength: 14 },
   );
-  assertEquals(summary(results), [
+  expect(summary(results)).toStrictEqual([
     "empty:many",
     "placeholder_extra:few",
     "plural_form_unexpected:two",
@@ -1213,9 +1208,9 @@ test("results: errors first, then in CHECKS order, then by form in CLDR order", 
     "numbers_differ:one",
     "numbers_differ:few",
   ]);
-  assertEquals(errorsOf(results).length, 5);
+  expect(errorsOf(results).length).toBe(5);
   const textResults = text("{{a}} $t(b) 1 x", "{{c}} $t(d) 2 x {{a}}{{a}}", { maxLength: 3 });
-  assertEquals(summary(textResults), [
+  expect(summary(textResults)).toStrictEqual([
     "placeholder_extra",
     "placeholder_extra",
     "reference_missing",
@@ -1223,10 +1218,14 @@ test("results: errors first, then in CHECKS order, then by form in CLDR order", 
     "max_length",
     "numbers_differ",
   ]);
-  assertEquals(
-    textResults.map((result) => result.value),
-    ["{{c}}", "{{a}}", "$t(b)", "$t(d)", undefined, "1"],
-  );
+  expect(textResults.map((result) => result.value)).toStrictEqual([
+    "{{c}}",
+    "{{a}}",
+    "$t(b)",
+    "$t(d)",
+    undefined,
+    "1",
+  ]);
 });
 
 test("results: every check id is reachable, with the severity from CHECKS", () => {
@@ -1296,11 +1295,11 @@ test("results: every check id is reachable, with the severity from CHECKS", () =
   ];
   for (const results of all) {
     for (const result of results) {
-      assertEquals(result.severity, CHECKS[result.check]);
+      expect(result.severity).toStrictEqual(CHECKS[result.check]);
       seen.add(result.check);
     }
   }
-  assertEquals([...seen].sort(), Object.keys(CHECKS).sort());
+  expect([...seen].sort()).toStrictEqual(Object.keys(CHECKS).sort());
 });
 
 test("results: optional fields are left out, not undefined", () => {
@@ -1312,25 +1311,27 @@ test("results: optional fields are left out, not undefined", () => {
 });
 
 test("mismatched English values: forms for text, and text for plurals", () => {
-  assertEquals(summary(text(COINS as unknown as string, "Münzen")), ["placeholder_missing"]);
-  assertEquals(text(COINS as unknown as string, "{{count}} Münzen"), []);
-  assertEquals(plural("pl", "{{count}} coins" as unknown as PluralForms, POLISH), []);
-  assertEquals(summary(plural("pl", { one: "{{count}} coin" }, { ...POLISH, few: "x" })), [
+  expect(summary(text(COINS as unknown as string, "Münzen"))).toStrictEqual([
+    "placeholder_missing",
+  ]);
+  expect(text(COINS as unknown as string, "{{count}} Münzen")).toStrictEqual([]);
+  expect(plural("pl", "{{count}} coins" as unknown as PluralForms, POLISH)).toStrictEqual([]);
+  expect(summary(plural("pl", { one: "{{count}} coin" }, { ...POLISH, few: "x" }))).toStrictEqual([
     "placeholder_missing:few",
   ]);
 });
 
 test("CRLF files: line breaks are text like any other", () => {
   const english = "Line one\r\n{{count}} coins\r\n";
-  assertEquals(text(english, "Zeile eins\r\n{{count}} Münzen\r\n"), []);
-  assertEquals(summary(text(english, "Zeile eins\r\nMünzen\r\n")), ["placeholder_missing"]);
-  assertEquals(summary(text("A\r\nB", "A\r\nB")), ["identical"]);
-  assertEquals(text("3\r\n4", "4\r\n3"), []);
+  expect(text(english, "Zeile eins\r\n{{count}} Münzen\r\n")).toStrictEqual([]);
+  expect(summary(text(english, "Zeile eins\r\nMünzen\r\n"))).toStrictEqual(["placeholder_missing"]);
+  expect(summary(text("A\r\nB", "A\r\nB"))).toStrictEqual(["identical"]);
+  expect(text("3\r\n4", "4\r\n3")).toStrictEqual([]);
 });
 
 test("an invalid language tag throws for plural strings", () => {
-  assertThrows(() => plural("not a tag", COINS, POLISH), RangeError);
-  assertEquals(text("Play", "Spielen", { language: "not a tag" }), []);
+  expect(() => plural("not a tag", COINS, POLISH)).toThrow(RangeError);
+  expect(text("Play", "Spielen", { language: "not a tag" })).toStrictEqual([]);
 });
 
 test("results never depend on the order the runtime lists categories in", () => {
@@ -1342,7 +1343,7 @@ test("results never depend on the order the runtime lists categories in", () => 
   };
   try {
     // A tag no other test uses, so its rules aren't cached yet.
-    assertEquals(summary(plural("be-BY", COINS, { two: "x", zero: "y" })), [
+    expect(summary(plural("be-BY", COINS, { two: "x", zero: "y" }))).toStrictEqual([
       "plural_form_missing:one",
       "plural_form_missing:few",
       "plural_form_missing:many",
@@ -1362,39 +1363,37 @@ test("checks stay fast on large values", () => {
   const started = performance.now();
   const results = text(english, translation, { maxLength: 10 });
   const elapsed = performance.now() - started;
-  assertEquals(summary(results), ["max_length"]);
+  expect(summary(results)).toStrictEqual(["max_length"]);
   assert(elapsed < 5000, `${elapsed} ms`);
 
   const forms = { one: english, other: english };
   const polish = { one: translation, few: translation, many: translation, other: translation };
   const again = performance.now();
-  assertEquals(plural("pl", forms, polish), []);
+  expect(plural("pl", forms, polish)).toStrictEqual([]);
   assert(performance.now() - again < 10000);
 });
 
 test("extra delimiters: the app's own placeholders are checked like i18next's", () => {
   const syntax = { prefix: "{{", suffix: "}}", extra: [{ prefix: "{", suffix: "}" }] };
   const english = "Join {companyName}, {{count}} openings";
-  assertEquals(text(english, "Komm zu {companyName}, {{count}} Stellen", { syntax }), []);
-  assertEquals(
+  expect(text(english, "Komm zu {companyName}, {{count}} Stellen", { syntax })).toStrictEqual([]);
+  expect(
     errorsOf(text(english, "Komm zu {Firmenname}, {{count}} Stellen", { syntax })).map((result) => [
       result.check,
       result.value,
     ]),
-    [
-      ["placeholder_missing", "{companyName}"],
-      ["placeholder_extra", "{Firmenname}"],
-    ],
-  );
-  assertEquals(
+  ).toStrictEqual([
+    ["placeholder_missing", "{companyName}"],
+    ["placeholder_extra", "{Firmenname}"],
+  ]);
+  expect(
     errorsOf(text(english, "Komm zu {{companyName}}, {{count}} Stellen", { syntax })).map(
       (result) => [result.check, result.value],
     ),
-    [
-      ["placeholder_missing", "{companyName}"],
-      ["placeholder_extra", "{{companyName}}"],
-    ],
-  );
+  ).toStrictEqual([
+    ["placeholder_missing", "{companyName}"],
+    ["placeholder_extra", "{{companyName}}"],
+  ]);
 });
 
 test("optional placeholders: the listed languages may leave them out, the others may not", () => {
@@ -1406,27 +1405,25 @@ test("optional placeholders: the listed languages may leave them out, the others
   };
   const english = "Looking for work as {article} {profession}";
   const polish = "Szukam pracy jako {profession}";
-  assertEquals(text(english, polish, { syntax, language: "pl" }), []);
-  assertEquals(
+  expect(text(english, polish, { syntax, language: "pl" })).toStrictEqual([]);
+  expect(
     errorsOf(text(english, "Suche Arbeit als {profession}", { syntax, language: "de" })).map(
       (result) => [result.check, result.value],
     ),
-    [["placeholder_missing", "{article}"]],
-  );
-  assertEquals(
+  ).toStrictEqual([["placeholder_missing", "{article}"]]);
+  expect(
     errorsOf(text(english, "Szukam pracy jako {article}", { syntax, language: "pl" })).map(
       (result) => [result.check, result.value],
     ),
-    [["placeholder_missing", "{profession}"]],
-  );
+  ).toStrictEqual([["placeholder_missing", "{profession}"]]);
 });
 
 test("whitespace rejects tabs exchanged for spaces and spaces beside a line break", () => {
   assert(hasErrors(text("\tPlay", " Spielen")));
   assert(hasErrors(text("Play\n", "Spielen \n")));
   assert(hasErrors(text("One paragraph.\n\nAnother.", "Ein Absatz.\nNoch einer.")));
-  assertFalse(hasErrors(text("Play\r\n", "Spielen\n")));
-  assertFalse(hasErrors(text("New game", "Neues  Spiel")));
+  expect(hasErrors(text("Play\r\n", "Spielen\n"))).toBeFalsy();
+  expect(hasErrors(text("New game", "Neues  Spiel"))).toBeFalsy();
 });
 
 test("duplicate translations compare case and edge whitespace within one file and language", () => {
@@ -1435,16 +1432,17 @@ test("duplicate translations compare case and edge whitespace within one file an
     { ...common, id: 1, key: "barn", source: "Storage Barn", translation: "Scheune" },
     { ...common, id: 2, key: "loft", source: "Hay Loft", translation: " SCHEUNE " },
   ]);
-  assertEquals(results.get('[1,"de"]')?.[0].message, 'Same as loft, whose English is "Hay Loft".');
-  assertEquals(results.get('[2,"de"]')?.[0].check, "duplicate_translation");
-  assertEquals(
+  expect(results.get('[1,"de"]')?.[0].message).toStrictEqual(
+    'Same as loft, whose English is "Hay Loft".',
+  );
+  expect(results.get('[2,"de"]')?.[0].check).toBe("duplicate_translation");
+  expect(
     checkDuplicateTranslations([
       { ...common, id: 1, key: "a", source: "Barn", translation: "Scheune" },
       { ...common, id: 2, key: "b", source: "Barn", translation: "Scheune" },
     ]).size,
-    0,
-  );
-  assertEquals(
+  ).toBe(0);
+  expect(
     checkDuplicateTranslations([
       { ...common, id: 1, key: "a", source: "Yes", translation: "Ja" },
       { ...common, id: 2, key: "b", source: "Sure", translation: "JA" },
@@ -1453,8 +1451,7 @@ test("duplicate translations compare case and edge whitespace within one file an
       { ...common, id: 5, language: "fr", key: "e", source: "Loft", translation: "Scheune" },
       { ...common, id: 6, kind: "reference", key: "f", source: "Loft", translation: "Scheune" },
     ]).size,
-    0,
-  );
+  ).toBe(0);
 });
 
 // Documents
@@ -1477,19 +1474,19 @@ test("documents: a translation with the same paragraphs passes, whatever its lin
     "Manche hielten durch. Andere haben nun etwas zu erzählen.",
     "",
   ].join("\r\n");
-  assertEquals(text(ARTICLE, translation, { document: true }), []);
-  assertEquals(text(`${ARTICLE}\n`, translation, { document: true }), []);
+  expect(text(ARTICLE, translation, { document: true })).toStrictEqual([]);
+  expect(text(`${ARTICLE}\n`, translation, { document: true })).toStrictEqual([]);
 });
 
 test("documents: paragraphs replace line breaks, so an extra blank line isn't an error", () => {
   const extraBlankLine = ARTICLE.replace("\n\nSome", "\n\n\nSome");
-  assertEquals(text(ARTICLE, extraBlankLine, { document: true }), []);
-  assertEquals(summary(text(ARTICLE, extraBlankLine)), ["whitespace"]);
+  expect(text(ARTICLE, extraBlankLine, { document: true })).toStrictEqual([]);
+  expect(summary(text(ARTICLE, extraBlankLine))).toStrictEqual(["whitespace"]);
 });
 
 test("documents: a merged or split paragraph is an error", () => {
   const merged = ARTICLE.replace("\n\nSome", " Some");
-  assertEquals(text(ARTICLE, merged, { document: true }), [
+  expect(text(ARTICLE, merged, { document: true })).toStrictEqual([
     {
       check: "paragraphs",
       severity: "error",
@@ -1497,21 +1494,23 @@ test("documents: a merged or split paragraph is an error", () => {
     },
   ]);
   const split = ARTICLE.replace(": {{cityName}}.", ".\n\n{{cityName}}.");
-  assertEquals(messages(text(ARTICLE, split, { document: true })), [
+  expect(messages(text(ARTICLE, split, { document: true }))).toStrictEqual([
     "The English has 3 paragraphs; the translation has 4.",
   ]);
 });
 
 test("documents: placeholders are checked across the whole file", () => {
   const missing = ARTICLE.replace("name: {{cityName}}.", "name.");
-  assertEquals(summary(text(ARTICLE, missing, { document: true })), ["placeholder_missing"]);
+  expect(summary(text(ARTICLE, missing, { document: true }))).toStrictEqual([
+    "placeholder_missing",
+  ]);
 });
 
 test("documents: whitespace at the end never counts, at the start it does", () => {
-  assertEquals(text(ARTICLE, `${ARTICLE}\n\n  `, { document: true }), [
+  expect(text(ARTICLE, `${ARTICLE}\n\n  `, { document: true })).toStrictEqual([
     { check: "identical", severity: "warning", message: "Identical to the English." },
   ]);
-  assertEquals(summary(text(ARTICLE, `\n${ARTICLE}`, { document: true })), ["whitespace"]);
+  expect(summary(text(ARTICLE, `\n${ARTICLE}`, { document: true }))).toStrictEqual(["whitespace"]);
 });
 
 const GUIDE = [
@@ -1547,12 +1546,12 @@ const GUIDE_DE = [
 ].join("\n");
 
 test("documents: a Markdown translation that keeps code, links and structure passes", () => {
-  assertEquals(text(GUIDE, GUIDE_DE, { document: true }), []);
+  expect(text(GUIDE, GUIDE_DE, { document: true })).toStrictEqual([]);
 });
 
 test("documents: translated inline code is an error", () => {
   const translated = GUIDE_DE.replace("`quaso init`", "`quaso initialisieren`");
-  assertEquals(text(GUIDE, translated, { document: true }), [
+  expect(text(GUIDE, translated, { document: true })).toStrictEqual([
     {
       check: "markdown_verbatim",
       severity: "error",
@@ -1564,35 +1563,35 @@ test("documents: translated inline code is an error", () => {
 
 test("documents: a translated code block is an error, named by its first line", () => {
   const translated = GUIDE_DE.replace("quaso upload", "quaso hochladen");
-  assertEquals(messages(text(GUIDE, translated, { document: true })), [
+  expect(messages(text(GUIDE, translated, { document: true }))).toStrictEqual([
     "The code block starting “```sh” must stay as in the English: it is missing or changed.",
   ]);
 });
 
 test("documents: a localised URL is an error", () => {
   const translated = GUIDE_DE.replace("example.com/guide", "example.com/de/guide");
-  assertEquals(messages(text(GUIDE, translated, { document: true })), [
+  expect(messages(text(GUIDE, translated, { document: true }))).toStrictEqual([
     "“https://example.com/guide” must stay as in the English: it is missing or changed.",
   ]);
 });
 
 test("documents: a translated front matter key is an error", () => {
   const translated = GUIDE_DE.replace("title:", "titel:");
-  assertEquals(messages(text(GUIDE, translated, { document: true })), [
+  expect(messages(text(GUIDE, translated, { document: true }))).toStrictEqual([
     "“title:” must stay as in the English: it is missing or changed.",
   ]);
 });
 
 test("documents: an added link destination is an error", () => {
   const translated = GUIDE_DE.replace("dann", "dann [mehr](https://example.com/more)");
-  assertEquals(messages(text(GUIDE, translated, { document: true })), [
+  expect(messages(text(GUIDE, translated, { document: true }))).toStrictEqual([
     "“https://example.com/more” isn't in the English, or is repeated.",
   ]);
 });
 
 test("documents: a heading turned into a paragraph is an error", () => {
   const translated = GUIDE_DE.replace("## Installation", "Installation");
-  assertEquals(text(GUIDE, translated, { document: true }), [
+  expect(text(GUIDE, translated, { document: true })).toStrictEqual([
     {
       check: "markdown_structure",
       severity: "error",
@@ -1611,19 +1610,21 @@ test("documents: a heading turned into a paragraph is an error", () => {
 
 test("documents: a changed heading level is an error", () => {
   const translated = GUIDE_DE.replace("## Installation", "### Installation");
-  assertEquals(messages(text(GUIDE, translated, { document: true })), [
+  expect(messages(text(GUIDE, translated, { document: true }))).toStrictEqual([
     "Paragraph 2 is a level-2 heading in the English, but a level-3 heading in the translation.",
   ]);
 });
 
 test("documents: a list turned into a quote is an error", () => {
   const translated = GUIDE_DE.replace("- [Zurück", "> [Zurück");
-  assertEquals(summary(text(GUIDE, translated, { document: true })), ["markdown_structure"]);
+  expect(summary(text(GUIDE, translated, { document: true }))).toStrictEqual([
+    "markdown_structure",
+  ]);
 });
 
 test("documents: a translated heading breaks the link to it: a warning", () => {
   const translated = GUIDE_DE.replace("## Installation", "## Einrichtung");
-  assertEquals(text(GUIDE, translated, { document: true }), [
+  expect(text(GUIDE, translated, { document: true })).toStrictEqual([
     {
       check: "heading_anchor",
       severity: "warning",
@@ -1639,16 +1640,16 @@ test("documents: a link rewritten to the translated heading's anchor passes", ()
     "(#installation)",
     "(#einrichtung)",
   );
-  assertEquals(text(GUIDE, translated, { document: true }), []);
+  expect(text(GUIDE, translated, { document: true })).toStrictEqual([]);
 });
 
 test("documents: a link to an anchor outside the headings, kept as in the English, passes", () => {
   const english = "Intro.\n\n[Top](#top)";
-  assertEquals(text(english, "Einleitung.\n\n[Nach oben](#top)", { document: true }), []);
+  expect(text(english, "Einleitung.\n\n[Nach oben](#top)", { document: true })).toStrictEqual([]);
 });
 
 test("documents: the Markdown checks don't run on strings that aren't documents", () => {
-  assertEquals(text("Run `init`", "Führe `initialisieren` aus"), []);
+  expect(text("Run `init`", "Führe `initialisieren` aus")).toStrictEqual([]);
 });
 
 // --- ICU MessageFormat.
@@ -1668,12 +1669,12 @@ const ALCALDE = `{style, select,
 }`;
 
 test("checks, ICU: a select block translated case by case passes", () => {
-  assertEquals(text(MAYOR, ALCALDE, { language: "es", syntax: ICU }), []);
+  expect(text(MAYOR, ALCALDE, { language: "es", syntax: ICU })).toStrictEqual([]);
 });
 
 test("checks, ICU: a placeholder missing from a case says which case", () => {
   const translation = ALCALDE.replace("La alcaldesa {name}", "La alcaldesa");
-  assertEquals(messages(text(MAYOR, translation, { language: "es", syntax: ICU })), [
+  expect(messages(text(MAYOR, translation, { language: "es", syntax: ICU }))).toStrictEqual([
     "Placeholder {name} is missing in the feminine case of {style, select}.",
   ]);
 });
@@ -1684,7 +1685,7 @@ test("checks, ICU: a missing or extra select case is an error", () => {
   feminine {La alcaldesa {name} ha comenzado su nuevo mandato.}
   other {Ha comenzado el nuevo mandato de {name}.}
 }`;
-  assertEquals(messages(text(MAYOR, translation, { language: "es", syntax: ICU })), [
+  expect(messages(text(MAYOR, translation, { language: "es", syntax: ICU }))).toStrictEqual([
     "The masculine case of {style, select} is missing.",
     "The male case of {style, select} isn't in the English.",
   ]);
@@ -1699,50 +1700,50 @@ test("checks, ICU: a broken block is reported missing", () => {
 test("checks, ICU: plural cases follow the language's categories", () => {
   const source = "{n, plural, one {# coin} other {# coins}}";
   const polish = "{n, plural, one {# moneta} few {# monety} many {# monet} other {# monety}}";
-  assertEquals(text(source, polish, { language: "pl", syntax: ICU }), []);
-  assertEquals(
+  expect(text(source, polish, { language: "pl", syntax: ICU })).toStrictEqual([]);
+  expect(
     messages(
       text(source, "{n, plural, one {# moneta} other {# monety}}", { language: "pl", syntax: ICU }),
     ),
-    ["The few case of {n, plural} is missing.", "The many case of {n, plural} is missing."],
-  );
-  assertEquals(
+  ).toStrictEqual([
+    "The few case of {n, plural} is missing.",
+    "The many case of {n, plural} is missing.",
+  ]);
+  expect(
     messages(text(source, "{n, plural, one {# 枚} other {# 枚}}", { language: "ja", syntax: ICU })),
-    ["The one case of {n, plural} isn't used in Japanese."],
-  );
+  ).toStrictEqual(["The one case of {n, plural} isn't used in Japanese."]);
 });
 
 test("checks, ICU: a case that covers one number may leave out #", () => {
   const source = "{n, plural, one {# coin} other {# coins}}";
-  assertEquals(
+  expect(
     text(source, "{n, plural, one {eine Münze} other {# Münzen}}", { language: "de", syntax: ICU }),
-    [],
-  );
-  assertEquals(
+  ).toStrictEqual([]);
+  expect(
     messages(
       text(source, "{n, plural, one {# Münze} other {Münzen}}", { language: "de", syntax: ICU }),
     ),
-    ["Placeholder # is missing in the other case of {n, plural}."],
-  );
+  ).toStrictEqual(["Placeholder # is missing in the other case of {n, plural}."]);
 });
 
 test("checks, ICU: keywords and exact cases are neither text nor numbers", () => {
   const source = "{n, plural, =0 {No coins} other {# coins}}";
-  assertEquals(
+  expect(
     text(source, "{n, plural, =0 {Keine Münzen} one {# Münze} other {# Münzen}}", {
       language: "de",
       syntax: ICU,
     }),
-    [],
-  );
+  ).toStrictEqual([]);
 });
 
 test("checks, ICU: a block inside a Markdown document is checked like a string's", () => {
   const source = `# The town hall\n\n${MAYOR}\n\nSee \`{ "a": 1 }\` and [the term](#the-town-hall).`;
   const good = `# El ayuntamiento\n\n${ALCALDE}\n\nVer \`{ "a": 1 }\` y [el mandato](#el-ayuntamiento).`;
-  assertEquals(text(source, good, { language: "es", syntax: ICU, document: true }), []);
+  expect(text(source, good, { language: "es", syntax: ICU, document: true })).toStrictEqual([]);
   const broken = good.replace("feminine {", "femenino {");
-  assertEquals(messages(text(source, broken, { language: "es", syntax: ICU, document: true })), [
+  expect(
+    messages(text(source, broken, { language: "es", syntax: ICU, document: true })),
+  ).toStrictEqual([
     "The feminine case of {style, select} is missing.",
     "The femenino case of {style, select} isn't in the English.",
   ]);
@@ -1768,12 +1769,12 @@ function feed(source: string, translation: string, language: string): CheckResul
 }
 
 test("checks, arguments: a Spanish select added on a declared argument passes", () => {
-  assertEquals(feed(JOINED, UNIDA, "es"), []);
+  expect(feed(JOINED, UNIDA, "es")).toStrictEqual([]);
 });
 
 test("checks, arguments: a case missing a placeholder of the English names the case", () => {
   const translation = UNIDA.replace("¡Emocionado de unirme a {company}!", "¡Emocionado!");
-  assertEquals(messages(feed(JOINED, translation, "es")), [
+  expect(messages(feed(JOINED, translation, "es"))).toStrictEqual([
     "Placeholder {company} is missing in the male case of {authorGender, select}.",
   ]);
 });
@@ -1784,36 +1785,38 @@ test("checks, arguments: a problem in every case is reported once, without a cas
   male {¡Emocionado!}
   other {¡Qué ganas!}
 }`;
-  assertEquals(messages(feed(JOINED, translation, "es")), ["Placeholder {company} is missing."]);
+  expect(messages(feed(JOINED, translation, "es"))).toStrictEqual([
+    "Placeholder {company} is missing.",
+  ]);
 });
 
 test("checks, arguments: a case the declaration doesn't list is an error", () => {
   const translation = UNIDA.replace("other {", "neutral {¡Feliz en {company}!}\n  other {");
-  assertEquals(messages(feed(JOINED, translation, "es")), [
+  expect(messages(feed(JOINED, translation, "es"))).toStrictEqual([
     "The neutral case of {authorGender, select} isn't one of its cases: female, male, other.",
   ]);
 });
 
 test("checks, arguments: a select on a declared argument needs an other case", () => {
   const translation = UNIDA.replace("other {¡Qué ganas de empezar en {company}!}", "");
-  assertEquals(messages(feed(JOINED, translation, "es")), [
+  expect(messages(feed(JOINED, translation, "es"))).toStrictEqual([
     "The {authorGender, select} block needs an other case.",
   ]);
 });
 
 test("checks, arguments: the English's select may be left out where the language needs none", () => {
-  assertEquals(feed(HIRING, "{name}さんは採用活動中だそうです。", "ja"), []);
+  expect(feed(HIRING, "{name}さんは採用活動中だそうです。", "ja")).toStrictEqual([]);
 });
 
 test("checks, arguments: without the English's select, its placeholders are still required", () => {
-  assertEquals(messages(feed(HIRING, "Hier wird eingestellt.", "de")), [
+  expect(messages(feed(HIRING, "Hier wird eingestellt.", "de"))).toStrictEqual([
     "Placeholder {name} is missing.",
   ]);
 });
 
 test("checks, arguments: a select on an undeclared argument is refused as before", () => {
   const translation = UNIDA.replaceAll("authorGender", "readerGender");
-  assertEquals(messages(feed(JOINED, translation, "es")), [
+  expect(messages(feed(JOINED, translation, "es"))).toStrictEqual([
     "Placeholder {company} is missing.",
     "The {readerGender, select} block isn't in the English.",
     "The English has 0 line breaks inside; the translation has 4.",
@@ -1822,7 +1825,7 @@ test("checks, arguments: a select on an undeclared argument is refused as before
 });
 
 test("checks, arguments: without the declaration, an added select is refused as before", () => {
-  assertEquals(messages(text(JOINED, UNIDA, { language: "es", syntax: ICU })), [
+  expect(messages(text(JOINED, UNIDA, { language: "es", syntax: ICU }))).toStrictEqual([
     "Placeholder {company} is missing.",
     "The {authorGender, select} block isn't in the English.",
     "The English has 0 line breaks inside; the translation has 4.",
@@ -1837,7 +1840,7 @@ test("checks, arguments: two arguments vary together", () => {
 }`;
   const declared = [...AUTHOR, { name: "readerGender", cases: ["female"] }];
   const options = { language: "es", syntax: ICU, arguments: declared };
-  assertEquals(messages(text("{reader} liked it.", translation, options)), [
+  expect(messages(text("{reader} liked it.", translation, options))).toStrictEqual([
     "Placeholder {reader} is missing in the male case of {authorGender, select} and the other case of {readerGender, select}.",
     "Placeholder {reader} is missing in the other case of {authorGender, select} and the other case of {readerGender, select}.",
   ]);
@@ -1851,7 +1854,7 @@ test("checks, arguments: a plural form's select is checked in that form", () => 
     other: "{authorGender, select, female {Te siguen {count} personas} other {Te siguen}}",
   };
   const options = { syntax: ICU, arguments: AUTHOR };
-  assertEquals(messages(plural("es", source, translation, options)), [
+  expect(messages(plural("es", source, translation, options))).toStrictEqual([
     "Placeholder {count} is missing in the male case of {authorGender, select} (other form).",
     "Placeholder {count} is missing in the other case of {authorGender, select} (other form).",
   ]);

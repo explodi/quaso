@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 import * as fs from "node:fs/promises";
 /**
- * Capture the real app and Quaso Quest: deno run -A site/screenshots.ts.
+ * Capture the real app and Quaso Quest: node site/screenshots.ts.
  * Install the game dependencies first with npm ci --prefix examples/demo-game.
  */
 import { type Actor, ANONYMOUS, SYSTEM } from "@quaso/service";
@@ -11,6 +11,7 @@ import { createServer, type ViteDevServer } from "vite";
 import { ensureWebsiteBuilt, openBrowser, waitFor, WEB_DIST } from "../e2e/_setup.ts";
 import { type App, createApp } from "../packages/server/src/app.ts";
 import { readProjectFiles } from "../packages/server/src/dev_seed.ts";
+import { serve } from "../packages/server/src/http/serve.ts";
 import { memoryLogger, testConfig } from "../packages/server/src/testing/helpers.ts";
 import { realService } from "../packages/server/src/testing/real_service.ts";
 
@@ -103,10 +104,8 @@ const real = await realService({ dev: true });
 let browser: Awaited<ReturnType<typeof openBrowser>> | undefined;
 let gameServer: ViteDevServer | undefined;
 let app: App;
-const server = Deno.serve({ hostname: "127.0.0.1", port: 0, onListen() {} }, (request) =>
-  app(request),
-);
-const url = `http://127.0.0.1:${server.addr.port}`;
+const server = await serve({ hostname: "127.0.0.1", port: 0 }, (request) => app(request));
+const url = `http://127.0.0.1:${server.port}`;
 const directory = fromFileUrl(new URL("./public/screenshots/", import.meta.url));
 const gameDirectory = fromFileUrl(new URL("../examples/demo-game/", import.meta.url));
 try {

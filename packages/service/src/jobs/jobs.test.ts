@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
+import { assert, expect, test } from "vitest";
 /**
  * The whole LLM flow with the fake translator (S5.8): uploads queue jobs, the alarm runs
  * them, and the results follow the state rules of design §5.4.
  */
-import { assert, assertEquals, assertRejects, assertStringIncludes } from "@std/assert";
 import type { PluralForms } from "@quaso/core";
 import { ANONYMOUS, SYSTEM } from "../api.ts";
 import { ServiceError } from "../errors.ts";
@@ -65,39 +64,43 @@ test("an upload with automatic translation makes every language green", async ()
     },
   );
   assert(upload.job !== null, "the upload queued a job");
-  assertEquals(instance.scheduler.scheduled, [instance.clock.now], "woken up at once");
-  assertEquals(await drain(instance), 1);
+  expect(instance.scheduler.scheduled, "woken up at once").toStrictEqual([instance.clock.now]);
+  expect(await drain(instance)).toBe(1);
 
   const polish = await translations(instance, "pl");
-  assertEquals(polish.title?.value, "[Ŵáýƒáŕéŕ]");
-  assertEquals(polish.greeting?.value, "[Ŵéļçöɱé ƀáçķ, {{name}}!]");
-  assertEquals(polish.coins?.value, {
+  expect(polish.title?.value).toBe("[Ŵáýƒáŕéŕ]");
+  expect(polish.greeting?.value).toBe("[Ŵéļçöɱé ƀáçķ, {{name}}!]");
+  expect(polish.coins?.value).toStrictEqual({
     one: "[{{count}} çöíñ]",
     few: "[{{count}} çöíñś]",
     many: "[{{count}} çöíñś]",
     other: "[{{count}} çöíñś]",
   });
-  assertEquals(polish.again?.value, "[$t(title) áğáíñ]", "the reference comes back exactly");
+  expect(polish.again?.value, "the reference comes back exactly").toStrictEqual(
+    "[$t(title) áğáíñ]",
+  );
   for (const language of ["de", "pl"]) {
     const all = Object.values(await translations(instance, language));
-    assertEquals(all.length, STRINGS);
+    expect(all.length).toStrictEqual(STRINGS);
     assert(all.every((t) => t?.colour === "green" && !t.outdated && t.qa.errors === 0));
-    assertEquals(all[0]?.author, { type: "llm", id: null, name: FAKE_MODEL });
+    expect(all[0]?.author).toStrictEqual({ type: "llm", id: null, name: FAKE_MODEL });
   }
   const german = await instance.service.exportFiles(SYSTEM, { languages: ["de"] });
-  assertEquals(JSON.parse(german.files[0].content).coins_other, "[{{count}} çöíñś]");
+  expect(JSON.parse(german.files[0].content).coins_other).toBe("[{{count}} çöíñś]");
   const polishFile = JSON.parse(
     (await instance.service.exportFiles(SYSTEM, { languages: ["pl"] })).files[0].content,
   );
-  assertEquals(
-    Object.keys(polishFile).filter((key) => key.startsWith("coins_")),
-    ["coins_one", "coins_few", "coins_many", "coins_other"],
-  );
+  expect(Object.keys(polishFile).filter((key) => key.startsWith("coins_"))).toStrictEqual([
+    "coins_one",
+    "coins_few",
+    "coins_many",
+    "coins_other",
+  ]);
 
   const job = await instance.service.getJob(SYSTEM, { id: upload.job.id });
-  assertEquals(job.status, "done");
-  assertEquals(job.priority, "upload");
-  assertEquals(job.progress, {
+  expect(job.status).toBe("done");
+  expect(job.priority).toBe("upload");
+  expect(job.progress).toStrictEqual({
     total: 2 * STRINGS,
     done: 2 * STRINGS,
     translated: 2 * STRINGS,
@@ -107,23 +110,22 @@ test("an upload with automatic translation makes every language green", async ()
   });
   assert(job.tokens.input > 0 && job.tokens.output > 0);
   assert(job.startedAt !== null && job.finishedAt !== null);
-  assertEquals(count(instance.sql, "job_items"), 0, "a finished job's items are gone");
+  expect(count(instance.sql, "job_items"), "a finished job's items are gone").toBe(0);
 
   const history = await instance.service.getHistory(ANONYMOUS, {
     id: stringId(instance.sql, "common.json", "greeting"),
     language: "de",
   });
   const llm = history.entries.find((entry) => entry.event === "translation_llm")!;
-  assertEquals(llm.actor.name, FAKE_MODEL);
-  assertEquals(llm.detail?.model, FAKE_MODEL);
-  assertEquals(llm.detail?.jobId, upload.job.id);
-  assertEquals(typeof llm.detail?.requestId, "number");
+  expect(llm.actor.name).toStrictEqual(FAKE_MODEL);
+  expect(llm.detail?.model).toStrictEqual(FAKE_MODEL);
+  expect(llm.detail?.jobId).toStrictEqual(upload.job.id);
+  expect(typeof llm.detail?.requestId).toBe("number");
   // Two batches (one per language) and the file's context.
-  assertEquals(count(instance.sql, "llm_requests", "strings > 0"), 2);
-  assertEquals(count(instance.sql, "llm_requests", "strings = 0"), 1);
+  expect(count(instance.sql, "llm_requests", "strings > 0")).toBe(2);
+  expect(count(instance.sql, "llm_requests", "strings = 0")).toBe(1);
   const activity = await instance.service.getActivity(ANONYMOUS, {});
-  assertEquals(
-    activity.items[0].summary,
+  expect(activity.items[0].summary).toStrictEqual(
     `Translation job ${upload.job.id} finished: 8 translated`,
   );
 });
@@ -134,14 +136,14 @@ test("re-translating does green strings once each, never blue, and doesn't loop"
   writeBlue(instance, "title", "de", "Wanderer");
   const { job } = await instance.service.createJob(SYSTEM, { retranslate: true });
   assert(job !== null);
-  assertEquals(job.priority, "bulk");
-  assertEquals(job.progress.total, 2 * STRINGS - 1);
-  assertEquals(await drain(instance), 1);
+  expect(job.priority).toBe("bulk");
+  expect(job.progress.total).toStrictEqual(2 * STRINGS - 1);
+  expect(await drain(instance)).toBe(1);
   const done = await instance.service.getJob(SYSTEM, { id: job.id });
-  assertEquals(done.status, "done");
-  assertEquals(done.progress.done, 2 * STRINGS - 1);
-  assertEquals((await translations(instance, "de")).title?.value, "Wanderer", "blue stays");
-  assertEquals((await translations(instance, "de")).title?.colour, "blue");
+  expect(done.status).toBe("done");
+  expect(done.progress.done).toStrictEqual(2 * STRINGS - 1);
+  expect((await translations(instance, "de")).title?.value, "blue stays").toBe("Wanderer");
+  expect((await translations(instance, "de")).title?.colour).toBe("blue");
 });
 
 test("an outdated green translation is updated", async () => {
@@ -153,8 +155,8 @@ test("an outdated green translation is updated", async () => {
   assert(upload.job !== null);
   await drain(instance);
   const greeting = (await translations(instance, "de")).greeting!;
-  assertEquals(greeting.value, "[Ĥéļļö áğáíñ, {{name}}!]");
-  assertEquals([greeting.colour, greeting.outdated], ["green", false]);
+  expect(greeting.value).toBe("[Ĥéļļö áğáíñ, {{name}}!]");
+  expect([greeting.colour, greeting.outdated]).toStrictEqual(["green", false]);
 });
 
 test("an outdated proofread translation is updated green, and comes back blue with its English", async () => {
@@ -167,21 +169,25 @@ test("an outdated proofread translation is updated green, and comes back blue wi
   });
   await drain(instance);
   const updated = (await translations(instance, "de")).greeting!;
-  assertEquals(
-    [updated.value, updated.colour, updated.outdated],
-    ["[Ĥéļļö áğáíñ, {{name}}!]", "green", false],
+  expect([updated.value, updated.colour, updated.outdated]).toStrictEqual([
+    "[Ĥéļļö áğáíñ, {{name}}!]",
+    "green",
+    false,
+  ]);
+  expect(count(instance.sql, "suggestions", "language = 'de'"), "nothing to review").toStrictEqual(
+    0,
   );
-  assertEquals(count(instance.sql, "suggestions", "language = 'de'"), 0, "nothing to review");
 
   await uploadJson(instance.service, { "common.json": COMMON });
   await drain(instance);
   const restored = (await translations(instance, "de")).greeting!;
-  assertEquals(
-    [restored.value, restored.colour, restored.outdated],
-    ["Willkommen zurück, {{name}}!", "blue", false],
-  );
+  expect([restored.value, restored.colour, restored.outdated]).toStrictEqual([
+    "Willkommen zurück, {{name}}!",
+    "blue",
+    false,
+  ]);
   const after = await instance.service.exportFiles(SYSTEM, { languages: ["de"] });
-  assertEquals(JSON.parse(after.files[0].content).greeting, "Willkommen zurück, {{name}}!");
+  expect(JSON.parse(after.files[0].content).greeting).toBe("Willkommen zurück, {{name}}!");
 });
 
 test("upload jobs follow updateOutdated for green and proofread translations alike", async () => {
@@ -193,10 +199,10 @@ test("upload jobs follow updateOutdated for green and proofread translations ali
   const upload = await uploadJson(instance.service, {
     "common.json": { ...COMMON, title: "Wayfarers", greeting: "Hello again, {{name}}!" },
   });
-  assertEquals(upload.job, null, "nothing to do: no job");
+  expect(upload.job, "nothing to do: no job").toBe(null);
   const german = await translations(instance, "de");
-  assertEquals(german.greeting?.outdated, true, "green stays outdated");
-  assertEquals(german.title?.outdated, true, "and so does the proofread one");
+  expect(german.greeting?.outdated, "green stays outdated").toBe(true);
+  expect(german.title?.outdated, "and so does the proofread one").toBe(true);
 });
 
 test("a person's job updates outdated translations, proofread ones too, whatever the upload settings", async () => {
@@ -215,13 +221,13 @@ test("a person's job updates outdated translations, proofread ones too, whatever
     dryRun: true,
     languages: ["de"],
   });
-  assertEquals(estimate?.work, { translate: 0, retranslate: 0, update: 2 });
+  expect(estimate?.work).toStrictEqual({ translate: 0, retranslate: 0, update: 2 });
 
   await instance.service.createJob(SYSTEM, { languages: ["de"] });
   await drain(instance);
   const german = await translations(instance, "de");
-  assertEquals([german.title?.colour, german.title?.outdated], ["green", false]);
-  assertEquals(german.greeting?.outdated, false);
+  expect([german.title?.colour, german.title?.outdated]).toStrictEqual(["green", false]);
+  expect(german.greeting?.outdated).toBe(false);
 });
 
 test("a person's change during a batch wins over the LLM's result", async () => {
@@ -234,14 +240,15 @@ test("a person's change during a batch wins over the LLM's result", async () => 
   held.release();
   await running;
   await drain(instance);
-  assertEquals(
-    (await translations(instance, "de")).greeting?.value,
+  expect((await translations(instance, "de")).greeting?.value).toStrictEqual(
     "Willkommen zurück, {{name}}!",
   );
-  assertEquals((await translations(instance, "pl")).greeting?.value, "Witaj ponownie, {{name}}!");
+  expect((await translations(instance, "pl")).greeting?.value).toStrictEqual(
+    "Witaj ponownie, {{name}}!",
+  );
   const [job] = (await instance.service.listJobs(SYSTEM, {})).jobs;
-  assertEquals(job.progress.skipped, 2);
-  assertEquals(job.progress.translated, 2 * STRINGS - 2);
+  expect(job.progress.skipped).toBe(2);
+  expect(job.progress.translated).toStrictEqual(2 * STRINGS - 2);
 });
 
 test("a cancelled job's results are dropped, and it runs no more", async () => {
@@ -251,16 +258,18 @@ test("a cancelled job's results are dropped, and it runs no more", async () => {
   await held.started;
   const [queued] = (await instance.service.listJobs(SYSTEM, {})).jobs;
   const cancelled = await instance.service.cancelJob(SYSTEM, { id: queued.id });
-  assertEquals(cancelled.status, "cancelled");
+  expect(cancelled.status).toBe("cancelled");
   held.release();
   await running;
-  assertEquals(await drain(instance), 0);
-  assertEquals(count(instance.sql, "translations"), 0);
+  expect(await drain(instance)).toBe(0);
+  expect(count(instance.sql, "translations")).toBe(0);
   const job = await instance.service.getJob(SYSTEM, { id: queued.id });
-  assertEquals([job.status, job.progress.done], ["cancelled", 0]);
+  expect([job.status, job.progress.done]).toStrictEqual(["cancelled", 0]);
   assert(job.finishedAt !== null);
   // Cancelling again changes nothing.
-  assertEquals((await instance.service.cancelJob(SYSTEM, { id: queued.id })).status, "cancelled");
+  expect((await instance.service.cancelJob(SYSTEM, { id: queued.id })).status).toStrictEqual(
+    "cancelled",
+  );
 });
 
 test("jobs: who may start, see and cancel them", async () => {
@@ -275,35 +284,35 @@ test("jobs: who may start, see and cancel them", async () => {
     [read.actor, "forbidden"],
     [contributor, "forbidden"],
   ] as const) {
-    const error = await assertRejects(() => instance.service.createJob(actor, {}), ServiceError);
-    assertEquals(error.code, code);
-    await assertRejects(() => instance.service.listJobs(actor, {}), ServiceError);
+    const error = await instance.service.createJob(actor, {}).catch((error: unknown) => error);
+    assert(error instanceof ServiceError);
+    expect(error.code).toStrictEqual(code);
+    await expect(instance.service.listJobs(actor, {})).rejects.toThrow(ServiceError);
   }
   const { job } = await instance.service.createJob(upload.actor, { languages: ["de"] });
   assert(job !== null);
-  assertEquals(job.createdBy, { type: "token", id: upload.id, name: "upload key" });
-  const denied = await assertRejects(
-    () => instance.service.cancelJob(other.actor, { id: job.id }),
-    ServiceError,
-  );
-  assertEquals(denied.code, "forbidden");
-  assertEquals(
-    (await instance.service.cancelJob(upload.actor, { id: job.id })).status,
+  expect(job.createdBy).toStrictEqual({ type: "token", id: upload.id, name: "upload key" });
+  const denied = await instance.service
+    .cancelJob(other.actor, { id: job.id })
+    .catch((error: unknown) => error);
+  assert(denied instanceof ServiceError);
+  expect(denied.code).toBe("forbidden");
+  expect((await instance.service.cancelJob(upload.actor, { id: job.id })).status).toStrictEqual(
     "cancelled",
   );
   const second = await instance.service.createJob(manager, { languages: ["pl"] });
-  assertEquals(second.job?.createdBy.type, "user");
+  expect(second.job?.createdBy.type).toBe("user");
   await drain(instance);
-  const finished = await assertRejects(
-    () => instance.service.cancelJob(manager, { id: second.job!.id }),
-    ServiceError,
-  );
-  assertEquals(finished.code, "conflict");
-  const missing = await assertRejects(
-    () => instance.service.getJob(manager, { id: 999 }),
-    ServiceError,
-  );
-  assertEquals(missing.code, "not_found");
+  const finished = await instance.service
+    .cancelJob(manager, { id: second.job!.id })
+    .catch((error: unknown) => error);
+  assert(finished instanceof ServiceError);
+  expect(finished.code).toBe("conflict");
+  const missing = await instance.service
+    .getJob(manager, { id: 999 })
+    .catch((error: unknown) => error);
+  assert(missing instanceof ServiceError);
+  expect(missing.code).toBe("not_found");
 });
 
 test("jobs: a manager limited to some languages runs and cancels jobs in those only (ROLE-3)", async () => {
@@ -311,42 +320,51 @@ test("jobs: a manager limited to some languages runs and cancels jobs in those o
   const { service } = instance;
   const polish = addUser(instance.sql, "manager", ["pl"], "Polish manager");
   const none = addUser(instance.sql, "manager", [], "Manager without languages");
-  const code = async (promise: Promise<unknown>) =>
-    (await assertRejects(() => promise, ServiceError)).code;
+  const code = async (promise: Promise<unknown>) => {
+    const error = await promise.catch((error: unknown) => error);
+    assert(error instanceof ServiceError);
+    return error.code;
+  };
   writeBlue(instance, "title", "de", "Wanderer");
   write(instance, "common.json", "greeting", "de", "Willkommen, {{name}}!");
 
   // Another language, alone or among theirs, is refused, dry run or not.
   for (const languages of [["de"], ["pl", "de"]]) {
-    assertEquals(
-      await code(service.createJob(polish, { languages, retranslate: true })),
+    expect(await code(service.createJob(polish, { languages, retranslate: true }))).toStrictEqual(
       "forbidden",
     );
-    assertEquals(await code(service.createJob(polish, { languages, dryRun: true })), "forbidden");
+    expect(await code(service.createJob(polish, { languages, dryRun: true }))).toStrictEqual(
+      "forbidden",
+    );
   }
-  assertEquals(await code(service.createJob(none, {})), "forbidden");
+  expect(await code(service.createJob(none, {}))).toBe("forbidden");
   // Without languages, a job covers theirs.
   const estimate = (await service.createJob(polish, { dryRun: true })).estimate!;
-  assertEquals(
-    estimate.languages.map((l) => l.language),
-    ["pl"],
-  );
+  expect(estimate.languages.map((l) => l.language)).toStrictEqual(["pl"]);
   const { job } = await service.createJob(polish, { retranslate: true });
-  assertEquals([job!.scope.languages, job!.progress.total], [["pl"], STRINGS]);
+  expect([job!.scope.languages, job!.progress.total]).toStrictEqual([["pl"], STRINGS]);
   await drain(instance);
-  assertEquals((await translations(instance, "de")).greeting?.value, "Willkommen, {{name}}!");
-  assertEquals((await translations(instance, "pl")).greeting?.colour, "green");
+  expect((await translations(instance, "de")).greeting?.value).toStrictEqual(
+    "Willkommen, {{name}}!",
+  );
+  expect((await translations(instance, "pl")).greeting?.colour).toBe("green");
 
   // They cancel jobs in their languages, not the others' (an upload's covers every one).
   const german = await service.createJob(SYSTEM, { languages: ["de"], retranslate: true });
   const everything = await service.createJob(SYSTEM, { retranslate: true });
   const theirs = await service.createJob(polish, { languages: ["pl"], retranslate: true });
-  assertEquals(await code(service.cancelJob(polish, { id: german.job!.id })), "forbidden");
-  assertEquals(await code(service.cancelJob(polish, { id: everything.job!.id })), "forbidden");
-  assertEquals((await service.cancelJob(polish, { id: theirs.job!.id })).status, "cancelled");
+  expect(await code(service.cancelJob(polish, { id: german.job!.id }))).toBe("forbidden");
+  expect(await code(service.cancelJob(polish, { id: everything.job!.id }))).toStrictEqual(
+    "forbidden",
+  );
+  expect((await service.cancelJob(polish, { id: theirs.job!.id })).status).toStrictEqual(
+    "cancelled",
+  );
   // Nothing limits administrators, whatever list they kept.
   const admin = addUser(instance.sql, "administrator", ["pl"]);
-  assertEquals((await service.cancelJob(admin, { id: german.job!.id })).status, "cancelled");
+  expect((await service.cancelJob(admin, { id: german.job!.id })).status).toStrictEqual(
+    "cancelled",
+  );
 });
 
 test("jobs: qa re-translates the green translations that fail the checks, and only those", async () => {
@@ -359,20 +377,20 @@ test("jobs: qa re-translates the green translations that fail the checks, and on
   );
   const plain = await instance.service.createJob(SYSTEM, { dryRun: true });
   const qa = await instance.service.createJob(SYSTEM, { qa: true, dryRun: true });
-  assertEquals([plain.estimate!.strings, qa.estimate!.strings], [0, 1]);
+  expect([plain.estimate!.strings, qa.estimate!.strings]).toStrictEqual([0, 1]);
   instance.sql.run("UPDATE translations SET colour = 'blue' WHERE string_id = ?", title);
   const blue = await instance.service.createJob(SYSTEM, { qa: true, dryRun: true });
-  assertEquals(blue.estimate!.strings, 0, "blue translations never change");
+  expect(blue.estimate!.strings, "blue translations never change").toBe(0);
 });
 
 test("jobs: the scope is checked, and a dry run only estimates", async () => {
   using instance = await project();
   const check = async (request: Parameters<typeof instance.service.createJob>[1], code: string) => {
-    const error = await assertRejects(
-      () => instance.service.createJob(SYSTEM, request),
-      ServiceError,
-    );
-    assertEquals(error.code, code, JSON.stringify(request));
+    const error = await instance.service
+      .createJob(SYSTEM, request)
+      .catch((error: unknown) => error);
+    assert(error instanceof ServiceError);
+    expect(error.code, JSON.stringify(request)).toStrictEqual(code);
   };
   await check({ languages: ["fr"] }, "bad_request");
   await check({ files: ["missing.json"] }, "bad_request");
@@ -385,13 +403,17 @@ test("jobs: the scope is checked, and a dry run only estimates", async () => {
     dryRun: true,
     languages: ["PL"],
   });
-  assertEquals(job, null);
-  assertEquals(count(instance.sql, "jobs"), jobs, "nothing created");
+  expect(job).toBe(null);
+  expect(count(instance.sql, "jobs"), "nothing created").toStrictEqual(jobs);
   assert(estimate !== null);
-  assertEquals(estimate.strings, STRINGS);
-  assertEquals(estimate.requests, 1);
-  assertEquals(estimate.languages, [{ language: "pl", strings: STRINGS, words: estimate.words }]);
-  assertEquals(estimate.files, [{ file: "common.json", strings: STRINGS, words: estimate.words }]);
+  expect(estimate.strings).toStrictEqual(STRINGS);
+  expect(estimate.requests).toBe(1);
+  expect(estimate.languages).toStrictEqual([
+    { language: "pl", strings: STRINGS, words: estimate.words },
+  ]);
+  expect(estimate.files).toStrictEqual([
+    { file: "common.json", strings: STRINGS, words: estimate.words },
+  ]);
   assert(estimate.words > 0);
   assert(estimate.estimatedTokens.input > 200, JSON.stringify(estimate));
   assert(estimate.estimatedTokens.output > 10);
@@ -402,14 +424,14 @@ test("jobs: the scope is checked, and a dry run only estimates", async () => {
     instruction: "  Be brief.  ",
     model: "model-b",
   });
-  assertEquals(single.job?.priority, "string");
-  assertEquals(single.job?.scope, {
+  expect(single.job?.priority).toBe("string");
+  expect(single.job?.scope).toStrictEqual({
     languages: ["de"],
     strings: [stringId(instance.sql, "common.json", "greeting")],
     instruction: "Be brief.",
     model: "model-b",
   });
-  assertEquals(single.job?.progress.total, 1);
+  expect(single.job?.progress.total).toBe(1);
 });
 
 test("without a provider, LLM translation is off with a clear message", async () => {
@@ -421,17 +443,20 @@ test("without a provider, LLM translation is off with a clear message", async ()
       languages: ["de"],
     },
   );
-  assertEquals(upload.job, null);
-  assertEquals((await instance.service.getProject(ANONYMOUS, {})).llmAvailable, false);
-  const error = await assertRejects(() => instance.service.createJob(SYSTEM, {}), ServiceError);
-  assertEquals(error.code, "llm_unavailable");
-  assertEquals(error.message, "LLM translation is off: enter a Gemini API key in Settings.");
-  assertEquals(error.status, 503);
-  assertEquals(await instance.service.listModels(SYSTEM, {}), { models: [] });
+  expect(upload.job).toBe(null);
+  expect((await instance.service.getProject(ANONYMOUS, {})).llmAvailable).toBe(false);
+  const error = await instance.service.createJob(SYSTEM, {}).catch((error: unknown) => error);
+  assert(error instanceof ServiceError);
+  expect(error.code).toBe("llm_unavailable");
+  expect(error.message).toStrictEqual(
+    "LLM translation is off: enter a Gemini API key in Settings.",
+  );
+  expect(error.status).toBe(503);
+  expect(await instance.service.listModels(SYSTEM, {})).toStrictEqual({ models: [] });
 
   using withProvider = await project();
-  assertEquals((await withProvider.service.getProject(ANONYMOUS, {})).llmAvailable, true);
-  assertEquals(await withProvider.service.listModels(SYSTEM, {}), { models: [FAKE_MODEL] });
+  expect((await withProvider.service.getProject(ANONYMOUS, {})).llmAvailable).toBe(true);
+  expect(await withProvider.service.listModels(SYSTEM, {})).toStrictEqual({ models: [FAKE_MODEL] });
 });
 
 test("a file's context is generated once, and a person's context wins", async () => {
@@ -439,7 +464,7 @@ test("a file's context is generated once, and a person's context wins", async ()
   provider.release();
   using instance = await project(provider);
   await drain(instance);
-  assertEquals(provider.texts.length, 1);
+  expect(provider.texts.length).toBe(1);
   const [file] = instance.sql.query<{ generated_context: string | null }>(
     "SELECT generated_context FROM files",
   );
@@ -447,7 +472,7 @@ test("a file's context is generated once, and a person's context wins", async ()
   assert(provider.requests[0].prompt.includes(file.generated_context!));
   await instance.service.createJob(SYSTEM, { retranslate: true });
   await drain(instance);
-  assertEquals(provider.texts.length, 1, "cached");
+  expect(provider.texts.length, "cached").toBe(1);
 
   instance.sql.run("UPDATE files SET context = 'Words shown on the title screen.'");
   await instance.service.createJob(SYSTEM, { retranslate: true, languages: ["de"] });
@@ -483,8 +508,7 @@ test("a file's prompt has its folders' contexts, outermost first, then its own",
   instance.sql.run("UPDATE files SET context = 'The main menu.'");
   await instance.service.createJob(SYSTEM, { languages: ["de"] });
   await drain(instance);
-  assertStringIncludes(
-    provider.requests[0].prompt,
+  expect(provider.requests[0].prompt).toContain(
     "About this file:\nWords of a sailing game.\n\nMenu buttons.\n\nThe main menu.\n",
   );
 });
@@ -504,14 +528,11 @@ test("the upload key's usage, the custom instruction and the model reach the req
   });
   await drain(instance);
   const last = provider.requests[provider.requests.length - 1];
-  assertEquals(last.model, "model-b");
+  expect(last.model).toBe("model-b");
   assert(last.prompt.endsWith("Keep it short."));
-  assertEquals(
-    last.batch?.strings.map((s) => s.id),
-    [`s${single}`],
-  );
+  expect(last.batch?.strings.map((s) => s.id)).toStrictEqual([`s${single}`]);
   const forms = (await translations(instance, "pl")).coins?.value as PluralForms;
-  assertEquals(Object.keys(forms), ["one", "few", "many", "other"]);
+  expect(Object.keys(forms)).toStrictEqual(["one", "few", "many", "other"]);
 });
 
 test("other languages in the prompt: only translations of the current English", async () => {
@@ -535,7 +556,7 @@ test("other languages in the prompt: only translations of the current English", 
   await uploadJson(instance.service, { "common.json": { ...english, quit: "Save the game" } });
   await instance.service.createJob(SYSTEM, { languages: ["pl"] });
   await drain(instance);
-  assertEquals(provider.requests.length, 1);
+  expect(provider.requests.length).toBe(1);
   const prompt = provider.requests[0].prompt;
   const play = stringId(instance.sql, "common.json", "play");
   assert(

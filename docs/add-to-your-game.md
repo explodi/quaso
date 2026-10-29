@@ -94,12 +94,6 @@ The CLI commands and file mappings below work for both. See the
    review it before using `download --overwrite-local`. Keep `.quaso/` in `.gitignore`; the CLI
    stores its previous downloads there to detect local changes.
 
-With Deno 2.9 or later, replace `npx quaso` with `deno run -A npm:@quaso-i18n/cli@main`, for example:
-
-```sh
-deno run -A npm:@quaso-i18n/cli@main init --languages de,fr,pl
-```
-
 ## Configure paths and languages
 
 Use `quaso.config.json` to define the source files and each language's output path:

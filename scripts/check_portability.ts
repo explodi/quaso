@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 import * as fs from "node:fs/promises";
 /**
- * Keeps `core` and `service` portable (design §3): they run in Deno, in `workerd` inside a
- * Durable Object, and (`core`) in browsers and Node. Their code, tests excepted, may only
+ * Keeps `core` and `service` portable (design §3): they run in the Node server, in `workerd` inside a
+ * Durable Object, and (`core`) in browsers and the CLI. Their code, tests excepted, may only
  * use web-standard APIs and their ports: no `Deno.*`, no `node:`, `jsr:`, `npm:` or `@std/`
  * imports, and nothing from the server.
  */

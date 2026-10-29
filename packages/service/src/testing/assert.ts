@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 /**
  * A tiny assertion helper for the shared test cases, which also run in `workerd` (Sprint 3)
- * where `@std/assert` isn't available. Plain data only: objects, arrays, bytes and primitives.
+ * where Vitest's assertions aren't available. Plain data only: objects, arrays, bytes and primitives.
  */
 
 export class AssertionError extends Error {

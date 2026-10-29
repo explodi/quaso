@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
+import { assert, expect, test } from "vitest";
 import * as fs from "node:fs/promises";
 /**
  * The colours' accessibility (S7.9): theme.css is generated from tokens.ts, every text and
  * background pair has WCAG AA contrast in both themes, and the three state colours stay
  * apart for people with the common red–green colour blindnesses.
  */
-import { assert, assertEquals } from "@std/assert";
 import { colourDifference, contrastRatio, lightness, type Vision } from "../lib/contrast.ts";
 import { CONTRAST_CHECKS, faviconSvg, THEME_CSS_URL, themeCss, THEMES } from "./tokens.ts";
 
@@ -32,7 +31,7 @@ async function stylesheets(): Promise<{ name: string; css: string }[]> {
 
 test("theme.css is generated from tokens.ts", async () => {
   const css = await fs.readFile(THEME_CSS_URL, "utf8");
-  assertEquals(css, themeCss(), "theme.css is out of date: run deno task design:tokens");
+  expect(css, "theme.css is out of date: run npm run design:tokens").toStrictEqual(themeCss());
 });
 
 test("every colour pair has enough contrast in both themes (WCAG 2.2 AA)", () => {
@@ -45,7 +44,7 @@ test("every colour pair has enough contrast in both themes (WCAG 2.2 AA)", () =>
       }
     }
   }
-  assertEquals(failures, []);
+  expect(failures).toStrictEqual([]);
 });
 
 test("the state colours stay apart with red–green colour blindness", () => {
@@ -72,9 +71,9 @@ test("the state colours stay apart with red–green colour blindness", () => {
 });
 
 test("contrast arithmetic matches WCAG's examples", () => {
-  assertEquals(contrastRatio("#000000", "#ffffff"), 21);
-  assertEquals(contrastRatio("#fff", "#fff"), 1);
-  assertEquals(Math.round(contrastRatio("#777777", "#ffffff") * 100) / 100, 4.48);
+  expect(contrastRatio("#000000", "#ffffff")).toBe(21);
+  expect(contrastRatio("#fff", "#fff")).toBe(1);
+  expect(Math.round(contrastRatio("#777777", "#ffffff") * 100) / 100).toBe(4.48);
 });
 
 test("no stylesheet fades text: the contrast checks above would no longer hold", async () => {
@@ -93,18 +92,16 @@ test("no stylesheet fades text: the contrast checks above would no longer hold",
       failures.push(`${name}: ${selector.trim()} { opacity: ${value} }`);
     }
   }
-  assertEquals(failures, []);
+  expect(failures).toStrictEqual([]);
 });
 
 test("favicons use the shared brand palette", async () => {
-  assertEquals(
+  expect(
     await fs.readFile(new URL("../../../web/public/favicon.svg", import.meta.url), "utf8"),
-    faviconSvg(),
-  );
-  assertEquals(
+  ).toStrictEqual(faviconSvg());
+  expect(
     await fs.readFile(new URL("../../../../site/public/favicon.svg", import.meta.url), "utf8"),
-    faviconSvg(),
-  );
+  ).toStrictEqual(faviconSvg());
 });
 
 test("authored stylesheets use palette variables instead of literal colors", async () => {
@@ -114,5 +111,5 @@ test("authored stylesheets use palette variables instead of literal colors", asy
     const literal = /#[\da-f]{3,8}\b|\b(?:rgb|rgba|hsl|hsla|oklch|oklab|lab|lch)\s*\(/i.exec(css);
     if (literal) failures.push(`${name}: ${literal[0]}`);
   }
-  assertEquals(failures, []);
+  expect(failures).toStrictEqual([]);
 });

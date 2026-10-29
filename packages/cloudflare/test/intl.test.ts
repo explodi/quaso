@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 /**
  * Plural rules in workerd (S0.3): the service decides each language's plural categories
- * with the runtime's `Intl.PluralRules`, so workerd must agree with CLDR (and with Deno)
+ * with the runtime's `Intl.PluralRules`, so workerd must agree with CLDR (and with Node)
  * for the languages we test everywhere.
  */
 import { pluralCategories } from "@quaso/core";

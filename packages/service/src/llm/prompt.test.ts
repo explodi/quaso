@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assert, assertEquals, assertFalse, assertStringIncludes } from "@std/assert";
+import { assert, expect, test } from "vitest";
 import { DEFAULT_SYNTAX, PROMPT_PLACEHOLDERS } from "@quaso/core";
 import { DEFAULT_PROMPT_TEMPLATE } from "../settings.ts";
 import {
@@ -69,23 +68,20 @@ test("prompt: the default template uses every placeholder and splits at the mark
     assert(DEFAULT_PROMPT_TEMPLATE.includes(placeholder), placeholder);
   }
   const rendered = renderPrompt(DEFAULT_PROMPT_TEMPLATE, [COINS], context());
-  assertStringIncludes(rendered.system, "from English (en) into Polish (pl)");
-  assertStringIncludes(
-    rendered.system,
-    `Keep every placeholder listed in a string's "placeholders"`,
-  );
-  assertFalse(rendered.system.includes("%%"), "notes are never sent");
-  assertFalse(rendered.system.includes("---STRINGS---"));
-  assertStringIncludes(rendered.prompt, "The strings come from the file common.json.");
-  assertFalse(rendered.prompt.includes("---STRINGS---"));
+  expect(rendered.system).toContain("from English (en) into Polish (pl)");
+  expect(rendered.system).toContain(`Keep every placeholder listed in a string's "placeholders"`);
+  expect(rendered.system.includes("%%"), "notes are never sent").toBeFalsy();
+  expect(rendered.system.includes("---STRINGS---")).toBeFalsy();
+  expect(rendered.prompt).toContain("The strings come from the file common.json.");
+  expect(rendered.prompt.includes("---STRINGS---")).toBeFalsy();
   // Stable parts first: the strings aren't in the system instruction.
-  assertFalse(rendered.system.includes('"id":"s12"'));
+  expect(rendered.system.includes('"id":"s12"')).toBeFalsy();
 });
 
 test("prompt: a Polish plural string with its forms and example numbers", () => {
   const rendered = renderPrompt(DEFAULT_PROMPT_TEMPLATE, [COINS], context());
   const [line] = stringLines(rendered.prompt);
-  assertEquals(line, {
+  expect(line).toStrictEqual({
     id: "s12",
     key: "coins",
     english: { one: "{{count}} coin", other: "{{count}} coins" },
@@ -97,22 +93,22 @@ test("prompt: a Polish plural string with its forms and example numbers", () => 
     },
     placeholders: ["{{count}}"],
   });
-  assertStringIncludes(rendered.system, "one (1); few (2–4, 22–24, 32–34, …)");
-  assertEquals(rendered.batch.strings[0].forms, ["one", "few", "many", "other"]);
-  assertEquals(rendered.batch.targetLanguage, "pl");
+  expect(rendered.system).toContain("one (1); few (2–4, 22–24, 32–34, …)");
+  expect(rendered.batch.strings[0].forms).toStrictEqual(["one", "few", "many", "other"]);
+  expect(rendered.batch.targetLanguage).toBe("pl");
 });
 
 test("prompt: references are masked, with what they stand for, within the limit", () => {
   const references = new Map([["$t(common:play)", { english: "Play", translation: "Graj" }]]);
   const rendered = renderPrompt(DEFAULT_PROMPT_TEMPLATE, [AGAIN], context({ references }));
   const [line] = stringLines(rendered.prompt);
-  assertEquals(line.english, "⟦1⟧ again");
-  assertEquals(line.references, { "⟦1⟧": '"Graj" (English: "Play")' });
-  assertEquals(line.description, "The button after a game over");
+  expect(line.english).toBe("⟦1⟧ again");
+  expect(line.references).toStrictEqual({ "⟦1⟧": '"Graj" (English: "Play")' });
+  expect(line.description).toBe("The button after a game over");
   // The limit counts the reference as stored: 20 − (15 − 3) = 8 for what the model writes.
-  assertEquals(line.maxLength, 8);
-  assertEquals(rendered.masked.get("s13")?.references, ["$t(common:play)"]);
-  assertEquals(rendered.batch.strings[0].english, "⟦1⟧ again");
+  expect(line.maxLength).toBe(8);
+  expect(rendered.masked.get("s13")?.references).toStrictEqual(["$t(common:play)"]);
+  expect(rendered.batch.strings[0].english).toBe("⟦1⟧ again");
 });
 
 test("prompt: plural forms share one numbering of references", () => {
@@ -125,9 +121,9 @@ test("prompt: plural forms share one numbering of references", () => {
     "de",
     DEFAULT_SYNTAX,
   );
-  assertEquals(masked.english, { one: "⟦2⟧ and ⟦1⟧", other: "⟦1⟧ and ⟦2⟧, {{count}}" });
-  assertEquals(masked.references, ["$t(b)", "$t(a)"]);
-  assertEquals(masked.forms, ["one", "other"]);
+  expect(masked.english).toStrictEqual({ one: "⟦2⟧ and ⟦1⟧", other: "⟦1⟧ and ⟦2⟧, {{count}}" });
+  expect(masked.references).toStrictEqual(["$t(b)", "$t(a)"]);
+  expect(masked.forms).toStrictEqual(["one", "other"]);
 });
 
 test("prompt: neighbours, other languages, identical strings and the custom instruction", () => {
@@ -151,23 +147,17 @@ test("prompt: neighbours, other languages, identical strings and the custom inst
       languageInstructions: "Address the player informally.",
     }),
   );
-  assertStringIncludes(
-    rendered.prompt,
+  expect(rendered.prompt).toContain(
     '{"key":"saved","english":"Game saved.","translation":"Gra zapisana."}',
   );
-  assertStringIncludes(
-    rendered.prompt,
+  expect(rendered.prompt).toContain(
     '{"id":"s12","language":"de","translation":{"one":"{{count}} Münze"},"proofread":true}',
   );
-  assertStringIncludes(rendered.prompt, '{"english":"Back","translation":"Wróć"}');
-  assertStringIncludes(rendered.prompt, "About this file:\nThe game's shared words.");
+  expect(rendered.prompt).toContain('{"english":"Back","translation":"Wróć"}');
+  expect(rendered.prompt).toContain("About this file:\nThe game's shared words.");
   assert(rendered.prompt.endsWith("Use the informal you."), rendered.prompt);
-  assertStringIncludes(
-    rendered.system,
-    "Instructions for the project:\nKeep the name Quaso Quest.",
-  );
-  assertStringIncludes(
-    rendered.system,
+  expect(rendered.system).toContain("Instructions for the project:\nKeep the name Quaso Quest.");
+  expect(rendered.system).toContain(
     "Instructions for Polish (pl):\nAddress the player informally.",
   );
 });
@@ -190,10 +180,10 @@ test("prompt: empty optional sections vanish, headings and all", () => {
     "The strings around them",
     "An instruction for this run",
   ]) {
-    assertFalse(all.includes(heading), heading);
+    expect(all.includes(heading), heading).toBeFalsy();
   }
-  assertFalse(all.includes("%"), all);
-  assertFalse(/\n\n\n/.test(all), "no empty paragraphs");
+  expect(all.includes("%"), all).toBeFalsy();
+  expect(/\n\n\n/.test(all), "no empty paragraphs").toBeFalsy();
 });
 
 test("prompt: outdated translations and refused answers are shown, masked", () => {
@@ -209,8 +199,8 @@ test("prompt: outdated translations and refused answers are shown, masked", () =
     context(),
   );
   const [line] = stringLines(rendered.prompt);
-  assertEquals(line.outdatedTranslation, "⟦1⟧ jeszcze");
-  assertEquals(line.refused, {
+  expect(line.outdatedTranslation).toBe("⟦1⟧ jeszcze");
+  expect(line.refused).toStrictEqual({
     answer: "⟦1⟧ ponownie!!",
     reasons: ["At most 8 characters; this has 14."],
   });
@@ -223,22 +213,20 @@ test("prompt: templates without the marker, notes, unknown and repeated placehol
     customInstruction: "",
     projectName: "%fileName%",
   };
-  assertEquals(
+  expect(
     renderTemplate(
       "%% a note\nFile %fileName%, %fileName%.\n\n%customInstruction%\n\n%strings% 100%",
       values,
     ),
-    { system: DEFAULT_SYSTEM, prompt: "File a.json, a.json.\n\nS 100%" },
-  );
+  ).toStrictEqual({ system: DEFAULT_SYSTEM, prompt: "File a.json, a.json.\n\nS 100%" });
   // A value is inserted once: a placeholder inside it stays as it is.
-  assertEquals(renderTemplate("%projectName%", values).prompt, "%fileName%");
-  assertEquals(renderTemplate("Rules\n---STRINGS---\n%strings%", values), {
+  expect(renderTemplate("%projectName%", values).prompt).toBe("%fileName%");
+  expect(renderTemplate("Rules\n---STRINGS---\n%strings%", values)).toStrictEqual({
     system: "Rules",
     prompt: "S",
   });
   // The strings always go, even in a paragraph with an empty placeholder.
-  assertEquals(
-    renderTemplate("%customInstruction%\nThe strings:\n%strings%", values).prompt,
+  expect(renderTemplate("%customInstruction%\nThe strings:\n%strings%", values).prompt).toBe(
     "The strings:\nS",
   );
 });
@@ -262,7 +250,7 @@ test("prompt: a string lists the app's own placeholders beside i18next's", () =>
   };
   const rendered = renderPrompt(DEFAULT_PROMPT_TEMPLATE, [hiring], context({ syntax }));
   const [line] = stringLines(rendered.prompt);
-  assertEquals(line.placeholders, ["{companyName}", "{{count}}"]);
+  expect(line.placeholders).toStrictEqual(["{companyName}", "{{count}}"]);
 });
 
 test("prompt: a string lists the placeholders the target language may leave out", () => {
@@ -281,13 +269,13 @@ test("prompt: a string lists the placeholders the target language may leave out"
     maxLength: null,
   };
   const polish = renderPrompt(DEFAULT_PROMPT_TEMPLATE, [seeking], context({ syntax }));
-  assertEquals(stringLines(polish.prompt)[0].optionalPlaceholders, ["{article}"]);
+  expect(stringLines(polish.prompt)[0].optionalPlaceholders).toStrictEqual(["{article}"]);
   const german = renderPrompt(
     DEFAULT_PROMPT_TEMPLATE,
     [seeking],
     context({ syntax, targetLanguage: "de" }),
   );
-  assertEquals(stringLines(german.prompt)[0].optionalPlaceholders, undefined);
+  expect(stringLines(german.prompt)[0].optionalPlaceholders).toBe(undefined);
 });
 
 /** The `required` of the answer's `forms`, for a batch's strings. */
@@ -302,19 +290,18 @@ test("prompt: the answer's schema requires the plural forms every plural string 
   const cardinal = { id: "s1", kind: "plural" as const, english: { one: "a", other: "b" } };
   const ordinal = { id: "s2", kind: "ordinal" as const, english: { one: "a", other: "b" } };
   const text = { id: "s3", kind: "text" as const, english: "c" };
-  assertEquals(requiredForms([{ ...cardinal, forms: ["one", "many", "other"] }, text]), [
+  expect(requiredForms([{ ...cardinal, forms: ["one", "many", "other"] }, text])).toStrictEqual([
     "one",
     "many",
     "other",
   ]);
-  assertEquals(
+  expect(
     requiredForms([
       { ...cardinal, forms: ["one", "many", "other"] },
       { ...ordinal, forms: ["one", "other"] },
     ]),
-    ["one", "other"],
-  );
-  assertEquals(responseSchemaFor([text]), RESPONSE_SCHEMA);
+  ).toStrictEqual(["one", "other"]);
+  expect(responseSchemaFor([text])).toStrictEqual(RESPONSE_SCHEMA);
 });
 
 test("prompt: ICU projects get the ICU rules; others don't", () => {
@@ -323,9 +310,9 @@ test("prompt: ICU projects get the ICU rules; others don't", () => {
     [COINS],
     context({ syntax: { ...DEFAULT_SYNTAX, icu: true } }),
   );
-  assertStringIncludes(icu.system, ICU_RULES);
+  expect(icu.system).toContain(ICU_RULES);
   const plain = renderPrompt(DEFAULT_PROMPT_TEMPLATE, [COINS], context());
-  assertFalse(plain.system.includes(ICU_RULES));
+  expect(plain.system.includes(ICU_RULES)).toBeFalsy();
 });
 
 const ICU_SYNTAX = { ...DEFAULT_SYNTAX, icu: true };
@@ -352,7 +339,7 @@ test("prompt: a string's line lists its arguments, with the other case", () => {
     [JOINED],
     context({ targetLanguage: "es", syntax: ICU_SYNTAX }),
   );
-  assertEquals(stringLines(rendered.prompt)[0].arguments, [
+  expect(stringLines(rendered.prompt)[0].arguments).toStrictEqual([
     {
       name: "authorGender",
       cases: ["female", "male", "other"],
@@ -367,7 +354,7 @@ test("prompt: a batch with arguments gets the rules for them", () => {
     [JOINED],
     context({ targetLanguage: "es", syntax: ICU_SYNTAX }),
   );
-  assertStringIncludes(rendered.system, argumentRules("es"));
+  expect(rendered.system).toContain(argumentRules("es"));
 });
 
 test("prompt: a batch without arguments doesn't get their rules", () => {
@@ -376,7 +363,7 @@ test("prompt: a batch without arguments doesn't get their rules", () => {
     [COINS],
     context({ targetLanguage: "es", syntax: ICU_SYNTAX }),
   );
-  assertFalse(rendered.system.includes(argumentRules("es")));
+  expect(rendered.system.includes(argumentRules("es"))).toBeFalsy();
 });
 
 test("prompt: without ICU MessageFormat, arguments are neither listed nor explained", () => {
@@ -385,6 +372,6 @@ test("prompt: without ICU MessageFormat, arguments are neither listed nor explai
     [JOINED],
     context({ targetLanguage: "es" }),
   );
-  assertEquals(stringLines(rendered.prompt)[0].arguments, undefined);
-  assertFalse(rendered.system.includes(argumentRules("es")));
+  expect(stringLines(rendered.prompt)[0].arguments).toBe(undefined);
+  expect(rendered.system.includes(argumentRules("es"))).toBeFalsy();
 });

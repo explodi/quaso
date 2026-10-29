@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
+import { tmpdir } from "node:os";
+import { expect, test } from "vitest";
 import * as fs from "node:fs/promises";
-import { assertEquals, assertRejects } from "@std/assert";
 import { fileURLToPath as fromFileUrl } from "node:url";
 import { join } from "node:path";
 import { openNodeSqlite } from "./adapters/node_sqlite.ts";
@@ -12,7 +12,7 @@ import { FakeScheduler, TestClock } from "./test_helpers.ts";
 const fixtures = fromFileUrl(new URL("../testdata/upgrade/", import.meta.url));
 
 async function startBeta1Database(version: number) {
-  const dir = await Deno.makeTempDir({ prefix: "quaso-beta-1-" });
+  const dir = await fs.mkdtemp(join(tmpdir(), "quaso-beta-1-"));
   const file = join(dir, "quaso.sqlite");
   await fs.copyFile(join(fixtures, `v${version}.sqlite`), file);
   const database = openNodeSqlite(file);
@@ -30,9 +30,9 @@ test("a Beta 1 database at schema version 1 is refused, and left unchanged", asy
   const beta1 = await startBeta1Database(1);
   try {
     const before = await fs.readFile(beta1.file);
-    await assertRejects(() => beta1.service.start(), Error, "This database is from Beta 1");
+    await expect(beta1.service.start()).rejects.toThrow("This database is from Beta 1");
     beta1.database.close();
-    assertEquals(await fs.readFile(beta1.file), before);
+    expect(await fs.readFile(beta1.file)).toStrictEqual(before);
   } finally {
     await fs.rm(beta1.dir, { recursive: true });
   }
@@ -42,9 +42,9 @@ test("a Beta 1 database at schema version 3 is refused, and left unchanged", asy
   const beta1 = await startBeta1Database(3);
   try {
     const before = await fs.readFile(beta1.file);
-    await assertRejects(() => beta1.service.start(), Error, "This database is from Beta 1");
+    await expect(beta1.service.start()).rejects.toThrow("This database is from Beta 1");
     beta1.database.close();
-    assertEquals(await fs.readFile(beta1.file), before);
+    expect(await fs.readFile(beta1.file)).toStrictEqual(before);
   } finally {
     await fs.rm(beta1.dir, { recursive: true });
   }

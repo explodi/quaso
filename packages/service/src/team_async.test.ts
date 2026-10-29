@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
+import { test } from "vitest";
 import { openAsyncSqlite } from "./adapters/node_async_sqlite.ts";
 import { TEAM_CASES } from "./testing/team_cases.ts";
 import { initializeUploadSql } from "./testing/upload_cases.ts";

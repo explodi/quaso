@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assert, assertEquals, assertRejects } from "@std/assert";
+import { assert, expect, test } from "vitest";
 import { ANONYMOUS, SYSTEM } from "./api.ts";
 import { ServiceError } from "./errors.ts";
 import type { SyncSql, SqlRow, SqlValue } from "./ports.ts";
@@ -66,48 +65,42 @@ test("progress counts strings, words and states per language and file", async ()
     "hud.json": HUD,
   });
   const status = await instance.service.getStatus(SYSTEM, { language: "de" });
-  assertEquals(status.sourceLanguage, "en");
-  assertEquals(status.languages.length, 1);
+  expect(status.sourceLanguage).toBe("en");
+  expect(status.languages.length).toBe(1);
   const de = status.languages[0];
   // Words: title 2, intro 6, coins 2 (forms), hp 2 → 12.
-  assertEquals(
-    {
-      strings: de.strings,
-      words: de.words,
-      untranslated: de.untranslated,
-      green: de.green,
-      blue: de.blue,
-      outdated: de.outdated,
-      pending: de.pending,
-      qa: de.qa,
-      wordsLeft: de.wordsLeft,
-      translatedPercent: de.translatedPercent,
-      proofreadPercent: de.proofreadPercent,
-    },
-    {
-      strings: 4,
-      words: 12,
-      untranslated: 0,
-      green: 2,
-      blue: 2,
-      outdated: 1,
-      pending: 1,
-      qa: 1,
-      wordsLeft: 0,
-      translatedPercent: 100,
-      proofreadPercent: 66,
-    },
-  );
-  assertEquals([de.tag, de.name, de.direction], ["de", "German", "ltr"]);
-  assertEquals(de.plural, { cardinal: ["one", "other"], ordinal: ["other"] });
-  assertEquals(
-    de.files.map((file) => [file.path, file.strings, file.words, file.blue]),
-    [
-      ["common.json", 3, 10, 1],
-      ["hud.json", 1, 2, 1],
-    ],
-  );
-  assertEquals(de.files[0].proofreadPercent, 60);
+  expect({
+    strings: de.strings,
+    words: de.words,
+    untranslated: de.untranslated,
+    green: de.green,
+    blue: de.blue,
+    outdated: de.outdated,
+    pending: de.pending,
+    qa: de.qa,
+    wordsLeft: de.wordsLeft,
+    translatedPercent: de.translatedPercent,
+    proofreadPercent: de.proofreadPercent,
+  }).toStrictEqual({
+    strings: 4,
+    words: 12,
+    untranslated: 0,
+    green: 2,
+    blue: 2,
+    outdated: 1,
+    pending: 1,
+    qa: 1,
+    wordsLeft: 0,
+    translatedPercent: 100,
+    proofreadPercent: 66,
+  });
+  expect([de.tag, de.name, de.direction]).toStrictEqual(["de", "German", "ltr"]);
+  expect(de.plural).toStrictEqual({ cardinal: ["one", "other"], ordinal: ["other"] });
+  expect(de.files.map((file) => [file.path, file.strings, file.words, file.blue])).toStrictEqual([
+    ["common.json", 3, 10, 1],
+    ["hud.json", 1, 2, 1],
+  ]);
+  expect(de.files[0].proofreadPercent).toBe(60);
 });
 
 test("status lists every language with its plural categories, after overrides", async () => {
@@ -117,21 +110,25 @@ test("status lists every language with its plural categories, after overrides", 
     JSON.stringify({ cardinal: ["one", "few", "other"] }),
   );
   const status = await instance.service.getStatus(SYSTEM, {});
-  assertEquals(
-    status.languages.map((language) => [language.tag, language.direction]),
-    [
-      ["ar", "rtl"],
-      ["de", "ltr"],
-      ["pl", "ltr"],
-    ],
-  );
-  assertEquals(status.languages[0].plural.cardinal, ["zero", "one", "two", "few", "many", "other"]);
-  assertEquals(status.languages[2].plural, {
+  expect(status.languages.map((language) => [language.tag, language.direction])).toStrictEqual([
+    ["ar", "rtl"],
+    ["de", "ltr"],
+    ["pl", "ltr"],
+  ]);
+  expect(status.languages[0].plural.cardinal).toStrictEqual([
+    "zero",
+    "one",
+    "two",
+    "few",
+    "many",
+    "other",
+  ]);
+  expect(status.languages[2].plural).toStrictEqual({
     cardinal: ["one", "few", "other"],
     ordinal: ["other"],
   });
   for (const language of status.languages) {
-    assertEquals([language.untranslated, language.translatedPercent], [4, 0]);
+    expect([language.untranslated, language.translatedPercent]).toStrictEqual([4, 0]);
   }
 });
 
@@ -148,19 +145,18 @@ test("percentages use string counts when there are no words", async () => {
   const result = await instance.service.listFiles(ANONYMOUS, { language: "de" });
   assert(result.language !== undefined);
   const { files } = result;
-  assertEquals(
-    files.map((file) => [file.path, file.words, file.translatedPercent]),
-    [["a.json", 0, 50]],
-  );
+  expect(files.map((file) => [file.path, file.words, file.translatedPercent])).toStrictEqual([
+    ["a.json", 0, 50],
+  ]);
 });
 
 test("unknown languages are not found", async () => {
   using instance = await project();
-  const error = await assertRejects(
-    () => instance.service.listFiles(ANONYMOUS, { language: "fr" }),
-    ServiceError,
-  );
-  assertEquals(error.code, "not_found");
+  const error = await instance.service
+    .listFiles(ANONYMOUS, { language: "fr" })
+    .catch((error: unknown) => error);
+  assert(error instanceof ServiceError);
+  expect(error.code).toBe("not_found");
 });
 
 test("getProject describes the project, its languages and facts", async () => {
@@ -169,27 +165,30 @@ test("getProject describes the project, its languages and facts", async () => {
   addUser(instance.sql, "none");
   write(instance, "common.json", "title", "pl", "Wędrowiec");
   const info = await instance.service.getProject(ANONYMOUS, {});
-  assertEquals(info.name, "Untitled project");
-  assertEquals([info.sourceLanguage, info.sourceLanguageName], ["en", "English"]);
-  assertEquals(info.syntax, { prefix: "{{", suffix: "}}", extra: [], optional: [], icu: false });
-  assertEquals(
-    info.languages.map((language) => [language.tag, language.green]),
-    [
-      ["ar", 0],
-      ["de", 0],
-      ["pl", 1],
-    ],
-  );
-  assertEquals(info.details, {
+  expect(info.name).toBe("Untitled project");
+  expect([info.sourceLanguage, info.sourceLanguageName]).toStrictEqual(["en", "English"]);
+  expect(info.syntax).toStrictEqual({
+    prefix: "{{",
+    suffix: "}}",
+    extra: [],
+    optional: [],
+    icu: false,
+  });
+  expect(info.languages.map((language) => [language.tag, language.green])).toStrictEqual([
+    ["ar", 0],
+    ["de", 0],
+    ["pl", 1],
+  ]);
+  expect(info.details).toStrictEqual({
     strings: 4,
     words: 11,
     files: 2,
     members: 1,
     lastActivity: instance.clock.now,
   });
-  assertEquals(info.llmAvailable, false);
-  assertEquals(info.referenceLanguages, []);
-  assertEquals(info.revision, 2);
+  expect(info.llmAvailable).toBe(false);
+  expect(info.referenceLanguages).toStrictEqual([]);
+  expect(info.revision).toBe(2);
 });
 
 test("counts are kept until the next write, even one that doesn't raise the revision", async () => {
@@ -202,15 +201,12 @@ test("counts are kept until the next write, even one that doesn't raise the revi
     return query.call<SyncSql, [string, ...SqlValue[]], T[]>(instance.sql, text, ...params);
   };
   const first = await instance.service.getProject(ANONYMOUS, {});
-  assertEquals(reads, 3, "one read per language");
-  assertEquals(await instance.service.getProject(ANONYMOUS, {}), first);
+  expect(reads, "one read per language").toBe(3);
+  expect(await instance.service.getProject(ANONYMOUS, {})).toStrictEqual(first);
   const status = await instance.service.getStatus(SYSTEM, {});
   await instance.service.listFiles(ANONYMOUS, { language: "de" });
-  assertEquals(reads, 3, "the same state is counted once");
-  assertEquals(
-    status.languages.map((language) => language.green),
-    [0, 1, 0],
-  );
+  expect(reads, "the same state is counted once").toBe(3);
+  expect(status.languages.map((language) => language.green)).toStrictEqual([0, 1, 0]);
 
   instance.sql.run(
     `INSERT INTO suggestions (string_id, language, kind, value, source_hash, base_revision,
@@ -218,17 +214,17 @@ test("counts are kept until the next write, even one that doesn't raise the revi
     stringId(instance.sql, "common.json", "title"),
   );
   const after = await instance.service.getStatus(SYSTEM, { language: "de" });
-  assertEquals(after.languages[0].pending, 1);
-  assertEquals(reads, 4);
+  expect(after.languages[0].pending).toBe(1);
+  expect(reads).toBe(4);
 
   write(instance, "common.json", "intro", "de", "Alles", BLUE);
   const project2 = await instance.service.getProject(ANONYMOUS, {});
-  assertEquals(project2.languages.find((language) => language.tag === "de")?.blue, 1);
+  expect(project2.languages.find((language) => language.tag === "de")?.blue).toBe(1);
 });
 
 test("source listings are public without a language and record only the last upload change", async () => {
   using instance = await startTestService();
-  assertEquals(await instance.service.listFiles(ANONYMOUS, {}), { files: [] });
+  expect(await instance.service.listFiles(ANONYMOUS, {})).toStrictEqual({ files: [] });
   const file = {
     path: "main.json",
     repoPath: "src/locales/en/main.json",
@@ -237,7 +233,7 @@ test("source listings are public without a language and record only the last upl
   await instance.service.upload(SYSTEM, { files: [file] });
   const initial = await instance.service.listFiles(ANONYMOUS, {});
   assert(initial.language === undefined);
-  assertEquals(
+  expect(
     initial.files.map((source) => [
       source.path,
       source.repoPath,
@@ -245,18 +241,18 @@ test("source listings are public without a language and record only the last upl
       source.words,
       source.revision,
     ]),
-    [["main.json", "src/locales/en/main.json", 1, 1, 1]],
-  );
+  ).toStrictEqual([["main.json", "src/locales/en/main.json", 1, 1, 1]]);
   instance.clock.advance(500);
   await instance.service.upload(SYSTEM, { files: [file] });
-  assertEquals(await instance.service.listFiles(ANONYMOUS, {}), initial);
+  expect(await instance.service.listFiles(ANONYMOUS, {})).toStrictEqual(initial);
   await instance.service.upload(SYSTEM, {
     files: [{ ...file, content: '{"hello":"Good morning"}' }],
   });
   const changed = await instance.service.listFiles(ANONYMOUS, {});
   assert(changed.language === undefined);
-  assertEquals(
-    [changed.files[0].words, changed.files[0].updatedAt, changed.files[0].revision],
-    [2, initial.files[0].updatedAt + 500, 2],
-  );
+  expect([
+    changed.files[0].words,
+    changed.files[0].updatedAt,
+    changed.files[0].revision,
+  ]).toStrictEqual([2, initial.files[0].updatedAt + 500, 2]);
 });

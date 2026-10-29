@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals } from "@std/assert";
+import { expect, test } from "vitest";
 import type { Role } from "@quaso/core";
 import type { Context } from "../../../service/src/context.ts";
 import { can as serviceCan } from "../../../service/src/permissions.ts";
@@ -33,12 +32,10 @@ const TABLE: Record<Action, (Role | "anyone")[]> = {
 
 test("can() follows the design's permission table", () => {
   for (const action of ACTIONS) {
-    assertEquals(can(null, action), TABLE[action].includes("anyone"), `anyone: ${action}`);
+    expect(can(null, action), `anyone: ${action}`).toStrictEqual(TABLE[action].includes("anyone"));
     for (const role of ["none", "contributor", "manager", "administrator"] as const) {
-      assertEquals(
-        can({ role, languages: null }, action),
+      expect(can({ role, languages: null }, action), `${role}: ${action}`).toStrictEqual(
         TABLE[action].includes(role),
-        `${role}: ${action}`,
       );
     }
   }
@@ -46,35 +43,35 @@ test("can() follows the design's permission table", () => {
 
 test("language limits apply to suggesting, editing and reviewing", () => {
   const contributor = { role: "contributor" as const, languages: ["de", "pt-BR"] };
-  assertEquals(can(contributor, "suggest", "de"), true);
-  assertEquals(can(contributor, "suggest", "pt-br"), true);
-  assertEquals(can(contributor, "suggest", "fr"), false);
-  assertEquals(can(contributor, "suggest"), true);
-  assertEquals(can(contributor, "read", "fr"), true);
+  expect(can(contributor, "suggest", "de")).toBe(true);
+  expect(can(contributor, "suggest", "pt-br")).toBe(true);
+  expect(can(contributor, "suggest", "fr")).toBe(false);
+  expect(can(contributor, "suggest")).toBe(true);
+  expect(can(contributor, "read", "fr")).toBe(true);
   const manager = { role: "manager" as const, languages: ["fr"] };
-  assertEquals(can(manager, "edit", "fr"), true);
-  assertEquals(can(manager, "edit", "de"), false);
-  assertEquals(can(manager, "review", "de"), false);
+  expect(can(manager, "edit", "fr")).toBe(true);
+  expect(can(manager, "edit", "de")).toBe(false);
+  expect(can(manager, "review", "de")).toBe(false);
   // Running the LLM isn't limited by language (as in the service).
-  assertEquals(can(manager, "translate", "de"), true);
+  expect(can(manager, "translate", "de")).toBe(true);
 });
 
 test("as in the service: no language list limits administrators", () => {
   // A manager limited to German who was promoted keeps the list; it no longer applies.
   const administrator = { role: "administrator" as const, languages: ["de"] };
   for (const action of ["suggest", "edit", "review"] as const) {
-    assertEquals(can(administrator, action, "fr"), true, action);
+    expect(can(administrator, action, "fr"), action).toBe(true);
   }
 });
 
 test("as in the service: tags compare in their canonical form", () => {
   const contributor = { role: "contributor" as const, languages: ["iw", "zh-hans"] };
-  assertEquals(can(contributor, "suggest", "he"), true);
-  assertEquals(can(contributor, "suggest", "zh-Hans"), true);
-  assertEquals(can(contributor, "suggest", "zh-Hant"), false);
+  expect(can(contributor, "suggest", "he")).toBe(true);
+  expect(can(contributor, "suggest", "zh-Hans")).toBe(true);
+  expect(can(contributor, "suggest", "zh-Hant")).toBe(false);
   const manager = { role: "manager" as const, languages: ["he"] };
-  assertEquals(can(manager, "edit", "iw"), true);
-  assertEquals(can(manager, "edit", "ar"), false);
+  expect(can(manager, "edit", "iw")).toBe(true);
+  expect(can(manager, "edit", "ar")).toBe(false);
 });
 
 test("can() gives the service's answer for every role, language list, action and language", () => {
@@ -96,11 +93,10 @@ test("can() gives the service's answer for every role, language list, action and
       } as unknown as Context;
       for (const action of ACTIONS) {
         for (const language of languages) {
-          assertEquals(
+          expect(
             can({ role, languages: languagesOf }, action, language),
-            serviceCan(ctx, { type: "user", userId: 1 }, action, language),
             `${role} ${JSON.stringify(languagesOf)} ${action} ${language}`,
-          );
+          ).toStrictEqual(serviceCan(ctx, { type: "user", userId: 1 }, action, language));
         }
       }
     }

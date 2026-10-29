@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-/** `deno task cf:deploy` only deploys a named environment. */
+/** `npm run cf:deploy` only deploys a named environment. */
 import { describe, expect, it } from "vitest";
 import { deployEnvironment, deployProblem } from "../scripts/deploy_args.ts";
 

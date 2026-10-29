@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 /** Helpers for the server's tests. */
-import { assert } from "@std/assert";
+import { assert } from "vitest";
+
 import type { ServiceApi } from "@quaso/service";
 import { type App, createApp } from "../app.ts";
 import { type Config, type Env, loadConfig } from "../config.ts";
@@ -50,7 +51,14 @@ export function call(
     headers.set("Content-Type", "application/json");
     body = JSON.stringify(init.json);
   }
-  return app(new Request(`http://quaso.test${path}`, { ...init, headers, body }), {
+  // Node's Request requires `duplex` for a streamed body.
+  const request = new Request(`http://quaso.test${path}`, {
+    ...init,
+    headers,
+    body,
+    duplex: "half",
+  } as RequestInit);
+  return app(request, {
     remoteAddr: { hostname: "192.0.2.1" },
   });
 }

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 /** Uses Wrangler's current credentials without displaying or persisting them. */
+import { spawnSync } from "node:child_process";
 import type { Fetch } from "../../core/mod.ts";
 
 export interface Identity {
@@ -15,19 +16,19 @@ export type WranglerRun = (
 ) => Promise<{ code: number; stdout: string }>;
 
 export async function runWrangler(args: string[], inherit = false) {
-  const result = await new Deno.Command(Deno.execPath(), {
-    args: ["run", "-A", "npm:wrangler", ...args],
+  const output = inherit ? "inherit" : "pipe";
+  const result = spawnSync("npx", ["wrangler", ...args], {
     cwd: new URL("../", import.meta.url),
-    stdin: "inherit",
-    stdout: inherit ? "inherit" : "piped",
-    stderr: inherit ? "inherit" : "piped",
+    stdio: ["inherit", output, output],
+    encoding: "utf8",
     // Wrangler's token command otherwise copies its JSON output into a diagnostic log.
     env: {
+      ...process.env,
       WRANGLER_LOG_SANITIZE: "true",
       ...(args[0] === "auth" ? { WRANGLER_WRITE_LOGS: "false" } : {}),
     },
-  }).output();
-  return { code: result.code, stdout: new TextDecoder().decode(result.stdout) };
+  });
+  return { code: result.status ?? 1, stdout: result.stdout ?? "" };
 }
 
 export async function connectCloudflare(run: WranglerRun = runWrangler, request: Fetch = fetch) {
@@ -85,23 +86,20 @@ interface Envelope<T> {
   result_info?: { total_pages?: number };
 }
 export class CloudflareApiError extends Error {
-  constructor(
-    readonly status: number,
-    path: string,
-    codes: number[] = [],
-  ) {
+  readonly status: number;
+  constructor(status: number, path: string, codes: number[] = []) {
     super(
       `Cloudflare request ${path} failed (HTTP ${status}${codes.length ? `; codes ${codes.join(", ")}` : ""}).`,
     );
+    this.status = status;
   }
 }
 
 export class CloudflareApi {
   private headers: Headers;
-  constructor(
-    credentials: Credentials,
-    private fetch: Fetch = globalThis.fetch,
-  ) {
+  private fetch: Fetch;
+  constructor(credentials: Credentials, fetch: Fetch = globalThis.fetch) {
+    this.fetch = fetch;
     this.headers = new Headers();
     if (credentials.type === "api_key") {
       this.headers.set("X-Auth-Key", credentials.key);
