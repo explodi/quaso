@@ -29,6 +29,10 @@ concurrency:
   group: pages
   cancel-in-progress: false
 
+env:
+  # npm ci leaves browsers alone; `npm run e2e:browser` installs Chrome where tests need it.
+  PUPPETEER_SKIP_DOWNLOAD: "true"
+
 jobs:
   build:
     name: Build the website

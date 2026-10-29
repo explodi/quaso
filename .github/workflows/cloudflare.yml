@@ -18,6 +18,10 @@ concurrency:
   group: cloudflare-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # npm ci leaves browsers alone; `npm run e2e:browser` installs Chrome where tests need it.
+  PUPPETEER_SKIP_DOWNLOAD: "true"
+
 jobs:
   cloudflare:
     name: Cloudflare package

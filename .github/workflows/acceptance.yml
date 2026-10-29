@@ -15,6 +15,10 @@ concurrency:
   group: quaso-staging-checks
   cancel-in-progress: false
 
+env:
+  # npm ci leaves browsers alone; `npm run e2e:browser` installs Chrome where tests need it.
+  PUPPETEER_SKIP_DOWNLOAD: "true"
+
 jobs:
   configuration:
     name: Check optional staging configuration
