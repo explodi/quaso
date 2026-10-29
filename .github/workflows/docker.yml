@@ -23,6 +23,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  # npm ci leaves browsers alone; `npm run e2e:browser` installs Chrome where tests need it.
+  PUPPETEER_SKIP_DOWNLOAD: "true"
   IMAGE: ${{ vars.DOCKERHUB_IMAGE || format('{0}/quaso', github.repository_owner) }}
 
 jobs:

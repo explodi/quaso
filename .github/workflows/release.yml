@@ -19,6 +19,10 @@ on:
 permissions:
   contents: read
 
+env:
+  # npm ci leaves browsers alone; `npm run e2e:browser` installs Chrome where tests need it.
+  PUPPETEER_SKIP_DOWNLOAD: "true"
+
 jobs:
   check:
     name: Check the version
