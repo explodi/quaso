@@ -410,9 +410,12 @@ export async function sendKey(
 
 /** Makes the page believe it runs on a Mac (`navigator.platform`), before it loads. */
 export async function emulateMac(page: Page) {
-  // For the tab's first page only: on Linux, Chrome drops it when the tab navigates.
   const userAgent = await page.browser().userAgent();
   await page.setUserAgent({ userAgent, platform: "MacIntel" });
+  // Chrome on Linux doesn't always apply the override's platform; the app reads only this.
+  await page.evaluateOnNewDocument(() => {
+    Object.defineProperty(Navigator.prototype, "platform", { get: () => "MacIntel" });
+  });
 }
 
 /** Where the page is: its path and query. */
