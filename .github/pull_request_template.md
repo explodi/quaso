@@ -4,7 +4,7 @@
 
 **How it was tested**
 
-- [ ] Relevant checks pass; list the commands and results above (`deno task check` for code changes)
-- [ ] Documentation matches any changed behavior; `deno task site:build` passes for documentation changes
-- [ ] New dependencies (if any) are justified below: what they save, and why stock Deno or a small
+- [ ] Relevant checks pass; list the commands and results above (`npm run check` for code changes)
+- [ ] Documentation matches any changed behavior; `npm run site:build` passes for documentation changes
+- [ ] New dependencies (if any) are justified below: what they save, and why Node's built-ins or a small
       module won't do

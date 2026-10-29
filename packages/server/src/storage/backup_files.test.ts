@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
+import { tmpdir } from "node:os";
 import { gzipSync } from "node:zlib";
 import * as fs from "node:fs/promises";
-import { test } from "node:test";
+import { assert, expect, test } from "vitest";
 import * as fsSync from "node:fs";
 /**
  * Backup files: each download is the instance at one moment (a snapshot with local
  * storage; with Cloudflare storage, rows read at one state, started again after a write),
  * snapshots are single files, and SQLite backups restore from read-only folders.
  */
-import { assert, assertEquals, assertRejects, assertStringIncludes } from "@std/assert";
 import { join } from "node:path";
 import { backup, DatabaseSync } from "node:sqlite";
 import type { BackupDocument } from "@quaso/core";
@@ -45,30 +45,30 @@ test("downloaded snapshots erase credentials while the operator database retains
     const options = { snapshotTo: local.storage.snapshotTo, tempDir: local.storage.tempDir };
     const response = await sqliteBackupResponse(local.service, admin, options);
     const bytes = new Uint8Array(await response.arrayBuffer());
-    assertEquals(Buffer.from(bytes).includes(Buffer.from(credential)), false);
+    expect(Buffer.from(bytes).includes(Buffer.from(credential))).toBe(false);
     const path = join(dir, "download.sqlite");
     await fs.writeFile(path, bytes);
     const download = new DatabaseSync(path, { readOnly: true });
     try {
-      assertEquals(Number(download.prepare("SELECT COUNT(*) AS n FROM secrets").get()!.n), 0);
+      expect(Number(download.prepare("SELECT COUNT(*) AS n FROM secrets").get()!.n)).toStrictEqual(
+        0,
+      );
     } finally {
       download.close();
     }
     const result = await restoreFile(target.service, path, { tempDir: dir });
-    assertEquals(result.missingSecrets, ["gemini_api_key"]);
-    assertEquals(
-      (await target.service.listSecrets(SYSTEM, {})).missingSecrets,
+    expect(result.missingSecrets).toStrictEqual(["gemini_api_key"]);
+    expect((await target.service.listSecrets(SYSTEM, {})).missingSecrets).toStrictEqual(
       result.missingSecrets,
     );
     const json = await jsonBackupResponse(local.service, admin, options);
     const document = await json.text();
-    assertEquals(document.includes(credential), false);
-    assertEquals(Object.hasOwn(JSON.parse(document).tables, "secrets"), false);
-    assertEquals(
+    expect(document.includes(credential)).toBe(false);
+    expect(Object.hasOwn(JSON.parse(document).tables, "secrets")).toBe(false);
+    expect(
       local.storage.sql.query("SELECT value FROM secrets WHERE name = 'gemini_api_key'")[0].value,
-      credential,
-    );
-    assertEquals(fsSync.readdirSync(local.storage.tempDir), []);
+    ).toStrictEqual(credential);
+    expect(fsSync.readdirSync(local.storage.tempDir)).toStrictEqual([]);
   } finally {
     target.close();
     local.storage.close();
@@ -162,7 +162,7 @@ function translationFacts(query: (sql: string) => Row[]) {
 }
 
 async function tempDir(): Promise<string> {
-  return await fs.realpath(await Deno.makeTempDir({ prefix: "quaso-backup-test-" }));
+  return await fs.realpath(await fs.mkdtemp(join(tmpdir(), "quaso-backup-test-")));
 }
 
 test("the SQLite file built from rows is one moment's copy: a write between two calls starts it again", async () => {
@@ -176,26 +176,22 @@ test("the SQLite file built from rows is one moment's copy: a write between two 
     const response = await sqliteBackupResponse(remote.service, admin, { tempDir: dir });
     const path = join(dir, "download.sqlite");
     const bytes = new Uint8Array(await response.arrayBuffer());
-    assertEquals(Buffer.from(bytes).includes(Buffer.from(credential)), false);
+    expect(Buffer.from(bytes).includes(Buffer.from(credential))).toBe(false);
     await fs.writeFile(path, bytes);
     // Once for the permission, then twice: the write made the first read start again.
-    assertEquals(remote.counts.backups, 3);
+    expect(remote.counts.backups).toBe(3);
     const file = new DatabaseSync(path, { readOnly: true });
     try {
       const facts = translationFacts((sql) => file.prepare(sql).all() as Row[]);
       // The translation made meanwhile is there with its history, as in the database.
-      assertEquals(
-        facts,
-        translationFacts((sql) => instance.sql.query(sql)),
-      );
-      assertEquals(facts.translations.length, 2);
+      expect(facts).toStrictEqual(translationFacts((sql) => instance.sql.query(sql)));
+      expect(facts.translations.length).toBe(2);
     } finally {
       file.close();
     }
-    assertEquals(
+    expect(
       [...fsSync.readdirSync(dir, { withFileTypes: true })].map((entry) => entry.name),
-      ["download.sqlite"],
-    );
+    ).toStrictEqual(["download.sqlite"]);
   } finally {
     instance.close();
     await fs.rm(dir, { recursive: true });
@@ -213,25 +209,22 @@ test("the JSON document with Cloudflare storage is one moment's copy too, and re
     const remote = writeBetweenCalls(instance.service);
     const response = await jsonBackupResponse(remote.service, admin, { tempDir: dir });
     const document: BackupDocument = await response.json();
-    assertEquals(JSON.stringify(document).includes(credential), false);
-    assertEquals(Object.hasOwn(document.tables, "secrets"), false);
-    assertEquals(remote.counts.backups, 3);
-    assertEquals(document.tables.translations.length, 2);
-    assertEquals(
-      document.tables.history.filter((row) => row.language !== null).length,
+    expect(JSON.stringify(document).includes(credential)).toBe(false);
+    expect(Object.hasOwn(document.tables, "secrets")).toBe(false);
+    expect(remote.counts.backups).toBe(3);
+    expect(document.tables.translations.length).toBe(2);
+    expect(document.tables.history.filter((row) => row.language !== null).length).toStrictEqual(
       translationFacts((sql) => instance.sql.query(sql)).history.length,
     );
     const result = await restoreBackup(target.service, documentSource(document));
-    assertEquals(result.missingSecrets, ["email_api_key"]);
-    assertEquals(
-      (await target.service.exportFiles(SYSTEM, {})).files,
+    expect(result.missingSecrets).toStrictEqual(["email_api_key"]);
+    expect((await target.service.exportFiles(SYSTEM, {})).files).toStrictEqual(
       (await instance.service.exportFiles(SYSTEM, {})).files,
     );
-    assertEquals(
+    expect(
       [...fsSync.readdirSync(dir, { withFileTypes: true })],
-      [],
       "the temporary file is gone",
-    );
+    ).toStrictEqual([]);
 
     // Writes that never stop: the download fails, loudly, instead of being inconsistent.
     const busy = {
@@ -244,12 +237,12 @@ test("the JSON document with Cloudflare storage is one moment's copy too, and re
         return await instance.service.backupTables(actor, input);
       },
     };
-    const error = await assertRejects(
-      () => jsonBackupResponse(busy, admin, { tempDir: dir }),
-      ServiceError,
+    const error = await jsonBackupResponse(busy, admin, { tempDir: dir }).catch(
+      (error: unknown) => error,
     );
-    assertEquals(error.code, "unavailable");
-    assertEquals([...fsSync.readdirSync(dir, { withFileTypes: true })], []);
+    assert(error instanceof ServiceError);
+    expect(error.code).toBe("unavailable");
+    expect([...fsSync.readdirSync(dir, { withFileTypes: true })]).toStrictEqual([]);
   } finally {
     instance.close();
     target.close();
@@ -274,40 +267,31 @@ test("with local storage the JSON document is read from a snapshot: later writes
     // A translator saves while the document is on its way.
     await translate(local.service, "play", "Spielen");
     const document: BackupDocument = await response.json();
-    assertEquals(
-      document.tables.translations.map((row) => row.value),
-      ['"Wanderer"'],
-    );
-    assertEquals(
-      document.tables.history.filter((row) => row.language !== null).length,
+    expect(document.tables.translations.map((row) => row.value)).toStrictEqual(['"Wanderer"']);
+    expect(document.tables.history.filter((row) => row.language !== null).length).toStrictEqual(
       before.history.length,
     );
-    assertEquals(
+    expect(
       [...fsSync.readdirSync(local.storage.tempDir, { withFileTypes: true })],
-      [],
       "the snapshot is gone",
-    );
+    ).toStrictEqual([]);
     await restoreBackup(target.service, documentSource(document));
-    assertEquals(
-      translationFacts((sql) => target.sql.query(sql)),
-      before,
-    );
+    expect(translationFacts((sql) => target.sql.query(sql))).toStrictEqual(before);
 
     // Only administrators, checked before any snapshot is taken.
-    const denied = await assertRejects(
-      () =>
-        jsonBackupResponse(
-          local.service,
-          { type: "anonymous" },
-          {
-            snapshotTo: local.storage.snapshotTo,
-            tempDir: local.storage.tempDir,
-          },
-        ),
-      ServiceError,
+    const denied = await jsonBackupResponse(
+      local.service,
+      { type: "anonymous" },
+      {
+        snapshotTo: local.storage.snapshotTo,
+        tempDir: local.storage.tempDir,
+      },
+    ).catch((error: unknown) => error);
+    assert(denied instanceof ServiceError);
+    expect(denied.code).toBe("unauthorized");
+    expect([...fsSync.readdirSync(local.storage.tempDir, { withFileTypes: true })]).toStrictEqual(
+      [],
     );
-    assertEquals(denied.code, "unauthorized");
-    assertEquals([...fsSync.readdirSync(local.storage.tempDir, { withFileTypes: true })], []);
   } finally {
     local.storage.close();
     target.close();
@@ -337,34 +321,32 @@ test("SQLite backups restore from a read-only folder, and leave nothing beside t
     const expected = (await local.service.exportFiles(SYSTEM, {})).files;
     // A snapshot (the SQLite download with local storage) is one file, not in WAL mode.
     await local.storage.snapshotTo(join(mount, "snapshot.sqlite"));
-    assertEquals(await journalBytes(join(mount, "snapshot.sqlite")), [1, 1]);
+    expect(await journalBytes(join(mount, "snapshot.sqlite"))).toStrictEqual([1, 1]);
     // One from before this release: in WAL mode, as the database is.
     await backup(local.storage.db, join(mount, "old.sqlite"));
-    assertEquals(await journalBytes(join(mount, "old.sqlite")), [2, 2]);
+    expect(await journalBytes(join(mount, "old.sqlite"))).toStrictEqual([2, 2]);
     await readOnly(mount, true);
 
     for (const name of ["snapshot.sqlite", "old.sqlite"]) {
       const target = await memoryService();
-      const temp = await Deno.makeTempDir({ dir });
+      const temp = await fs.mkdtemp(join(dir, "restore-"));
       try {
         const result = await restoreFile(target.service, join(mount, name), { tempDir: temp });
-        assertEquals(result.tables.revision_guard, undefined);
-        assertEquals(result.tables.strings, 2, name);
-        assertEquals((await target.service.exportFiles(SYSTEM, {})).files, expected, name);
-        assertEquals(
+        expect(result.tables.revision_guard).toBe(undefined);
+        expect(result.tables.strings, name).toBe(2);
+        expect((await target.service.exportFiles(SYSTEM, {})).files, name).toStrictEqual(expected);
+        expect(
           [...fsSync.readdirSync(temp, { withFileTypes: true })],
-          [],
           `${name}: the copy is gone`,
-        );
+        ).toStrictEqual([]);
       } finally {
         target.close();
       }
     }
-    assertEquals(
+    expect(
       [...fsSync.readdirSync(mount, { withFileTypes: true })].map((entry) => entry.name).sort(),
-      ["old.sqlite", "snapshot.sqlite"],
       "no -wal or -shm files beside the backups",
-    );
+    ).toStrictEqual(["old.sqlite", "snapshot.sqlite"]);
   } finally {
     await readOnly(mount, false);
     local.storage.close();
@@ -380,9 +362,10 @@ test("a SQLite file that isn't Quaso's is refused as such", async () => {
     const other = new DatabaseSync(path);
     other.exec("CREATE TABLE notes (text TEXT)");
     other.close();
-    const error = await assertRejects(() => restoreFile(target.service, path), ServiceError);
-    assertEquals(error.code, "bad_request");
-    assertStringIncludes(error.message, "isn't a Quaso database");
+    const error = await restoreFile(target.service, path).catch((error: unknown) => error);
+    assert(error instanceof ServiceError);
+    expect(error.code).toBe("bad_request");
+    expect(error.message).toContain("isn't a Quaso database");
     assert((await target.service.getProject(SYSTEM, {})).details.strings === 0);
   } finally {
     target.close();
@@ -401,8 +384,9 @@ test("Beta 1 SQLite and JSON backups are rejected before the destination changes
     );
     old.close();
     const before = await target.service.backupInfo(SYSTEM, {});
-    const sqliteError = await assertRejects(() => restoreFile(target.service, path), ServiceError);
-    assertStringIncludes(sqliteError.message, "Beta 1 (1.0.0-rc.1) backups are not supported");
+    const sqliteError = await restoreFile(target.service, path).catch((error: unknown) => error);
+    assert(sqliteError instanceof ServiceError);
+    expect(sqliteError.message).toContain("Beta 1 (1.0.0-rc.1) backups are not supported");
     const jsonPath = join(dir, "beta-1.json");
     await fs.writeFile(
       jsonPath,
@@ -413,21 +397,17 @@ test("Beta 1 SQLite and JSON backups are rejected before the destination changes
         tables: { meta: [{ key: "schema_version", value: "4" }] },
       }),
     );
-    const jsonError = await assertRejects(
-      () => restoreFile(target.service, jsonPath),
-      ServiceError,
-    );
-    assertStringIncludes(jsonError.message, "Beta 1 (1.0.0-rc.1) backups are not supported");
+    const jsonError = await restoreFile(target.service, jsonPath).catch((error: unknown) => error);
+    assert(jsonError instanceof ServiceError);
+    expect(jsonError.message).toContain("Beta 1 (1.0.0-rc.1) backups are not supported");
     const gzipPath = join(dir, "beta-1.json.gz");
     await fs.writeFile(gzipPath, gzipSync(await fs.readFile(jsonPath)));
-    const gzipError = await assertRejects(
-      () => restoreFile(target.service, gzipPath),
-      ServiceError,
-    );
-    assertStringIncludes(gzipError.message, "Beta 1 (1.0.0-rc.1) backups are not supported");
+    const gzipError = await restoreFile(target.service, gzipPath).catch((error: unknown) => error);
+    assert(gzipError instanceof ServiceError);
+    expect(gzipError.message).toContain("Beta 1 (1.0.0-rc.1) backups are not supported");
     const after = await target.service.backupInfo(SYSTEM, {});
-    assertEquals(after.state, before.state);
-    assertEquals(after.tables, before.tables);
+    expect(after.state).toStrictEqual(before.state);
+    expect(after.tables).toStrictEqual(before.tables);
   } finally {
     target.close();
     await fs.rm(dir, { recursive: true });
@@ -440,12 +420,12 @@ test("a gzip backup that expands past the limit is refused as too large", async 
   try {
     const path = join(dir, "bomb.json.gz");
     await fs.writeFile(path, gzipSync(new Uint8Array(2 * 1024 * 1024)));
-    const error = await assertRejects(
-      () => restoreFile(target.service, path, { maxJsonBytes: 1024 * 1024 }),
-      ServiceError,
+    const error = await restoreFile(target.service, path, { maxJsonBytes: 1024 * 1024 }).catch(
+      (error: unknown) => error,
     );
-    assertEquals(error.code, "payload_too_large");
-    assertEquals(error.message, "The backup's JSON document is larger than 1 MB.");
+    assert(error instanceof ServiceError);
+    expect(error.code).toBe("payload_too_large");
+    expect(error.message).toBe("The backup's JSON document is larger than 1 MB.");
   } finally {
     target.close();
     await fs.rm(dir, { recursive: true });

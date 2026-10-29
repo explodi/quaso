@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: MIT
-import * as fs from "node:fs/promises";
 /**
  * The CLI's end-to-end harness (S4.10, S4.11): a real server in this process (the server's
  * app and the real service on an in-memory database, on a random port), temporary copies of
- * the translation fixture, and the CLI run in-process or as the built bundle under Node or
- * Deno. Test code: it may start processes; the CLI never does.
+ * the translation fixture, and the CLI run in-process or as the built bundle under Node.
+ * Test code: it may start processes; the CLI never does.
  */
-import { cp } from "node:fs/promises";
+import { spawn } from "node:child_process";
+import * as fs from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createFakeTranslator, type Service, SYSTEM, TimerScheduler } from "@quaso/service";
 import { createApp } from "../../server/src/app.ts";
+import { freePort, serve } from "../../server/src/http/serve.ts";
 import { createLogger } from "../../server/src/log.ts";
 import { demoDir } from "../../server/src/dev_seed.ts";
 import { testConfig } from "../../server/src/testing/helpers.ts";
@@ -54,11 +56,11 @@ export async function startServer(options: { llm?: boolean } = {}): Promise<Test
     log: createLogger({ level: "error", write: () => {} }),
     version: "e2e",
   });
-  const server = Deno.serve({ hostname: "127.0.0.1", port: 0, onListen() {} }, (request, info) =>
+  const server = await serve({ hostname: "127.0.0.1", port: 0 }, (request, info) =>
     app(request, info),
   );
   return {
-    url: `http://127.0.0.1:${server.addr.port}`,
+    url: `http://127.0.0.1:${server.port}`,
     uploadKey: upload.secret,
     readKey: read.secret,
     async close() {
@@ -71,25 +73,22 @@ export async function startServer(options: { llm?: boolean } = {}): Promise<Test
 }
 
 /** An address where nothing listens: a port that was just free. */
-export function closedAddress(): string {
-  const listener = Deno.listen({ hostname: "127.0.0.1", port: 0 });
-  const port = listener.addr.port;
-  listener.close();
-  return `http://127.0.0.1:${port}`;
+export async function closedAddress(): Promise<string> {
+  return `http://127.0.0.1:${await freePort()}`;
 }
 
 /** A temporary folder, and a function that removes it. */
 export async function tempDir(
   prefix = "quaso-cli-",
 ): Promise<{ dir: string; remove(): Promise<void> }> {
-  const dir = await Deno.makeTempDir({ prefix });
+  const dir = await fs.mkdtemp(join(tmpdir(), prefix));
   return { dir, remove: () => fs.rm(dir, { recursive: true }).catch(() => {}) };
 }
 
 /** Copies the translation fixture into `parent` and returns the copy's folder. */
 export async function copyDemo(parent: string, name = "demo-game"): Promise<string> {
   const target = join(parent, name);
-  await cp(DEMO_DIR, target, { recursive: true });
+  await fs.cp(DEMO_DIR, target, { recursive: true });
   return target;
 }
 
@@ -97,9 +96,7 @@ export async function copyDemo(parent: string, name = "demo-game"): Promise<stri
 export async function hashFiles(dir: string): Promise<Map<string, string>> {
   const hashes = new Map<string, string>();
   const visit = async (folder: string, prefix: string) => {
-    const entries = [];
-    for await (const entry of await fs.readdir(folder, { withFileTypes: true }))
-      entries.push(entry);
+    const entries = await fs.readdir(folder, { withFileTypes: true });
     for (const entry of entries.sort((a, b) => (a.name < b.name ? -1 : 1))) {
       const path = join(folder, entry.name);
       if (entry.isDirectory()) await visit(path, `${prefix}${entry.name}/`);
@@ -145,45 +142,30 @@ export function inProcess(): Runner {
   };
 }
 
-/** The built bundle, started with `node` or `deno run`. */
-export function bundled(runtime: "node" | "deno", bundle: string): Runner {
-  return async (args, options) => {
-    const [command, prefix] =
-      runtime === "node" ? ["node", [bundle]] : [Deno.execPath(), ["run", "-A", bundle]];
+/**
+ * The built bundle, under `node` (by default the one that runs the tests). Asynchronous: the
+ * CLI talks to the server in this process, which a blocked event loop couldn't answer.
+ */
+export function bundled(bundle: string, node = process.execPath): Runner {
+  return (args, options) => {
     const env = { ...process.env };
     for (const name of Object.keys(env)) {
       if (name.startsWith("QUASO_") || name === "FORCE_COLOR") delete env[name];
     }
-    const output = await new Deno.Command(command, {
-      args: [...prefix, ...args],
+    const child = spawn(node, [bundle, ...args], {
       cwd: options.cwd,
       env: { ...env, NO_COLOR: "1", ...options.env },
-      clearEnv: true,
-      stdin: "null",
-      stdout: "piped",
-      stderr: "piped",
-    }).output();
-    const decoder = new TextDecoder();
-    return {
-      code: output.code,
-      stdout: decoder.decode(output.stdout),
-      stderr: decoder.decode(output.stderr),
-    };
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.setEncoding("utf8").on("data", (text: string) => (stdout += text));
+    child.stderr.setEncoding("utf8").on("data", (text: string) => (stderr += text));
+    return new Promise((resolve, reject) => {
+      child.once("error", reject);
+      child.once("close", (code) => resolve({ code: code ?? 1, stdout, stderr }));
+    });
   };
-}
-
-/** Whether `node` can be started, and its version. */
-export async function nodeVersion(): Promise<string | null> {
-  try {
-    const output = await new Deno.Command("node", {
-      args: ["--version"],
-      stdout: "piped",
-      stderr: "null",
-    }).output();
-    return output.success ? new TextDecoder().decode(output.stdout).trim() : null;
-  } catch {
-    return null;
-  }
 }
 
 /** Parses the one JSON document of a `--json` run. */

@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "lib": ["esnext", "dom", "dom.iterable", "dom.asynciterable"],
+    "types": ["node"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": [
+    "packages/core",
+    "packages/service",
+    "packages/server",
+    "packages/cli",
+    "packages/design-system",
+    "packages/web",
+    "packages/cloudflare/scripts",
+    "scripts",
+    "site",
+    "e2e",
+    "acceptance",
+    "*.ts"
+  ],
+  "exclude": ["**/node_modules", "**/dist"]
+}

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
-/// <reference lib="dom" />
-import { assert, assertEquals, assertStringIncludes } from "@std/assert";
+import { assert, expect } from "vitest";
+
 import { ANONYMOUS, SYSTEM } from "@quaso/service";
 import { browserTest, MANAGER_SESSION, openTab, press, text, waitFor } from "./_setup.ts";
 
@@ -18,8 +18,8 @@ browserTest(
     await page.click('.language-open[href="/translate/fr"]');
     await waitFor(page, () => location.pathname === "/translate/fr");
     await waitFor(page, () => document.querySelector(".panel-key code") !== null);
-    assertStringIncludes(await text(page, "main h1"), "French");
-    assertEquals(await page.evaluate(() => document.activeElement?.tagName), "H1");
+    expect(await text(page, "main h1")).toContain("French");
+    expect(await page.evaluate(() => document.activeElement?.tagName)).toBe("H1");
     assert(await page.$('.nav a[aria-current="page"][href="/"]'));
 
     await page.click(".header .brand");
@@ -50,7 +50,7 @@ browserTest(
     );
     await waitFor(page, () => location.pathname === "/translate/fr");
     await waitFor(page, () => document.querySelector(".panel-key code") !== null);
-    assertEquals(problems, []);
+    expect(problems).toStrictEqual([]);
   },
 );
 
@@ -71,11 +71,11 @@ browserTest(
       page,
       () => document.querySelector('.workspace-resume[href="/translate/fr"]') !== null,
     );
-    assertStringIncludes(await text(page, ".workspace-resume"), "Continue in French");
+    expect(await text(page, ".workspace-resume")).toContain("Continue in French");
     await page.click(".workspace-resume");
     await waitFor(page, () => document.querySelector(".pane-panel textarea") !== null);
-    assertStringIncludes(await text(page, "#edit-heading"), "Your suggestion (French)");
-    assertEquals(problems, []);
+    expect(await text(page, "#edit-heading")).toContain("Your suggestion (French)");
+    expect(problems).toStrictEqual([]);
   },
 );
 
@@ -85,15 +85,13 @@ browserTest(
   async ({ server, browser }) => {
     const { page, problems } = await openTab(browser, server, "/?q=French&sort=least");
     await waitFor(page, () => document.querySelectorAll(".language-row").length === 1);
-    assertEquals(
-      await page.$eval("#language-search", (input) => (input as HTMLInputElement).value),
+    expect(await page.$eval("#language-search", (input) => (input as HTMLInputElement).value)).toBe(
       "French",
     );
-    assertEquals(
+    expect(
       await page.$eval(".languages-card select", (select) => (select as HTMLSelectElement).value),
-      "least",
-    );
-    assertStringIncludes(await text(page, ".language-row"), "French");
+    ).toBe("least");
+    expect(await text(page, ".language-row")).toContain("French");
     assert(await page.$('.language-open[href="/translate/fr"]'));
     assert(await page.$('.language-link[href="/languages/fr"]'));
 
@@ -105,16 +103,15 @@ browserTest(
     await waitFor(page, () => new URLSearchParams(location.search).get("q") === "German");
     await page.reload({ waitUntil: "networkidle0" });
     await waitFor(page, () => document.querySelectorAll(".language-row").length === 1);
-    assertStringIncludes(await text(page, ".language-row"), "German");
-    assertEquals(
-      await page.evaluate(() => new URLSearchParams(location.search).get("sort")),
+    expect(await text(page, ".language-row")).toContain("German");
+    expect(await page.evaluate(() => new URLSearchParams(location.search).get("sort"))).toBe(
       "least",
     );
     await page.click('.language-link[href="/languages/de"]');
     await waitFor(page, () => location.pathname === "/languages/de");
     await waitFor(page, () => document.querySelector('[role="treeitem"]') !== null);
-    assertStringIncludes(await text(page, "main h1"), "German");
-    assertEquals(problems, []);
+    expect(await text(page, "main h1")).toContain("German");
+    expect(problems).toStrictEqual([]);
   },
 );
 
@@ -155,7 +152,7 @@ browserTest(
       ),
     );
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
-    assertEquals(problems, []);
+    expect(problems).toStrictEqual([]);
   },
 );
 
@@ -170,7 +167,7 @@ browserTest(
     await page.focus(".pane-panel textarea");
     await page.setViewport({ width: 360, height: 800 });
     assert(await page.$eval(".pane-panel", (pane) => pane.getClientRects().length > 0));
-    assertEquals(await page.evaluate(() => document.activeElement?.tagName), "TEXTAREA");
+    expect(await page.evaluate(() => document.activeElement?.tagName)).toBe("TEXTAREA");
     assert(await page.evaluate(() => document.activeElement!.getBoundingClientRect().width > 0));
     assert(
       await page.$eval(
@@ -178,7 +175,7 @@ browserTest(
         (button) => button.getAttribute("aria-pressed") === "true",
       ),
     );
-    assertEquals(problems, []);
+    expect(problems).toStrictEqual([]);
   },
 );
 
@@ -191,17 +188,15 @@ browserTest(
       page,
       () => document.querySelector('.tree-name[href="/translate/fr?file=common.json"]') !== null,
     );
-    assertEquals(
+    expect(
       await page.$eval(
         ".source-language-choice select",
         (select) => (select as HTMLSelectElement).value,
       ),
-      "fr",
-    );
+    ).toBe("fr");
     await page.select(".source-language-choice select", "de");
     await waitFor(page, () => new URLSearchParams(location.search).get("language") === "de");
-    assertEquals(
-      await page.evaluate(() => new URLSearchParams(location.search).get("filter")),
+    expect(await page.evaluate(() => new URLSearchParams(location.search).get("filter"))).toBe(
       "common",
     );
     await page.reload({ waitUntil: "networkidle0" });
@@ -209,21 +204,19 @@ browserTest(
       page,
       () => document.querySelector('.tree-name[href="/translate/de?file=common.json"]') !== null,
     );
-    assertEquals(
+    expect(
       await page.$eval(
         '.sources-page input[type="search"]',
         (input) => (input as HTMLInputElement).value,
       ),
-      "common",
-    );
+    ).toBe("common");
     await page.click('.tree-name[href="/translate/de?file=common.json"]');
     await waitFor(page, () => location.pathname === "/translate/de");
-    assertEquals(
-      await page.evaluate(() => new URLSearchParams(location.search).get("file")),
+    expect(await page.evaluate(() => new URLSearchParams(location.search).get("file"))).toBe(
       "common.json",
     );
     await waitFor(page, () => document.querySelector(".panel-key code") !== null);
-    assertEquals(problems, []);
+    expect(problems).toStrictEqual([]);
   },
 );
 
@@ -252,10 +245,10 @@ browserTest(
     await page.goto(`${server.url}/settings?section=general`, { waitUntil: "networkidle0" });
     await page.click('nav.settings-nav a[href="/settings?section=retention"]');
     await waitFor(page, () => new URLSearchParams(location.search).get("section") === "retention");
-    assertStringIncludes(await text(page, "header.settings-page-heading"), "History & retention");
+    expect(await text(page, "header.settings-page-heading")).toContain("History & retention");
     await page.goBack({ waitUntil: "networkidle0" });
     await waitFor(page, () => new URLSearchParams(location.search).get("section") === "general");
-    assertStringIncludes(await text(page, "header.settings-page-heading"), "Project details");
+    expect(await text(page, "header.settings-page-heading")).toContain("Project details");
     assert(
       await page.$('nav.settings-nav a[aria-current="page"][href="/settings?section=general"]'),
     );
@@ -265,19 +258,18 @@ browserTest(
     await waitFor(page, () => new URLSearchParams(location.search).get("section") === "retention");
     await page.goBack({ waitUntil: "networkidle0" });
     await waitFor(page, () => new URLSearchParams(location.search).get("section") === "general");
-    assertEquals(
+    expect(
       await page.$eval(
         "label.settings-mobile-nav > select",
         (select) => (select as HTMLSelectElement).value,
       ),
-      "general",
-    );
+    ).toBe("general");
     await page.goForward({ waitUntil: "networkidle0" });
     await waitFor(page, () => new URLSearchParams(location.search).get("section") === "retention");
     await page.reload({ waitUntil: "networkidle0" });
-    assertStringIncludes(await text(page, "header.settings-page-heading"), "History & retention");
+    expect(await text(page, "header.settings-page-heading")).toContain("History & retention");
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
-    assertEquals(problems, []);
+    expect(problems).toStrictEqual([]);
   },
 );
 
@@ -307,7 +299,7 @@ browserTest(
     await press(page, "Enter");
     await waitFor(page, () => location.pathname === "/activity");
     await waitFor(page, () => document.activeElement?.tagName === "H1");
-    assertStringIncludes(await text(page, "main h1"), "Activity");
+    expect(await text(page, "main h1")).toContain("Activity");
     assert(await page.$('.nav a[aria-current="page"][href="/activity"]'));
     assert(
       await page.$eval(
@@ -332,8 +324,8 @@ browserTest(
     await press(page, "Enter");
     await waitFor(page, () => location.pathname === "/glossary");
     await waitFor(page, () => document.activeElement?.tagName === "H1");
-    assertEquals(await page.$(".nav .menu"), null);
+    expect(await page.$(".nav .menu")).toBe(null);
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
-    assertEquals(problems, []);
+    expect(problems).toStrictEqual([]);
   },
 );

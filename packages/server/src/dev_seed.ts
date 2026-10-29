@@ -2,7 +2,7 @@
 import * as fs from "node:fs/promises";
 /**
  * The development seed (design §5.13): the translation fixture from `testing/fixtures/`,
- * uploaded and partly translated, and a development API key. `deno task dev` runs it once,
+ * uploaded and partly translated, and a development API key. `npm run dev` runs it once,
  * on a new database, through `quaso seed-dev`.
  */
 import {

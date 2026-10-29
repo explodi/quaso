@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
-/// <reference lib="dom" />
 /**
  * The editor in a browser (S7.5–S7.7, S7.9): keyboard navigation in the string list and the
  * file tree, the shortcuts, plural inputs with example numbers, right-to-left inputs, live
  * checks, and a failed save that keeps the text.
  */
-import { assert, assertEquals, assertStringIncludes } from "@std/assert";
+import { assert, expect } from "vitest";
+
 import type { Page } from "puppeteer";
 import { SYSTEM } from "@quaso/service";
 import {
@@ -42,7 +42,7 @@ browserTest(
     const { page } = tab;
     // The first string is selected when none is.
     await waitFor(page, () => new URLSearchParams(location.search).get("id") !== null);
-    assertEquals(await selectedId(page), String(strings[0].id));
+    expect(await selectedId(page)).toStrictEqual(String(strings[0].id));
     await waitForPanel(page, strings[0].key);
 
     await page.evaluate(() =>
@@ -69,12 +69,12 @@ browserTest(
     await press(page, "ArrowDown");
     await press(page, "Enter");
     await waitForPanel(page, strings[1].key);
-    assertEquals(await selectedId(page), String(strings[1].id));
+    expect(await selectedId(page)).toStrictEqual(String(strings[1].id));
 
     // Alt+↓ and Alt+↑ move between strings; focus follows in the list.
     await press(page, "ArrowDown", ["Alt"]);
     await waitForPanel(page, strings[2].key);
-    assertEquals(await selectedId(page), String(strings[2].id));
+    expect(await selectedId(page)).toStrictEqual(String(strings[2].id));
     await waitFor(
       page,
       () => document.activeElement?.closest<HTMLElement>("[data-index]")?.dataset.index === "2",
@@ -101,8 +101,8 @@ browserTest(
       [...document.querySelectorAll<HTMLInputElement>(".state-filter input")][3].click();
     });
     await waitFor(page, () => location.search.includes("state=blue"));
-    assertStringIncludes(await pagePath(page), `id=${strings[1].id}`);
-    assertEquals(tab.problems, []);
+    expect(await pagePath(page)).toContain(`id=${strings[1].id}`);
+    expect(tab.problems).toStrictEqual([]);
   },
 );
 
@@ -134,8 +134,8 @@ browserTest(
         document.querySelector('.pane-files [aria-selected="true"]')?.getAttribute("data-path") ===
         "menus.json",
     );
-    assertStringIncludes(await text(page, "#strings-title"), "menus.json");
-    assertEquals(tab.problems, []);
+    expect(await text(page, "#strings-title")).toContain("menus.json");
+    expect(tab.problems).toStrictEqual([]);
   },
 );
 
@@ -160,17 +160,14 @@ browserTest(
         value: input.value,
       })),
     );
-    assertEquals(
-      inputs.map((i) => i.label),
-      [
-        "Plural form one, for 1",
-        "Plural form few, for 2–4, 22–24, 32–34, …",
-        "Plural form many, for 0, 5–21, 25–31, …",
-        "Plural form other, for 1.5",
-      ],
-    );
-    for (const input of inputs) assertEquals([input.lang, input.dir], ["pl", "ltr"]);
-    assertEquals(inputs[0].value, "{{count}} moneta");
+    expect(inputs.map((i) => i.label)).toStrictEqual([
+      "Plural form one, for 1",
+      "Plural form few, for 2–4, 22–24, 32–34, …",
+      "Plural form many, for 0, 5–21, 25–31, …",
+      "Plural form other, for 1.5",
+    ]);
+    for (const input of inputs) expect([input.lang, input.dir]).toStrictEqual(["pl", "ltr"]);
+    expect(inputs[0].value).toBe("{{count}} moneta");
 
     // Emptying a form is an error, live, and blocks saving.
     await page.evaluate(() =>
@@ -201,7 +198,7 @@ browserTest(
       page,
       () => !document.querySelector("#translation-few-checks")?.textContent?.includes("empty"),
     );
-    assertEquals(tab.problems, []);
+    expect(tab.problems).toStrictEqual([]);
   },
 );
 
@@ -215,21 +212,19 @@ browserTest(
     const tab = await openTab(browser, server, `/translate/ar?id=${again.id}`);
     const { page } = tab;
     await waitFor(page, () => document.querySelector(".pane-panel textarea") !== null);
-    assertEquals(
+    expect(
       await page.evaluate(() => {
         const input = document.querySelector<HTMLTextAreaElement>(".pane-panel textarea")!;
         return [input.dir, input.lang, getComputedStyle(input).direction];
       }),
-      ["rtl", "ar", "rtl"],
-    );
+    ).toStrictEqual(["rtl", "ar", "rtl"]);
     // The reference is a chip, ⟦1⟧, with the English it refers to.
-    assertStringIncludes(await text(page, ".chips"), "⟦1⟧");
-    assertStringIncludes(
+    expect(await text(page, ".chips")).toContain("⟦1⟧");
+    expect(
       await page.evaluate(
         () => document.querySelector(".chip-reference")?.getAttribute("title") ?? "",
       ),
-      "$t(common:play): “Play”",
-    );
+    ).toContain("$t(common:play): “Play”");
     await page.evaluate(() =>
       document.querySelector<HTMLTextAreaElement>(".pane-panel textarea")!.focus(),
     );
@@ -252,15 +247,14 @@ browserTest(
     // A plural string in Arabic: six forms, all right to left.
     await page.goto(`${server.url}/translate/ar?id=${coins.id}`, { waitUntil: "networkidle0" });
     await waitFor(page, () => document.querySelectorAll(".pane-panel textarea").length === 6);
-    assertEquals(
+    expect(
       await page.evaluate(() =>
         [...document.querySelectorAll<HTMLTextAreaElement>(".pane-panel textarea")]
           .map((t) => t.dir)
           .join(","),
       ),
-      "rtl,rtl,rtl,rtl,rtl,rtl",
-    );
-    assertEquals(tab.problems, []);
+    ).toBe("rtl,rtl,rtl,rtl,rtl,rtl");
+    expect(tab.problems).toStrictEqual([]);
   },
 );
 
@@ -287,7 +281,7 @@ browserTest(
       page,
       () => document.querySelector(".row-link:has(.row-not-saved) .row-key code")?.textContent,
     );
-    assertEquals(notSaved, target.key);
+    expect(notSaved).toStrictEqual(target.key);
 
     // Opening it again shows why, with the text as it was typed.
     await page.evaluate(() =>
@@ -298,19 +292,17 @@ browserTest(
         .querySelector('.pane-panel [role="alert"]')
         ?.textContent?.includes("You need to sign in to do that."),
     );
-    assertEquals(await selectedId(page), String(target.id));
-    assertEquals(
+    expect(await selectedId(page)).toStrictEqual(String(target.id));
+    expect(
       await page.evaluate(
         () => document.querySelector<HTMLTextAreaElement>(".pane-panel textarea")!.value,
       ),
-      "Bonjour",
-    );
+    ).toBe("Bonjour");
     // The only problem is the expected refusal of the save itself.
-    assertEquals(
+    expect(
       tab.problems.filter((p) => !/status of 40[13] .*\/translations\/fr\)$/.test(p)),
-      [],
-    );
-    assertEquals(tab.problems.length, 1);
+    ).toStrictEqual([]);
+    expect(tab.problems.length).toBe(1);
   },
 );
 
@@ -341,19 +333,18 @@ browserTest(
     )!;
     const tab = await openTab(browser, server, "/", emulateMac);
     let page = tab.page;
-    assertEquals(await page.evaluate(() => navigator.platform), "MacIntel");
+    expect(await page.evaluate(() => navigator.platform)).toBe("MacIntel");
     // Control: a search box outside the editor gets the characters.
     await waitFor(page, () => document.querySelector("#language-search") !== null);
     await page.evaluate(() =>
       document.querySelector<HTMLInputElement>("#language-search")!.focus(),
     );
     await typeWithOption(page, "{}");
-    assertEquals(
+    expect(
       await page.evaluate(
         () => document.querySelector<HTMLInputElement>("#language-search")!.value,
       ),
-      "{}",
-    );
+    ).toBe("{}");
 
     // A new tab rather than a navigation: on Linux, Chrome drops the emulated platform when
     // the tab navigates, and the editor would take Option+digit for a placeholder shortcut.
@@ -372,7 +363,7 @@ browserTest(
     await page.keyboard.type("score");
     // ⌥1 is ¡, not the first placeholder.
     await typeWithOption(page, "}} [|]“¡");
-    assertEquals(await value(), "Punkte: {{score}} [|]“¡");
+    expect(await value()).toBe("Punkte: {{score}} [|]“¡");
     // Control+1 inserts the first placeholder (⌘+1 is the browser's).
     await sendKey(page, { key: "1", code: "Digit1", ctrl: true, keyCode: 49 });
     await waitFor(
@@ -385,21 +376,20 @@ browserTest(
     await page.evaluate(() => document.querySelector<HTMLInputElement>("#string-search")!.focus());
     await typeWithOption(page, "[");
     await sendKey(page, { key: "1", code: "Digit1", ctrl: true, keyCode: 49 });
-    assertEquals(
+    expect(
       await page.evaluate(() => [
         document.querySelector<HTMLInputElement>("#string-search")!.value,
         document.activeElement?.id,
       ]),
-      ["[", "string-search"],
-    );
-    assertEquals(await value(), "Punkte: {{score}} [|]“¡{{score}}");
+    ).toStrictEqual(["[", "string-search"]);
+    expect(await value()).toBe("Punkte: {{score}} [|]“¡{{score}}");
     // The shortcuts dialog names the Mac's keys.
     await page.evaluate(() => document.querySelector<HTMLElement>(".row-link")?.focus());
     await press(page, "?", ["Shift"]);
     await waitFor(page, () => document.querySelector("dialog[open]") !== null);
-    assertStringIncludes(await text(page, "dialog[open]"), "Control+1…9");
-    assertEquals(tab.problems, []);
-    assertEquals(editor.problems, []);
+    expect(await text(page, "dialog[open]")).toContain("Control+1…9");
+    expect(tab.problems).toStrictEqual([]);
+    expect(editor.problems).toStrictEqual([]);
   },
 );
 
@@ -438,18 +428,17 @@ browserTest(
     await paragraphs[0].type("# Das Fest");
     await paragraphs[1].type("Das Tal erwacht früh.");
     await paragraphs[2].type("- Bring Weizen mit.");
-    assertStringIncludes(await text(page, ".panel-edit"), "3 / 3 paragraphs");
+    expect(await text(page, ".panel-edit")).toContain("3 / 3 paragraphs");
 
     await tab("Whole file");
     await waitFor(page, () => document.querySelector("#translation-text") !== null);
-    assertEquals(
+    expect(
       await page.$eval("#translation-text", (element) => (element as HTMLTextAreaElement).value),
-      "# Das Fest\n\nDas Tal erwacht früh.\n\n- Bring Weizen mit.",
-    );
+    ).toBe("# Das Fest\n\nDas Tal erwacht früh.\n\n- Bring Weizen mit.");
 
     await tab("Preview");
     await waitFor(page, () => document.querySelector(".markdown-preview") !== null);
-    assertEquals(await text(page, ".markdown-preview .markdown-heading-1"), "Das Fest");
-    assertEquals(await text(page, ".markdown-preview li"), "Bring Weizen mit.");
+    expect(await text(page, ".markdown-preview .markdown-heading-1")).toBe("Das Fest");
+    expect(await text(page, ".markdown-preview li")).toBe("Bring Weizen mit.");
   },
 );

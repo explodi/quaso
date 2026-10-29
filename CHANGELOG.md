@@ -32,7 +32,7 @@ Release candidates are for deployment and migration testing. The team decides wh
   where it doesn't. The editor shows them beside the source, and **Vary by …** writes a select
   block into the translation. Uploads to a project without ICU keep them and warn. Schema version
   7 stores them with each string. Instances on the default prompt get its `arguments` field on the
-  next request. `deno task test:llm` takes `--project` and `--icu` to evaluate another project.
+  next request. `npm run test:llm` takes `--project` and `--icu` to evaluate another project.
 - Converting a project from i18next to ICU MessageFormat: `quaso convert-to-icu` converts the
   instance's strings, translations and pending suggestions in one transaction, then the source
   files in place with the same rules, and turns on **ICU MessageFormat**. `{{name}}` becomes
@@ -171,6 +171,12 @@ Release candidates are for deployment and migration testing. The team decides wh
 
 ### Changed
 
+- Quaso runs on Node 26 (the version in `.nvmrc`), which runs the TypeScript sources directly.
+  Development uses npm workspaces (`npm ci`, `npm run <task>`), tests run with Vitest and types
+  are checked with `tsc`. The image runs the server's sources with Node on a distroless base
+  (`gcr.io/distroless/nodejs26-debian13`); there is no compiled server binary, and
+  `npm run build` builds the website only. The server trusts extra CA certificates from
+  `NODE_EXTRA_CA_CERTS`. The CLI runs on Node 22 or later and no longer supports Deno.
 - An outdated proofread (blue) translation is updated like any other. Proofreading holds for the
   source text it was made for: when that text changes, a job rewrites the translation, green, and
   sets the proofread one aside in a new `proofread_translations` table (schema version 8). An upload
@@ -218,7 +224,7 @@ Release candidates are for deployment and migration testing. The team decides wh
 
 - The server's remote-storage mode (`SERVICES_URL`, `SERVICE_TOKEN`) and its `LOCATION_HINT`
   setting. The Cloudflare Worker no longer serves the internal API that mode called; a Cloudflare
-  deployment keeps its data in D1 and R2 (`deno task cf:setup`).
+  deployment keeps its data in D1 and R2 (`npm run cf:setup`).
 - The `published/<language>/<file>` copy of each file's latest version in the object store.
   Downloads have always read the immutable `versions/` objects, so nothing read these copies.
   Existing ones can be deleted.

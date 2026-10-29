@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals } from "@std/assert";
+import { expect, test } from "vitest";
 import { openAsyncSqlite } from "./adapters/node_async_sqlite.ts";
 import { SYSTEM_AUTHOR } from "./actors.ts";
 import { initializeUploadSql, UPLOAD_CASES } from "./testing/upload_cases.ts";
@@ -32,10 +31,10 @@ test("upload decision is repeatable and does not mutate its snapshot", async () 
     const { revision, state } = await readUploadSnapshot(opened.sql, request, "test");
     const before = JSON.stringify(state);
     const plan = planUpload(state, request, SYSTEM_AUTHOR, revision, 100, true);
-    assertEquals(plan, planUpload(state, request, SYSTEM_AUTHOR, revision, 100, true));
-    assertEquals(JSON.stringify(state), before);
-    assertEquals(plan.result.languagesAdded, ["de"]);
-    assertEquals(plan.result.job, { id: 1 });
+    expect(plan).toStrictEqual(planUpload(state, request, SYSTEM_AUTHOR, revision, 100, true));
+    expect(JSON.stringify(state)).toStrictEqual(before);
+    expect(plan.result.languagesAdded).toStrictEqual(["de"]);
+    expect(plan.result.job).toStrictEqual({ id: 1 });
   } finally {
     opened.close();
   }

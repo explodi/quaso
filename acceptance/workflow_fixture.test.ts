@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
+import { expect, test } from "vitest";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
-import { assertEquals } from "@std/assert";
 import { ANONYMOUS, SYSTEM, type Service } from "@quaso/service";
 import type { QuasoConfig } from "@quaso/core";
 import { realService } from "../packages/server/src/testing/real_service.ts";
@@ -57,88 +56,80 @@ test("workflow fixture imports ten languages and opens five new Spanish entries 
     await upload(instance.service, config, "project");
     await importExports(instance.service, config);
     const initial = await instance.service.getProject(ANONYMOUS, {});
-    assertEquals(
-      [initial.details.files, initial.details.strings, initial.details.words],
-      [5, 10, 20],
-    );
-    assertEquals(
+    expect([initial.details.files, initial.details.strings, initial.details.words]).toStrictEqual([
+      5, 10, 20,
+    ]);
+    expect(
       initial.languages.map((language) => [
         language.tag,
         language.translatedPercent,
         language.blue,
         language.green,
       ]),
-      [
-        ["de", 100, 2, 8],
-        ["es", 100, 10, 0],
-        ["fr", 100, 2, 8],
-        ["it", 100, 2, 8],
-        ["ja", 100, 2, 8],
-        ["ko", 100, 2, 8],
-        ["pl", 100, 2, 8],
-        ["pt-PT", 100, 2, 8],
-        ["tr", 100, 2, 8],
-        ["zh-Hans", 100, 2, 8],
-      ],
-    );
-    assertEquals(
-      initial.languages.map((language) => language.proofreadPercent),
-      [20, 100, 20, 20, 20, 20, 20, 20, 20, 20],
-    );
+    ).toStrictEqual([
+      ["de", 100, 2, 8],
+      ["es", 100, 10, 0],
+      ["fr", 100, 2, 8],
+      ["it", 100, 2, 8],
+      ["ja", 100, 2, 8],
+      ["ko", 100, 2, 8],
+      ["pl", 100, 2, 8],
+      ["pt-PT", 100, 2, 8],
+      ["tr", 100, 2, 8],
+      ["zh-Hans", 100, 2, 8],
+    ]);
+    expect(initial.languages.map((language) => language.proofreadPercent)).toStrictEqual([
+      20, 100, 20, 20, 20, 20, 20, 20, 20, 20,
+    ]);
     const changed = await upload(instance.service, config, "updated");
-    assertEquals(
-      changed.files.map((file) => [file.path, file.added, file.changed]),
-      [
-        ["buildings.json", 1, 0],
-        ["common.json", 1, 0],
-        ["menu.json", 1, 1],
-        ["toolbox.json", 1, 0],
-        ["tutorial/steps.json", 1, 0],
-      ],
-    );
+    expect(changed.files.map((file) => [file.path, file.added, file.changed])).toStrictEqual([
+      ["buildings.json", 1, 0],
+      ["common.json", 1, 0],
+      ["menu.json", 1, 1],
+      ["toolbox.json", 1, 0],
+      ["tutorial/steps.json", 1, 0],
+    ]);
     const updated = await instance.service.getProject(ANONYMOUS, {});
-    assertEquals([updated.details.strings, updated.details.words], [15, 31]);
-    assertEquals(
+    expect([updated.details.strings, updated.details.words]).toStrictEqual([15, 31]);
+    expect(
       updated.languages.map((language) => [
         language.untranslated,
         language.outdated,
         language.wordsLeft,
       ]),
-      [
-        [5, 1, 10],
-        [5, 1, 10],
-        [5, 1, 10],
-        [5, 1, 10],
-        [5, 1, 10],
-        [5, 1, 10],
-        [5, 1, 10],
-        [5, 1, 10],
-        [5, 1, 10],
-        [5, 1, 10],
-      ],
-    );
+    ).toStrictEqual([
+      [5, 1, 10],
+      [5, 1, 10],
+      [5, 1, 10],
+      [5, 1, 10],
+      [5, 1, 10],
+      [5, 1, 10],
+      [5, 1, 10],
+      [5, 1, 10],
+      [5, 1, 10],
+      [5, 1, 10],
+    ]);
     const queue = await instance.service.getStringsQueue(ANONYMOUS, { language: "es" });
-    assertEquals(queue.toDo, 6);
+    expect(queue.toDo).toBe(6);
     const entries = await instance.service.listStrings(ANONYMOUS, {
       language: "es",
       ids: queue.ids.slice(0, 6),
     });
     const byId = new Map(entries.strings.map((entry) => [entry.id, entry]));
-    assertEquals(
+    expect(
       queue.ids.slice(0, 6).map((id) => {
         const entry = byId.get(id)!;
         return [entry.file, entry.key];
       }),
-      [
-        ["buildings.json", "upgrade"],
-        ["common.json", "reward"],
-        ["menu.json", "resume"],
-        ["toolbox.json", "repair"],
-        ["tutorial/steps.json", "complete"],
-        ["menu.json", "map"],
-      ],
-    );
-    assertEquals(config.languageMapping, { "pt-PT": "pt", "zh-Hans": "zh" });
+    ).toStrictEqual([
+      ["buildings.json", "upgrade"],
+      ["common.json", "reward"],
+      ["menu.json", "resume"],
+      ["toolbox.json", "repair"],
+      ["tutorial/steps.json", "complete"],
+      ["menu.json", "map"],
+    ]);
+    expect(config.languageMapping).toStrictEqual({ "pt-PT": "pt", "zh-Hans": "zh" });
   } finally {
     instance.close();
   }
@@ -165,7 +156,7 @@ test("workflow fixture Crowdin conversion retains all languages and nested downl
       ],
       { cwd: folder },
     );
-    assertEquals(result.code, 0, result.stderr);
-    assertEquals(JSON.parse(result.stdout).result.config, config);
+    expect(result.code, result.stderr).toBe(0);
+    expect(JSON.parse(result.stdout).result.config).toStrictEqual(config);
   });
 });

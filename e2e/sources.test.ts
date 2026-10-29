@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
-/// <reference lib="dom" />
+import { assert, expect } from "vitest";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import { browserTest, openTab, press, text, waitFor } from "./_setup.ts";
 
 browserTest(
@@ -32,21 +31,18 @@ browserTest(
       page.setViewport({ width: 1440, height: 1000 }),
     );
     await waitFor(page, () => document.querySelectorAll(".tree-counts time").length === 2);
-    assertEquals(
+    expect(
       await page.$eval('a.tree-name[href*="common.json"]', (element) =>
         element.getAttribute("href"),
       ),
-      "/translate/de?file=common.json",
-    );
-    assertStringIncludes(
-      await text(page, '.tree-item[data-path="src/"] > .tree-row .tree-counts'),
+    ).toBe("/translate/de?file=common.json");
+    expect(await text(page, '.tree-item[data-path="src/"] > .tree-row .tree-counts')).toContain(
       "3 strings",
     );
-    assertStringIncludes(
-      await text(page, '.tree-item[data-path="src/"] > .tree-row .tree-counts'),
+    expect(await text(page, '.tree-item[data-path="src/"] > .tree-row .tree-counts')).toContain(
       "5 words",
     );
-    assertEquals(await page.$(".sources-page progress"), null);
+    expect(await page.$(".sources-page progress")).toBe(null);
     assert(await page.$('a[aria-current="page"][href="/sources"]'));
     await page.focus('.tree-item[data-path="menus/play.json"]');
     await press(page, "ArrowLeft");
@@ -82,24 +78,22 @@ browserTest(
     );
     await page.reload({ waitUntil: "networkidle0" });
     assert(await page.$('a.tree-name[href="/translate/fr?file=common.json"]'));
-    assertEquals(
+    expect(
       await page.$eval(
         ".source-language-choice select",
         (select) => (select as HTMLSelectElement).value,
       ),
-      "fr",
-    );
+    ).toBe("fr");
     await page.select(".source-language-choice select", "de");
     await waitFor(page, () => new URLSearchParams(location.search).get("language") === "de");
     assert(await page.$('a.tree-name[href="/translate/de?file=common.json"]'));
     await page.reload({ waitUntil: "networkidle0" });
-    assertEquals(
+    expect(
       await page.$eval(
         ".source-language-choice select",
         (select) => (select as HTMLSelectElement).value,
       ),
-      "de",
-    );
+    ).toBe("de");
     assert(await page.$('a.tree-name[href="/translate/de?file=common.json"]'));
     await page.type('.sources-page input[type="search"]', "menus");
     await waitFor(
@@ -107,7 +101,7 @@ browserTest(
       () =>
         document.querySelector('.sources-page [role="status"]')?.textContent === "1 file shown.",
     );
-    assertEquals(await page.$('.tree-item[data-path="common.json"]'), null);
+    expect(await page.$('.tree-item[data-path="common.json"]')).toBe(null);
     await page.goto(`${server.url}/sources`, { waitUntil: "networkidle0" });
     await page.screenshot({ path: join(tmpdir(), "quaso-sources-desktop.png"), fullPage: true });
     await page.setViewport({ width: 360, height: 800 });
@@ -124,7 +118,7 @@ browserTest(
       ),
     );
     assert(nodes.some((node) => node.role?.value === "heading" && node.name?.value === "Sources"));
-    assertEquals(problems, []);
+    expect(problems).toStrictEqual([]);
   },
 );
 
@@ -146,8 +140,8 @@ browserTest(
     await waitFor(page, () =>
       document.querySelector(".tree-counts")?.textContent?.includes("0 strings"),
     );
-    assertStringIncludes(await text(page, ".sources-page"), "Add a target language");
-    assertEquals(await page.$("a.tree-name"), null);
-    assertEquals(problems, []);
+    expect(await text(page, ".sources-page")).toContain("Add a target language");
+    expect(await page.$("a.tree-name")).toBe(null);
+    expect(problems).toStrictEqual([]);
   },
 );

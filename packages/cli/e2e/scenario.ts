@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import { assert, expect } from "vitest";
 import * as fs from "node:fs/promises";
 /**
  * The end-to-end scenario (S4.11), for any way of running the CLI: upload, import,
@@ -10,7 +11,6 @@ import * as fs from "node:fs/promises";
  * translator (S5.6): `upload --wait`, `translate` with `--dry-run`, `--language`, `--file`
  * and `--no-wait`, and exit code 6 with the failed strings' local paths.
  */
-import { assert, assertEquals, assertMatch, assertStringIncludes } from "@std/assert";
 import { join } from "node:path";
 import {
   closedAddress,
@@ -35,28 +35,24 @@ export async function runScenario(cli: Runner, log: (step: string) => void = () 
     const env = { QUASO_HOSTNAME: server.url, QUASO_API_KEY: server.uploadKey };
     const quaso = async (args: string[], expected: number, extra: Record<string, string> = {}) => {
       const result = await cli(args, { cwd: project, env: { ...env, ...extra } });
-      assertEquals(
+      expect(
         result.code,
-        expected,
         `quaso ${args.join(" ")} exited with ${result.code}, not ${expected}\n` +
           `stdout:\n${result.stdout}\nstderr:\n${result.stderr}`,
-      );
+      ).toStrictEqual(expected);
       return result;
     };
 
     log("upload");
     const first = await quaso(["upload"], 0);
-    assertStringIncludes(first.stdout, "3 files uploaded");
-    assertStringIncludes(
-      first.stdout,
-      "Languages added on the instance: de, fr, pl, ja, ar, pt-BR",
-    );
+    expect(first.stdout).toContain("3 files uploaded");
+    expect(first.stdout).toContain("Languages added on the instance: de, fr, pl, ja, ar, pt-BR");
 
     log("upload again: nothing changes");
     const again = jsonOf(await quaso(["upload", "--json"], 0));
-    assertEquals(again.schemaVersion, 1);
-    assertEquals(again.command, "upload");
-    assertEquals(again.result.uploadId, null);
+    expect(again.schemaVersion).toBe(1);
+    expect(again.command).toBe("upload");
+    expect(again.result.uploadId).toBe(null);
     assert(again.result.files.every((file: { status: string }) => file.status === "unchanged"));
 
     log("import the demo's German as blue and Polish as green");
@@ -69,16 +65,16 @@ export async function runScenario(cli: Runner, log: (step: string) => void = () 
     log("status shows German as blue; --fail-on untranslated exits 7");
     const status = jsonOf(await quaso(["status", "--language", "de", "--json"], 0));
     const de = status.result.languages[0];
-    assertEquals(de.tag, "de");
+    expect(de.tag).toBe("de");
     assert(de.blue > 0 && de.blue === de.strings - de.untranslated, JSON.stringify(de));
     const failing = await quaso(["status", "--fail-on", "untranslated"], 7);
-    assertStringIncludes(failing.stdout, "--fail-on untranslated: met");
-    assertStringIncludes(failing.stdout, "ja: ");
+    expect(failing.stdout).toContain("--fail-on untranslated: met");
+    expect(failing.stdout).toContain("ja: ");
     await quaso(["status", "--fail-on", "untranslated", "--language", "de"], 0);
 
     log("download explicitly replaces the fixture translation files in every language");
     const download = jsonOf(await quaso(["download", "--overwrite-local", "--json"], 0));
-    assertEquals(download.result.skipped, []);
+    expect(download.result.skipped).toStrictEqual([]);
     for (const language of DEMO_LANGUAGES) {
       for (const file of DEMO_FILES) {
         const path = join(project, "src", "locales", language, file);
@@ -88,14 +84,16 @@ export async function runScenario(cli: Runner, log: (step: string) => void = () 
     const japanese = JSON.parse(
       await fs.readFile(join(project, "src", "locales", "ja", "common.json"), "utf8"),
     );
-    assertEquals(japanese.play, "Play", "untranslated strings are written in English (FMT-2)");
+    expect(japanese.play, "untranslated strings are written in English (FMT-2)").toStrictEqual(
+      "Play",
+    );
 
     log("a second download writes nothing (acceptance test 5)");
     const second = jsonOf(await quaso(["download", "--json"], 0));
-    assertEquals(second.result.written, []);
-    assertEquals(second.result.unchanged.length, DEMO_LANGUAGES.length * DEMO_FILES.length);
+    expect(second.result.written).toStrictEqual([]);
+    expect(second.result.unchanged.length).toStrictEqual(DEMO_LANGUAGES.length * DEMO_FILES.length);
     const quiet = await quaso(["download"], 0);
-    assertStringIncludes(quiet.stdout, "Everything is up to date");
+    expect(quiet.stdout).toContain("Everything is up to date");
 
     log("the Polish file has every plural form (acceptance test 8)");
     const polish = JSON.parse(
@@ -111,7 +109,7 @@ export async function runScenario(cli: Runner, log: (step: string) => void = () 
     await fs.writeFile(orphan, "{}\n");
     await fs.writeFile(notes, "not a translation\n");
     const dry = jsonOf(await quaso(["download", "--prune", "--dry-run", "--json"], 0));
-    assertEquals(dry.result.pruned, [{ path: "src/locales/de/old.json", language: "de" }]);
+    expect(dry.result.pruned).toStrictEqual([{ path: "src/locales/de/old.json", language: "de" }]);
     assert((await fs.stat(orphan)).isFile(), "a dry run deletes nothing");
     await quaso(["download", "--prune"], 0);
     await fs.stat(orphan).then(
@@ -122,17 +120,17 @@ export async function runScenario(cli: Runner, log: (step: string) => void = () 
 
     log("a missing key exits 3, a wrong key exits 3");
     const missing = await quaso(["status"], 3, { QUASO_API_KEY: "" });
-    assertStringIncludes(missing.stderr, "QUASO_API_KEY");
+    expect(missing.stderr).toContain("QUASO_API_KEY");
     await quaso(["status"], 3, { QUASO_API_KEY: "qso_not-a-real-key" });
     const readOnly = await quaso(["upload"], 3, { QUASO_API_KEY: server.readKey });
-    assertStringIncludes(readOnly.stderr, "scope");
+    expect(readOnly.stderr).toContain("scope");
 
     log("a server that isn't running exits 4");
-    const down = await quaso(["status", "--json"], 4, { QUASO_HOSTNAME: closedAddress() });
-    assertEquals(jsonOf(down).error.code, "network");
+    const down = await quaso(["status", "--json"], 4, { QUASO_HOSTNAME: await closedAddress() });
+    expect(jsonOf(down).error.code).toBe("network");
 
     log("the English files are unchanged (acceptance test 6)");
-    assertEquals(await hashFiles(english), before);
+    expect(await hashFiles(english)).toStrictEqual(before);
 
     log("an invalid source file exits 5 with its file, line and column");
     const broken = await copyDemo(temp.dir, "broken");
@@ -141,8 +139,8 @@ export async function runScenario(cli: Runner, log: (step: string) => void = () 
       '{\n  "main": {\n    "play": "Play",\n  }\n}\n',
     );
     const invalid = await cli(["upload", "--dry-run"], { cwd: broken, env });
-    assertEquals(invalid.code, 5, `${invalid.stdout}\n${invalid.stderr}`);
-    assertMatch(invalid.stderr, /src\/locales\/en\/menus\.json:3:19: /);
+    expect(invalid.code, `${invalid.stdout}\n${invalid.stderr}`).toBe(5);
+    expect(invalid.stderr).toMatch(/src\/locales\/en\/menus\.json:3:19: /);
 
     await llmScenario(cli, temp.dir, log);
   } finally {
@@ -172,40 +170,37 @@ async function llmScenario(cli: Runner, parent: string, log: (step: string) => v
     const env = { QUASO_HOSTNAME: server.url, QUASO_API_KEY: server.uploadKey };
     const quaso = async (args: string[], expected: number) => {
       const result = await cli(args, { cwd: project, env });
-      assertEquals(
+      expect(
         result.code,
-        expected,
         `quaso ${args.join(" ")} exited with ${result.code}, not ${expected}\n` +
           `stdout:\n${result.stdout}\nstderr:\n${result.stderr}`,
-      );
+      ).toStrictEqual(expected);
       return result;
     };
 
     log("LLM: upload --wait waits for the automatic job; a string that fails exits 6");
     const uploaded = await quaso(["upload", "--wait"], 6);
-    assertStringIncludes(uploaded.stdout, "3 files uploaded");
+    expect(uploaded.stdout).toContain("3 files uploaded");
     for (const language of DEMO_LANGUAGES) {
-      assertStringIncludes(
-        uploaded.stdout,
+      expect(uploaded.stdout).toContain(
         `src/locales/${language}/common.json › greeting (${language}): at most 5 characters`,
       );
     }
     const status = jsonOf(await quaso(["status", "--json"], 0));
     for (const language of status.result.languages) {
-      assertEquals(language.untranslated, 1, `${language.tag}: only the greeting`);
-      assertEquals(language.green, language.strings - 1);
+      expect(language.untranslated, `${language.tag}: only the greeting`).toBe(1);
+      expect(language.green).toStrictEqual(language.strings - 1);
     }
 
     log("LLM: translate --dry-run estimates, translate --language fails again (exit 6)");
     const dry = jsonOf(await quaso(["translate", "--dry-run", "--json"], 0));
-    assertEquals(dry.result.estimate.strings, DEMO_LANGUAGES.length);
-    assertEquals(dry.result.estimate.requests, DEMO_LANGUAGES.length);
+    expect(dry.result.estimate.strings).toStrictEqual(DEMO_LANGUAGES.length);
+    expect(dry.result.estimate.requests).toStrictEqual(DEMO_LANGUAGES.length);
     assert(dry.result.estimate.estimatedTokens.input > 0);
     const failing = jsonOf(await quaso(["translate", "--language", "pl", "--json"], 6));
-    assertEquals(
-      failing.result.failures.map((f: { file: string }) => f.file),
-      ["src/locales/pl/common.json"],
-    );
+    expect(failing.result.failures.map((f: { file: string }) => f.file)).toStrictEqual([
+      "src/locales/pl/common.json",
+    ]);
 
     log("LLM: without the limit, translate --file translates it, and download writes it");
     await writeConfig([]);
@@ -213,22 +208,22 @@ async function llmScenario(cli: Runner, parent: string, log: (step: string) => v
     const translated = jsonOf(
       await quaso(["translate", "--file", "src/locales/en/common.json", "--json"], 0),
     );
-    assertEquals(translated.result.job.progress.translated, DEMO_LANGUAGES.length);
-    assertEquals(translated.result.failures, []);
+    expect(translated.result.job.progress.translated).toStrictEqual(DEMO_LANGUAGES.length);
+    expect(translated.result.failures).toStrictEqual([]);
     await quaso(["download", "--overwrite-local"], 0);
     const polish = JSON.parse(
       await fs.readFile(join(project, "src", "locales", "pl", "common.json"), "utf8"),
     );
-    assertEquals(polish.greeting, "[Ŵéļçöɱé ƀáçķ, {{name}}!]");
-    assertEquals(polish.coins_few, "[{{count}} çöíñś]");
+    expect(polish.greeting).toBe("[Ŵéļçöɱé ƀáçķ, {{name}}!]");
+    expect(polish.coins_few).toBe("[{{count}} çöíñś]");
     const menus = JSON.parse(
       await fs.readFile(join(project, "src", "locales", "de", "menus.json"), "utf8"),
     );
-    assertEquals(menus.main.playAgain, "[$t(common:play) áğáíñ]", "the reference stays");
+    expect(menus.main.playAgain, "the reference stays").toBe("[$t(common:play) áğáíñ]");
 
     log("LLM: translate --retranslate --no-wait starts a job and exits");
     const queued = jsonOf(await quaso(["translate", "--retranslate", "--no-wait", "--json"], 0));
-    assertEquals(queued.result.waited, false);
+    expect(queued.result.waited).toBe(false);
     assert(queued.result.job.id > 0);
   } finally {
     await server.close();

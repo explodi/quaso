@@ -39,7 +39,9 @@ export class StoredLlm {
   #models: ModelList;
   readonly #fake: TranslationProvider | null;
 
-  constructor(private readonly options: StoredLlmOptions) {
+  private readonly options: StoredLlmOptions;
+  constructor(options: StoredLlmOptions) {
+    this.options = options;
     this.#fake = options.dev ? createFakeTranslator({ delayMs: 300 }) : null;
     this.#models = new ModelList(null, options.clock, options.logger);
   }

@@ -1090,7 +1090,7 @@ export function Catalog() {
                 <p>
                   Use semantic CSS variables. The palette in{" "}
                   <code>@quaso/design-system/tokens</code> defines every shade;{" "}
-                  <code>deno task design:tokens</code> generates the themes.
+                  <code>npm run design:tokens</code> generates the themes.
                 </p>
               </div>
               <div>

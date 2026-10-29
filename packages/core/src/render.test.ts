@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assert, assertEquals, assertStrictEquals, assertThrows } from "@std/assert";
+import * as fs from "node:fs/promises";
+import { assert, expect, test } from "vitest";
 import {
   parsePluralKey,
   type PluralEntry,
@@ -38,50 +38,63 @@ test("explicit omission removes whole plural groups and affected arrays without 
     format: DEFAULT_FORMAT,
     omitted: new Set([entryKey("text", ["array", 1]), entryKey("plural", ["coins"])]),
   });
-  assertEquals(JSON.parse(rendered), { new: "New", literal: 7 });
+  expect(JSON.parse(rendered)).toStrictEqual({ new: "New", literal: 7 });
 });
-const arAppendix = await Deno.readTextFile(
+const arAppendix = await fs.readFile(
   new URL("../testdata/i18next/ar/appendix.json", import.meta.url),
+  "utf8",
 );
-const enAppendix = await Deno.readTextFile(
+const enAppendix = await fs.readFile(
   new URL("../testdata/i18next/en/appendix.json", import.meta.url),
+  "utf8",
 );
-const enCommon = await Deno.readTextFile(
+const enCommon = await fs.readFile(
   new URL("../testdata/i18next/en/common.json", import.meta.url),
+  "utf8",
 );
-const enHud = await Deno.readTextFile(
+const enHud = await fs.readFile(
   new URL("../testdata/i18next/en/hud.json.txt", import.meta.url),
+  "utf8",
 );
-const enMenus = await Deno.readTextFile(
+const enMenus = await fs.readFile(
   new URL("../testdata/i18next/en/menus.json.txt", import.meta.url),
+  "utf8",
 );
-const enStore = await Deno.readTextFile(
+const enStore = await fs.readFile(
   new URL("../testdata/i18next/en/store.json.txt", import.meta.url),
+  "utf8",
 );
-const frAppendix = await Deno.readTextFile(
+const frAppendix = await fs.readFile(
   new URL("../testdata/i18next/fr/appendix.json", import.meta.url),
+  "utf8",
 );
-const frMenus = await Deno.readTextFile(
+const frMenus = await fs.readFile(
   new URL("../testdata/i18next/fr/menus.json.txt", import.meta.url),
+  "utf8",
 );
-const importedPlCommon = await Deno.readTextFile(
+const importedPlCommon = await fs.readFile(
   new URL("../testdata/i18next/import/pl/common.json.txt", import.meta.url),
+  "utf8",
 );
-const jaAppendix = await Deno.readTextFile(
+const jaAppendix = await fs.readFile(
   new URL("../testdata/i18next/ja/appendix.json", import.meta.url),
+  "utf8",
 );
-const plAppendix = await Deno.readTextFile(
+const plAppendix = await fs.readFile(
   new URL("../testdata/i18next/pl/appendix.json", import.meta.url),
+  "utf8",
 );
-const plCommon = await Deno.readTextFile(
+const plCommon = await fs.readFile(
   new URL("../testdata/i18next/pl/common.json", import.meta.url),
+  "utf8",
 );
-const plMenus = await Deno.readTextFile(
+const plMenus = await fs.readFile(
   new URL("../testdata/i18next/pl/menus.json.txt", import.meta.url),
+  "utf8",
 );
 
 /*
- * Golden files live in packages/core/testdata/i18next/<language>/. Files that `deno task fmt`
+ * Golden files live in packages/core/testdata/i18next/<language>/. Files that `npm run fmt`
  * would reformat (4-space or tab indentation, CRLF, one line) end in `.json.txt` so that
  * their bytes stay as they are; testdata/.gitattributes keeps git from converting their line
  * endings.
@@ -139,12 +152,16 @@ test("renderFile reproduces every English golden file byte for byte", () => {
     const format = english(name).format as JsonFormat;
     const rendered = renderFile(entries, new Map(), { language: "en", format });
     const expected = format.finalNewline ? text : text + format.newline;
-    assertStrictEquals(rendered, expected, name);
+    expect(rendered, name).toBe(expected);
   }
   // The tab-indented file has no final newline and gains one; the others are unchanged.
   assert(!enHud.endsWith("\n"));
-  assertEquals(english("menus").format, { indent: "    ", newline: "\r\n", finalNewline: true });
-  assertEquals(english("store").format, { indent: "", newline: "\n", finalNewline: true });
+  expect(english("menus").format).toStrictEqual({
+    indent: "    ",
+    newline: "\r\n",
+    finalNewline: true,
+  });
+  expect(english("store").format).toStrictEqual({ indent: "", newline: "\n", finalNewline: true });
 });
 
 test("renderFile writes the translation golden files from their own translations", () => {
@@ -159,9 +176,9 @@ test("renderFile writes the translation golden files from their own translations
   for (const [language, name, text] of cases) {
     const { entries, format } = english(name);
     const { values, unknownKeys } = readTranslation(text, entries, { language });
-    assertEquals(unknownKeys, [], `${language}/${name}`);
+    expect(unknownKeys, `${language}/${name}`).toStrictEqual([]);
     const rendered = renderFile(entries, values, { language, format });
-    assertStrictEquals(rendered, text, `${language}/${name}`);
+    expect(rendered, `${language}/${name}`).toBe(text);
   }
 });
 
@@ -169,9 +186,9 @@ test("renderFile writes an imported translation in the English structure", () =>
   const { entries, format } = english("common");
   const { values } = readTranslation(importedPlCommon, entries, { language: "pl" });
   const rendered = renderFile(entries, values, { language: "pl", format });
-  assertStrictEquals(rendered, plCommon);
+  expect(rendered).toBe(plCommon);
   // The import was 4-space indented, in another order; the output follows English.
-  assertEquals(keysAt(rendered, ["nav"]), keysAt(enCommon, ["nav"]));
+  expect(keysAt(rendered, ["nav"])).toStrictEqual(keysAt(enCommon, ["nav"]));
 });
 
 // Plural forms by language
@@ -179,7 +196,7 @@ test("renderFile writes an imported translation in the English structure", () =>
 test("renderFile writes Polish plural forms in CLDR order at the group's position", () => {
   const { entries, format } = english("appendix");
   const rendered = renderFile(entries, new Map(), { language: "pl", format });
-  assertEquals(keysAt(rendered, ["inventory"]), [
+  expect(keysAt(rendered, ["inventory"])).toStrictEqual([
     "coins",
     "coins_one",
     "coins_few",
@@ -193,7 +210,7 @@ test("renderFile writes Polish plural forms in CLDR order at the group's positio
   ]);
   const top = keysAt(rendered);
   const start = top.indexOf("collected");
-  assertEquals(top.slice(start, start + 16), [
+  expect(top.slice(start, start + 16)).toStrictEqual([
     "collected",
     "inventory",
     "messages_zero",
@@ -211,7 +228,7 @@ test("renderFile writes Polish plural forms in CLDR order at the group's positio
     "greeting_female",
     "ally_male_one",
   ]);
-  assertEquals(keysAt(rendered, ["tutorial", 1]), [
+  expect(keysAt(rendered, ["tutorial", 1])).toStrictEqual([
     "title",
     "body",
     "offers_one",
@@ -286,21 +303,25 @@ test("renderFile writes the plural forms each language needs", () => {
     ],
   ];
   for (const [language, keys] of cases) {
-    assertEquals(keysAt(render(PLURAL_SOURCE, language)), ["before", ...keys, "after"], language);
+    expect(keysAt(render(PLURAL_SOURCE, language)), language).toStrictEqual([
+      "before",
+      ...keys,
+      "after",
+    ]);
   }
 });
 
 test("renderFile gives every language a zero form when English has one", () => {
   for (const language of ["ja", "pl", "fr", "de", "ru", "zh", "ar", "lv"]) {
     const rendered = plain(render(PLURAL_SOURCE, language));
-    assertEquals(rendered.messages_zero, "No messages", language);
+    expect(rendered.messages_zero, language).toBe("No messages");
     // Arabic and Latvian have a zero form of their own, filled from English `other`.
     const native = language === "ar" || language === "lv";
-    assertStrictEquals(rendered.coins_zero, native ? "{{count}} coins" : undefined, language);
+    expect(rendered.coins_zero, language).toBe(native ? "{{count}} coins" : undefined);
   }
   // An ordinal group never gets an extra zero form.
   const ordinal = render('{"x_ordinal_zero": "0th", "x_ordinal_other": "nth"}', "ja");
-  assertEquals(keysAt(ordinal), ["x_ordinal_other"]);
+  expect(keysAt(ordinal)).toStrictEqual(["x_ordinal_other"]);
 });
 
 test("renderFile follows a plural override", () => {
@@ -310,7 +331,7 @@ test("renderFile follows a plural override", () => {
     format,
     pluralOverride: { cardinal: ["one", "few", "other"], ordinal: ["one", "other"] },
   });
-  assertEquals(keysAt(rendered), [
+  expect(keysAt(rendered)).toStrictEqual([
     "before",
     "coins_one",
     "coins_few",
@@ -334,36 +355,36 @@ test("renderFile fills missing forms from English: same category, then other", (
       ['["messages"]#plural', { other: "{{count}} \u0631\u0633\u0627\u0644\u0629" }],
     ]),
   );
-  assertEquals(rendered.coins_zero, "{{count}} coins");
-  assertEquals(rendered.coins_one, "{{count}} coin");
-  assertEquals(rendered.coins_two, "\u0639\u0645\u0644\u062a\u0627\u0646");
-  assertEquals(rendered.coins_few, "");
-  assertEquals(rendered.coins_many, "{{count}} coins");
-  assertEquals(rendered.coins_other, "{{count}} coins");
-  assertEquals(rendered.messages_zero, "No messages");
-  assertEquals(rendered.messages_one, "One message");
-  assertEquals(rendered.messages_many, "{{count}} messages");
-  assertEquals(rendered.messages_other, "{{count}} \u0631\u0633\u0627\u0644\u0629");
+  expect(rendered.coins_zero).toBe("{{count}} coins");
+  expect(rendered.coins_one).toBe("{{count}} coin");
+  expect(rendered.coins_two).toBe("\u0639\u0645\u0644\u062a\u0627\u0646");
+  expect(rendered.coins_few).toBe("");
+  expect(rendered.coins_many).toBe("{{count}} coins");
+  expect(rendered.coins_other).toBe("{{count}} coins");
+  expect(rendered.messages_zero).toBe("No messages");
+  expect(rendered.messages_one).toBe("One message");
+  expect(rendered.messages_many).toBe("{{count}} messages");
+  expect(rendered.messages_other).toBe("{{count}} \u0631\u0633\u0627\u0644\u0629");
 });
 
 test("renderFile uses English forms of categories English doesn't need", () => {
   // Written by hand with a `few` form English doesn't use: Polish gets it as its fallback.
   const source = '{"x_one": "one", "x_few": "few", "x_other": "other"}';
-  assertEquals(plain(render(source, "pl", [['["x"]#plural', { one: "jeden" }]])), {
+  expect(plain(render(source, "pl", [['["x"]#plural', { one: "jeden" }]]))).toStrictEqual({
     x_one: "jeden",
     x_few: "few",
     x_many: "other",
     x_other: "other",
   });
   // English itself drops the form it doesn't need.
-  assertEquals(keysAt(render(source, "en")), ["x_one", "x_other"]);
+  expect(keysAt(render(source, "en"))).toStrictEqual(["x_one", "x_other"]);
 });
 
 test("renderFile ignores translation forms the language doesn't need", () => {
   const rendered = render(PLURAL_SOURCE, "ja", [
     ['["coins"]#plural', { one: "1\u679a", other: "{{count}}\u679a", few: "x" }],
   ]);
-  assertEquals(plain(rendered).coins_other, "{{count}}\u679a");
+  expect(plain(rendered).coins_other).toBe("{{count}}\u679a");
   assert(!rendered.includes("1\u679a"));
 });
 
@@ -387,7 +408,7 @@ test("renderFile keeps English for untranslated strings and values of the wrong 
       ['["unknown"]', "Inconnu"],
     ]),
   );
-  assertEquals(rendered, {
+  expect(rendered).toStrictEqual({
     title: "Titre",
     subtitle: "Subtitle",
     body: "Body",
@@ -398,7 +419,7 @@ test("renderFile keeps English for untranslated strings and values of the wrong 
 });
 
 test("renderFile writes empty translations as they are", () => {
-  assertEquals(plain(render('{"a": "A"}', "de", [['["a"]', ""]])), { a: "" });
+  expect(plain(render('{"a": "A"}', "de", [['["a"]', ""]]))).toStrictEqual({ a: "" });
 });
 
 // Structure, references and literals
@@ -409,11 +430,11 @@ test("renderFile keeps arrays' length and order, element by element", () => {
     ['["hints",1,1,"t"]', "Drei"],
     ['["hints",0]', "Eins"],
   ]);
-  assertEquals(plain(rendered), {
+  expect(plain(rendered)).toStrictEqual({
     hints: ["Eins", ["Two", { t: "Drei" }], "$t(tip)", 4, [], {}],
     end: "End",
   });
-  assertEquals(keysAt(rendered), ["hints", "end"]);
+  expect(keysAt(rendered)).toStrictEqual(["hints", "end"]);
 });
 
 test("renderFile copies references and literals from English", () => {
@@ -445,7 +466,7 @@ test("renderFile copies references and literals from English", () => {
     ['["empty"]', "pusty"],
     ['["obj"]', "x"],
   ]);
-  assertStrictEquals(rendered, source + "\n");
+  expect(rendered).toBe(source + "\n");
 });
 
 test("renderFile keeps the English format and always ends with a newline", () => {
@@ -464,7 +485,7 @@ test("renderFile keeps the English format and always ends with a newline", () =>
   ];
   const { entries } = readSource(source);
   for (const [format, expected] of formats) {
-    assertStrictEquals(renderFile(entries, new Map(), { language: "en", format }), expected);
+    expect(renderFile(entries, new Map(), { language: "en", format })).toBe(expected);
   }
 });
 
@@ -479,14 +500,15 @@ test("renderFile keeps the lines of English files without indentation", () => {
     ],
   ];
   for (const [text, language] of cases) {
-    assertStrictEquals(render(text, "en"), text, JSON.stringify(text));
+    expect(render(text, "en"), JSON.stringify(text)).toBe(text);
     const rendered = render(text, language, [['["play"]', "Graj"]]);
-    assertEquals(plain(rendered).play, "Graj");
+    expect(plain(rendered).play).toBe("Graj");
     const newline = text.includes("\r\n") ? "\r\n" : text.includes("\r") ? "\r" : "\n";
-    assertEquals(rendered.split(newline).length, text.split(newline).length);
+    expect(rendered.split(newline).length).toStrictEqual(text.split(newline).length);
   }
-  assertStrictEquals(
+  expect(
     render('{\n"coins_one": "{{count}} coin",\n"coins_other": "{{count}} coins"\n}', "pl"),
+  ).toBe(
     '{\n"coins_one": "{{count}} coin",\n"coins_few": "{{count}} coins",\n' +
       '"coins_many": "{{count}} coins",\n"coins_other": "{{count}} coins"\n}\n',
   );
@@ -497,15 +519,14 @@ test("renderFile writes raw Unicode and escapes only what JSON needs", () => {
     ['["a"]', "\u{1f389} Cafe\u0301 \u65e5\u672c \u0645\u0631\u062d\u0628\u0627 \u00a0\u2028"],
     ['["b"]', 'q"\\\n\t\u0001 \ud800'],
   ]);
-  assertStrictEquals(
-    rendered,
+  expect(rendered).toBe(
     '{\n  "a": "\u{1f389} Cafe\u0301 \u65e5\u672c \u0645\u0631\u062d\u0628\u0627 \u00a0\u2028",\n  "b": "q\\"\\\\\\n\\t\\u0001 \\ud800"\n}\n',
   );
 });
 
 test("renderFile writes an empty object when there are no entries", () => {
-  assertStrictEquals(renderFile([], new Map(), { language: "pl", format: DEFAULT_FORMAT }), "{}\n");
-  assertStrictEquals(render("{}", "pl"), "{}\n");
+  expect(renderFile([], new Map(), { language: "pl", format: DEFAULT_FORMAT })).toBe("{}\n");
+  expect(render("{}", "pl")).toBe("{}\n");
 });
 
 test("renderFile is deterministic, whatever the order of the translations", () => {
@@ -513,8 +534,8 @@ test("renderFile is deterministic, whatever the order of the translations", () =
   const { values } = readTranslation(plAppendix, entries, { language: "pl" });
   const reversed = new Map([...values.entries()].reverse());
   const first = renderFile(entries, values, { language: "pl", format });
-  assertStrictEquals(renderFile(entries, reversed, { language: "pl", format }), first);
-  assertStrictEquals(renderFile(entries, values, { language: "pl", format }), first);
+  expect(renderFile(entries, reversed, { language: "pl", format })).toBe(first);
+  expect(renderFile(entries, values, { language: "pl", format })).toBe(first);
 });
 
 test("renderFile places array elements by index and fills gaps with null", () => {
@@ -523,13 +544,12 @@ test("renderFile places array elements by index and fills gaps with null", () =>
     { kind: "text", keyPath: ["list", 0], value: "a" },
     { kind: "text", keyPath: ["title"], value: "T" },
   ];
-  assertStrictEquals(
+  expect(
     renderFile(entries, new Map(), { language: "en", format: { ...DEFAULT_FORMAT, indent: "" } }),
-    '{"list":["a",null,"c"],"title":"T"}\n',
-  );
+  ).toBe('{"list":["a",null,"c"],"title":"T"}\n');
 });
 
-test("renderFile refuses entries whose key paths clash", () => {
+test("renderFile refuses entries whose key paths clash", async () => {
   const text = (keyPath: KeyPath): SourceEntry => ({ kind: "text", keyPath, value: "x" });
   const plural = (keyPath: KeyPath): SourceEntry => ({
     kind: "plural",
@@ -549,20 +569,19 @@ test("renderFile refuses entries whose key paths clash", () => {
     [{ kind: "literal", keyPath: ["a"], raw: "[]" }, text(["a", "b"])],
   ];
   for (const entries of cases) {
-    const error = assertThrows(
-      () => renderFile(entries, new Map(), { language: "pl", format: DEFAULT_FORMAT }),
-      SourceError,
-    );
-    assertEquals(error.code, "key_conflict", JSON.stringify(entries));
+    const error = await Promise.try(() =>
+      renderFile(entries, new Map(), { language: "pl", format: DEFAULT_FORMAT }),
+    ).catch((error: unknown) => error);
+    assert(error instanceof SourceError);
+    expect(error.code, JSON.stringify(entries)).toBe("key_conflict");
   }
   // English's `coins_few` is fine when the language doesn't write that key.
-  assertStrictEquals(
+  expect(
     renderFile([text(["coins_few"]), plural(["coins"])], new Map(), {
       language: "en",
       format: { ...DEFAULT_FORMAT, indent: "" },
     }),
-    '{"coins_few":"x","coins_one":"a","coins_other":"b"}\n',
-  );
+  ).toBe('{"coins_few":"x","coins_one":"a","coins_other":"b"}\n');
 });
 
 test("renderFile extends objects and arrays that came from literals", () => {
@@ -572,10 +591,9 @@ test("renderFile extends objects and arrays that came from literals", () => {
     { kind: "literal", keyPath: ["c"], raw: "[]" },
     { kind: "text", keyPath: ["c", 0], value: "C" },
   ];
-  assertStrictEquals(
+  expect(
     renderFile(entries, new Map(), { language: "en", format: { ...DEFAULT_FORMAT, indent: "" } }),
-    '{"a":{"b":"B"},"c":["C"]}\n',
-  );
+  ).toBe('{"a":{"b":"B"},"c":["C"]}\n');
 });
 
 // Property tests
@@ -862,9 +880,9 @@ test("property: rendering English gives the same file and entries back, every ti
     const options = { language: "en", format: sourceFormat };
     const rendered = renderFile(source.entries, new Map(), options);
     const expected = sourceFormat.finalNewline ? text : text + sourceFormat.newline;
-    assertStrictEquals(rendered, expected, `run ${run}`);
-    assertStrictEquals(renderFile(source.entries, new Map(), options), rendered);
-    assertEquals(readSource(rendered).entries, source.entries, `run ${run}`);
+    expect(rendered, `run ${run}`).toBe(expected);
+    expect(renderFile(source.entries, new Map(), options)).toBe(rendered);
+    expect(readSource(rendered).entries, `run ${run}`).toStrictEqual(source.entries);
     groups += source.entries.filter((e) => e.kind === "plural" || e.kind === "ordinal").length;
   }
   assert(groups > 200, `only ${groups} plural groups were generated`);
@@ -879,10 +897,12 @@ test("property: reading a rendered translation gives back what was rendered", ()
     const { entries } = readSource(stringifyJson(generator.document(), format));
     const translations = randomTranslations(random, entries);
     const rendered = renderFile(entries, translations, { language, format });
-    assertStrictEquals(renderFile(entries, translations, { language, format }), rendered);
+    expect(renderFile(entries, translations, { language, format })).toBe(rendered);
     const result = readTranslation(rendered, entries, { language });
-    assertEquals(result.unknownKeys, [], `run ${run} (${language})`);
-    assertEquals(result.values, expectedValues(entries, translations, language), `run ${run}`);
+    expect(result.unknownKeys, `run ${run} (${language})`).toStrictEqual([]);
+    expect(result.values, `run ${run}`).toStrictEqual(
+      expectedValues(entries, translations, language),
+    );
   }
 });
 
@@ -916,7 +936,7 @@ function syntheticSource(count: number): string {
 
 test("renderFile renders 3000 strings into 10 languages well under a second", () => {
   const { entries, format } = readSource(syntheticSource(3000));
-  assertEquals(entries.length, 3000);
+  expect(entries.length).toBe(3000);
   const languages = ["pl", "ja", "ar", "fr", "de", "ru", "cy", "zh", "pt-BR", "tr"];
   const translations = languages.map((language) => {
     const values = new Map<string, TextValue>();
@@ -961,7 +981,7 @@ test("untranslated omit: untranslated texts are left out, translated ones writte
     menu: { play: "Play", quit: "Quit" },
     back: "$t(menu.quit)",
   };
-  assertEquals(renderOmitting(english, [[entryKey("text", ["menu", "play"]), "Graj"]]), {
+  expect(renderOmitting(english, [[entryKey("text", ["menu", "play"]), "Graj"]])).toStrictEqual({
     menu: { play: "Graj" },
     back: "$t(menu.quit)",
   });
@@ -975,7 +995,7 @@ test("untranslated omit: a plural group keeps only its translated forms", () => 
     gems_other: "{{count}} gems",
   };
   const partial: PluralForms = { one: "{{count}} moneta", other: "{{count}} monety" };
-  assertEquals(renderOmitting(english, [[entryKey("plural", ["coins"]), partial]]), {
+  expect(renderOmitting(english, [[entryKey("plural", ["coins"]), partial]])).toStrictEqual({
     coins_one: "{{count}} moneta",
     coins_other: "{{count}} monety",
   });
@@ -988,5 +1008,7 @@ test("untranslated omit: an array with an untranslated element is left out whole
     [entryKey("text", ["greetings", 0]), "Cześć"],
     [entryKey("text", ["greetings", 1]), "Dzień dobry"],
   ];
-  assertEquals(renderOmitting(english, translations), { greetings: ["Cześć", "Dzień dobry"] });
+  expect(renderOmitting(english, translations)).toStrictEqual({
+    greetings: ["Cześć", "Dzień dobry"],
+  });
 });

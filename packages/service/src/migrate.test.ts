@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals, assertRejects } from "@std/assert";
+import { expect, test } from "vitest";
 import { openNodeSqlite } from "./adapters/node_sqlite.ts";
 import { migrate, schemaVersion } from "./migrate.ts";
 import { DATABASE_VERSION, MIGRATIONS, type Migration } from "./migrations.ts";
@@ -39,11 +38,13 @@ test(
       migrations: FAKE,
       beforeMigrate: (from, to) => void calls.push([from, to]),
     });
-    assertEquals(result, { from: 0, to: 2, created: true });
-    assertEquals(calls, []);
-    assertEquals(schemaVersion(sql), 2);
+    expect(result).toStrictEqual({ from: 0, to: 2, created: true });
+    expect(calls).toStrictEqual([]);
+    expect(schemaVersion(sql)).toBe(2);
     sql.run("INSERT INTO notes (text) VALUES ('hi')");
-    assertEquals(sql.query("SELECT text, author FROM notes"), [{ text: "hi", author: "nobody" }]);
+    expect(sql.query("SELECT text, author FROM notes")).toStrictEqual([
+      { text: "hi", author: "nobody" },
+    ]);
   }),
 );
 
@@ -57,9 +58,11 @@ test(
       migrations: FAKE,
       beforeMigrate: (from, to) => void calls.push([from, to, schemaVersion(sql)]),
     });
-    assertEquals(result, { from: 1, to: 2, created: false });
-    assertEquals(calls, [[1, 2, 1]], "called before migrating");
-    assertEquals(sql.query("SELECT text, author FROM notes"), [{ text: "kept", author: "nobody" }]);
+    expect(result).toStrictEqual({ from: 1, to: 2, created: false });
+    expect(calls, "called before migrating").toStrictEqual([[1, 2, 1]]);
+    expect(sql.query("SELECT text, author FROM notes")).toStrictEqual([
+      { text: "kept", author: "nobody" },
+    ]);
   }),
 );
 
@@ -72,8 +75,8 @@ test(
       migrations: FAKE,
       beforeMigrate: () => void (called = true),
     });
-    assertEquals(result, { from: 2, to: 2, created: false });
-    assertEquals(called, false);
+    expect(result).toStrictEqual({ from: 2, to: 2, created: false });
+    expect(called).toBe(false);
   }),
 );
 
@@ -81,9 +84,7 @@ test(
   "migrate refuses a database newer than the code",
   withDatabase(async (sql) => {
     await migrate(sql, { migrations: FAKE });
-    await assertRejects(
-      () => migrate(sql, { migrations: FAKE.slice(0, 1) }),
-      Error,
+    await expect(migrate(sql, { migrations: FAKE.slice(0, 1) })).rejects.toThrow(
       "schema version 2",
     );
   }),
@@ -97,20 +98,19 @@ test(
       FAKE[0],
       { version: 2, name: "broken", sql: "CREATE TABLE extra (x INTEGER); SELECT * FROM missing;" },
     ];
-    await assertRejects(() => migrate(sql, { migrations: broken }));
-    assertEquals(schemaVersion(sql), 1);
-    assertEquals(
+    await expect(migrate(sql, { migrations: broken })).rejects.toThrow();
+    expect(schemaVersion(sql)).toBe(1);
+    expect(
       sql.query("SELECT name FROM sqlite_master WHERE name = 'extra'"),
-      [],
       "the migration's first statement was rolled back",
-    );
+    ).toStrictEqual([]);
   }),
 );
 
 test(
   "migrate refuses migrations out of order",
   withDatabase(async (sql) => {
-    await assertRejects(() => migrate(sql, { migrations: [FAKE[1]] }), Error, "version 2, not 1");
+    await expect(migrate(sql, { migrations: [FAKE[1]] })).rejects.toThrow("version 2, not 1");
   }),
 );
 
@@ -118,12 +118,12 @@ test(
   "the real migrations create the schema",
   withDatabase(async (sql) => {
     const result = await migrate(sql);
-    assertEquals(result, { from: 0, to: DATABASE_VERSION, created: true });
+    expect(result).toStrictEqual({ from: 0, to: DATABASE_VERSION, created: true });
     const tables = sql
       .query<{ name: string }>("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
       .map((row) => row.name);
     for (const table of ["meta", "settings", "strings", "translations", "history", "api_tokens"]) {
-      assertEquals(tables.includes(table), true, table);
+      expect(tables.includes(table), table).toBe(true);
     }
   }),
 );
@@ -137,12 +137,12 @@ test(
        VALUES ('text/menus.json', 'text/menus.json', '{}', 'Menus', 100, 100)`,
     );
     const result = await migrate(sql, { migrations: MIGRATIONS.slice(0, 6) });
-    assertEquals(result, { from: 5, to: 6, created: false });
-    assertEquals(sql.query("SELECT path, context FROM files"), [
+    expect(result).toStrictEqual({ from: 5, to: 6, created: false });
+    expect(sql.query("SELECT path, context FROM files")).toStrictEqual([
       { path: "text/menus.json", context: "Menus" },
     ]);
     sql.run("INSERT INTO folders (path, context, updated_at) VALUES ('text', 'Game text', 200)");
-    assertEquals(sql.query("SELECT path, context FROM folders"), [
+    expect(sql.query("SELECT path, context FROM folders")).toStrictEqual([
       { path: "text", context: "Game text" },
     ]);
   }),
@@ -163,8 +163,8 @@ test(
        '"Excited to join {company}!"', 'h', '', 0, 100, 100)`,
     );
     const result = await migrate(sql, { migrations: MIGRATIONS.slice(0, 7) });
-    assertEquals(result, { from: 6, to: 7, created: false });
-    assertEquals(sql.query("SELECT display_key, arguments FROM strings"), [
+    expect(result).toStrictEqual({ from: 6, to: 7, created: false });
+    expect(sql.query("SELECT display_key, arguments FROM strings")).toStrictEqual([
       { display_key: "posts.joined", arguments: null },
     ]);
   }),

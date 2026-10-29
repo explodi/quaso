@@ -22,7 +22,7 @@
     "wrangler": "4.136.3"
   },
   "dependencies": {
-    "@quaso/core": "workspace:*",
-    "@quaso/service": "workspace:*"
+    "@quaso/core": "*",
+    "@quaso/service": "*"
   }
 }

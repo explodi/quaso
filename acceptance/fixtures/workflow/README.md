@@ -34,13 +34,13 @@ in a temporary copy without an existing Quaso config. The YAML mappings retain `
 Verify the fixture's import counts and queue starting conditions with:
 
 ```sh
-deno test -A acceptance/workflow_fixture.test.ts
+npx vitest run --project acceptance acceptance/workflow_fixture.test.ts
 ```
 
 This check validates the data on the real SQLite service. The full browser/CLI workflow
-runs with `deno test -A e2e/workflow.test.ts` after `deno task build:cli`.
-The same runner targets an instance URL through `deno task workflow --url URL`; see the
+runs with `npx vitest run --project e2e e2e/workflow.test.ts` after `npm run build:cli`.
+The same runner targets an instance URL through `npm run workflow -- --url URL`; see the
 [testing guide](../../../docs/contributing/testing.md#the-fake-translator) for credentials,
 stub requirements and cleanup. Replace `URL` with the address of a dedicated test instance. The Docker workflow runs with
-`deno task docker:workflow` and is required by release publication. Cloudflare execution remains a
+`npm run docker:workflow` and is required by release publication. Cloudflare execution remains a
 separate check.

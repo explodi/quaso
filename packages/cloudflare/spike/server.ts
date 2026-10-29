@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: MIT
+// Self-contained, so that the Dockerfile can copy this one file and Node can run it as is.
+import { createServer } from "node:http";
+
 let busyUntil = 0;
 let measureGrace = false;
 const startedAt = Date.now();
@@ -35,7 +38,7 @@ process.on("SIGTERM", () => {
   setTimeout(() => process.exit(0), 60_000);
 });
 
-Deno.serve({ port: 8000 }, async (request) => {
+async function handle(request: Request): Promise<Response> {
   const url = new URL(request.url);
   if (url.pathname === "/grace") {
     measureGrace = true;
@@ -84,4 +87,11 @@ Deno.serve({ port: 8000 }, async (request) => {
     });
   }
   return new Response(null, { status: 404 });
-});
+}
+
+// The endpoints read only the URL.
+createServer(async (incoming, outgoing) => {
+  const response = await handle(new Request(`http://localhost${incoming.url}`));
+  outgoing.writeHead(response.status, Object.fromEntries(response.headers));
+  outgoing.end(Buffer.from(await response.arrayBuffer()));
+}).listen(8000);

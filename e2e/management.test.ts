@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-/// <reference lib="dom" />
 /** Sprint 8 acceptance: real accounts, real writes and real exports through the browser. */
-import { assert, assertEquals, assertMatch, assertStringIncludes } from "@std/assert";
+import { assert, expect } from "vitest";
+
 import type { Page } from "puppeteer";
 import {
   ANONYMOUS,
@@ -55,43 +55,40 @@ browserTest(
     const { page } = tab;
     await signIn(page, server, OWNER);
     await page.goto(`${server.url}/settings?section=llm`, { waitUntil: "networkidle0" });
-    assertStringIncludes(await text(page, "main"), "Enter them again: Gemini API key.");
-    assertEquals(
+    expect(await text(page, "main")).toContain("Enter them again: Gemini API key.");
+    expect(
       await page.evaluate(
         () =>
           [...document.querySelectorAll<HTMLButtonElement>("button")].find(
             (button) => button.textContent?.trim() === "Test Gemini key",
           )?.disabled,
       ),
-      true,
-    );
+    ).toBe(true);
     const value = "replacement-key-should-never-appear-9876";
     await fill(page, "Gemini API key", value);
-    assertEquals(
+    expect(
       await page.$eval('input[type="password"]', (input) => (input as HTMLInputElement).value),
-      value,
-    );
+    ).toStrictEqual(value);
     await click(page, "Set key");
     await waitFor(page, () =>
       document.querySelector("main")?.textContent?.includes("Set, ending in …9876."),
     );
-    assertEquals((await text(page, "main")).includes(value), false);
-    assertEquals((await text(page, "main")).includes("Enter them again"), false);
-    assertEquals(
+    expect((await text(page, "main")).includes(value)).toBe(false);
+    expect((await text(page, "main")).includes("Enter them again")).toBe(false);
+    expect(
       await page.$eval('input[type="password"]', (input) => (input as HTMLInputElement).value),
-      "",
-    );
+    ).toBe("");
     await click(page, "Test Gemini key");
     await waitFor(page, () =>
       document.querySelector("main")?.textContent?.includes("Gemini key works. Available models:"),
     );
-    assertStringIncludes(await text(page, "main"), "fake");
+    expect(await text(page, "main")).toContain("fake");
     await fill(page, "New Gemini API key", "next-provider-credential-4567");
     await click(page, "Replace");
     await waitFor(page, () =>
       document.querySelector("main")?.textContent?.includes("Set, ending in …4567."),
     );
-    assertEquals((await text(page, "main")).includes("Gemini key works"), false);
+    expect((await text(page, "main")).includes("Gemini key works")).toBe(false);
     await fill(page, "Requests in parallel", "2");
     await fill(page, "Monthly token budget", "100000");
     await click(page, "Save AI settings");
@@ -102,14 +99,14 @@ browserTest(
       return section?.querySelector('[role="status"]')?.textContent === "Saved.";
     });
     const settings = await server.service.getSettings(SYSTEM, {});
-    assertEquals(settings.settings.llm.concurrency, 2);
-    assertEquals(settings.settings.llm.monthlyTokenBudget, 100000);
+    expect(settings.settings.llm.concurrency).toBe(2);
+    expect(settings.settings.llm.monthlyTokenBudget).toBe(100000);
     await click(page, "Remove key");
     await waitFor(page, () => document.querySelector("dialog[open]") !== null);
     await click(page, "Remove key", "dialog[open]");
     await waitFor(page, () => document.querySelector("main")?.textContent?.includes("Not set."));
-    assertEquals((await server.service.listSecrets(SYSTEM, {})).missingSecrets, []);
-    assertEquals(tab.problems, []);
+    expect((await server.service.listSecrets(SYSTEM, {})).missingSecrets).toStrictEqual([]);
+    expect(tab.problems).toStrictEqual([]);
   },
 );
 
@@ -147,9 +144,9 @@ browserTest(
       return input && input.value !== "Ancien";
     });
     const result = (await getStrings(server, "fr")).strings[0];
-    assertEquals(result.translation?.colour, "green");
+    expect(result.translation?.colour).toBe("green");
     assert(result.translation?.value !== "Ancien");
-    assertEquals(tab.problems, []);
+    expect(tab.problems).toStrictEqual([]);
   },
 );
 
@@ -194,12 +191,12 @@ browserTest(
 
     await tab.page.goto(`${server.url}/translate/fr?id=${ids[0]}`, { waitUntil: "networkidle0" });
     await waitFor(tab.page, () => document.querySelector(".llm-offer-button") !== null);
-    assertEquals(asked, [ids.slice(0, 4), ids.slice(4, 8)]);
+    expect(asked).toStrictEqual([ids.slice(0, 4), ids.slice(4, 8)]);
 
     // On the second string six answers are ahead: nothing is asked.
     await openString(1);
     await new Promise((done) => setTimeout(done, 1_200));
-    assertEquals(asked.length, 2);
+    expect(asked.length).toBe(2);
 
     // On the third string five are ahead: the next four are asked for.
     const refill = tab.page.waitForRequest((request) =>
@@ -207,8 +204,8 @@ browserTest(
     );
     await openString(2);
     await refill;
-    assertEquals(asked, [ids.slice(0, 4), ids.slice(4, 8), ids.slice(8, 12)]);
-    assertEquals(tab.problems, []);
+    expect(asked).toStrictEqual([ids.slice(0, 4), ids.slice(4, 8), ids.slice(8, 12)]);
+    expect(tab.problems).toStrictEqual([]);
   },
 );
 
@@ -262,9 +259,11 @@ browserTest(
       page,
       () => document.querySelector('.settings-actions [role="status"]')?.textContent === "Saved.",
     );
-    assertEquals((await server.service.getSettings(SYSTEM, {})).settings.name, "Renamed project");
+    expect((await server.service.getSettings(SYSTEM, {})).settings.name).toStrictEqual(
+      "Renamed project",
+    );
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
-    assertEquals(problems, []);
+    expect(problems).toStrictEqual([]);
   },
 );
 
@@ -372,24 +371,24 @@ browserTest(
     const tab = await openTab(browser, server, "/signin");
     await signIn(tab.page, server, VOLUNTEER);
     await suggestion(tab.page, server, target.id, "Jouer");
-    assertEquals((await exported(server)).play, "Ancien");
+    expect((await exported(server)).play).toBe("Ancien");
     await signOut(tab.page);
     await signIn(tab.page, server, OWNER);
     await tab.page.goto(`${server.url}/review`, { waitUntil: "networkidle0" });
-    assertStringIncludes(await text(tab.page, ".review-diff"), "Jouer");
+    expect(await text(tab.page, ".review-diff")).toContain("Jouer");
     await tab.page.click(".review-comment summary");
     await fill(tab.page, "Review comment (optional)", "Merci !");
     await click(tab.page, "Approve");
     await waitFor(tab.page, () =>
       document.querySelector("main")?.textContent?.includes("No suggestions match"),
     );
-    assertEquals((await exported(server)).play, "Jouer");
+    expect((await exported(server)).play).toBe("Jouer");
     await tab.page.goto(`${server.url}/translate/fr?id=${target.id}`, {
       waitUntil: "networkidle0",
     });
     await waitFor(tab.page, () => document.querySelector(".state-badges .badge-blue") !== null);
-    assertEquals((await getStrings(server, "fr")).strings[0].translation?.colour, "blue");
-    assertEquals(tab.problems, []);
+    expect((await getStrings(server, "fr")).strings[0].translation?.colour).toBe("blue");
+    expect(tab.problems).toStrictEqual([]);
   },
 );
 
@@ -420,9 +419,9 @@ browserTest(
     await waitFor(tab.page, () =>
       document.querySelector(".state-badges")?.textContent?.includes("Outdated"),
     );
-    assertStringIncludes(await text(tab.page, "main"), "Jouer");
-    assertEquals((await exported(server)).play, "Jouer");
-    assertEquals(tab.problems, []);
+    expect(await text(tab.page, "main")).toContain("Jouer");
+    expect((await exported(server)).play).toBe("Jouer");
+    expect(tab.problems).toStrictEqual([]);
   },
 );
 
@@ -464,7 +463,7 @@ browserTest(
     await signOut(tab.page);
     await signIn(tab.page, server, OWNER);
     await tab.page.goto(`${server.url}/team`, { waitUntil: "networkidle0" });
-    assertStringIncludes(await text(tab.page, "main"), "I can help with French.");
+    expect(await text(tab.page, "main")).toContain("I can help with French.");
     await click(tab.page, "Approve volunteer");
     await waitFor(tab.page, () =>
       document.querySelector("main")?.textContent?.includes("No volunteer requests are waiting"),
@@ -473,10 +472,10 @@ browserTest(
     await signIn(tab.page, server, VOLUNTEER);
     await suggestion(tab.page, server, target.id, "Jouer");
     await tab.page.goto(`${server.url}/contributions`, { waitUntil: "networkidle0" });
-    assertStringIncludes(await text(tab.page, ".record-list"), "pending");
-    assertStringIncludes(await text(tab.page, ".record-list"), "Jouer");
-    assertEquals((await getStrings(server, "fr")).strings[0].translation, null);
-    assertEquals(tab.problems, []);
+    expect(await text(tab.page, ".record-list")).toContain("pending");
+    expect(await text(tab.page, ".record-list")).toContain("Jouer");
+    expect((await getStrings(server, "fr")).strings[0].translation).toBe(null);
+    expect(tab.problems).toStrictEqual([]);
   },
 );
 
@@ -501,17 +500,17 @@ browserTest(
     await waitFor(tab.page, () => document.querySelector(".job-indicator") !== null);
     await server.service.alarm();
     const completedJobs = await server.service.listJobs(SYSTEM, {});
-    assertEquals(completedJobs.jobs[0].status, "done");
+    expect(completedJobs.jobs[0].status).toBe("done");
     await waitFor(tab.page, () =>
       document.body.textContent?.includes("Translation finished: 1 translated, 0 failed"),
     );
     const target = (await getStrings(server, "fr")).strings[0];
-    assertEquals(target.translation?.colour, "green");
+    expect(target.translation?.colour).toBe("green");
     await tab.page.goto(`${server.url}/translate/fr?id=${target.id}`, {
       waitUntil: "networkidle0",
     });
     await waitFor(tab.page, () => document.querySelector(".state-badges .badge-green") !== null);
-    assertEquals(tab.problems, []);
+    expect(tab.problems).toStrictEqual([]);
   },
 );
 
@@ -536,9 +535,9 @@ browserTest(
     const secret = await tab.page.evaluate(
       () => document.querySelector<HTMLTextAreaElement>(".secret-value")!.value,
     );
-    assertMatch(secret, /^qso_/);
+    expect(secret).toMatch(/^qso_/);
     await click(tab.page, "Done", "dialog[open]");
-    assertEquals(
+    expect(
       await tab.page.evaluate(
         (s: string) =>
           document.body.textContent?.includes(s) ||
@@ -547,19 +546,17 @@ browserTest(
           ].some((input) => input.value === s),
         secret,
       ),
-      false,
-    );
+    ).toBe(false);
     const response = await fetch(`${server.url}/api/v1/strings?language=fr`, {
       headers: { Authorization: `Bearer ${secret}` },
     });
     assert(response.ok);
     (await response.json()) as StringsPage;
     await tab.page.goto(`${server.url}/settings`, { waitUntil: "networkidle0" });
-    assertEquals(
-      await tab.page.evaluate(() => document.querySelector(".secret-value") !== null),
+    expect(await tab.page.evaluate(() => document.querySelector(".secret-value") !== null)).toBe(
       false,
     );
-    assertEquals(tab.problems, []);
+    expect(tab.problems).toStrictEqual([]);
   },
 );
 
@@ -623,12 +620,12 @@ browserTest(
     await fill(page, "Project instructions", "Use a friendly voice.");
     await save("AI translation");
     await section("general");
-    assertEquals(await value("Project name"), "Saved project name");
+    expect(await value("Project name")).toBe("Saved project name");
     await section("retention");
-    assertEquals(await value("File history days"), "0");
-    assertEquals(await value("Backup retention days"), "7");
+    expect(await value("File history days")).toBe("0");
+    expect(await value("Backup retention days")).toBe("7");
     await section("llm");
-    assertEquals(await value("Project instructions"), "Use a friendly voice.");
+    expect(await value("Project instructions")).toBe("Use a friendly voice.");
     await section("files");
     await fill(page, "File context", "Buttons in the main menu.");
     await save("common.json");
@@ -637,9 +634,9 @@ browserTest(
     await save("common.json: play");
     await section("general");
     await section("files");
-    assertEquals(await value("File context"), "Buttons in the main menu.");
-    assertEquals(await value("Maximum characters"), "12");
-    assertEquals(tab.problems, []);
+    expect(await value("File context")).toBe("Buttons in the main menu.");
+    expect(await value("Maximum characters")).toBe("12");
+    expect(tab.problems).toStrictEqual([]);
   },
 );
 
@@ -658,7 +655,7 @@ browserTest(
       page,
       () => document.querySelector("main h2")?.textContent === "Placeholder rules",
     );
-    assertEquals(new URL(page.url()).searchParams.get("section"), "placeholders");
+    expect(new URL(page.url()).searchParams.get("section")).toBe("placeholders");
     await page.click('a[href="/settings?section=llm"]');
     await waitFor(page, () => document.querySelector("main h1")?.textContent === "AI translation");
     await page.goBack();
@@ -666,14 +663,14 @@ browserTest(
       page,
       () => document.querySelector("main h2")?.textContent === "Placeholder rules",
     );
-    assertEquals(new URL(page.url()).searchParams.get("section"), "placeholders");
+    expect(new URL(page.url()).searchParams.get("section")).toBe("placeholders");
     await page.reload({ waitUntil: "networkidle0" });
-    assertEquals(await text(page, "main h2"), "Placeholder rules");
+    expect(await text(page, "main h2")).toBe("Placeholder rules");
 
     await page.setViewport({ width: 320, height: 760 });
     await page.select(".settings-mobile-nav select", "general");
     await waitFor(page, () => document.querySelector("main h2")?.textContent === "Project details");
-    assertEquals(new URL(page.url()).searchParams.get("section"), "general");
+    expect(new URL(page.url()).searchParams.get("section")).toBe("general");
     await page.select(".settings-mobile-nav select", "placeholders");
     await waitFor(
       page,
@@ -690,23 +687,23 @@ browserTest(
         );
         return field?.querySelector("input")?.value;
       });
-    assertEquals(await languages(), "es, fr");
+    expect(await languages()).toBe("es, fr");
     await click(page, "Save placeholder rules");
     await waitFor(
       page,
       () => document.querySelector('main [role="status"]')?.textContent === "Saved.",
     );
-    assertEquals((await server.service.getSettings(SYSTEM, {})).settings.syntax.optional, [
+    expect((await server.service.getSettings(SYSTEM, {})).settings.syntax.optional).toStrictEqual([
       { placeholder: "{{article}}", languages: ["es", "fr"] },
     ]);
     await click(page, "Add language exception");
-    assertEquals(await page.$('main [role="status"]'), null);
+    expect(await page.$('main [role="status"]')).toBe(null);
     await page.reload({ waitUntil: "networkidle0" });
-    assertEquals(await text(page, "main h2"), "Placeholder rules");
-    assertEquals(await languages(), "es, fr");
+    expect(await text(page, "main h2")).toBe("Placeholder rules");
+    expect(await languages()).toBe("es, fr");
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
-    assertEquals(overflow, false);
-    assertEquals(tab.problems, []);
+    expect(overflow).toBe(false);
+    expect(tab.problems).toStrictEqual([]);
   },
 );
 
@@ -721,22 +718,22 @@ browserTest(
     await page.click(".settings-advanced > summary");
     await fill(page, "Strings per batch", "0");
     await page.click(".settings-advanced > summary");
-    assertEquals(await page.$(".settings-advanced[open]"), null);
+    expect(await page.$(".settings-advanced[open]")).toBe(null);
     await click(page, "Save AI settings");
     await waitFor(page, () => {
       const advanced = document.querySelector<HTMLDetailsElement>(".settings-advanced");
       const field = advanced?.querySelector('[data-settings-path="llm.batchSize"] input');
       return advanced?.open && document.activeElement === field;
     });
-    assertEquals(await page.$('.settings-actions [role="status"]'), null);
+    expect(await page.$('.settings-actions [role="status"]')).toBe(null);
     await fill(page, "Strings per batch", "10");
     await click(page, "Save AI settings");
     await waitFor(
       page,
       () => document.querySelector('.settings-actions [role="status"]')?.textContent === "Saved.",
     );
-    assertEquals((await server.service.getSettings(SYSTEM, {})).settings.llm.batchSize, 10);
-    assertEquals(tab.problems, []);
+    expect((await server.service.getSettings(SYSTEM, {})).settings.llm.batchSize).toBe(10);
+    expect(tab.problems).toStrictEqual([]);
   },
 );
 
@@ -783,11 +780,10 @@ browserTest(
     await waitFor(tab.page, () => document.querySelector("dialog[open]") !== null);
     await press(tab.page, "Escape");
     await waitFor(tab.page, () => document.querySelector("dialog[open]") === null);
-    assertEquals(
-      await tab.page.evaluate(() => document.activeElement?.textContent?.trim()),
+    expect(await tab.page.evaluate(() => document.activeElement?.textContent?.trim())).toBe(
       "Auto-translate",
     );
-    assertEquals(tab.problems, []);
+    expect(tab.problems).toStrictEqual([]);
   },
 );
 
@@ -843,11 +839,11 @@ browserTest(
     await waitFor(tab.page, () =>
       document.querySelector("main [role=alert]")?.textContent?.includes("qa_failed"),
     );
-    assertStringIncludes(await text(tab.page, "main [role=alert]"), "game");
+    expect(await text(tab.page, "main [role=alert]")).toContain("game");
     const result = await getStrings(server, "fr");
-    assertEquals(result.strings.find((s) => s.key === "play")?.translation?.colour, "blue");
-    assertEquals(result.strings.find((s) => s.key === "quit")?.translation, null);
-    assertEquals(tab.problems, []);
+    expect(result.strings.find((s) => s.key === "play")?.translation?.colour).toBe("blue");
+    expect(result.strings.find((s) => s.key === "quit")?.translation).toBe(null);
+    expect(tab.problems).toStrictEqual([]);
   },
 );
 
@@ -878,13 +874,13 @@ browserTest(
     await tab.page.goto(`${server.url}/activity`, { waitUntil: "networkidle0" });
     await click(tab.page, "Apply rename");
     await waitFor(tab.page, () => document.querySelector("dialog[open]") !== null);
-    assertStringIncludes(await text(tab.page, "dialog[open]"), "Translations and history");
+    expect(await text(tab.page, "dialog[open]")).toContain("Translations and history");
     await click(tab.page, "Apply rename", "dialog[open]");
     await waitFor(tab.page, () =>
       document.querySelector("main")?.textContent?.includes("Rename applied."),
     );
     const target = (await getStrings(server, "fr")).strings[0];
-    assertEquals([target.key, target.translation?.value], ["start", "Jouer"]);
+    expect([target.key, target.translation?.value]).toStrictEqual(["start", "Jouer"]);
     await tab.page.goto(`${server.url}/translate/fr?id=${target.id}`, {
       waitUntil: "networkidle0",
     });
@@ -892,7 +888,7 @@ browserTest(
     await waitFor(tab.page, () =>
       document.querySelector(".history")?.textContent?.includes("Renamed from play"),
     );
-    assertEquals(tab.problems, []);
+    expect(tab.problems).toStrictEqual([]);
   },
 );
 
@@ -935,22 +931,21 @@ browserTest(
     await waitFor(page, () =>
       document.querySelector("main")!.textContent!.includes("Test message accepted."),
     );
-    assertEquals((await server.service.getSettings(SYSTEM, {})).settings.email, {
+    expect((await server.service.getSettings(SYSTEM, {})).settings.email).toStrictEqual({
       provider: "resend",
       from: "Quaso <quaso@example.com>",
       accountId: "",
     });
     await fill(page, "Sender address", "other@example.com");
-    assertEquals((await text(page, "main")).includes("Test message accepted."), false);
+    expect((await text(page, "main")).includes("Test message accepted.")).toBe(false);
     await page.reload({ waitUntil: "networkidle0" });
-    assertEquals(
+    expect(
       await page.evaluate(() =>
         [...document.querySelectorAll("input")].some(
           (input) => input.value === "Quaso <quaso@example.com>",
         ),
       ),
-      true,
-    );
-    assertEquals(tab.problems, []);
+    ).toBe(true);
+    expect(tab.problems).toStrictEqual([]);
   },
 );

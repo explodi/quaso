@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals } from "@std/assert";
+import { expect, test } from "vitest";
 import { openAsyncSqlite } from "./adapters/node_async_sqlite.ts";
 import { MIGRATIONS } from "./migrations.ts";
 import { readUploadSnapshot } from "./upload_snapshot.ts";
@@ -55,31 +54,28 @@ test("upload snapshot reads revision and operation dependencies in one batch", a
     },
     "test-model",
   );
-  assertEquals(reads, 1);
-  assertEquals(revision, 7);
-  assertEquals(state.hasStrings, true);
-  assertEquals(state.settings.llm.model, "test-model");
-  assertEquals(
-    state.files.map((row) => row.path),
-    ["menu.json", "other.json", "hidden.json"],
-  );
-  assertEquals(
-    state.strings.map((row) => row.id),
-    [1],
-  );
-  assertEquals(
-    state.translations.map((row) => [row.string_id, row.value]),
-    [[1, '"Hallo"']],
-  );
-  assertEquals(state.suggestions.length, 1);
-  assertEquals(state.humanHistory, [
+  expect(reads).toBe(1);
+  expect(revision).toBe(7);
+  expect(state.hasStrings).toBe(true);
+  expect(state.settings.llm.model).toBe("test-model");
+  expect(state.files.map((row) => row.path)).toStrictEqual([
+    "menu.json",
+    "other.json",
+    "hidden.json",
+  ]);
+  expect(state.strings.map((row) => row.id)).toStrictEqual([1]);
+  expect(state.translations.map((row) => [row.string_id, row.value])).toStrictEqual([
+    [1, '"Hallo"'],
+  ]);
+  expect(state.suggestions.length).toBe(1);
+  expect(state.humanHistory).toStrictEqual([
     { string_id: 1, language: null, people: 1 },
     { string_id: 1, language: "de", people: 1 },
   ]);
-  assertEquals(state.renames, [{ string_id: 1, detail: '{"fromStringId":4}' }]);
-  assertEquals(state.languages[0].pluralOverride, { cardinal: ["other"] });
-  assertEquals(state.glossary[0].term, "Wayfarer");
-  assertEquals(state.nextIds, { file: 4, string: 4, upload: 1, job: 1 });
+  expect(state.renames).toStrictEqual([{ string_id: 1, detail: '{"fromStringId":4}' }]);
+  expect(state.languages[0].pluralOverride).toStrictEqual({ cardinal: ["other"] });
+  expect(state.glossary[0].term).toBe("Wayfarer");
+  expect(state.nextIds).toStrictEqual({ file: 4, string: 4, upload: 1, job: 1 });
 });
 
 test("upload snapshot includes limit and explicit rename files outside the upload", async () => {
@@ -94,14 +90,8 @@ test("upload snapshot includes limit and explicit rename files outside the uploa
     },
     "model",
   );
-  assertEquals(
-    state.strings.map((row) => row.id),
-    [2, 3],
-  );
-  assertEquals(
-    state.translations.map((row) => row.string_id),
-    [2],
-  );
+  expect(state.strings.map((row) => row.id)).toStrictEqual([2, 3]);
+  expect(state.translations.map((row) => row.string_id)).toStrictEqual([2]);
 });
 
 test("upload snapshot checks every active file for renames without a file", async () => {
@@ -115,16 +105,7 @@ test("upload snapshot checks every active file for renames without a file", asyn
     },
     "model",
   );
-  assertEquals(
-    state.strings.map((row) => row.id),
-    [1, 2],
-  );
-  assertEquals(
-    state.translations.map((row) => row.string_id),
-    [1, 2],
-  );
-  assertEquals(
-    state.humanHistory.map((row) => row.string_id),
-    [1, 1, 2],
-  );
+  expect(state.strings.map((row) => row.id)).toStrictEqual([1, 2]);
+  expect(state.translations.map((row) => row.string_id)).toStrictEqual([1, 2]);
+  expect(state.humanHistory.map((row) => row.string_id)).toStrictEqual([1, 1, 2]);
 });

@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assert, assertEquals, assertMatch, assertNotEquals } from "@std/assert";
+import { assert, expect, test } from "vitest";
 import {
   constantTimeEqual,
   constantTimeEqualText,
@@ -32,13 +31,11 @@ async function webCrypto(
 
 test("passwords: the JavaScript PBKDF2 gives the published test vectors and Web Crypto's results", async () => {
   // PBKDF2-HMAC-SHA-256 test vectors (RFC 7914 §11 and the RFC 6070 inputs for SHA-256).
-  assertEquals(
-    hex(pbkdf2Sha256(encoder.encode("passwd"), encoder.encode("salt"), 1, 64)),
+  expect(hex(pbkdf2Sha256(encoder.encode("passwd"), encoder.encode("salt"), 1, 64))).toStrictEqual(
     "55ac046e56e3089fec1691c22544b605f94185216dde0465e68b9d57c20dacbc" +
       "49ca9cccf179b645991664b39d77ef317c71b845b1e30bd509112041d3a19783",
   );
-  assertEquals(
-    hex(pbkdf2Sha256(encoder.encode("password"), encoder.encode("salt"), 4096, 32)),
+  expect(hex(pbkdf2Sha256(encoder.encode("password"), encoder.encode("salt"), 4096, 32))).toBe(
     "c5e478d59288c841aa530db6845c4c8d962893a001ce4e11a4963873aa98134a",
   );
   const cases: [string, string, number, number][] = [
@@ -48,10 +45,11 @@ test("passwords: the JavaScript PBKDF2 gives the published test vectors and Web 
     ["", "", 1, 32],
   ];
   for (const [password, salt, iterations, length] of cases) {
-    assertEquals(
+    expect(
       hex(pbkdf2Sha256(encoder.encode(password), encoder.encode(salt), iterations, length)),
-      hex(await webCrypto(encoder.encode(password), encoder.encode(salt), iterations, length)),
       password,
+    ).toStrictEqual(
+      hex(await webCrypto(encoder.encode(password), encoder.encode(salt), iterations, length)),
     );
   }
 });
@@ -60,18 +58,18 @@ test("passwords: a hash stores the scheme, the iterations and a random salt", as
   const options = { iterations: 1000 };
   const first = await hashPassword("correct horse battery", options);
   const second = await hashPassword("correct horse battery", options);
-  assertMatch(first, /^pbkdf2-sha256\$1000\$[A-Za-z0-9+/=]{24}\$[A-Za-z0-9+/=]{44}$/);
-  assertNotEquals(first, second, "a salt per password");
-  assertEquals(parseHash(first)?.iterations, 1000);
-  assertEquals((await verifyPassword("correct horse battery", first, options)).ok, true);
-  assertEquals((await verifyPassword("correct horse batter", first, options)).ok, false);
-  assertEquals(DEFAULT_ITERATIONS, 600_000);
-  assertMatch(await hashPassword("x".repeat(10), {}), /^pbkdf2-sha256\$600000\$/);
+  expect(first).toMatch(/^pbkdf2-sha256\$1000\$[A-Za-z0-9+/=]{24}\$[A-Za-z0-9+/=]{44}$/);
+  expect(first, "a salt per password").not.toStrictEqual(second);
+  expect(parseHash(first)?.iterations).toBe(1000);
+  expect((await verifyPassword("correct horse battery", first, options)).ok).toBe(true);
+  expect((await verifyPassword("correct horse batter", first, options)).ok).toBe(false);
+  expect(DEFAULT_ITERATIONS).toBe(600_000);
+  expect(await hashPassword("x".repeat(10), {})).toMatch(/^pbkdf2-sha256\$600000\$/);
 });
 
 test("passwords: a hash with 210,000 iterations verifies and asks for a rehash at the default", async () => {
   const old = await hashPassword("correct horse battery", { iterations: 210_000 });
-  assertEquals(await verifyPassword("correct horse battery", old, {}), {
+  expect(await verifyPassword("correct horse battery", old, {})).toStrictEqual({
     ok: true,
     needsRehash: true,
   });
@@ -86,7 +84,7 @@ test("passwords: stored hashes match standard PBKDF2 without an instance secret"
     500,
     32,
   );
-  assertEquals(hex(parsed.hash), hex(expected));
+  expect(hex(parsed.hash)).toStrictEqual(hex(expected));
 });
 
 test("passwords: the JavaScript fallback verifies what Web Crypto hashed, and back", async () => {
@@ -101,11 +99,11 @@ test("passwords: the JavaScript fallback verifies what Web Crypto hashed, and ba
 
 test("passwords: fewer iterations than today's ask for a rehash; bad hashes never verify", async () => {
   const old = await hashPassword("correct horse battery", { iterations: 100 });
-  assertEquals(await verifyPassword("correct horse battery", old, { iterations: 200 }), {
+  expect(await verifyPassword("correct horse battery", old, { iterations: 200 })).toStrictEqual({
     ok: true,
     needsRehash: true,
   });
-  assertEquals(await verifyPassword("wrong password", old, { iterations: 200 }), {
+  expect(await verifyPassword("wrong password", old, { iterations: 200 })).toStrictEqual({
     ok: false,
     needsRehash: false,
   });
@@ -117,11 +115,10 @@ test("passwords: fewer iterations than today's ask for a rehash; bad hashes neve
     "md5$1$AAAA$AAAA",
     "pbkdf2-sha256$0$AA==$AA==",
   ]) {
-    assertEquals(
-      await verifyPassword("anything", bad, { iterations: 10 }),
-      { ok: false, needsRehash: false },
-      String(bad),
-    );
+    expect(await verifyPassword("anything", bad, { iterations: 10 }), String(bad)).toStrictEqual({
+      ok: false,
+      needsRehash: false,
+    });
   }
 });
 

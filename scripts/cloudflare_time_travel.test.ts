@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
-import { exists } from "@std/fs/exists";
-import { test } from "node:test";
-import { expect } from "@std/expect";
+import { existsSync } from "node:fs";
+import { expect, test } from "vitest";
 import * as fs from "node:fs/promises";
 import { CloudflareApi } from "../packages/cloudflare/scripts/cloudflare_api.ts";
 import { restoreTimeTravel } from "../packages/cloudflare/scripts/time_travel.ts";
@@ -147,7 +146,7 @@ test("stops the container before D1 restoration, records undo and resumes withou
   expect(f.messages.join("\n")).toContain(`Previous bookmark (save to undo): ${previous}`);
   expect(f.messages.join("\n")).not.toContain(f.state.key);
   expect(f.messages.join("\n")).not.toContain("private-oauth");
-  expect(await exists(f.paths[0])).toBe(false);
+  expect(existsSync(f.paths[0])).toBe(false);
   expect(f.forces).toEqual([false, false]);
 });
 
@@ -168,7 +167,7 @@ test("failed D1 restoration leaves maintenance enabled and removes its key and l
     "delete key",
   ]);
   expect(f.messages.join("\n")).toContain("Maintenance mode may remain enabled");
-  expect(await exists(f.paths[0])).toBe(false);
+  expect(existsSync(f.paths[0])).toBe(false);
 });
 
 test("does not restore D1 when the container stop is unconfirmed", async () => {
@@ -185,7 +184,7 @@ test("does not restore D1 when the container stop is unconfirmed", async () => {
     "pause",
     "delete key",
   ]);
-  expect(await exists(f.paths[0])).toBe(false);
+  expect(existsSync(f.paths[0])).toBe(false);
 });
 
 test("keeps the undo bookmark available when the normal Worker redeployment fails", async () => {
@@ -196,7 +195,7 @@ test("keeps the undo bookmark available when the normal Worker redeployment fail
   ).rejects.toThrow("remove restoration maintenance");
   expect(f.messages.join("\n")).toContain(`Undo bookmark: ${previous}`);
   expect(f.events.at(-1)).toBe("delete key");
-  expect(await exists(f.paths[0])).toBe(false);
+  expect(existsSync(f.paths[0])).toBe(false);
 });
 
 test("explicit recovery resumes maintenance without restoring D1 again", async () => {

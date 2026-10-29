@@ -158,25 +158,6 @@ Check the diff and test the game, including plurals and placeholders. Run downlo
 it should say **Everything is up to date**. Commit the reviewed config, package files and downloaded
 translations with your normal git workflow. Keep `.env` out of the commit.
 
-## Deno project tasks
-
-If your game uses Deno 2.9 or later for tasks, you can keep the npm-installed CLI and Node runtime
-from this guide. Merge these tasks into
-`deno.json`:
-
-```json
-{
-  "tasks": {
-    "l10n:upload": "node node_modules/@quaso-i18n/cli/quaso.mjs upload",
-    "l10n:download": "node node_modules/@quaso-i18n/cli/quaso.mjs download"
-  }
-}
-```
-
-Run `deno task --env-file=.env l10n:upload` or
-`deno task --env-file=.env l10n:download`. Deno [loads the task's environment](https://docs.deno.com/runtime/reference/cli/task/);
-Node runs the installed CLI.
-
 ## Troubleshooting
 
 - **Missing key or hostname:** check `.env` and run through the task, which loads it.

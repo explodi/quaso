@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
-/// <reference lib="dom" />
 /**
  * The editor's data in a browser: the string list and the panel keep up with other people's
  * changes (the list keeps every loaded string in place; changes reach anonymous visitors,
  * whose answers the browser may cache), failed searches say so, the selection follows the
  * filters, addresses keep what they say, and conflicts on actions retry the action.
  */
-import { assert, assertEquals, assertStringIncludes } from "@std/assert";
+import { assert, expect } from "vitest";
+
 import type { Page } from "puppeteer";
 import type { ProjectInfo, StringsPage } from "@quaso/core";
 import {
@@ -121,8 +121,8 @@ browserTest(
     let before = listRequests.length;
     await focusWindow(page);
     await new Promise((done) => setTimeout(done, 700));
-    assertEquals(listRequests.slice(before), []);
-    assertEquals(await loadedRows(page), 1_200);
+    expect(listRequests.slice(before)).toStrictEqual([]);
+    expect(await loadedRows(page)).toBe(1_200);
 
     // Someone else changes a translation: the list is fetched again, all 1,200 strings of it,
     // 500 at a time, and stays where it was.
@@ -145,22 +145,20 @@ browserTest(
     const refetch = listRequests
       .slice(before)
       .map((search) => new URLSearchParams(search).get("limit"));
-    assertEquals(refetch, ["500", "500", "200"]);
-    assertEquals(await loadedRows(page), 1_200);
-    assertEquals(
+    expect(refetch).toStrictEqual(["500", "500", "200"]);
+    expect(await loadedRows(page)).toBe(1_200);
+    expect(
       await page.evaluate(() => document.querySelector<HTMLElement>(".string-list")!.scrollTop),
-      scrollTop,
-    );
-    assertEquals(
+    ).toStrictEqual(scrollTop);
+    expect(
       await page.evaluate(() =>
         document.querySelector('[data-index="1005"] .string-row')?.classList.contains("is-current"),
       ),
-      true,
-    );
+    ).toBe(true);
     // The next string is still the one after k1005.
     await press(page, "ArrowDown", ["Alt"]);
     await waitForPanel(page, "k1006");
-    assertEquals(tab.problems, []);
+    expect(tab.problems).toStrictEqual([]);
   },
 );
 
@@ -171,7 +169,7 @@ browserTest(
     const title = (await getStrings(server, "ja", "&q=main.title")).strings.find(
       (s) => s.key === "main.title",
     )!;
-    assertEquals(title.translation, null);
+    expect(title.translation).toBe(null);
     const tab = await openTab(browser, server, `/translate/ja?id=${title.id}`);
     const { page } = tab;
     await waitFor(
@@ -185,7 +183,7 @@ browserTest(
         fetch(`/api/v1/strings/${id}?language=ja`).then((r) => r.headers.get("cache-control")),
       title.id,
     );
-    assertStringIncludes(cacheControl ?? "", "max-age");
+    expect(cacheControl ?? "").toContain("max-age");
 
     const translated = "クアソ・クエスト";
     await server.api("/imports", {
@@ -216,7 +214,7 @@ browserTest(
       page,
       () => document.querySelector(".string-row.is-current .state-marker .state-green") !== null,
     );
-    assertEquals(tab.problems, []);
+    expect(tab.problems).toStrictEqual([]);
   },
 );
 
@@ -241,12 +239,11 @@ browserTest(
     const { page } = tab;
     await waitFor(page, () => document.querySelectorAll(".string-list [data-index]").length > 0);
     // The search box takes no more than the API does.
-    assertEquals(
+    expect(
       await page.evaluate(
         () => document.querySelector<HTMLInputElement>("#string-search")!.maxLength,
       ),
-      200,
-    );
+    ).toBe(200);
     await page.evaluate(() => document.querySelector<HTMLInputElement>("#string-search")!.focus());
     await page.keyboard.type("boom");
     await waitFor(
@@ -256,20 +253,16 @@ browserTest(
           .querySelector('.pane-strings [role="alert"]')
           ?.textContent?.includes("Something broke.") ?? false,
     );
-    assertEquals(await page.evaluate(() => document.querySelectorAll(".string-list").length), 0);
-    assertEquals(await text(page, ".strings-status p"), "The strings couldn't be loaded.");
+    expect(await page.evaluate(() => document.querySelectorAll(".string-list").length)).toBe(0);
+    expect(await text(page, ".strings-status p")).toBe("The strings couldn't be loaded.");
     // Nothing is left to select for bulk actions.
-    assertEquals(
+    expect(
       await page.evaluate(
         () => document.querySelector<HTMLInputElement>(".select-all input")!.disabled,
       ),
-      true,
-    );
+    ).toBe(true);
     assert(all.total > 0);
-    assertEquals(
-      tab.problems.filter((p) => !/status of 500 .*q=boom/.test(p)),
-      [],
-    );
+    expect(tab.problems.filter((p) => !/status of 500 .*q=boom/.test(p))).toStrictEqual([]);
   },
 );
 
@@ -304,7 +297,7 @@ browserTest(
     );
     await waitFor(page, () => location.search.includes("file=menus.json"));
     await waitFor(page, () => document.querySelector(".bulk-bar") === null);
-    assertEquals(tab.problems, []);
+    expect(tab.problems).toStrictEqual([]);
   },
 );
 
@@ -321,7 +314,7 @@ browserTest(
     const query = await page.evaluate(() =>
       Object.fromEntries(new URLSearchParams(location.search)),
     );
-    assertEquals(query, { id: String(again.id), file: "menus.json" });
+    expect(query).toStrictEqual({ id: String(again.id), file: "menus.json" });
     await waitForPanel(page, "main.playAgain");
 
     // pt-br is pt-BR: the address changes once, at once, and then the editor stays put.
@@ -348,15 +341,16 @@ browserTest(
       page,
       () => document.querySelector('[data-index="3"] .string-row.is-current') !== null,
     );
-    assertEquals(
+    expect(
       await page.evaluate(
         () => (document.querySelector(".editor") as unknown as { marked?: boolean }).marked,
       ),
-      true,
+    ).toBe(true);
+    expect(await text(page, ".bulk-bar")).toContain("2 strings selected");
+    expect(await pagePath(page).then((path) => path.split("?")[0])).toStrictEqual(
+      "/translate/pt-BR",
     );
-    assertStringIncludes(await text(page, ".bulk-bar"), "2 strings selected");
-    assertEquals(await pagePath(page).then((path) => path.split("?")[0]), "/translate/pt-BR");
-    assertEquals(tab.problems, []);
+    expect(tab.problems).toStrictEqual([]);
   },
 );
 
@@ -437,16 +431,15 @@ browserTest(
         b.textContent?.trim(),
       ),
     );
-    assertEquals(labels, ["Reload", "Delete their version"]);
+    expect(labels).toStrictEqual(["Reload", "Delete their version"]);
     await button("Delete their version", ".notice-warning");
     await waitFor(page, () => document.querySelector(".pane-panel .notice-warning") === null);
-    assertEquals(
+    expect(
       writes.map((w) => [w.method, (w.body as { baseRevision?: number })?.baseRevision]),
-      [
-        ["DELETE", target.translation!.revision],
-        ["DELETE", 9],
-      ],
-    );
+    ).toStrictEqual([
+      ["DELETE", target.translation!.revision],
+      ["DELETE", 9],
+    ]);
 
     // Approve meets a conflict whose answer lacks the current translation: the website
     // fetches it, rather than claiming it was deleted.
@@ -463,16 +456,10 @@ browserTest(
     );
     const notice = await text(page, '.pane-panel .notice-warning[role="alert"]');
     assert(!notice.includes("deleted"), notice);
-    assertStringIncludes(notice, "Approve their version");
+    expect(notice).toContain("Approve their version");
     assert(!notice.includes("Save mine over it"), notice);
-    assertEquals(
-      writes.map((w) => w.method),
-      ["POST"],
-    );
-    assertEquals(
-      tab.problems.filter((p) => !/status of 409 /.test(p)),
-      [],
-    );
+    expect(writes.map((w) => w.method)).toStrictEqual(["POST"]);
+    expect(tab.problems.filter((p) => !/status of 409 /.test(p))).toStrictEqual([]);
   },
 );
 
@@ -499,7 +486,7 @@ browserTest(
       }),
     });
     const project = await server.api<ProjectInfo>("/project");
-    assertEquals(project.sourceLanguage, "he");
+    expect(project.sourceLanguage).toBe("he");
     const { strings } = await server.api<StringsPage>("/strings?language=en");
     const coins = strings.find((s) => s.key === "coins")!;
     const tab = await openTab(browser, server, `/translate/en?id=${coins.id}`);
@@ -511,27 +498,25 @@ browserTest(
       ].map((e) => `${e.getAttribute("lang")}:${getComputedStyle(e).direction}`),
     );
     assert(directions.length >= 5, JSON.stringify(directions));
-    for (const direction of directions) assertEquals(direction, "he:rtl");
-    assertEquals(await text(page, "#source-heading"), "Source");
-    assertStringIncludes(await text(page, ".panel-source .panel-section-head"), "Hebrew");
-    assertStringIncludes(await text(page, ".panel-assist"), "Copy the Hebrew");
+    for (const direction of directions) expect(direction).toBe("he:rtl");
+    expect(await text(page, "#source-heading")).toBe("Source");
+    expect(await text(page, ".panel-source .panel-section-head")).toContain("Hebrew");
+    expect(await text(page, ".panel-assist")).toContain("Copy the Hebrew");
     // The English translation inputs stay left to right.
-    assertEquals(
+    expect(
       await page.evaluate(
         () => document.querySelector<HTMLTextAreaElement>(".pane-panel textarea")!.dir,
       ),
-      "ltr",
-    );
+    ).toBe("ltr");
     const greeting = strings.find((s) => s.key === "greeting")!;
     await page.goto(`${server.url}/translate/en?id=${greeting.id}`, { waitUntil: "networkidle0" });
     await waitForPanel(page, "greeting");
-    assertEquals(
+    expect(
       await page.evaluate(() => {
         const source = document.querySelector(".pane-panel .source")!;
         return `${source.getAttribute("lang")}:${getComputedStyle(source).direction}`;
       }),
-      "he:rtl",
-    );
-    assertEquals(tab.problems, []);
+    ).toBe("he:rtl");
+    expect(tab.problems).toStrictEqual([]);
   },
 );

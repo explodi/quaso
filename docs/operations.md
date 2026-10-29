@@ -75,7 +75,7 @@ empty instance. A backup from a newer schema requires a newer Quaso release.
 
 Cloudflare's D1 Time Travel is separate from portable restore. It rewinds the deployed database in
 place within the Workers Paid plan's 30-day history:
-`deno task cf:restore --env production --at <UTC time>`. The command pauses the instance and stops
+`npm run cf:restore -- --env production --at <UTC time>`. The command pauses the instance and stops
 the container first, and prints a bookmark that undoes the restore. Check health and the restored
 data afterwards. A drill belongs on staging; local D1 cannot time travel. Writes after the selected
 time disappear, including changes to credentials and sessions. R2 is not rewound, and file cleanup
@@ -100,7 +100,7 @@ recovering later writes. Never run an older image against an upgraded database.
 
 For Cloudflare, test staging and retain a portable backup, source commit, image and pre-upgrade UTC
 time. Use the new release's source checkout and matching `image` in `quaso.cloudflare.jsonc`, then
-run `deno task cf:deploy --env production`. The checkout supplies the Worker and website; the image
+run `npm run cf:deploy -- --env production`. The checkout supplies the Worker and website; the image
 supplies the server. Wrangler activates the Worker before updating the container, so deployment can
 fail after the new Worker is live. See
 [Cloudflare's deployment order](https://developers.cloudflare.com/containers/guides/deploy/). Schema
@@ -133,7 +133,7 @@ Check these signals to detect problems:
 - Quaso writes structured JSON logs. `docker compose logs --tail 100 quaso` is the first check on a
   VM. Keep logs in your existing log system with limited retention and access.
 - Cloudflare has Workers Logs enabled in `wrangler.jsonc`. From `packages/cloudflare`, use
-  `deno run -A npm:wrangler tail quaso-production`. If you chose another Worker name, use it here.
+  `npx wrangler tail quaso-production`. If you chose another Worker name, use it here.
   Check both Worker and container failures.
 - Alert when health fails, backups become stale, disk space is low, or jobs keep failing/pausing.
 
@@ -147,9 +147,9 @@ Measure the deployment with data and traffic like your own. The repository inclu
 and Cloudflare runtime tests, but their results do not predict network delay, Gemini response time,
 or the wait for a sleeping container to start.
 
-Use `scripts/measure.ts` from the regions where contributors work; the
+Use `node scripts/measure.ts` from the regions where contributors work; the
 [Cloudflare guide](deploy-cloudflare.md#measure-it) describes its options. It works against Docker
-Compose too. Run `QUASO_SMOKE=1 deno task test` for the larger local data test. Record the source
+Compose too. Run `QUASO_SMOKE=1 npm test` for the larger local data test. Record the source
 commit, server image, data size, location and conditions with each result before using it to choose
 hardware or set alert limits.
 
@@ -181,5 +181,5 @@ settings.
 
 1.0.0-rc.2 has a rewritten initial schema and no upgrade path from 1.0.0-rc.1. Its restore commands
 reject 1.0.0-rc.1 SQLite, JSON and compressed JSON backups. Start a fresh instance and import the
-translation files instead. For local development, use `deno task dev:reset` to replace old
+translation files instead. For local development, use `npm run dev:reset` to replace old
 development data.

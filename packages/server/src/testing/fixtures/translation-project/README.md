@@ -6,7 +6,7 @@ complete German and Polish translations, partial French translations, and three 
 languages. Its plural forms, references to other strings, placeholders, and length limit test the translation
 workflow. A placeholder is text, such as `{{count}}`, that the game fills in.
 
-`deno task dev` seeds this project, and `deno task cli` uses it when called from the repository root.
+`npm run dev` seeds this project, and `npm run cli` uses it when called from the repository root.
 Keeping the fixture stable lets tests compare exact translations and string counts.
 
 For the playable French game with English and German waiting to be translated, use

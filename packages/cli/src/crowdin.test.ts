@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
+import { expect, test } from "vitest";
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
-import { assertEquals, assertStringIncludes } from "@std/assert";
 import { sha256Hex } from "@quaso/core";
 import { convertCrowdin } from "./crowdin.ts";
 import { fakeFetch, jsonResponse, runCli, withProject } from "./test_helpers.ts";
@@ -28,16 +27,16 @@ test("Crowdin init and download retain nested exported paths and infer languages
     },
     async (dir) => {
       const initialized = await runCli(["init", "--from-crowdin", "--json"], { cwd: dir });
-      assertEquals(initialized.code, 0, initialized.stderr);
+      expect(initialized.code, initialized.stderr).toBe(0);
       const result = JSON.parse(initialized.stdout).result;
-      assertEquals(result.config, {
+      expect(result.config).toStrictEqual({
         sourceLanguage: "en",
         languages: ["pt-PT", "zh-Hans"],
         languageMapping: { "pt-PT": "pt", "zh-Hans": "zh" },
         files: [{ source: "src/locales/en/**/*.json", translation: "src/locales/{lang}/{path}" }],
       });
-      assertStringIncludes(result.proposals[0], "proposed zh-Hans");
-      assertEquals(initialized.stdout.includes("private-crowdin-token"), false);
+      expect(result.proposals[0]).toContain("proposed zh-Hans");
+      expect(initialized.stdout.includes("private-crowdin-token")).toBe(false);
       const content = '{"play":"Jogar"}';
       const fetch = fakeFetch(() =>
         jsonResponse({
@@ -54,9 +53,8 @@ test("Crowdin init and download retain nested exported paths and infer languages
         env: { QUASO_HOSTNAME: "https://quaso.test", QUASO_API_KEY: "qso_test" },
         fetch,
       });
-      assertEquals(downloaded.code, 6, downloaded.stderr);
-      assertEquals(
-        await readFile(join(dir, "src/locales/pt/menu/play.json"), "utf8"),
+      expect(downloaded.code, downloaded.stderr).toBe(6);
+      expect(await readFile(join(dir, "src/locales/pt/menu/play.json"), "utf8")).toStrictEqual(
         '{"play":"Old"}',
       );
       const replaced = await runCli(
@@ -67,13 +65,14 @@ test("Crowdin init and download retain nested exported paths and infer languages
           fetch,
         },
       );
-      assertEquals(replaced.code, 0, replaced.stderr);
-      assertEquals(
-        JSON.parse(replaced.stdout).result.written[0].path,
+      expect(replaced.code, replaced.stderr).toBe(0);
+      expect(JSON.parse(replaced.stdout).result.written[0].path).toStrictEqual(
         "src/locales/pt/menu/play.json",
       );
-      assertEquals(await readFile(join(dir, "src/locales/pt/menu/play.json"), "utf8"), content);
-      assertEquals(await readFile(join(dir, "crowdin.yml"), "utf8"), YAML);
+      expect(await readFile(join(dir, "src/locales/pt/menu/play.json"), "utf8")).toStrictEqual(
+        content,
+      );
+      expect(await readFile(join(dir, "crowdin.yml"), "utf8")).toStrictEqual(YAML);
     },
   );
 });
@@ -92,10 +91,10 @@ files:
     },
     async (dir) => {
       const converted = await convertCrowdin(dir, "custom.yml", "en");
-      assertEquals(converted.files, [
+      expect(converted.files).toStrictEqual([
         { source: "src/en/**/*.json", translation: "{lang}/src/en/{path}" },
       ]);
-      assertEquals(converted.languageMapping, { "pt-PT": "pt_PT" });
+      expect(converted.languageMapping).toStrictEqual({ "pt-PT": "pt_PT" });
     },
   );
 });
@@ -113,8 +112,8 @@ test("Crowdin language-name placeholder uses explicit folder mappings", async ()
     },
     async (dir) => {
       const converted = await convertCrowdin(dir, "crowdin.yml", "en");
-      assertEquals(converted.files[0].translation, "{lang}/{path}");
-      assertEquals(converted.languageMapping, { de: "German" });
+      expect(converted.files[0].translation).toBe("{lang}/{path}");
+      expect(converted.languageMapping).toStrictEqual({ de: "German" });
     },
   );
 });
@@ -129,9 +128,9 @@ test("Crowdin unsupported placeholders are reported without writing a config", a
     },
     async (dir) => {
       const run = await runCli(["init", "--from-crowdin", "--languages", "de"], { cwd: dir });
-      assertEquals(run.code, 2);
-      assertStringIncludes(run.stderr, "%android_code%");
-      assertEquals(await readdir(dir), ["crowdin.yml"]);
+      expect(run.code).toBe(2);
+      expect(run.stderr).toContain("%android_code%");
+      expect(await readdir(dir)).toStrictEqual(["crowdin.yml"]);
     },
   );
 });
@@ -139,9 +138,9 @@ test("Crowdin unsupported placeholders are reported without writing a config", a
 test("Crowdin malformed YAML diagnostics exclude credentials", async () => {
   await withProject({ "crowdin.yml": "api_token: [private-crowdin-token\n" }, async (dir) => {
     const run = await runCli(["init", "--from-crowdin"], { cwd: dir });
-    assertEquals(run.code, 2);
-    assertStringIncludes(run.stderr, "invalid YAML");
-    assertEquals(run.stderr.includes("private-crowdin-token"), false);
+    expect(run.code).toBe(2);
+    expect(run.stderr).toContain("invalid YAML");
+    expect(run.stderr.includes("private-crowdin-token")).toBe(false);
   });
 });
 
@@ -155,9 +154,9 @@ test("Crowdin recursive flattening is reported instead of changing download path
     },
     async (dir) => {
       const run = await runCli(["init", "--from-crowdin", "--languages", "de"], { cwd: dir });
-      assertEquals(run.code, 2);
-      assertStringIncludes(run.stderr, "without changing paths");
-      assertEquals(await readdir(dir), ["crowdin.yml"]);
+      expect(run.code).toBe(2);
+      expect(run.stderr).toContain("without changing paths");
+      expect(await readdir(dir)).toStrictEqual(["crowdin.yml"]);
     },
   );
 });
@@ -172,8 +171,8 @@ test("Crowdin original_path requires explicit preserved hierarchy", async () => 
     },
     async (dir) => {
       const run = await runCli(["init", "--from-crowdin", "--languages", "de"], { cwd: dir });
-      assertEquals(run.code, 2);
-      assertStringIncludes(run.stderr, "preserve_hierarchy: true");
+      expect(run.code).toBe(2);
+      expect(run.stderr).toContain("preserve_hierarchy: true");
     },
   );
 });
@@ -191,11 +190,11 @@ test("Crowdin partial conversion reports unsupported entries and leaves the sour
       ["init", "--from-crowdin", "crowdin.yml", "--languages", "de", "--json"],
       { cwd: dir },
     );
-    assertEquals(run.code, 0, run.stderr);
+    expect(run.code, run.stderr).toBe(0);
     const result = JSON.parse(run.stdout).result;
-    assertEquals(result.config.files.length, 1);
-    assertStringIncludes(result.warnings.join("\n"), "%unsupported%");
-    assertStringIncludes(result.warnings.join("\n"), "export_only_approved");
-    assertEquals(await readFile(join(dir, "crowdin.yml"), "utf8"), yaml);
+    expect(result.config.files.length).toBe(1);
+    expect(result.warnings.join("\n")).toContain("%unsupported%");
+    expect(result.warnings.join("\n")).toContain("export_only_approved");
+    expect(await readFile(join(dir, "crowdin.yml"), "utf8")).toStrictEqual(yaml);
   });
 });

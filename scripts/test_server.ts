@@ -1,43 +1,39 @@
 // SPDX-License-Identifier: MIT
-/** Exercises embedded assets and the snapshot worker without the checkout as cwd. */
+/**
+ * `npm run test:server`: runs the server as the image does, from outside the checkout, and
+ * checks the website, the snapshot worker, backup extraction and a graceful stop.
+ */
 import { strict as assert } from "node:assert";
+import { spawn, spawnSync } from "node:child_process";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { freePort } from "../packages/server/src/http/serve.ts";
 import { createFolderStore } from "../packages/server/src/storage/folder_store.ts";
 import { backupKey } from "@quaso/service";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
-const dir = await mkdtemp(join(tmpdir(), "quaso-binary-"));
-const listener = Deno.listen({ hostname: "127.0.0.1", port: 0 });
-const port = listener.addr.port;
-listener.close();
+const dir = await mkdtemp(join(tmpdir(), "quaso-server-"));
+const main = join(root, "packages/server/main.ts");
+const port = await freePort();
 const url = `http://127.0.0.1:${port}`;
 const env = {
+  ...process.env,
   DATA_DIR: dir,
   QUASO_DEV: "1",
   PORT: String(port),
   PUBLIC_URL: url,
 };
-let server: ReturnType<Deno.Command["spawn"]> | undefined;
-let output: ReturnType<ReturnType<Deno.Command["spawn"]>["output"]> | undefined;
+let server: ReturnType<typeof spawn> | undefined;
+let exited: Promise<{ code: number | null; stderr: string }> | undefined;
 try {
-  const seed = await new Deno.Command(Deno.execPath(), {
-    args: ["run", "-A", join(root, "packages/server/main.ts"), "seed-dev"],
-    cwd: dir,
-    env,
-  }).output();
-  assert.equal(seed.code, 0, new TextDecoder().decode(seed.stderr));
-  const executable = process.platform === "win32" ? "quaso.exe" : "quaso";
-  const binary = process.argv[2] ?? join(root, "dist", executable);
-  server = new Deno.Command(binary, {
-    cwd: dir,
-    env,
-    stdout: "piped",
-    stderr: "piped",
-  }).spawn();
-  output = server.output();
+  const seed = spawnSync(process.execPath, [main, "seed-dev"], { cwd: dir, env, encoding: "utf8" });
+  assert.equal(seed.status, 0, seed.stderr);
+  server = spawn(process.execPath, [main], { cwd: dir, env, stdio: ["ignore", "ignore", "pipe"] });
+  let stderr = "";
+  server.stderr!.on("data", (chunk) => (stderr += chunk));
+  exited = new Promise((done) => server!.once("exit", (code) => done({ code, stderr })));
   let ready = false;
   for (let attempt = 0; attempt < 100; attempt++) {
     try {
@@ -48,11 +44,11 @@ try {
     if (ready) break;
     await new Promise((done) => setTimeout(done, 50));
   }
-  assert(ready, "The compiled server did not become healthy");
+  assert(ready, "The server did not become healthy");
   const html = await (await fetch(url)).text();
   const script = html.match(/src="([^"]+\.js)"/)?.[1];
-  assert(script, "The binary must serve the embedded website, not the placeholder");
-  assert((await fetch(url + script)).ok, "The embedded JavaScript must be readable");
+  assert(script, "The server must serve the built website, not the placeholder");
+  assert((await fetch(url + script)).ok, "The website's JavaScript must be readable");
   const login = await fetch(`${url}/auth/dev-login`, { redirect: "manual" });
   const cookie = login.headers
     .getSetCookie()
@@ -65,23 +61,23 @@ try {
   const key = backupKey(Date.UTC(2026, 9, 2), "sqlite");
   await createFolderStore(join(dir, "store")).write(key, bytes);
   const extracted = join(dir, "extracted.sqlite");
-  const result = await new Deno.Command(binary, {
-    args: ["backup", key, extracted],
+  const result = spawnSync(process.execPath, [main, "backup", key, extracted], {
     cwd: dir,
     env,
-  }).output();
-  assert.equal(result.code, 0, new TextDecoder().decode(result.stderr));
+    encoding: "utf8",
+  });
+  assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(new Uint8Array(await readFile(extracted)), bytes);
 } finally {
   if (server) {
     server.kill("SIGTERM");
     const deadline = setTimeout(() => server!.kill("SIGKILL"), 5000);
-    const result = await output!;
+    const result = await exited!;
     clearTimeout(deadline);
-    assert.equal(result.code, 0, new TextDecoder().decode(result.stderr));
+    assert.equal(result.code, 0, result.stderr);
   }
   await rm(dir, { recursive: true, force: true });
 }
 console.log(
-  "Compiled server: HTTP, embedded website, snapshot worker, backup extraction and graceful stop passed",
+  "Server outside the checkout: HTTP, website, snapshot worker, backup extraction and graceful stop passed",
 );

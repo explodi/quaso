@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assert, assertEquals, assertMatch, assertNotEquals, assertRejects } from "@std/assert";
+import { assert, expect, test } from "vitest";
 import { sha256Hex } from "@quaso/core";
 import { DEV_EMAIL, SETUP_TOKEN } from "./accounts.ts";
 import { type Actor, ANONYMOUS, SYSTEM } from "./api.ts";
@@ -23,9 +22,10 @@ const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
 
 async function rejectsWith(promise: Promise<unknown>, code: string, message?: string) {
-  const error = await assertRejects(() => promise, ServiceError);
-  assertEquals(error.code, code, error.message);
-  if (message !== undefined) assertEquals(error.message, message);
+  const error = await promise.catch((error: unknown) => error);
+  assert(error instanceof ServiceError);
+  expect(error.code, error.message).toStrictEqual(code);
+  if (message !== undefined) expect(error.message).toStrictEqual(message);
   return error;
 }
 
@@ -38,28 +38,31 @@ test("accounts: sign-up makes an account without a role and signs it in", async 
     displayName: "Ada",
     userAgent: "Test browser",
   });
-  assertMatch(result.sessionId, /^[\w-]{43}$/);
-  assertEquals(result.expiresAt, instance.clock.now + SESSION_TTL);
-  assertEquals(result.user.email, "ada@example.com");
-  assertEquals(result.user.role, "none");
-  assertEquals(result.user.languages, null);
-  assertEquals(result.user.hasPassword, true);
-  assertEquals(result.user.emailVerified, false);
-  assertEquals(result.user.identities, []);
-  assertEquals(result.user.volunteerRequest, null);
-  assertEquals(await service.resolveSession(SYSTEM, { sessionId: result.sessionId }), {
+  expect(result.sessionId).toMatch(/^[\w-]{43}$/);
+  expect(result.expiresAt).toStrictEqual(instance.clock.now + SESSION_TTL);
+  expect(result.user.email).toBe("ada@example.com");
+  expect(result.user.role).toBe("none");
+  expect(result.user.languages).toBe(null);
+  expect(result.user.hasPassword).toBe(true);
+  expect(result.user.emailVerified).toBe(false);
+  expect(result.user.identities).toStrictEqual([]);
+  expect(result.user.volunteerRequest).toBe(null);
+  expect(await service.resolveSession(SYSTEM, { sessionId: result.sessionId })).toStrictEqual({
     userId: result.user.id,
     expiresAt: result.expiresAt,
   });
   const [stored] = instance.sql.query<{ id_hash: string; user_agent: string }>(
     "SELECT id_hash, user_agent FROM sessions",
   );
-  assertEquals(stored, { id_hash: sha256Hex(result.sessionId), user_agent: "Test browser" });
+  expect(stored).toStrictEqual({
+    id_hash: sha256Hex(result.sessionId),
+    user_agent: "Test browser",
+  });
   const [user] = instance.sql.query<{ password_hash: string }>(
     "SELECT password_hash FROM users WHERE id = ?",
     result.user.id,
   );
-  assertMatch(user.password_hash, new RegExp(`^pbkdf2-sha256\\$${TEST_ITERATIONS}\\$`));
+  expect(user.password_hash).toMatch(new RegExp(`^pbkdf2-sha256\\$${TEST_ITERATIONS}\\$`));
   assert(!user.password_hash.includes(PASSWORD));
 
   await rejectsWith(
@@ -80,7 +83,7 @@ test("accounts: sign-in with the email address (any case) and the password", asy
     email: "ADA@example.com",
     password: PASSWORD,
   });
-  assertEquals(signedIn.user.id, user.id);
+  expect(signedIn.user.id).toStrictEqual(user.id);
   const wrong = "The email address or the password is wrong.";
   await rejectsWith(
     service.signIn(ANONYMOUS, { email: "ada@example.com", password: "not the password" }),
@@ -120,7 +123,7 @@ test("accounts: a sign-in rehashes a password stored with fewer iterations", asy
     "SELECT password_hash FROM users WHERE id = ?",
     user.id,
   );
-  assertMatch(row.password_hash, new RegExp(`^pbkdf2-sha256\\$${TEST_ITERATIONS * 2}\\$`));
+  expect(row.password_hash).toMatch(new RegExp(`^pbkdf2-sha256\\$${TEST_ITERATIONS * 2}\\$`));
   await stronger.signIn(ANONYMOUS, { email: "ada@example.com", password: PASSWORD });
   const otherKey = createService({
     sql: instance.sql,
@@ -128,10 +131,9 @@ test("accounts: a sign-in rehashes a password stored with fewer iterations", asy
     secretKey: "another key",
     passwordIterations: TEST_ITERATIONS * 2,
   });
-  assertEquals(
+  expect(
     (await otherKey.signIn(ANONYMOUS, { email: "ada@example.com", password: PASSWORD })).user.id,
-    user.id,
-  );
+  ).toStrictEqual(user.id);
 });
 
 test("accounts: sessions slide for 30 days, at most one write an hour, and end", async () => {
@@ -141,38 +143,44 @@ test("accounts: sessions slide for 30 days, at most one write an hour, and end",
   const start = clock.now;
   await rejectsWith(service.resolveSession(ANONYMOUS, { sessionId }), "forbidden");
   clock.advance(SESSION_TOUCH_INTERVAL - 1);
-  assertEquals(
-    (await service.resolveSession(SYSTEM, { sessionId }))?.expiresAt,
+  expect((await service.resolveSession(SYSTEM, { sessionId }))?.expiresAt).toStrictEqual(
     start + SESSION_TTL,
   );
   clock.advance(1);
-  assertEquals(
-    (await service.resolveSession(SYSTEM, { sessionId }))?.expiresAt,
+  expect((await service.resolveSession(SYSTEM, { sessionId }))?.expiresAt).toStrictEqual(
     clock.now + SESSION_TTL,
   );
   clock.advance(SESSION_TTL - 1);
-  assertEquals((await service.resolveSession(SYSTEM, { sessionId }))?.userId, user.id);
+  expect((await service.resolveSession(SYSTEM, { sessionId }))?.userId).toStrictEqual(user.id);
   clock.advance(SESSION_TTL);
-  assertEquals(await service.resolveSession(SYSTEM, { sessionId }), null);
-  assertEquals(count(instance.sql, "sessions"), 0, "the expired session is gone");
-  assertEquals(await service.resolveSession(SYSTEM, { sessionId: "unknown" }), null);
+  expect(await service.resolveSession(SYSTEM, { sessionId })).toBe(null);
+  expect(count(instance.sql, "sessions"), "the expired session is gone").toBe(0);
+  expect(await service.resolveSession(SYSTEM, { sessionId: "unknown" })).toBe(null);
 
   const other = await service.signIn(ANONYMOUS, { email: "ada@example.com", password: PASSWORD });
-  assertEquals(await service.signOut(ANONYMOUS, { sessionId: other.sessionId }), { ok: true });
-  assertEquals(await service.resolveSession(SYSTEM, { sessionId: other.sessionId }), null);
+  expect(await service.signOut(ANONYMOUS, { sessionId: other.sessionId })).toStrictEqual({
+    ok: true,
+  });
+  expect(await service.resolveSession(SYSTEM, { sessionId: other.sessionId })).toBe(null);
 });
 
 test("accounts: getSession names the signed-in person and whether setup is needed", async () => {
   using instance = await startTestService({ passwordIterations: TEST_ITERATIONS });
   const { service } = instance;
-  assertEquals(await service.getSession(ANONYMOUS, {}), { user: null, setupRequired: true });
+  expect(await service.getSession(ANONYMOUS, {})).toStrictEqual({
+    user: null,
+    setupRequired: true,
+  });
   const admin = addUser(instance.sql, "administrator", null, "Admin");
-  assertEquals(await service.getSession(ANONYMOUS, {}), { user: null, setupRequired: false });
+  expect(await service.getSession(ANONYMOUS, {})).toStrictEqual({
+    user: null,
+    setupRequired: false,
+  });
   const session = await service.getSession(admin, {});
-  assertEquals(session.user?.displayName, "Admin");
-  assertEquals(session.user?.role, "administrator");
+  expect(session.user?.displayName).toBe("Admin");
+  expect(session.user?.role).toBe("administrator");
   instance.sql.run("UPDATE users SET deleted_at = 1");
-  assertEquals((await service.getSession(admin, {})).user, null);
+  expect((await service.getSession(admin, {})).user).toBe(null);
 });
 
 test("accounts: the setup token is made once, kept until setup, and then refused", async () => {
@@ -184,14 +192,16 @@ test("accounts: the setup token is made once, kept until setup, and then refused
   );
   await rejectsWith(service.ensureSetupToken(ANONYMOUS, {}), "forbidden");
   const { token } = await service.ensureSetupToken(SYSTEM, {});
-  assertMatch(token!, /^[\w-]{43}$/);
-  assertEquals(
-    await service.ensureSetupToken(SYSTEM, {}),
-    { token },
-    "the same one after a restart",
-  );
-  assertEquals(await service.validateSetupToken(ANONYMOUS, { token: token! }), { ok: true });
-  assertEquals(await service.validateSetupToken(ANONYMOUS, { token: "guess" }), { ok: false });
+  expect(token!).toMatch(/^[\w-]{43}$/);
+  expect(await service.ensureSetupToken(SYSTEM, {}), "the same one after a restart").toStrictEqual({
+    token,
+  });
+  expect(await service.validateSetupToken(ANONYMOUS, { token: token! })).toStrictEqual({
+    ok: true,
+  });
+  expect(await service.validateSetupToken(ANONYMOUS, { token: "guess" })).toStrictEqual({
+    ok: false,
+  });
 
   const request = {
     token: "wrong",
@@ -203,27 +213,31 @@ test("accounts: the setup token is made once, kept until setup, and then refused
   };
   await rejectsWith(service.completeSetup(ANONYMOUS, request), "forbidden");
   const done = await service.completeSetup(ANONYMOUS, { ...request, token: token! });
-  assertEquals(done.user.role, "administrator");
-  assertEquals(done.user.email, "owner@example.com");
-  assertEquals(loadSettings(instance.ctx).name, "Quaso Quest");
-  assertEquals(loadSettings(instance.ctx).sourceLanguage, "en-GB");
-  assertEquals(getMeta(instance.sql, SETUP_TOKEN), null);
-  assertEquals(await service.ensureSetupToken(SYSTEM, {}), { token: null });
-  assertEquals(await service.validateSetupToken(ANONYMOUS, { token: token! }), { ok: false });
+  expect(done.user.role).toBe("administrator");
+  expect(done.user.email).toBe("owner@example.com");
+  expect(loadSettings(instance.ctx).name).toBe("Quaso Quest");
+  expect(loadSettings(instance.ctx).sourceLanguage).toBe("en-GB");
+  expect(getMeta(instance.sql, SETUP_TOKEN)).toBe(null);
+  expect(await service.ensureSetupToken(SYSTEM, {})).toStrictEqual({ token: null });
+  expect(await service.validateSetupToken(ANONYMOUS, { token: token! })).toStrictEqual({
+    ok: false,
+  });
   await rejectsWith(service.completeSetup(ANONYMOUS, { ...request, token: token! }), "forbidden");
-  assertEquals((await service.getSession(ANONYMOUS, {})).setupRequired, false);
+  expect((await service.getSession(ANONYMOUS, {})).setupRequired).toBe(false);
   const again = await service.signIn(ANONYMOUS, { email: "owner@example.com", password: PASSWORD });
-  assertEquals(again.user.id, done.user.id);
+  expect(again.user.id).toStrictEqual(done.user.id);
 });
 
 test("accounts: SETUP_TOKEN replaces the generated token", async () => {
   using instance = await startTestService({ passwordIterations: TEST_ITERATIONS });
   const { service } = instance;
   const generated = (await service.ensureSetupToken(SYSTEM, {})).token!;
-  assertEquals(await service.ensureSetupToken(SYSTEM, { token: "operator-chosen-token" }), {
+  expect(await service.ensureSetupToken(SYSTEM, { token: "operator-chosen-token" })).toStrictEqual({
     token: "operator-chosen-token",
   });
-  assertEquals(await service.validateSetupToken(ANONYMOUS, { token: generated }), { ok: false });
+  expect(await service.validateSetupToken(ANONYMOUS, { token: generated })).toStrictEqual({
+    ok: false,
+  });
   const done = await service.completeSetup(ANONYMOUS, {
     token: "operator-chosen-token",
     email: "owner@example.com",
@@ -231,8 +245,8 @@ test("accounts: SETUP_TOKEN replaces the generated token", async () => {
     displayName: "Owner",
     projectName: "Game",
   });
-  assertEquals(done.user.role, "administrator");
-  assertEquals(loadSettings(instance.ctx).sourceLanguage, "en");
+  expect(done.user.role).toBe("administrator");
+  expect(loadSettings(instance.ctx).sourceLanguage).toBe("en");
 });
 
 test("accounts: the developer account exists only on development instances", async () => {
@@ -243,18 +257,19 @@ test("accounts: the developer account exists only on development instances", asy
   using dev = await startTestService({ dev: true });
   await rejectsWith(dev.service.devSignIn(ANONYMOUS, {}), "forbidden");
   const account = await dev.service.ensureDevAccount(SYSTEM, {});
-  assertEquals(
-    [account.email, account.displayName, account.role, account.hasPassword],
-    [DEV_EMAIL, "Developer", "administrator", false],
-  );
-  assertEquals((await dev.service.ensureDevAccount(SYSTEM, {})).id, account.id);
+  expect([account.email, account.displayName, account.role, account.hasPassword]).toStrictEqual([
+    DEV_EMAIL,
+    "Developer",
+    "administrator",
+    false,
+  ]);
+  expect((await dev.service.ensureDevAccount(SYSTEM, {})).id).toStrictEqual(account.id);
   const session = await dev.service.devSignIn(SYSTEM, { userAgent: "Browser" });
-  assertEquals(session.user.id, account.id);
-  assertEquals(
+  expect(session.user.id).toStrictEqual(account.id);
+  expect(
     (await dev.service.resolveSession(SYSTEM, { sessionId: session.sessionId }))?.userId,
-    account.id,
-  );
-  assertEquals((await dev.service.getSession(ANONYMOUS, {})).setupRequired, false);
+  ).toStrictEqual(account.id);
+  expect((await dev.service.getSession(ANONYMOUS, {})).setupRequired).toBe(false);
 });
 
 test("accounts: GitHub and Discord sign in, create, link by verified email, and unlink", async () => {
@@ -271,16 +286,16 @@ test("accounts: GitHub and Discord sign in, create, link by verified email, and 
     displayName: "Octo Cat",
     avatarUrl: "https://example.com/octo.png",
   });
-  assertEquals(first.created, true);
-  assertEquals(first.user.email, null);
-  assertEquals(first.user.displayName, "Octo Cat");
-  assertEquals(first.user.avatarUrl, "https://example.com/octo.png");
-  assertEquals(first.user.identities, [{ provider: "github", username: "octo" }]);
+  expect(first.created).toBe(true);
+  expect(first.user.email).toBe(null);
+  expect(first.user.displayName).toBe("Octo Cat");
+  expect(first.user.avatarUrl).toBe("https://example.com/octo.png");
+  expect(first.user.identities).toStrictEqual([{ provider: "github", username: "octo" }]);
   assert(first.sessionId);
 
   const again = await service.signInWithIdentity(SYSTEM, { ...github, username: "octo2" });
-  assertEquals([again.created, again.user.id], [false, first.user.id]);
-  assertEquals(again.user.identities, [{ provider: "github", username: "octo2" }]);
+  expect([again.created, again.user.id]).toStrictEqual([false, first.user.id]);
+  expect(again.user.identities).toStrictEqual([{ provider: "github", username: "octo2" }]);
 
   // A verified address links to the account that has it, once that account verified it too.
   const ada = await signUp(instance, "ada@example.com");
@@ -293,15 +308,15 @@ test("accounts: GitHub and Discord sign in, create, link by verified email, and 
   };
   // Unverified, the account could be anyone's (a pre-account hijack): no link, no account.
   await rejectsWith(service.signInWithIdentity(SYSTEM, adaDiscord), "conflict");
-  assertEquals(count(instance.sql, "identities", "provider = 'discord'"), 0);
+  expect(count(instance.sql, "identities", "provider = 'discord'")).toBe(0);
   const verify = (await service.createEmailToken(SYSTEM, {
     email: "ada@example.com",
     purpose: "verify",
   }))!;
   await service.verifyEmail(ANONYMOUS, { token: verify.token });
   const discord = await service.signInWithIdentity(SYSTEM, adaDiscord);
-  assertEquals([discord.created, discord.user.id], [false, ada.user.id]);
-  assertEquals(discord.user.emailVerified, true);
+  expect([discord.created, discord.user.id]).toStrictEqual([false, ada.user.id]);
+  expect(discord.user.emailVerified).toBe(true);
 
   // Linking to the signed-in person, and not to someone else's.
   const linked = await service.signInWithIdentity(SYSTEM, {
@@ -310,11 +325,8 @@ test("accounts: GitHub and Discord sign in, create, link by verified email, and 
     username: "ada-gh",
     linkToUserId: ada.user.id,
   });
-  assertEquals(linked.sessionId, null);
-  assertEquals(
-    linked.user.identities.map((i) => i.provider),
-    ["discord", "github"],
-  );
+  expect(linked.sessionId).toBe(null);
+  expect(linked.user.identities.map((i) => i.provider)).toStrictEqual(["discord", "github"]);
   await rejectsWith(
     service.signInWithIdentity(SYSTEM, { ...github, linkToUserId: ada.user.id }),
     "conflict",
@@ -325,9 +337,9 @@ test("accounts: GitHub and Discord sign in, create, link by verified email, and 
   await rejectsWith(service.unlinkIdentity(octo, { provider: "github" }), "bad_request");
   await rejectsWith(service.unlinkIdentity(octo, { provider: "discord" }), "not_found");
   const unlinked = await service.unlinkIdentity(ada.actor, { provider: "github" });
-  assertEquals(unlinked.identities, [{ provider: "discord", username: "ada" }]);
+  expect(unlinked.identities).toStrictEqual([{ provider: "discord", username: "ada" }]);
   await service.unlinkIdentity(ada.actor, { provider: "discord" });
-  assertEquals((await service.getAccount(ada.actor, {})).identities, []);
+  expect((await service.getAccount(ada.actor, {})).identities).toStrictEqual([]);
 });
 
 test("accounts: no new account through GitHub while setup is required", async () => {
@@ -346,24 +358,22 @@ test("accounts: links by email verify, reset and sign in, once each, and expire"
     service.createEmailToken(ANONYMOUS, { email: "ada@example.com", purpose: "reset" }),
     "forbidden",
   );
-  assertEquals(
+  expect(
     await service.createEmailToken(SYSTEM, { email: "nobody@example.com", purpose: "reset" }),
-    null,
-  );
+  ).toBe(null);
 
   const verify = (await service.createEmailToken(SYSTEM, {
     email: "Ada@example.com",
     purpose: "verify",
   }))!;
-  assertEquals([verify.userId, verify.email], [ada.user.id, "ada@example.com"]);
-  assertEquals(verify.expiresAt, clock.now + 7 * DAY);
-  assertEquals(
+  expect([verify.userId, verify.email]).toStrictEqual([ada.user.id, "ada@example.com"]);
+  expect(verify.expiresAt).toStrictEqual(clock.now + 7 * DAY);
+  expect(
     instance.sql.query("SELECT token_hash FROM email_tokens")[0],
-    { token_hash: sha256Hex(verify.token) },
     "stored hashed",
-  );
-  assertEquals(await service.verifyEmail(ANONYMOUS, { token: verify.token }), { ok: true });
-  assertEquals((await service.getAccount(ada.actor, {})).emailVerified, true);
+  ).toStrictEqual({ token_hash: sha256Hex(verify.token) });
+  expect(await service.verifyEmail(ANONYMOUS, { token: verify.token })).toStrictEqual({ ok: true });
+  expect((await service.getAccount(ada.actor, {})).emailVerified).toBe(true);
   await rejectsWith(service.verifyEmail(ANONYMOUS, { token: verify.token }), "bad_request");
 
   // A reset link: an hour; a new password signs out every session, then signs in.
@@ -371,7 +381,7 @@ test("accounts: links by email verify, reset and sign in, once each, and expire"
     email: "ada@example.com",
     purpose: "reset",
   }))!;
-  assertEquals(reset.expiresAt, clock.now + HOUR);
+  expect(reset.expiresAt).toStrictEqual(clock.now + HOUR);
   await rejectsWith(
     service.resetPassword(ANONYMOUS, { token: reset.token, password: "short" }),
     "validation_failed",
@@ -380,11 +390,10 @@ test("accounts: links by email verify, reset and sign in, once each, and expire"
     token: reset.token,
     password: "a brand new password",
   });
-  assertEquals(await service.resolveSession(SYSTEM, { sessionId: ada.sessionId }), null);
-  assertEquals(
+  expect(await service.resolveSession(SYSTEM, { sessionId: ada.sessionId })).toBe(null);
+  expect(
     (await service.resolveSession(SYSTEM, { sessionId: after.sessionId }))?.userId,
-    ada.user.id,
-  );
+  ).toStrictEqual(ada.user.id);
   await rejectsWith(
     service.signIn(ANONYMOUS, { email: "ada@example.com", password: PASSWORD }),
     "unauthorized",
@@ -411,7 +420,7 @@ test("accounts: links by email verify, reset and sign in, once each, and expire"
     "bad_request",
   );
   const viaLink = await service.signInWithEmailLink(ANONYMOUS, { token: link.token });
-  assertEquals([viaLink.user.id, viaLink.user.emailVerified], [bob.user.id, true]);
+  expect([viaLink.user.id, viaLink.user.emailVerified]).toStrictEqual([bob.user.id, true]);
   const late = (await service.createEmailToken(SYSTEM, {
     email: "bob@example.com",
     purpose: "signin",
@@ -446,7 +455,7 @@ test("accounts: a provider's verified address never links to an unverified accou
   // ...and when the owner signs in with GitHub, they don't land in that account.
   await rejectsWith(service.signInWithIdentity(SYSTEM, owner), "conflict");
   const account = await service.getAccount(squatter.actor, {});
-  assertEquals([account.identities, account.emailVerified], [[], false]);
+  expect([account.identities, account.emailVerified]).toStrictEqual([[], false]);
 
   // The same when an account takes someone's address, which needs no verification.
   const other = await signUp(instance, "other@example.com");
@@ -458,12 +467,12 @@ test("accounts: a provider's verified address never links to an unverified accou
     service.signInWithIdentity(SYSTEM, { ...owner, subject: "778", email: "boss@game.com" }),
     "conflict",
   );
-  assertEquals(count(instance.sql, "identities"), 0);
+  expect(count(instance.sql, "identities")).toBe(0);
 
   // A GitHub account without that address still signs in, to an account of its own.
   const fresh = await service.signInWithIdentity(SYSTEM, { ...owner, email: null });
-  assertEquals(fresh.created, true);
-  assertNotEquals(fresh.user.id, squatter.user.id);
+  expect(fresh.created).toBe(true);
+  expect(fresh.user.id).not.toStrictEqual(squatter.user.id);
 });
 
 test("accounts: email-link recovery cannot share an unverified account with its creator", async () => {
@@ -485,28 +494,29 @@ test("accounts: email-link recovery cannot share an unverified account with its 
       service.signInWithEmailLink(ANONYMOUS, { token: link.token }),
       "forbidden",
     );
-    assertMatch(refused.message, /password reset/);
-    assertEquals((await service.getAccount(squatter.actor, {})).emailVerified, false);
+    expect(refused.message).toMatch(/password reset/);
+    expect((await service.getAccount(squatter.actor, {})).emailVerified).toBe(false);
 
     const reset = (await service.createEmailToken(SYSTEM, { email, purpose: "reset" }))!;
     const recovered = await service.resetPassword(ANONYMOUS, {
       token: reset.token,
       password: "the rightful owner's new password",
     });
-    assertEquals(recovered.user.emailVerified, true);
-    assertEquals(recovered.user.identities, []);
-    assertEquals(await service.resolveSession(SYSTEM, { sessionId: squatter.sessionId }), null);
+    expect(recovered.user.emailVerified).toBe(true);
+    expect(recovered.user.identities).toStrictEqual([]);
+    expect(await service.resolveSession(SYSTEM, { sessionId: squatter.sessionId })).toStrictEqual(
+      null,
+    );
     await rejectsWith(service.signIn(ANONYMOUS, { email, password: PASSWORD }), "unauthorized");
     const attacker = await service.signInWithIdentity(SYSTEM, {
       provider: "github",
       subject: email,
     });
-    assertNotEquals(attacker.user.id, recovered.user.id);
+    expect(attacker.user.id).not.toStrictEqual(recovered.user.id);
     const next = (await service.createEmailToken(SYSTEM, { email, purpose: "signin" }))!;
-    assertEquals(
+    expect(
       (await service.signInWithEmailLink(ANONYMOUS, { token: next.token })).user.id,
-      recovered.user.id,
-    );
+    ).toStrictEqual(recovered.user.id);
   }
   const owned = await service.signInWithIdentity(SYSTEM, {
     provider: "discord",
@@ -514,15 +524,14 @@ test("accounts: email-link recovery cannot share an unverified account with its 
     email: "verified@example.com",
     emailVerified: true,
   });
-  assertEquals(owned.user.hasPassword, false);
+  expect(owned.user.hasPassword).toBe(false);
   const link = (await service.createEmailToken(SYSTEM, {
     email: "verified@example.com",
     purpose: "signin",
   }))!;
-  assertEquals(
+  expect(
     (await service.signInWithEmailLink(ANONYMOUS, { token: link.token })).user.id,
-    owned.user.id,
-  );
+  ).toStrictEqual(owned.user.id);
 });
 
 test("accounts: a new address, a new password or a reset voids the links sent before", async () => {
@@ -574,7 +583,7 @@ test("accounts: a new address, a new password or a reset voids the links sent be
     service.resetPassword(ANONYMOUS, { token: reset2, password: "attacker's password" }),
     "bad_request",
   );
-  assertEquals(await service.verifyEmail(ANONYMOUS, { token: verify2 }), { ok: true });
+  expect(await service.verifyEmail(ANONYMOUS, { token: verify2 })).toStrictEqual({ ok: true });
 
   // A reset: the other reset and sign-in links.
   const [first, second, link] = [await again("reset"), await again("reset"), await again("signin")];
@@ -596,7 +605,7 @@ test("accounts: a new address, a new password or a reset voids the links sent be
     token: new URL(url).searchParams.get("token")!,
     password: "octo's first password",
   });
-  assertEquals(signedIn.user.id, octo.user.id);
+  expect(signedIn.user.id).toStrictEqual(octo.user.id);
 });
 
 test("accounts: administrators create reset links for teams without email", async () => {
@@ -606,13 +615,13 @@ test("accounts: administrators create reset links for teams without email", asyn
   const base = { userId: ada.user.id, baseUrl: "https://translate.example.com/" };
   await rejectsWith(service.createResetLink(ada.actor, base), "forbidden");
   const link = await service.createResetLink(admin, base);
-  assertMatch(link.url, /^https:\/\/translate\.example\.com\/reset-password\?token=[\w-]{43}$/);
-  assertEquals(link.expiresAt, clock.now + 7 * 24 * HOUR);
+  expect(link.url).toMatch(/^https:\/\/translate\.example\.com\/reset-password\?token=[\w-]{43}$/);
+  expect(link.expiresAt).toStrictEqual(clock.now + 7 * 24 * HOUR);
   clock.advance(6 * 24 * HOUR);
   const token = new URL(link.url).searchParams.get("token")!;
   const signedIn = await service.resetPassword(ANONYMOUS, { token, password: "chosen by ada now" });
-  assertEquals(signedIn.user.id, ada.user.id);
-  assertEquals(await service.resolveSession(SYSTEM, { sessionId: ada.sessionId }), null);
+  expect(signedIn.user.id).toStrictEqual(ada.user.id);
+  expect(await service.resolveSession(SYSTEM, { sessionId: ada.sessionId })).toBe(null);
   await rejectsWith(
     service.resetPassword(ANONYMOUS, { token, password: "reused password" }),
     "bad_request",
@@ -634,8 +643,7 @@ test("accounts: the account changes its name, email address and password", async
   const { service } = instance;
   const ada = await signUp(instance, "ada@example.com");
   await rejectsWith(service.getAccount(ANONYMOUS, {}), "unauthorized");
-  assertEquals(
-    (await service.updateAccount(ada.actor, { displayName: "Ada L." })).displayName,
+  expect((await service.updateAccount(ada.actor, { displayName: "Ada L." })).displayName).toBe(
     "Ada L.",
   );
 
@@ -654,7 +662,7 @@ test("accounts: the account changes its name, email address and password", async
     email: "New@example.com",
     currentPassword: PASSWORD,
   });
-  assertEquals([moved.email, moved.emailVerified], ["new@example.com", false]);
+  expect([moved.email, moved.emailVerified]).toStrictEqual(["new@example.com", false]);
 
   // A new password signs out every other session.
   const other = await service.signIn(ANONYMOUS, { email: "new@example.com", password: PASSWORD });
@@ -663,11 +671,10 @@ test("accounts: the account changes its name, email address and password", async
     currentPassword: PASSWORD,
     sessionId: ada.sessionId,
   });
-  assertEquals(await service.resolveSession(SYSTEM, { sessionId: other.sessionId }), null);
-  assertEquals(
+  expect(await service.resolveSession(SYSTEM, { sessionId: other.sessionId })).toBe(null);
+  expect(
     (await service.resolveSession(SYSTEM, { sessionId: ada.sessionId }))?.userId,
-    ada.user.id,
-  );
+  ).toStrictEqual(ada.user.id);
   await service.signIn(ANONYMOUS, { email: "new@example.com", password: "a much better password" });
 
   // An account without a password sets one (and an address) without a current one.
@@ -677,7 +684,7 @@ test("accounts: the account changes its name, email address and password", async
     email: "octo@example.com",
     password: "octo's new password",
   });
-  assertEquals([updated.email, updated.hasPassword], ["octo@example.com", true]);
+  expect([updated.email, updated.hasPassword]).toStrictEqual(["octo@example.com", true]);
   await rejectsWith(service.updateAccount(SYSTEM, { displayName: "System" }), "bad_request");
 });
 
@@ -706,7 +713,7 @@ test("accounts: a deleted volunteer's name leaves the activity feed (OPS-3)", as
   const summaries = items
     .filter((item) => item.detail.kind === "volunteer")
     .map((item) => item.summary);
-  assertEquals(summaries, [
+  expect(summaries).toStrictEqual([
     "Volunteer request declined: Deleted user",
     "Volunteer approved: Deleted user, as contributor (de)",
   ]);
@@ -749,7 +756,9 @@ test("accounts: deleting an account keeps what it wrote, as Deleted user (OPS-3)
     service.deleteAccount(ada.actor, { confirm: "yes" } as never),
     "validation_failed",
   );
-  assertEquals(await service.deleteAccount(ada.actor, { confirm: "delete", password: PASSWORD }), {
+  expect(
+    await service.deleteAccount(ada.actor, { confirm: "delete", password: PASSWORD }),
+  ).toStrictEqual({
     ok: true,
   });
 
@@ -758,7 +767,7 @@ test("accounts: deleting an account keeps what it wrote, as Deleted user (OPS-3)
      FROM users WHERE id = ?`,
     ada.user.id,
   );
-  assertEquals(row, {
+  expect(row).toStrictEqual({
     email: null,
     password_hash: null,
     display_name: "Deleted user",
@@ -768,28 +777,28 @@ test("accounts: deleting an account keeps what it wrote, as Deleted user (OPS-3)
     deleted_at: instance.clock.now,
   });
   for (const table of ["identities", "sessions", "email_tokens"]) {
-    assertEquals(count(instance.sql, table, `user_id = ${ada.user.id}`), 0, table);
+    expect(count(instance.sql, table, `user_id = ${ada.user.id}`), table).toBe(0);
   }
   const [suggestion] = instance.sql.query<{ status: string }>(
     "SELECT status FROM suggestions WHERE id = ?",
     pending.id,
   );
-  assertEquals(suggestion.status, "withdrawn");
+  expect(suggestion.status).toBe("withdrawn");
   const detail = await service.getString(ANONYMOUS, {
     id: stringId(instance.sql, "common.json", "quit"),
     language: "de",
   });
-  assertEquals(detail.translation?.author.name, "Deleted user");
-  assertEquals(detail.translation?.author.avatarUrl, null);
+  expect(detail.translation?.author.name).toBe("Deleted user");
+  expect(detail.translation?.author.avatarUrl).toBe(null);
   await rejectsWith(service.getAccount(ada.actor, {}), "forbidden");
-  assertEquals(await service.resolveSession(SYSTEM, { sessionId: ada.sessionId }), null);
+  expect(await service.resolveSession(SYSTEM, { sessionId: ada.sessionId })).toBe(null);
   await rejectsWith(
     service.signIn(ANONYMOUS, { email: "ada@example.com", password: PASSWORD }),
     "unauthorized",
   );
   // The address is free again.
   const again = await signUp(instance, "ada@example.com");
-  assertNotEquals(again.user.id, ada.user.id);
+  expect(again.user.id).not.toStrictEqual(ada.user.id);
 
   // The last administrator can't leave.
   const [owner] = instance.sql.query<{ id: number }>(
@@ -799,6 +808,6 @@ test("accounts: deleting an account keeps what it wrote, as Deleted user (OPS-3)
     service.deleteAccount({ type: "user", userId: owner.id }, { confirm: "delete" }),
     "bad_request",
   );
-  assertEquals(Object.keys(ENGLISH).length > 0, true);
-  assertEquals(admin.type, "user");
+  expect(Object.keys(ENGLISH).length > 0).toBe(true);
+  expect(admin.type).toBe("user");
 });

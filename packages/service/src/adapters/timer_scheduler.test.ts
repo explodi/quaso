@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals } from "@std/assert";
+import { expect, test } from "vitest";
 import { TimerScheduler } from "./timer_scheduler.ts";
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -14,11 +13,11 @@ test("TimerScheduler calls onAlarm at the scheduled time", async () => {
   try {
     const at = Date.now() + 20;
     scheduler.schedule(at);
-    assertEquals(scheduler.pending, true);
+    expect(scheduler.pending).toBe(true);
     await wait(60);
-    assertEquals(calls.length, 1);
-    assertEquals(calls[0] >= at - 2, true);
-    assertEquals(scheduler.pending, false);
+    expect(calls.length).toBe(1);
+    expect(calls[0] >= at - 2).toBe(true);
+    expect(scheduler.pending).toBe(false);
   } finally {
     scheduler.stop();
   }
@@ -33,7 +32,7 @@ test("TimerScheduler fires at once for a time in the past", async () => {
   try {
     scheduler.schedule(0);
     await wait(10);
-    assertEquals(calls, 1);
+    expect(calls).toBe(1);
   } finally {
     scheduler.stop();
   }
@@ -49,18 +48,18 @@ test("a new schedule replaces the pending one; cancel and stop clear it", async 
     scheduler.schedule(Date.now() + 10);
     scheduler.schedule(Date.now() + 30);
     await wait(20);
-    assertEquals(calls, 0, "the first wake-up was replaced");
+    expect(calls, "the first wake-up was replaced").toBe(0);
     await wait(40);
-    assertEquals(calls, 1);
+    expect(calls).toBe(1);
     scheduler.schedule(Date.now() + 10);
     scheduler.cancel();
     await wait(30);
-    assertEquals(calls, 1);
+    expect(calls).toBe(1);
     scheduler.stop();
     scheduler.schedule(Date.now());
-    assertEquals(scheduler.pending, false, "stopped for good");
+    expect(scheduler.pending, "stopped for good").toBe(false);
     await wait(10);
-    assertEquals(calls, 1);
+    expect(calls).toBe(1);
   } finally {
     scheduler.stop();
   }
@@ -79,11 +78,11 @@ test("long delays are split into timers the runtime accepts", async () => {
   try {
     scheduler.schedule(1000);
     await wait(30);
-    assertEquals(calls, 0, "the clock hasn't reached the time");
-    assertEquals(scheduler.pending, true);
+    expect(calls, "the clock hasn't reached the time").toBe(0);
+    expect(scheduler.pending).toBe(true);
     now = 1000;
     await wait(30);
-    assertEquals(calls, 1);
+    expect(calls).toBe(1);
   } finally {
     scheduler.stop();
   }
@@ -104,7 +103,7 @@ test("onAlarm errors go to onError", async () => {
     failing.schedule(0);
     throwing.schedule(0);
     await wait(20);
-    assertEquals(errors.map((error) => (error as Error).message).sort(), ["async", "sync"]);
+    expect(errors.map((error) => (error as Error).message).sort()).toStrictEqual(["async", "sync"]);
   } finally {
     failing.stop();
     throwing.stop();
@@ -137,11 +136,11 @@ test("a failed alarm is tried again after each retry delay, then given up", asyn
     scheduler.schedule(0);
     counting.schedule(0);
     await wait(100);
-    assertEquals(calls, 3, "two failures, then success");
-    assertEquals(errors, ["gemini 503 #1", "gemini 503 #2"]);
-    assertEquals(scheduler.pending, false);
-    assertEquals(giveUpCalls, 3, "the first run and two retries");
-    assertEquals(counting.pending, false);
+    expect(calls, "two failures, then success").toBe(3);
+    expect(errors).toStrictEqual(["gemini 503 #1", "gemini 503 #2"]);
+    expect(scheduler.pending).toBe(false);
+    expect(giveUpCalls, "the first run and two retries").toBe(3);
+    expect(counting.pending).toBe(false);
   } finally {
     scheduler.stop();
     giveUp.stop();
@@ -162,8 +161,8 @@ test("a wake-up scheduled during a failing alarm replaces its retry", async () =
   try {
     scheduler.schedule(0);
     await wait(40);
-    assertEquals(calls, 1, "no retry: the new wake-up is pending");
-    assertEquals(scheduler.pending, true);
+    expect(calls, "no retry: the new wake-up is pending").toBe(1);
+    expect(scheduler.pending).toBe(true);
   } finally {
     scheduler.stop();
   }

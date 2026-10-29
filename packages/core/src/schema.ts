@@ -131,8 +131,10 @@ export interface StringOptions {
 }
 
 export class StringSchema extends Schema<string> {
-  constructor(readonly options: StringOptions = {}) {
+  readonly options: StringOptions;
+  constructor(options: StringOptions = {}) {
     super();
+    this.options = options;
   }
   check(value: unknown, path: IssuePath, context: Context): string | Invalid {
     if (typeof value !== "string") {
@@ -172,8 +174,10 @@ export interface NumberOptions {
 }
 
 export class NumberSchema extends Schema<number> {
-  constructor(readonly options: NumberOptions = {}) {
+  readonly options: NumberOptions;
+  constructor(options: NumberOptions = {}) {
     super();
+    this.options = options;
   }
   check(value: unknown, path: IssuePath, context: Context): number | Invalid {
     const { min, max, integer } = this.options;
@@ -213,8 +217,10 @@ export class BooleanSchema extends Schema<boolean> {
 type Literal = string | number | boolean | null;
 
 export class LiteralSchema<T extends Literal> extends Schema<T> {
-  constructor(readonly value: T) {
+  readonly value: T;
+  constructor(value: T) {
     super();
+    this.value = value;
   }
   check(value: unknown, path: IssuePath, context: Context): T | Invalid {
     if (value !== this.value) return issue(context, path, `must be ${JSON.stringify(this.value)}`);
@@ -226,8 +232,10 @@ export class LiteralSchema<T extends Literal> extends Schema<T> {
 }
 
 export class EnumSchema<T extends string> extends Schema<T> {
-  constructor(readonly values: readonly T[]) {
+  readonly values: readonly T[];
+  constructor(values: readonly T[]) {
     super();
+    this.values = values;
   }
   check(value: unknown, path: IssuePath, context: Context): T | Invalid {
     if (typeof value !== "string" || !(this.values as readonly string[]).includes(value)) {
@@ -256,8 +264,10 @@ export class UnknownSchema extends Schema<unknown> {
 
 export class OptionalSchema<T> extends Schema<T | undefined> {
   readonly isOptional = true;
-  constructor(readonly inner: Schema<T>) {
+  readonly inner: Schema<T>;
+  constructor(inner: Schema<T>) {
     super();
+    this.inner = inner;
   }
   check(value: unknown, path: IssuePath, context: Context): T | undefined | Invalid {
     if (value === undefined) return undefined;
@@ -270,8 +280,10 @@ export class OptionalSchema<T> extends Schema<T | undefined> {
 }
 
 export class NullableSchema<T> extends Schema<T | null> {
-  constructor(readonly inner: Schema<T>) {
+  readonly inner: Schema<T>;
+  constructor(inner: Schema<T>) {
     super();
+    this.inner = inner;
   }
   check(value: unknown, path: IssuePath, context: Context): T | null | Invalid {
     if (value === null) return null;
@@ -293,11 +305,12 @@ export interface ArrayOptions {
 }
 
 export class ArraySchema<T> extends Schema<T[]> {
-  constructor(
-    readonly item: Schema<T>,
-    readonly options: ArrayOptions = {},
-  ) {
+  readonly item: Schema<T>;
+  readonly options: ArrayOptions;
+  constructor(item: Schema<T>, options: ArrayOptions = {}) {
     super();
+    this.item = item;
+    this.options = options;
   }
   check(value: unknown, path: IssuePath, context: Context): T[] | Invalid {
     if (!Array.isArray(value)) {
@@ -364,11 +377,12 @@ export interface ObjectOptions {
 }
 
 export class ObjectSchema<P extends Shape> extends Schema<ObjectType<P>> {
-  constructor(
-    readonly shape: P,
-    readonly options: ObjectOptions = {},
-  ) {
+  readonly shape: P;
+  readonly options: ObjectOptions;
+  constructor(shape: P, options: ObjectOptions = {}) {
     super();
+    this.shape = shape;
+    this.options = options;
   }
   check(value: unknown, path: IssuePath, context: Context): ObjectType<P> | Invalid {
     if (typeof value !== "object" || value === null || Array.isArray(value)) {
@@ -431,11 +445,12 @@ export interface RecordOptions {
 }
 
 export class RecordSchema<T> extends Schema<Record<string, T>> {
-  constructor(
-    readonly value: Schema<T>,
-    readonly options: RecordOptions = {},
-  ) {
+  readonly value: Schema<T>;
+  readonly options: RecordOptions;
+  constructor(value: Schema<T>, options: RecordOptions = {}) {
     super();
+    this.value = value;
+    this.options = options;
   }
   check(value: unknown, path: IssuePath, context: Context): Record<string, T> | Invalid {
     if (typeof value !== "object" || value === null || Array.isArray(value)) {
@@ -472,8 +487,10 @@ type UnionType<S extends readonly AnySchema[]> = Infer<S[number]>;
 
 /** The first matching alternative wins. Issues come from the closest alternative. */
 export class UnionSchema<S extends readonly AnySchema[]> extends Schema<UnionType<S>> {
-  constructor(readonly alternatives: S) {
+  readonly alternatives: S;
+  constructor(alternatives: S) {
     super();
+    this.alternatives = alternatives;
   }
   check(value: unknown, path: IssuePath, context: Context): UnionType<S> | Invalid {
     let best: Issue[] | undefined;
@@ -499,11 +516,12 @@ export class UnionSchema<S extends readonly AnySchema[]> extends Schema<UnionTyp
 
 /** A schema with an extra check, such as "a valid language tag". */
 export class RefinedSchema<T> extends Schema<T> {
-  constructor(
-    readonly inner: Schema<T>,
-    readonly refine: (value: T) => string | undefined,
-  ) {
+  readonly inner: Schema<T>;
+  readonly refine: (value: T) => string | undefined;
+  constructor(inner: Schema<T>, refine: (value: T) => string | undefined) {
     super();
+    this.inner = inner;
+    this.refine = refine;
   }
   check(value: unknown, path: IssuePath, context: Context): T | Invalid {
     const checked = this.inner.check(value, path, context);

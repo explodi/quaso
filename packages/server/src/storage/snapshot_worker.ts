@@ -2,10 +2,10 @@
 /**
  * Takes a snapshot on its own connection, in a worker, so the server's connection and its
  * requests go on meanwhile (design §8). The copy is one step of SQLite's backup API, so it
- * sees one consistent state of the database. `deno compile` includes this file
- * (scripts/build_server.ts).
+ * sees one consistent state of the database.
  */
 import { backup, DatabaseSync } from "node:sqlite";
+import { parentPort, workerData } from "node:worker_threads";
 
 /** What the worker is asked: copy the database file `source` into the new file `target`. */
 export interface SnapshotJob {
@@ -35,22 +35,21 @@ export async function copyDatabase(db: DatabaseSync, target: string): Promise<vo
   }
 }
 
-// snapshots.ts imports this module on the main thread too, for copyDatabase.
-const inWorker = "WorkerGlobalScope" in globalThis;
-if (inWorker) {
-  self.onmessage = async ({ data }: MessageEvent<SnapshotJob>) => {
-    let result: SnapshotResult;
+// snapshots.ts imports this module on the main thread too, for copyDatabase; the job, in
+// `workerData`, tells the worker apart (a test runner may itself run in a worker).
+const job: SnapshotJob | undefined = workerData?.snapshot;
+if (job && parentPort) {
+  let result: SnapshotResult;
+  try {
+    const db = new DatabaseSync(job.source, { readOnly: true });
     try {
-      const db = new DatabaseSync(data.source, { readOnly: true });
-      try {
-        await copyDatabase(db, data.target);
-      } finally {
-        db.close();
-      }
-      result = { ok: true };
-    } catch (error) {
-      result = { ok: false, message: error instanceof Error ? error.message : String(error) };
+      await copyDatabase(db, job.target);
+    } finally {
+      db.close();
     }
-    self.postMessage(result);
-  };
+    result = { ok: true };
+  } catch (error) {
+    result = { ok: false, message: error instanceof Error ? error.message : String(error) };
+  }
+  parentPort.postMessage(result);
 }

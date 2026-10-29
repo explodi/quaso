@@ -6,16 +6,16 @@ development environment, see [development setup](README.md).
 ## One application, one database, one game
 
 Each Quaso instance serves one project with an HTTP API at `/api/v1` and a React website. The
-service runs in a Deno server and stores project records in SQLite, either locally or through
+service runs in a Node server and stores project records in SQLite, either locally or through
 Cloudflare D1. Published files and backups use separate object storage. For several games, run one
 instance per game.
 
 ```text
- CLI (Node or Deno)           Browsers
+ CLI (Node)                   Browsers
        │  API key                 │  session cookie
        ▼                          ▼
 ┌──────────────────────────────────────────────┐
-│ server (Deno): website files + HTTP API     │
+│ server (Node): website files + HTTP API     │
 └──────────────────────┬───────────────────────┘
                        │ direct call
                        ▼
@@ -29,7 +29,7 @@ instance per game.
 ```
 
 The diagram shows the local request path. On Cloudflare, a Worker serves the website and
-published files, caches public API reads, and forwards server requests to the Deno container.
+published files, caches public API reads, and forwards server requests to the server's container.
 The website can load while the container wakes. See [Cloudflare development](cloudflare.md).
 
 The packages divide the work as follows:
@@ -41,7 +41,9 @@ The packages divide the work as follows:
   `@quaso/design-system`; the package does not import the app, its router, or domain types.
   See the [design-system guide](design-system.md) for component and styling conventions.
 - **The server** (`packages/server`) serves the website's files and the API. It authenticates people
-  and API keys, validates requests, and calls the service.
+  and API keys, validates requests, and calls the service. It uses Node's built-ins and web APIs:
+  `node:http` behind a small fetch-style `serve()` (`src/http/serve.ts`), `URLPattern` routes,
+  `node:sqlite` and Web Crypto.
 - **The service** (`packages/service`) holds the logic and the data: files, strings, translations,
   suggestions, history, translation and quality jobs, people, roles, sessions, and API keys.
 - **core** (`packages/core`) is source-file parsing, plural rules,
@@ -51,12 +53,12 @@ The packages divide the work as follows:
 
 ## Two places for the data
 
-Both deployments run the same service code inside the Deno server. Storage and request handling
+Both deployments run the same service code inside the Node server. Storage and request handling
 differ:
 
 | Storage         | Where the server runs                         | The database                                       | Files and backups |
 | --------------- | --------------------------------------------- | -------------------------------------------------- | ----------------- |
-| Local (default) | Docker, a VM, or `deno task dev`              | one SQLite file, `quaso.sqlite` in the data folder | the data folder   |
+| Local (default) | Docker, a VM, or `npm run dev`                | one SQLite file, `quaso.sqlite` in the data folder | the data folder   |
 | Cloudflare      | a Cloudflare Container, behind a small Worker | a D1 database                                      | an R2 bucket      |
 
 In the Cloudflare container, the server reaches D1 and R2 through two private outbound hosts,
@@ -76,8 +78,8 @@ implement these ports for each storage mode:
 - `Scheduler`: wake the service up later, for LLM jobs and backups. A timer in the server; on
   Cloudflare the container controller also wakes a sleeping container when work is due.
 
-This is why `core` and the main `service` logic use standard web APIs. They do not use `Deno.*` or `node:`,
-`jsr:`, `npm:` or `@std/` imports outside tests. CI checks it.
+This is why `core` and the main `service` logic use standard web APIs. They do not import `node:`, `npm:` or other
+runtime-specific modules outside tests. CI checks it.
 
 ### One writer at a time
 
@@ -231,10 +233,10 @@ Portable JSON backups omit these secrets, but SQLite snapshots contain them and 
 
 ## Tests
 
-Tests sit next to the code as `*.test.ts`. `deno task test` runs the normal local suite using a
+Tests sit next to the code as `*.test.ts`. `npm test` runs the normal local suite using a
 fake translator. Shared cases under `packages/service/src/testing/` check storage behavior against
 local SQLite and the D1 adapter through the production storage handler. The former Durable
 Object storage service has been removed; Durable Objects still control the Cloudflare container. Cloudflare tests run separately in `workerd` with
-`deno task cf:test`.
+`npm run cf:test`.
 
 See [testing](testing.md) for commands, and [Cloudflare development](cloudflare.md) for its runtime.

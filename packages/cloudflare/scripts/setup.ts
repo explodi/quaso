@@ -73,7 +73,8 @@ export function setupOptions(args: readonly string[]): SetupOptions {
       "--image",
       "--instance-config",
     ].includes(flag);
-    if (!supported) throw new Error(`Unknown setup option ${flag}. See deno task cf:setup --help.`);
+    if (!supported)
+      throw new Error(`Unknown setup option ${flag}. See npm run cf:setup -- --help.`);
     const value = args[++index];
     if (value === undefined || value.startsWith("-")) throw new Error(`${flag} needs a value.`);
     switch (flag) {
@@ -354,7 +355,7 @@ async function healthy(request: Fetch, hostname: string): Promise<boolean> {
   }
 }
 
-const HELP = `Usage: deno task cf:setup [options]
+const HELP = `Usage: npm run cf:setup -- [options]
 
 Choose an account, environment, domain and D1 location interactively.
   --env staging|production   Select the environment.

@@ -20,6 +20,8 @@ import * as fs from "node:fs/promises";
  *   file is only read, so it may sit in a read-only folder; one in WAL mode (older
  *   snapshots) is read from a copy in the temporary folder.
  */
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { DatabaseSync, type SQLInputValue } from "node:sqlite";
 import type { RestoreResult } from "@quaso/core";
 import {
@@ -151,7 +153,7 @@ export async function jsonBackupResponse(
     const file = await temporaryFile(options.tempDir, ".json");
     try {
       const stream = backupJsonStream(service, actor);
-      await Deno.writeFile(file, stream);
+      await fs.writeFile(file, stream);
       return file;
     } catch (error) {
       await fs.rm(file).catch(() => {});
@@ -256,7 +258,8 @@ function withCleanup(
 
 /** A new, empty temporary file (its folder resolved: `node:sqlite` refuses symbolic links). */
 async function temporaryFile(dir: string | undefined, suffix: string): Promise<string> {
-  const path = await Deno.makeTempFile({ dir, prefix: "quaso-backup-", suffix });
+  const path = join(dir ?? tmpdir(), `quaso-backup-${crypto.randomUUID()}${suffix}`);
+  await fs.writeFile(path, "", { flag: "wx" });
   return await fs.realpath(path);
 }
 

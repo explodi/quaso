@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assert, assertEquals } from "@std/assert";
+import { assert, expect, test } from "vitest";
 import { icuFieldForm, quoteField, writeIcuFieldForm } from "./icu_fields.ts";
 
 const PARTY =
@@ -14,7 +13,7 @@ function paths(english: string, translation: string, language: string): string[]
 }
 
 test("icuFieldForm: one field per case, with the language's plural cases", () => {
-  assertEquals(paths(PARTY, "", "es"), [
+  expect(paths(PARTY, "", "es")).toStrictEqual([
     "female › =0",
     "female › one",
     "female › many",
@@ -28,9 +27,9 @@ test("icuFieldForm: one field per case, with the language's plural cases", () =>
 
 test("icuFieldForm: an empty translation gives empty fields with their English", () => {
   const form = icuFieldForm(PARTY, "", "es");
-  assertEquals(form?.fields[2].text, "");
-  assertEquals(form?.fields[2].plural, true);
-  assertEquals(form?.fields[2].english, [
+  expect(form?.fields[2].text).toBe("");
+  expect(form?.fields[2].plural).toBe(true);
+  expect(form?.fields[2].english).toStrictEqual([
     { type: "argument", text: "{name}" },
     { type: "text", text: " invites " },
     { type: "number", text: "#" },
@@ -40,21 +39,20 @@ test("icuFieldForm: an empty translation gives empty fields with their English",
 
 test("icuFieldForm: text around a block is a field where the English has text", () => {
   const form = icuFieldForm(SIGNED, "", "es");
-  assertEquals(
+  expect(
     form?.fields.map((field) => [
       field.afterBlock,
       field.path.map((step) => step.key),
       field.beforeBlock,
     ]),
-    [
-      [undefined, [], "g"],
-      [undefined, ["female"], undefined],
-      [undefined, ["other"], undefined],
-      ["g", [], undefined],
-    ],
-  );
-  assertEquals(form?.fields[0].text, "");
-  assertEquals(form?.fields[3].english, [{ type: "text", text: " book." }]);
+  ).toStrictEqual([
+    [undefined, [], "g"],
+    [undefined, ["female"], undefined],
+    [undefined, ["other"], undefined],
+    ["g", [], undefined],
+  ]);
+  expect(form?.fields[0].text).toBe("");
+  expect(form?.fields[3].english).toStrictEqual([{ type: "text", text: " book." }]);
 });
 
 test("icuFieldForm: a translation's texts, quotes resolved", () => {
@@ -63,10 +61,12 @@ test("icuFieldForm: a translation's texts, quotes resolved", () => {
     "{author} a signé {g, select, female {son livre '{'dédicacé'}'} other {l''ouvrage}}.",
     "fr",
   );
-  assertEquals(
-    form?.fields.map((field) => field.text),
-    ["{author} a signé ", "son livre {dédicacé}", "l'ouvrage", "."],
-  );
+  expect(form?.fields.map((field) => field.text)).toStrictEqual([
+    "{author} a signé ",
+    "son livre {dédicacé}",
+    "l'ouvrage",
+    ".",
+  ]);
 });
 
 test("icuFieldForm: a case the translation lacks is an empty field", () => {
@@ -75,35 +75,33 @@ test("icuFieldForm: a case the translation lacks is an empty field", () => {
     "{n, plural, one {# gato} other {# gatos}}",
     "es",
   );
-  assertEquals(
-    form?.fields.map((field) => [field.path[0].key, field.text]),
-    [
-      ["one", "# gato"],
-      ["many", ""],
-      ["other", "# gatos"],
-    ],
-  );
+  expect(form?.fields.map((field) => [field.path[0].key, field.text])).toStrictEqual([
+    ["one", "# gato"],
+    ["many", ""],
+    ["other", "# gatos"],
+  ]);
 });
 
 test("icuFieldForm: a translation the fields can't show", () => {
   const english = "{n, plural, one {# cat} other {# cats}}";
   // An exact case of its own, and a category Japanese doesn't use.
-  assertEquals(icuFieldForm(english, "{n, plural, =5 {five} other {# neko}}", "ja"), null);
-  assertEquals(icuFieldForm(english, "{n, plural, one {#} other {# neko}}", "ja"), null);
+  expect(icuFieldForm(english, "{n, plural, =5 {five} other {# neko}}", "ja")).toBe(null);
+  expect(icuFieldForm(english, "{n, plural, one {#} other {# neko}}", "ja")).toBe(null);
   // A block of its own, on another argument, or broken.
-  assertEquals(icuFieldForm(english, "{n, plural, other {{g, select, other {#}}}}", "ja"), null);
-  assertEquals(icuFieldForm(english, "{m, plural, other {# neko}}", "ja"), null);
-  assertEquals(icuFieldForm(english, "{n, plural, other {# neko}", "ja"), null);
+  expect(icuFieldForm(english, "{n, plural, other {{g, select, other {#}}}}", "ja")).toStrictEqual(
+    null,
+  );
+  expect(icuFieldForm(english, "{m, plural, other {# neko}}", "ja")).toBe(null);
+  expect(icuFieldForm(english, "{n, plural, other {# neko}", "ja")).toBe(null);
   // Text around the block, where the English has none.
-  assertEquals(icuFieldForm(english, "¡{n, plural, other {# neko}}!", "ja"), null);
+  expect(icuFieldForm(english, "¡{n, plural, other {# neko}}!", "ja")).toBe(null);
 });
 
 test("icuFieldForm: blocks in another order don't fit", () => {
   const english = "{a, select, x {X} other {O}} {b, select, y {Y} other {O}}";
-  assertEquals(
+  expect(
     icuFieldForm(english, "{b, select, y {Y} other {O}} {a, select, x {X} other {O}}", "en"),
-    null,
-  );
+  ).toBe(null);
 });
 
 test("writeIcuFieldForm: the fields as the translation, in the English's layout", () => {
@@ -115,16 +113,14 @@ test("writeIcuFieldForm: the fields as the translation, in the English's layout"
     [other, "su libro"],
     [after, "."],
   ]);
-  assertEquals(
-    writeIcuFieldForm(form, changes),
+  expect(writeIcuFieldForm(form, changes)).toStrictEqual(
     "{author} firmó {g, select, female {su libro} other {su libro}}.",
   );
 });
 
 test("writeIcuFieldForm: plural cases for the language, empty where not written yet", () => {
   const form = icuFieldForm("{n, plural, one {# cat} other {# cats}}", "", "es")!;
-  assertEquals(
-    writeIcuFieldForm(form, new Map([[form.fields[0], "# gato"]])),
+  expect(writeIcuFieldForm(form, new Map([[form.fields[0], "# gato"]]))).toStrictEqual(
     "{n, plural, one {# gato} many {} other {}}",
   );
 });
@@ -136,61 +132,61 @@ test("writeIcuFieldForm: blank fields write no translation", () => {
     "es",
   )!;
   const blank = new Map(form.fields.map((field) => [field, " "]));
-  assertEquals(writeIcuFieldForm(form, blank), "");
+  expect(writeIcuFieldForm(form, blank)).toBe("");
 });
 
 test("writeIcuFieldForm: without changes, the translation as the fields read it", () => {
   const translation = "{author} firmó {g, select, female {su} other {su}} libro.";
   const form = icuFieldForm(SIGNED, translation, "es")!;
-  assertEquals(writeIcuFieldForm(form), translation);
+  expect(writeIcuFieldForm(form)).toStrictEqual(translation);
 });
 
 test("writeIcuFieldForm: a field's text reads back the same", () => {
   const form = icuFieldForm(SIGNED, "", "es")!;
   const typed = "it's '{x}' {author}'s l'{author} '";
   const written = writeIcuFieldForm(form, new Map([[form.fields[1], typed]]));
-  assertEquals(icuFieldForm(SIGNED, written, "es")?.fields[1].text, typed);
+  expect(icuFieldForm(SIGNED, written, "es")?.fields[1].text).toStrictEqual(typed);
 });
 
 test("writeIcuFieldForm: a plural case's text reads back the same", () => {
   const form = icuFieldForm("{n, plural, one {# cat} other {# cats}}", "", "ja")!;
   const typed = "'# ' {n}{{n}} '{' ''";
   const written = writeIcuFieldForm(form, new Map([[form.fields[0], typed]]));
-  assertEquals(
+  expect(
     icuFieldForm("{n, plural, one {# cat} other {# cats}}", written, "ja")?.fields[0].text,
-    typed,
-  );
+  ).toStrictEqual(typed);
 });
 
 const KNOWN = new Set(["name", "n"]);
 
 test("quoteField: known arguments stay, other braces are quoted", () => {
-  assertEquals(quoteField("Hi {name}, see {docs}", KNOWN, false, true), "Hi {name}, see '{docs}'");
-  assertEquals(
-    quoteField("{ name } paid {n, number}", KNOWN, false, true),
+  expect(quoteField("Hi {name}, see {docs}", KNOWN, false, true)).toStrictEqual(
+    "Hi {name}, see '{docs}'",
+  );
+  expect(quoteField("{ name } paid {n, number}", KNOWN, false, true)).toStrictEqual(
     "{ name } paid {n, number}",
   );
-  assertEquals(quoteField("{}{name}", KNOWN, false, true), "'{}'{name}");
+  expect(quoteField("{}{name}", KNOWN, false, true)).toBe("'{}'{name}");
 });
 
 test("quoteField: # is the number in a plural case, text elsewhere", () => {
-  assertEquals(quoteField("# cats", KNOWN, true, false), "# cats");
-  assertEquals(quoteField("Track #1", KNOWN, false, false), "Track #1");
+  expect(quoteField("# cats", KNOWN, true, false)).toBe("# cats");
+  expect(quoteField("Track #1", KNOWN, false, false)).toBe("Track #1");
 });
 
 test("quoteField: apostrophes are doubled only where ICU would start a quote", () => {
-  assertEquals(quoteField("l'arbre", KNOWN, false, true), "l'arbre");
-  assertEquals(quoteField("l'{name}", KNOWN, false, true), "l''{name}");
-  assertEquals(quoteField("rock''n", KNOWN, false, true), "rock'''n");
-  assertEquals(quoteField("'#", KNOWN, true, false), "''#");
-  assertEquals(quoteField("'#", KNOWN, false, false), "'#");
+  expect(quoteField("l'arbre", KNOWN, false, true)).toBe("l'arbre");
+  expect(quoteField("l'{name}", KNOWN, false, true)).toBe("l''{name}");
+  expect(quoteField("rock''n", KNOWN, false, true)).toBe("rock'''n");
+  expect(quoteField("'#", KNOWN, true, false)).toBe("''#");
+  expect(quoteField("'#", KNOWN, false, false)).toBe("'#");
 });
 
 test("quoteField: an apostrophe at the end is doubled when syntax follows", () => {
-  assertEquals(quoteField("the cats'", KNOWN, false, false), "the cats''");
-  assertEquals(quoteField("the cats'", KNOWN, false, true), "the cats'");
+  expect(quoteField("the cats'", KNOWN, false, false)).toBe("the cats''");
+  expect(quoteField("the cats'", KNOWN, false, true)).toBe("the cats'");
 });
 
 test("quoteField: an apostrophe beside a quoted brace", () => {
-  assertEquals(quoteField("{'s}", KNOWN, false, true), "'{''s}'");
+  expect(quoteField("{'s}", KNOWN, false, true)).toBe("'{''s}'");
 });

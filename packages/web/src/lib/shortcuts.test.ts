@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals } from "@std/assert";
+import { expect, test } from "vitest";
 import { isMac, type KeyInput, shortcutFor, shortcutList } from "./shortcuts.ts";
 
 function key(init: Partial<KeyInput> & { key: string }): KeyInput {
@@ -9,41 +8,49 @@ function key(init: Partial<KeyInput> & { key: string }): KeyInput {
 
 test("the editor's shortcuts", () => {
   for (const mac of [false, true]) {
-    assertEquals(shortcutFor(key({ key: "Enter", ctrlKey: true }), true, mac), { type: "save" });
-    assertEquals(shortcutFor(key({ key: "Enter", metaKey: true }), true, mac), { type: "save" });
-    assertEquals(shortcutFor(key({ key: "Enter" }), true, mac), null);
-    assertEquals(shortcutFor(key({ key: "ArrowDown", altKey: true }), true, mac), {
+    expect(shortcutFor(key({ key: "Enter", ctrlKey: true }), true, mac)).toStrictEqual({
+      type: "save",
+    });
+    expect(shortcutFor(key({ key: "Enter", metaKey: true }), true, mac)).toStrictEqual({
+      type: "save",
+    });
+    expect(shortcutFor(key({ key: "Enter" }), true, mac)).toBe(null);
+    expect(shortcutFor(key({ key: "ArrowDown", altKey: true }), true, mac)).toStrictEqual({
       type: "next",
     });
-    assertEquals(shortcutFor(key({ key: "ArrowUp", altKey: true }), false, mac), {
+    expect(shortcutFor(key({ key: "ArrowUp", altKey: true }), false, mac)).toStrictEqual({
       type: "previous",
     });
-    assertEquals(shortcutFor(key({ key: "ArrowDown" }), false, mac), null);
-    assertEquals(
+    expect(shortcutFor(key({ key: "ArrowDown" }), false, mac)).toBe(null);
+    expect(
       shortcutFor(key({ key: "C", code: "KeyC", ctrlKey: true, shiftKey: true }), true, mac),
-      { type: "copySource" },
-    );
-    assertEquals(shortcutFor(key({ key: "c", code: "KeyC", ctrlKey: true }), true, mac), null);
-    // Ctrl+digit (Control on a Mac), whatever the layout types on the key.
-    assertEquals(shortcutFor(key({ key: "3", code: "Digit3", ctrlKey: true }), true, mac), {
-      type: "insert",
-      index: 2,
-    });
-    assertEquals(shortcutFor(key({ key: '"', code: "Digit3", ctrlKey: true }), true, mac), {
-      type: "insert",
-      index: 2,
-    });
-    assertEquals(shortcutFor(key({ key: "0", code: "Digit0", ctrlKey: true }), true, mac), null);
-    // Ctrl+Alt is AltGr on Windows: it types characters.
-    assertEquals(
-      shortcutFor(key({ key: "{", code: "Digit7", ctrlKey: true, altKey: true }), true, mac),
+    ).toStrictEqual({ type: "copySource" });
+    expect(shortcutFor(key({ key: "c", code: "KeyC", ctrlKey: true }), true, mac)).toStrictEqual(
       null,
     );
-    assertEquals(shortcutFor(key({ key: "?", shiftKey: true }), false, mac), { type: "help" });
-    assertEquals(shortcutFor(key({ key: "?", shiftKey: true }), true, mac), null);
+    // Ctrl+digit (Control on a Mac), whatever the layout types on the key.
+    expect(shortcutFor(key({ key: "3", code: "Digit3", ctrlKey: true }), true, mac)).toStrictEqual({
+      type: "insert",
+      index: 2,
+    });
+    expect(shortcutFor(key({ key: '"', code: "Digit3", ctrlKey: true }), true, mac)).toStrictEqual({
+      type: "insert",
+      index: 2,
+    });
+    expect(shortcutFor(key({ key: "0", code: "Digit0", ctrlKey: true }), true, mac)).toStrictEqual(
+      null,
+    );
+    // Ctrl+Alt is AltGr on Windows: it types characters.
+    expect(
+      shortcutFor(key({ key: "{", code: "Digit7", ctrlKey: true, altKey: true }), true, mac),
+    ).toBe(null);
+    expect(shortcutFor(key({ key: "?", shiftKey: true }), false, mac)).toStrictEqual({
+      type: "help",
+    });
+    expect(shortcutFor(key({ key: "?", shiftKey: true }), true, mac)).toBe(null);
   }
   // Alt+digit, where Alt types nothing else (Windows, Linux).
-  assertEquals(shortcutFor(key({ key: "1", code: "Digit1", altKey: true }), true, false), {
+  expect(shortcutFor(key({ key: "1", code: "Digit1", altKey: true }), true, false)).toStrictEqual({
     type: "insert",
     index: 0,
   });
@@ -66,56 +73,57 @@ test("on a Mac, Option+digit types its character: { } [ ] | @ # stay typeable", 
   ];
   for (const [code, character] of typed) {
     for (const inTextInput of [true, false]) {
-      assertEquals(
+      expect(
         shortcutFor(key({ key: character, code, altKey: true }), inTextInput, true),
-        null,
         `${code} → ${character}`,
-      );
+      ).toBe(null);
     }
   }
   // A layout where Option+digit types nothing but the digit still gets the shortcut.
-  assertEquals(shortcutFor(key({ key: "2", code: "Digit2", altKey: true }), true, true), {
+  expect(shortcutFor(key({ key: "2", code: "Digit2", altKey: true }), true, true)).toStrictEqual({
     type: "insert",
     index: 1,
   });
 });
 
 test("the shortcut list names the platform's keys", () => {
-  assertEquals(isMac("MacIntel"), true);
-  assertEquals(isMac("Win32"), false);
-  assertEquals(shortcutList(true)[0].keys, [["⌘", "Enter"]]);
-  assertEquals(shortcutList(false)[0].keys, [["Ctrl", "Enter"]]);
+  expect(isMac("MacIntel")).toBe(true);
+  expect(isMac("Win32")).toBe(false);
+  expect(shortcutList(true)[0].keys).toStrictEqual([["⌘", "Enter"]]);
+  expect(shortcutList(false)[0].keys).toStrictEqual([["Ctrl", "Enter"]]);
   const insert = (mac: boolean) =>
     shortcutList(mac).find((s) => s.description.startsWith("Insert"))!.keys;
-  assertEquals(insert(true), [["Control", "1…9"]]);
-  assertEquals(insert(false), [["Alt", "1…9"]]);
+  expect(insert(true)).toStrictEqual([["Control", "1…9"]]);
+  expect(insert(false)).toStrictEqual([["Alt", "1…9"]]);
 });
 
 test("Alt+Shift arrows navigate unfinished entries without intercepting AltGr", () => {
-  assertEquals(shortcutFor(key({ key: "ArrowDown", altKey: true, shiftKey: true }), true), {
+  expect(shortcutFor(key({ key: "ArrowDown", altKey: true, shiftKey: true }), true)).toStrictEqual({
     type: "nextToDo",
   });
-  assertEquals(shortcutFor(key({ key: "ArrowUp", altKey: true, shiftKey: true }), true), {
+  expect(shortcutFor(key({ key: "ArrowUp", altKey: true, shiftKey: true }), true)).toStrictEqual({
     type: "previousToDo",
   });
-  assertEquals(
+  expect(
     shortcutFor(key({ key: "ArrowDown", ctrlKey: true, altKey: true, shiftKey: true }), true),
-    null,
-  );
-  assertEquals(
+  ).toBe(null);
+  expect(
     shortcutList(false).find((entry) => entry.description === "Next string to do")?.keys,
-    [["Alt", "Shift", "↓"]],
-  );
+  ).toStrictEqual([["Alt", "Shift", "↓"]]);
 });
 
 test("Ctrl+Shift+Enter puts the LLM suggestion in the input", () => {
-  assertEquals(shortcutFor(key({ key: "Enter", ctrlKey: true, shiftKey: true }), true, false), {
+  expect(
+    shortcutFor(key({ key: "Enter", ctrlKey: true, shiftKey: true }), true, false),
+  ).toStrictEqual({
     type: "takeLlmSuggestion",
   });
 });
 
 test("⌘+Shift+Enter puts the LLM suggestion in the input on a Mac", () => {
-  assertEquals(shortcutFor(key({ key: "Enter", metaKey: true, shiftKey: true }), true, true), {
+  expect(
+    shortcutFor(key({ key: "Enter", metaKey: true, shiftKey: true }), true, true),
+  ).toStrictEqual({
     type: "takeLlmSuggestion",
   });
 });

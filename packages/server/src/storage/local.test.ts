@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
+import { tmpdir } from "node:os";
 import * as fs from "node:fs/promises";
-import { test } from "node:test";
+import { assert, expect, test } from "vitest";
 import { DatabaseSync } from "node:sqlite";
-import { assert, assertEquals, assertRejects } from "@std/assert";
 import { join } from "node:path";
 import { silentLogger } from "@quaso/service";
 import { LockBusyError } from "./lock.ts";
@@ -10,7 +10,7 @@ import { DATABASE_FILE, openLocalStorage } from "./local.ts";
 import { listStoredBackups } from "../../../service/src/stored_backups.ts";
 
 async function withDataDir(fn: (dir: string) => Promise<void>): Promise<void> {
-  const dir = await Deno.makeTempDir();
+  const dir = await fs.mkdtemp(join(tmpdir(), "quaso-test-"));
   try {
     await fn(join(dir, "data"));
   } finally {
@@ -24,11 +24,13 @@ test("local storage: creates the folder and keeps a second server off", {}, () =
     try {
       assert((await fs.stat(join(dataDir, "store"))).isDirectory());
       assert((await fs.stat(join(dataDir, DATABASE_FILE))).isFile());
-      const error = await assertRejects(
-        () => openLocalStorage({ dataDir, log: silentLogger, lockTimeoutMs: 100 }),
-        LockBusyError,
-      );
-      assertEquals(error.message, `Another Quaso server is using ${dataDir}.`);
+      const error = await openLocalStorage({
+        dataDir,
+        log: silentLogger,
+        lockTimeoutMs: 100,
+      }).catch((error: unknown) => error);
+      assert(error instanceof LockBusyError);
+      expect(error.message).toStrictEqual(`Another Quaso server is using ${dataDir}.`);
     } finally {
       storage.close();
     }
@@ -50,19 +52,18 @@ test("local storage: a snapshot before migrating, and on demand", () =>
         (await storage.store.read("backups/pre-migration-v1-to-v2-20260924T031500Z.sqlite"))!,
       );
       const copy = new DatabaseSync(before);
-      assertEquals(
+      expect(
         copy
           .prepare("SELECT value FROM strings")
           .all()
           .map((r) => r.value),
-        ["Play"],
-      );
+      ).toStrictEqual(["Play"]);
       copy.close();
 
       time += 60_000;
-      assertEquals(await storage.snapshot(), "quaso-20260924T031600Z.sqlite");
-      assertEquals(storage.lastBackup()?.file, "quaso-20260924T031600Z.sqlite");
-      assertEquals((await listStoredBackups(storage.store)).length, 1);
+      expect(await storage.snapshot()).toBe("quaso-20260924T031600Z.sqlite");
+      expect(storage.lastBackup()?.file).toBe("quaso-20260924T031600Z.sqlite");
+      expect((await listStoredBackups(storage.store)).length).toBe(1);
     } finally {
       storage.close();
     }
@@ -80,7 +81,7 @@ test("local storage: closing checkpoints the write-ahead log", () =>
       (info) => info.size,
       () => 0,
     );
-    assertEquals(size, 0);
+    expect(size).toBe(0);
   }));
 
 test("local storage: the scheduler wakes up whoever the host names", () =>

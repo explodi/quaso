@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
+import { assert, expect, test } from "vitest";
 import * as fs from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
-import { assert, assertEquals } from "@std/assert";
 import ts from "typescript";
 
 const ROOT = fileURLToPath(new URL("./", import.meta.url));
@@ -14,10 +13,7 @@ test("the design-system source and assets are independent of its consumers", asy
     ...Object.keys(manifest.dependencies ?? {}),
     ...Object.keys(manifest.peerDependencies ?? {}),
   ]);
-  assertEquals(
-    [...dependencies].filter((name) => name.startsWith("@quaso/")),
-    [],
-  );
+  expect([...dependencies].filter((name) => name.startsWith("@quaso/"))).toStrictEqual([]);
   const files = await fs.readdir(new URL("src/", import.meta.url), { recursive: true });
   const failures: string[] = [];
   for (const name of files.filter(
@@ -64,5 +60,5 @@ test("the design-system source and assets are independent of its consumers", asy
       }
     }
   }
-  assertEquals(failures, []);
+  expect(failures).toStrictEqual([]);
 });

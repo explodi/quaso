@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
+import { assert, expect, test } from "vitest";
 import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { assert, assertEquals, assertRejects, assertStringIncludes } from "@std/assert";
 import { bundleStylesheet } from "./styles.ts";
 
 test("static site bundles public design-system CSS and all its self-hosted assets", async () => {
   const { css, assets } = await bundleStylesheet(new URL("./src/styles.css", import.meta.url));
   assert(!css.includes("@import"), "Published pages must not depend on package imports");
-  assertStringIncludes(css, "--font-display:");
-  assertStringIncludes(css, ".skip-link:focus");
-  assertStringIncludes(css, ".colour-label");
+  expect(css).toContain("--font-display:");
+  expect(css).toContain(".skip-link:focus");
+  expect(css).toContain(".colour-label");
   for (const name of [
     "jersey-10.ttf",
     "jersey-15.ttf",
@@ -24,13 +23,13 @@ test("static site bundles public design-system CSS and all its self-hosted asset
     const source = assets.get(name);
     assert(source, `${name} must be copied with the CSS`);
     assert((await stat(source)).size > 0);
-    assertStringIncludes(css, `url("./${name}")`);
+    expect(css).toContain(`url("./${name}")`);
   }
   for (const font of [10, 15, 20, 25]) {
     const license = new URL(
       import.meta.resolve(`@quaso/design-system/assets/Jersey-${font}-OFL.txt`),
     );
-    assertStringIncludes(await readFile(license, "utf8"), "SIL OPEN FONT LICENSE");
+    expect(await readFile(license, "utf8")).toContain("SIL OPEN FONT LICENSE");
   }
 });
 
@@ -51,17 +50,15 @@ test("CSS assets resolve from nested imports and remain relative under a hosting
       '.brand { background: url("./mascot.svg"); mask: url("data:image/svg+xml;base64,PHN2Zy8+"); }',
     );
     const { css, assets } = await bundleStylesheet(pathToFileURL(join(directory, "main.css")));
-    assertStringIncludes(css, 'url("./pixel%20font.ttf?v=1#face")');
-    assertStringIncludes(css, 'url("./mascot.svg")');
-    assertStringIncludes(css, 'url("data:image/svg+xml;base64,PHN2Zy8+")');
+    expect(css).toContain('url("./pixel%20font.ttf?v=1#face")');
+    expect(css).toContain('url("./mascot.svg")');
+    expect(css).toContain('url("data:image/svg+xml;base64,PHN2Zy8+")');
     assert(!css.includes("@import"));
-    assertEquals(
-      assets.get("pixel font.ttf")?.href,
+    expect(assets.get("pixel font.ttf")?.href).toStrictEqual(
       pathToFileURL(join(directory, "nested/pixel font.ttf")).href,
     );
     const mascotUrl = /background: url\("([^"]+)"\)/.exec(css)![1];
-    assertEquals(
-      new URL(mascotUrl, "https://example.test/quaso/assets/site.css").pathname,
+    expect(new URL(mascotUrl, "https://example.test/quaso/assets/site.css").pathname).toStrictEqual(
       "/quaso/assets/mascot.svg",
     );
   } finally {
@@ -81,9 +78,7 @@ test("CSS bundling rejects conflicting asset names instead of overwriting them",
       join(directory, "nested/type.css"),
       '.brand { background: url("./mascot.svg"); }',
     );
-    await assertRejects(
-      () => bundleStylesheet(pathToFileURL(join(directory, "main.css"))),
-      Error,
+    await expect(bundleStylesheet(pathToFileURL(join(directory, "main.css")))).rejects.toThrow(
       "CSS assets share the output filename mascot.svg",
     );
   } finally {

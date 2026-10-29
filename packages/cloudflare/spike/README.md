@@ -7,9 +7,9 @@ do not match any existing deployment. Store measurements in the ignored `.quaso/
 folder.
 
 Create the resources from `packages/cloudflare` with
-`deno run -A npm:wrangler d1 create <near-name> --location weur`,
-`deno run -A npm:wrangler d1 create <far-name> --location enam` and
-`deno run -A npm:wrangler r2 bucket create <bucket-name>`. Replace each name with one chosen for
+`npx wrangler d1 create <near-name> --location weur`,
+`npx wrangler d1 create <far-name> --location enam` and
+`npx wrangler r2 bucket create <bucket-name>`. Replace each name with one chosen for
 this test. Use the returned database IDs and the bucket name in an ignored Wrangler configuration
 with these bindings:
 
@@ -21,7 +21,7 @@ with these bindings:
 Set the Worker entry point to this folder's `worker.ts`, enable `workers_dev`, and use the
 `2026-09-01` compatibility date with `nodejs_compat`. Generate a random `TEST_KEY` in a private JSON
 secrets file. Deploy with
-`deno run -A npm:wrangler deploy --config <config-file> --secrets-file <secrets-file>`; never commit
+`npx wrangler deploy --config <config-file> --secrets-file <secrets-file>`; never commit
 that file.
 
 All requests require `Authorization: Bearer <TEST_KEY>`. Call these endpoints in order:
@@ -43,8 +43,8 @@ All requests require `Authorization: Bearer <TEST_KEY>`. Call these endpoints in
 From the repository root, check both programs:
 
 ```sh
-deno run -A npm:typescript/tsc --noEmit -p packages/cloudflare/spike/tsconfig.json
-deno check packages/cloudflare/spike/server.ts
+npx tsc --noEmit -p packages/cloudflare/spike/tsconfig.json
+npx tsc --noEmit --strict --module nodenext --types node packages/cloudflare/spike/server.ts
 ```
 
 After saving results, delete the container application, Worker, every object in the bucket, the
@@ -55,7 +55,7 @@ Keep the source and results so others can repeat the test.
 ## D1 batch contract
 
 This separate probe tests the service's grouped database writes against deployed D1. Run
-`deno run -A packages/cloudflare/scripts/batch_smoke.ts` from the repository root after signing in
+`node packages/cloudflare/scripts/batch_smoke.ts` from the repository root after signing in
 with Wrangler. This creates a uniquely named temporary Worker, controller, D1 database and container
 image; runs the shared batch cases from inside the container; saves
 `.quaso/beta-2-evidence/d1-contract.json`; and deletes its resources in a `finally` block. A cleanup

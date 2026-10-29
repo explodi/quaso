@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 import type { Fetch } from "@quaso/core";
-import { test } from "node:test";
-import { assert, assertEquals, assertInstanceOf, assertRejects } from "@std/assert";
+import { assert, expect, test } from "vitest";
 import {
   ApiError,
   apiUrl,
@@ -39,29 +38,27 @@ function fakeServer(respond: (call: Call) => Response | Promise<Response>): Call
 }
 
 test("query strings join arrays with commas and leave out empty values", () => {
-  assertEquals(
-    toQueryString({ language: "de", ids: [1, 2, 3], q: "", state: undefined }),
+  expect(toQueryString({ language: "de", ids: [1, 2, 3], q: "", state: undefined })).toStrictEqual(
     "?language=de&ids=1%2C2%2C3",
   );
-  assertEquals(toQueryString({ ids: [] }), "");
-  assertEquals(apiUrl("/strings", { language: "pt-BR" }), "/api/v1/strings?language=pt-BR");
+  expect(toQueryString({ ids: [] })).toBe("");
+  expect(apiUrl("/strings", { language: "pt-BR" })).toBe("/api/v1/strings?language=pt-BR");
 });
 
 test("requests send JSON with same-origin credentials", async () => {
   const calls = fakeServer(() => Response.json({ ok: true }));
   await saveTranslation(5, "pt-BR", { value: "Olá", baseRevision: 3 });
-  assertEquals(calls[0].url, "/api/v1/strings/5/translations/pt-BR");
-  assertEquals(calls[0].init.method, "PUT");
-  assertEquals(calls[0].init.credentials, "same-origin");
-  assertEquals(JSON.parse(String(calls[0].init.body)), { value: "Olá", baseRevision: 3 });
-  assertEquals(
-    (calls[0].init.headers as Record<string, string>)["Content-Type"],
+  expect(calls[0].url).toBe("/api/v1/strings/5/translations/pt-BR");
+  expect(calls[0].init.method).toBe("PUT");
+  expect(calls[0].init.credentials).toBe("same-origin");
+  expect(JSON.parse(String(calls[0].init.body))).toStrictEqual({ value: "Olá", baseRevision: 3 });
+  expect((calls[0].init.headers as Record<string, string>)["Content-Type"]).toStrictEqual(
     "application/json",
   );
 
   await listStrings({ language: "de", state: "green", q: "menu", limit: 50 });
-  assertEquals(calls[1].url, "/api/v1/strings?language=de&state=green&q=menu&limit=50");
-  assertEquals(calls[1].init.body, undefined);
+  expect(calls[1].url).toBe("/api/v1/strings?language=de&state=green&q=menu&limit=50");
+  expect(calls[1].init.body).toBe(undefined);
 });
 
 test("errors keep their code, details and the current translation", async () => {
@@ -83,14 +80,14 @@ test("errors keep their code, details and the current translation", async () => 
       },
     ),
   );
-  const error = await assertRejects(
-    () => saveTranslation(5, "de", { value: "Alt", baseRevision: 3 }),
-    ApiError,
+  const error = await saveTranslation(5, "de", { value: "Alt", baseRevision: 3 }).catch(
+    (error: unknown) => error,
   );
-  assertEquals(error.status, 409);
-  assertEquals(error.code, "conflict");
-  assertEquals(error.current?.value, "Neu");
-  assertEquals(error.missingEndpoint, false);
+  assert(error instanceof ApiError);
+  expect(error.status).toBe(409);
+  expect(error.code).toBe("conflict");
+  expect(error.current?.value).toBe("Neu");
+  expect(error.missingEndpoint).toBe(false);
 });
 
 test("an endpoint the server lacks is recognizable", () => {
@@ -99,21 +96,22 @@ test("an endpoint the server lacks is recognizable", () => {
     JSON.stringify({ error: { code: "not_found", message: "There is nothing at /api/v1/jobs." } }),
   );
   assert(missing.missingEndpoint);
-  assertEquals(errorMessage(missing), "This server doesn't support this yet.");
+  expect(errorMessage(missing)).toBe("This server doesn't support this yet.");
   const notFound = errorFromResponse(
     404,
     JSON.stringify({ error: { code: "not_found", message: "String 5 wasn't found." } }),
   );
-  assertEquals(notFound.missingEndpoint, false);
+  expect(notFound.missingEndpoint).toBe(false);
   const html = errorFromResponse(502, "<html>Bad gateway</html>");
-  assertEquals([html.code, html.status], ["unavailable", 502]);
+  expect([html.code, html.status]).toStrictEqual(["unavailable", 502]);
 });
 
 test("a network failure is an ApiError with status 0", async () => {
   configureApi({ fetch: (() => Promise.reject(new TypeError("Failed to fetch"))) as Fetch });
-  const error = await assertRejects(() => listStrings({ language: "de" }), ApiError);
-  assertEquals([error.status, error.code], [0, "unavailable"]);
-  assertInstanceOf(error, Error);
+  const error = await listStrings({ language: "de" }).catch((error: unknown) => error);
+  assert(error instanceof ApiError);
+  expect([error.status, error.code]).toStrictEqual([0, "unavailable"]);
+  assert(error instanceof Error);
 });
 
 test("GET /auth/session answering 404 means signed out, without accounts", async () => {
@@ -127,7 +125,7 @@ test("GET /auth/session answering 404 means signed out, without accounts", async
       },
     ),
   );
-  assertEquals(await getSession(), { info: SIGNED_OUT, accounts: false });
+  expect(await getSession()).toStrictEqual({ info: SIGNED_OUT, accounts: false });
 
   fakeServer(() =>
     Response.json({
@@ -139,22 +137,21 @@ test("GET /auth/session answering 404 means signed out, without accounts", async
     }),
   );
   const session = await getSession();
-  assertEquals(session.accounts, true);
-  assertEquals(session.info.setupRequired, true);
-  assertEquals(session.info.providers.github, true);
+  expect(session.accounts).toBe(true);
+  expect(session.info.setupRequired).toBe(true);
+  expect(session.info.providers.github).toBe(true);
 
   fakeServer(() => new Response("oops", { status: 500 }));
-  await assertRejects(() => getSession(), ApiError);
+  await expect(getSession()).rejects.toThrow(ApiError);
 });
 
 test("sign-in redirects go to the API's origin", () => {
   configureApi({ apiBase: "/api/v1" });
-  assertEquals(
-    browserAuthUrl("/auth/github", "/translate/de"),
+  expect(browserAuthUrl("/auth/github", "/translate/de")).toStrictEqual(
     "/auth/github?next=%2Ftranslate%2Fde",
   );
   configureApi({ apiBase: "https://api.example.com/api/v1" });
-  assertEquals(browserAuthUrl("/auth/dev-login"), "https://api.example.com/auth/dev-login");
+  expect(browserAuthUrl("/auth/dev-login")).toBe("https://api.example.com/auth/dev-login");
   configureApi({ apiBase: "/api/v1" });
 });
 
@@ -165,10 +162,13 @@ test("fresh reads bypass the browser's HTTP cache; others may use it", async () 
   await listStrings({ language: "ja", limit: 200 }, { fresh: true });
   await getProject({ fresh: false });
   await getSession({ fresh: true });
-  assertEquals(
-    calls.map((call) => call.init.cache),
-    [undefined, "no-cache", "no-cache", undefined, "no-cache"],
-  );
+  expect(calls.map((call) => call.init.cache)).toStrictEqual([
+    undefined,
+    "no-cache",
+    "no-cache",
+    undefined,
+    "no-cache",
+  ]);
 });
 
 test("errors without an error body get the status's code", () => {
@@ -184,10 +184,12 @@ test("errors without an error body get the status's code", () => {
   ];
   for (const [status, code] of cases) {
     const error = errorFromResponse(status, "<html>Proxy error</html>");
-    assertEquals([error.status, error.code], [status, code], String(status));
+    expect([error.status, error.code], String(status)).toStrictEqual([status, code]);
   }
-  assertEquals(errorMessage(errorFromResponse(401, "")), "You need to sign in to do that.");
-  assertEquals(errorMessage(errorFromResponse(403, "")), "You don't have permission to do that.");
+  expect(errorMessage(errorFromResponse(401, ""))).toBe("You need to sign in to do that.");
+  expect(errorMessage(errorFromResponse(403, ""))).toStrictEqual(
+    "You don't have permission to do that.",
+  );
 });
 
 test("a 401 outside sign-in tells the session module, which fetches the session again", async () => {
@@ -197,15 +199,15 @@ test("a 401 outside sign-in tells the session module, which fetches the session 
   fakeServer(unauthorized);
   configureApi({ onUnauthorized: (path) => told.push(path) });
   try {
-    await assertRejects(() => saveTranslation(5, "fr", { value: "Bonjour", baseRevision: 0 }));
+    await expect(saveTranslation(5, "fr", { value: "Bonjour", baseRevision: 0 })).rejects.toThrow();
     // A proxy's 401 without a body too.
     fakeServer(() => new Response("Unauthorized", { status: 401 }));
-    await assertRejects(() => getString(5, "fr"));
+    await expect(getString(5, "fr")).rejects.toThrow();
     // Not a wrong password, and not the session itself (it would ask again and again).
     fakeServer(unauthorized);
-    await assertRejects(() => getSession());
-    await assertRejects(() => signIn({ email: "a@example.com", password: "x" }));
-    assertEquals(told, ["/strings/5/translations/fr", "/strings/5"]);
+    await expect(getSession()).rejects.toThrow();
+    await expect(signIn({ email: "a@example.com", password: "x" })).rejects.toThrow();
+    expect(told).toStrictEqual(["/strings/5/translations/fr", "/strings/5"]);
   } finally {
     configureApi({ onUnauthorized: null });
   }

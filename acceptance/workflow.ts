@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
-/// <reference lib="dom" />
 /** The repository workflow through public HTTP, the built CLI and the real website. */
 import { mkdtemp, readFile, cp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
-import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import type { Browser, Page } from "puppeteer";
+import { assert, expect } from "vitest";
 import type { JobInfo, JobsResult, ProjectInfo, QuasoConfig, SourceFilesResult } from "@quaso/core";
 import type { DownloadResult } from "../packages/cli/src/commands/download.ts";
+import { bundled } from "../packages/cli/e2e/harness.ts";
 import { openTab, press, text, waitFor } from "../e2e/_setup.ts";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
@@ -74,7 +74,7 @@ export async function runWorkflow(options: WorkflowOptions): Promise<{ job: JobI
     );
     ownedPage = page;
     const initial = await api<ProjectInfo>(page, "/project");
-    assertEquals(initial.details.files, 0, "Use a dedicated empty workflow instance");
+    expect(initial.details.files, "Use a dedicated empty workflow instance").toBe(0);
     assert(initial.llmAvailable, "The workflow instance needs a deterministic LLM stub");
     const session = await api<{ setupRequired: boolean }>(page, "/auth/session");
     if (session.setupRequired) {
@@ -105,16 +105,14 @@ export async function runWorkflow(options: WorkflowOptions): Promise<{ job: JobI
       newKeys: { file: string; key: string }[];
       changedKey: { file: string; key: string };
     } = JSON.parse(await readFile(join(FIXTURE, "expected.json"), "utf8"));
+    const runCli = bundled(join(ROOT, "packages/cli/dist/quaso.mjs"));
     const cli = async <T>(...args: string[]): Promise<T> => {
-      const output = await new Deno.Command("node", {
-        args: [join(ROOT, "packages/cli/dist/quaso.mjs"), ...args, "--json"],
+      const output = await runCli([...args, "--json"], {
         cwd: workspace,
         env: { QUASO_HOSTNAME: url, QUASO_API_KEY: token.secret },
-        stdout: "piped",
-        stderr: "piped",
-      }).output();
-      assert(output.success, `CLI ${args.join(" ")}: ${new TextDecoder().decode(output.stderr)}`);
-      return JSON.parse(new TextDecoder().decode(output.stdout)).result as T;
+      });
+      assert(output.code === 0, `CLI ${args.join(" ")}: ${output.stderr}`);
+      return JSON.parse(output.stdout).result as T;
     };
     const source = async (file: string): Promise<Record<string, string>> =>
       JSON.parse(await readFile(join(workspace, "src/locales/en", file), "utf8"));
@@ -131,31 +129,29 @@ export async function runWorkflow(options: WorkflowOptions): Promise<{ job: JobI
     await cli("import", "--as", "blue", "--from", join(FIXTURE, "crowdin-approved"));
     await cli("import", "--as", "green", "--from", join(FIXTURE, "crowdin-full"));
     const imported = await api<ProjectInfo>(page, "/project");
-    assertEquals(
-      [imported.details.files, imported.details.strings, imported.details.words],
-      [5, 10, 20],
-    );
-    assertEquals(
-      imported.languages.map((language) => language.translatedPercent),
-      [100, 100, 100, 100, 100, 100, 100, 100, 100, 100],
-    );
-    assertEquals(
-      imported.languages.map((language) => language.blue),
-      [2, 10, 2, 2, 2, 2, 2, 2, 2, 2],
-    );
+    expect([
+      imported.details.files,
+      imported.details.strings,
+      imported.details.words,
+    ]).toStrictEqual([5, 10, 20]);
+    expect(imported.languages.map((language) => language.translatedPercent)).toStrictEqual([
+      100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
+    ]);
+    expect(imported.languages.map((language) => language.blue)).toStrictEqual([
+      2, 10, 2, 2, 2, 2, 2, 2, 2, 2,
+    ]);
     await until(async () => {
       await cli<DownloadResult>("download");
       return (await downloaded("es", "common.json")).start === "[es] Start journey";
     }, "baseline published downloads");
     await page.goto(url, { waitUntil: "networkidle0" });
     await waitFor(page, () => document.querySelectorAll(".language-row").length === 10);
-    assertEquals(
+    expect(
       await page.$$eval(
         ".language-row",
         (rows) => rows.filter((row) => row.textContent?.includes("100% translated")).length,
       ),
-      10,
-    );
+    ).toBe(10);
 
     options.step?.("2. Upload five new and one changed string");
     await cp(join(FIXTURE, "updated/src/locales/en"), join(workspace, "src/locales/en"), {
@@ -164,22 +160,18 @@ export async function runWorkflow(options: WorkflowOptions): Promise<{ job: JobI
     const upload = await cli<{ files: { path: string; added: number; changed: number }[] }>(
       "upload",
     );
-    assertEquals(
-      upload.files.map((file) => [file.path, file.added, file.changed]),
-      [
-        ["buildings.json", 1, 0],
-        ["common.json", 1, 0],
-        ["menu.json", 1, 1],
-        ["toolbox.json", 1, 0],
-        ["tutorial/steps.json", 1, 0],
-      ],
-    );
+    expect(upload.files.map((file) => [file.path, file.added, file.changed])).toStrictEqual([
+      ["buildings.json", 1, 0],
+      ["common.json", 1, 0],
+      ["menu.json", 1, 1],
+      ["toolbox.json", 1, 0],
+      ["tutorial/steps.json", 1, 0],
+    ]);
     const updated = await api<ProjectInfo>(page, "/project");
-    assertEquals([updated.details.strings, updated.details.words], [15, 31]);
-    assertEquals(
-      updated.languages.map((language) => language.wordsLeft),
-      [10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
-    );
+    expect([updated.details.strings, updated.details.words]).toStrictEqual([15, 31]);
+    expect(updated.languages.map((language) => language.wordsLeft)).toStrictEqual([
+      10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
+    ]);
     await waitFor(
       page,
       () => {
@@ -197,8 +189,7 @@ export async function runWorkflow(options: WorkflowOptions): Promise<{ job: JobI
     await waitFor(page, () => document.querySelectorAll(".tree-counts time").length === 5);
     assert(await page.$('[data-path="src/locales/en/tutorial/"]'));
     const sources = await api<SourceFilesResult>(page, "/files");
-    assertEquals(
-      sources.files.map((file) => file.repoPath),
+    expect(sources.files.map((file) => file.repoPath)).toStrictEqual(
       expected.files.map((file) => `src/locales/en/${file}`),
     );
 
@@ -208,16 +199,15 @@ export async function runWorkflow(options: WorkflowOptions): Promise<{ job: JobI
       firstDownload = await cli<DownloadResult>("download");
       return (await downloaded("es", "common.json")).reward === "Collect reward";
     }, "updated published downloads");
-    assertEquals(firstDownload.written.length, 50);
+    expect(firstDownload.written.length).toBe(50);
     for (const language of config.languages) {
       for (const entry of expected.newKeys)
-        assertEquals(
-          (await downloaded(language, entry.file))[entry.key],
+        expect((await downloaded(language, entry.file))[entry.key]).toStrictEqual(
           (await source(entry.file))[entry.key],
         );
     }
     const unchanged = await cli<DownloadResult>("download");
-    assertEquals([unchanged.written.length, unchanged.unchanged.length], [0, 50]);
+    expect([unchanged.written.length, unchanged.unchanged.length]).toStrictEqual([0, 50]);
 
     options.step?.("5. Translate Spanish in opening queue order");
     await page.goto(`${url}/translate/es`, { waitUntil: "networkidle0" });
@@ -231,7 +221,7 @@ export async function runWorkflow(options: WorkflowOptions): Promise<{ job: JobI
         (key: string) => document.querySelector(".panel-key code")?.textContent === key,
         [entry.key],
       );
-      assertStringIncludes(await text(page, ".panel-file"), entry.file);
+      expect(await text(page, ".panel-file")).toContain(entry.file);
       await page.focus("[data-translation-input]");
       await press(page, "a", ["Control"]);
       await page.keyboard.type(`[es] ${(await source(entry.file))[entry.key]}`);
@@ -252,7 +242,7 @@ export async function runWorkflow(options: WorkflowOptions): Promise<{ job: JobI
     const spanish = (await api<ProjectInfo>(page, "/project")).languages.find(
       (language) => language.tag === "es",
     )!;
-    assertEquals([spanish.translatedPercent, spanish.proofreadPercent], [100, 100]);
+    expect([spanish.translatedPercent, spanish.proofreadPercent]).toStrictEqual([100, 100]);
     await page.goto(`${url}/languages/es`, { waitUntil: "networkidle0" });
     await waitFor(page, () =>
       document.querySelector("main")?.textContent?.includes("100% translated • 100% proofread"),
@@ -267,16 +257,12 @@ export async function runWorkflow(options: WorkflowOptions): Promise<{ job: JobI
         (button) => button.textContent?.trim() === "Start translation" && !button.disabled,
       ),
     );
-    assertStringIncludes(
-      await text(page, ".reference-languages"),
-      "Spanish (proofread strings only)",
-    );
-    assertEquals(
+    expect(await text(page, ".reference-languages")).toContain("Spanish (proofread strings only)");
+    expect(
       await page.$eval('[role="tree"][aria-label="Files to translate"] [data-path=""]', (root) =>
         root.getAttribute("aria-checked"),
       ),
-      "true",
-    );
+    ).toBe("true");
     await click(page, "Start translation");
     await waitFor(page, () => document.querySelector("dialog[open]") === null);
     await page.goto(`${url}/translate/es`, { waitUntil: "networkidle0" });
@@ -293,37 +279,37 @@ export async function runWorkflow(options: WorkflowOptions): Promise<{ job: JobI
       90_000,
     );
     const job = await api<JobInfo>(page, `/jobs/${jobId}`);
-    assertEquals(
-      [job.status, job.progress.translated, job.progress.proposed, job.progress.failed],
-      ["done", 54, 0, 0],
-    );
+    expect([
+      job.status,
+      job.progress.translated,
+      job.progress.proposed,
+      job.progress.failed,
+    ]).toStrictEqual(["done", 54, 0, 0]);
 
     options.step?.("8. Every language shows 100% translated");
     await page.click('a.brand[href="/"]');
     await waitFor(page, () => document.querySelectorAll(".language-row").length === 10);
-    assertEquals(
+    expect(
       await page.$$eval(
         ".language-row",
         (rows) => rows.filter((row) => row.textContent?.includes("100% translated")).length,
       ),
-      10,
-    );
+    ).toBe(10);
     const final = await api<ProjectInfo>(page, "/project");
-    assertEquals(
+    expect(
       final.languages.map((language) => [language.translatedPercent, language.outdated]),
-      [
-        [100, 0],
-        [100, 0],
-        [100, 0],
-        [100, 0],
-        [100, 0],
-        [100, 0],
-        [100, 0],
-        [100, 0],
-        [100, 0],
-        [100, 0],
-      ],
-    );
+    ).toStrictEqual([
+      [100, 0],
+      [100, 0],
+      [100, 0],
+      [100, 0],
+      [100, 0],
+      [100, 0],
+      [100, 0],
+      [100, 0],
+      [100, 0],
+      [100, 0],
+    ]);
 
     options.step?.("9. Download translated new keys and verify repeat writes nothing");
     await until(async () => {
@@ -340,8 +326,8 @@ export async function runWorkflow(options: WorkflowOptions): Promise<{ job: JobI
       }
     }
     const repeated = await cli<DownloadResult>("download");
-    assertEquals([repeated.written.length, repeated.unchanged.length], [0, 50]);
-    assertEquals(problems, []);
+    expect([repeated.written.length, repeated.unchanged.length]).toStrictEqual([0, 50]);
+    expect(problems).toStrictEqual([]);
     return { job };
   } finally {
     try {

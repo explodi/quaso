@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals } from "@std/assert";
+import { expect, test } from "vitest";
 import type { Progress, TranslationInfo } from "@quaso/core";
 import { colourOf, filterCount, flagsOf, isCompleted, stateSentence } from "./states.ts";
 
@@ -17,22 +16,21 @@ const translation = (patch: Partial<TranslationInfo> = {}): TranslationInfo => (
 });
 
 test("colours and flags", () => {
-  assertEquals(colourOf(null), "red");
-  assertEquals(colourOf(translation()), "green");
-  assertEquals(colourOf(translation({ colour: "blue" })), "blue");
-  assertEquals(flagsOf({ translation: translation({ outdated: true }), pending: 2 }), {
+  expect(colourOf(null)).toBe("red");
+  expect(colourOf(translation())).toBe("green");
+  expect(colourOf(translation({ colour: "blue" }))).toBe("blue");
+  expect(flagsOf({ translation: translation({ outdated: true }), pending: 2 })).toStrictEqual({
     outdated: true,
     pending: 2,
     qa: false,
   });
-  assertEquals(
+  expect(
     stateSentence({
       translation: translation({ outdated: true, qa: { errors: 1, warnings: 0 } }),
       pending: 1,
     }),
-    "Translated, outdated, 1 pending, QA problems",
-  );
-  assertEquals(stateSentence({ translation: null, pending: 0 }), "Untranslated");
+  ).toBe("Translated, outdated, 1 pending, QA problems");
+  expect(stateSentence({ translation: null, pending: 0 })).toBe("Untranslated");
 });
 
 const progress = (patch: Partial<Progress> = {}): Progress => ({
@@ -51,11 +49,11 @@ const progress = (patch: Partial<Progress> = {}): Progress => ({
 });
 
 test("completed means translated, up to date and without QA problems", () => {
-  assertEquals(isCompleted(progress()), true);
-  assertEquals(isCompleted(progress({ untranslated: 1 })), false);
-  assertEquals(isCompleted(progress({ outdated: 1 })), false);
-  assertEquals(isCompleted(progress({ qa: 1 })), false);
-  assertEquals(isCompleted(progress({ strings: 0 })), false);
-  assertEquals(filterCount(progress(), "blue"), 6);
-  assertEquals(filterCount(progress(), "pending"), 1);
+  expect(isCompleted(progress())).toBe(true);
+  expect(isCompleted(progress({ untranslated: 1 }))).toBe(false);
+  expect(isCompleted(progress({ outdated: 1 }))).toBe(false);
+  expect(isCompleted(progress({ qa: 1 }))).toBe(false);
+  expect(isCompleted(progress({ strings: 0 }))).toBe(false);
+  expect(filterCount(progress(), "blue")).toBe(6);
+  expect(filterCount(progress(), "pending")).toBe(1);
 });

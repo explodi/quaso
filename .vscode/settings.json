@@ -1,17 +1,5 @@
 {
-  "deno.enable": true,
-  "deno.enablePaths": [
-    "packages/core",
-    "packages/service",
-    "packages/server",
-    "packages/cli",
-    "packages/web",
-    "scripts",
-    "site",
-    "e2e",
-    "acceptance",
-    "packages/cloudflare/scripts"
-  ],
+  "typescript.tsdk": "node_modules/typescript/lib",
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.formatOnSave": true
 }

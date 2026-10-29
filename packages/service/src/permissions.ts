@@ -113,10 +113,12 @@ type PermissionToken = {
 
 /** Permission decisions use the identity rows captured by the operation's snapshot. */
 export class Permissions {
-  constructor(
-    readonly actor: Actor,
-    private readonly state: { user?: PermissionUser; token?: PermissionToken } = {},
-  ) {}
+  readonly actor: Actor;
+  private readonly state: { user?: PermissionUser; token?: PermissionToken };
+  constructor(actor: Actor, state: { user?: PermissionUser; token?: PermissionToken } = {}) {
+    this.actor = actor;
+    this.state = state;
+  }
 
   can(action: Action, language?: string): boolean {
     const actor = this.actor;

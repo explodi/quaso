@@ -3,10 +3,9 @@
  * `quaso convert-to-icu` against the real server and service: the instance and the source
  * files convert alike, so an upload afterwards changes nothing and a download writes ICU.
  */
-import { test } from "node:test";
+import { expect, test } from "vitest";
 import * as fs from "node:fs/promises";
 import { join } from "node:path";
-import { assertEquals, assertStringIncludes } from "@std/assert";
 import { type Service, SYSTEM, silentLogger } from "@quaso/service";
 import { createMemoryStore } from "../../service/src/adapters/memory_store.ts";
 import { openAsyncSqlite } from "../../service/src/adapters/node_async_sqlite.ts";
@@ -109,7 +108,7 @@ async function withInstance(
 
 test("convert-to-icu: the files convert as the instance does, so upload changes nothing and download writes ICU", async () => {
   await withInstance(PROJECT, async ({ service, cli, read }) => {
-    assertEquals((await cli(["upload"])).code, 0);
+    expect((await cli(["upload"])).code).toBe(0);
     await service.importTranslations(SYSTEM, {
       language: "de",
       as: "blue",
@@ -117,24 +116,22 @@ test("convert-to-icu: the files convert as the instance does, so upload changes 
     });
 
     const converted = await cli(["convert-to-icu"]);
-    assertEquals(converted.code, 0, converted.stderr);
-    assertStringIncludes(converted.stdout, "Converted to ICU MessageFormat");
-    assertEquals(await read("src/locales/en/common.json"), CONVERTED);
-    assertEquals(await read("docs/en/news.md"), CONVERTED_NEWS);
+    expect(converted.code, converted.stderr).toBe(0);
+    expect(converted.stdout).toContain("Converted to ICU MessageFormat");
+    expect(await read("src/locales/en/common.json")).toStrictEqual(CONVERTED);
+    expect(await read("docs/en/news.md")).toStrictEqual(CONVERTED_NEWS);
 
     const upload = await cli(["upload", "--dry-run", "--json"]);
     const compared = JSON.parse(upload.stdout).result;
-    assertEquals(
+    expect(
       compared.files.map((file: { path: string; status: string }) => [file.path, file.status]),
-      [
-        ["common.json", "unchanged"],
-        ["news.md", "unchanged"],
-      ],
-    );
+    ).toStrictEqual([
+      ["common.json", "unchanged"],
+      ["news.md", "unchanged"],
+    ]);
 
-    assertEquals((await cli(["download"])).code, 0);
-    assertEquals(
-      await read("src/locales/de/common.json"),
+    expect((await cli(["download"])).code).toBe(0);
+    expect(await read("src/locales/de/common.json")).toStrictEqual(
       [
         "{",
         '  "greeting": "Hallo {name}",',
@@ -147,52 +144,58 @@ test("convert-to-icu: the files convert as the instance does, so upload changes 
     );
 
     const again = await cli(["convert-to-icu"]);
-    assertEquals(again.code, 0);
-    assertStringIncludes(again.stdout, "Nothing to do");
+    expect(again.code).toBe(0);
+    expect(again.stdout).toContain("Nothing to do");
   });
 });
 
 test("convert-to-icu: the files the instance publishes are ICU after its next publication", async () => {
   await withInstance(PROJECT, async ({ service, app, cli, later }) => {
-    assertEquals((await cli(["upload"])).code, 0);
+    expect((await cli(["upload"])).code).toBe(0);
     await service.importTranslations(SYSTEM, {
       language: "de",
       as: "blue",
       files: [{ path: "common.json", content: JSON.stringify(GERMAN) }],
     });
     await later();
-    assertEquals((await cli(["convert-to-icu"])).code, 0);
+    expect((await cli(["convert-to-icu"])).code).toBe(0);
     await later();
     const published = await call(app, "/files/de/common.json");
-    assertEquals(JSON.parse(await published.text()).greeting, "Hallo {name}");
+    expect(JSON.parse(await published.text()).greeting).toBe("Hallo {name}");
   });
 });
 
 test("convert-to-icu converts the files of a project the instance converted before", async () => {
   await withInstance(PROJECT, async ({ service, cli, read }) => {
-    assertEquals((await cli(["upload"])).code, 0);
+    expect((await cli(["upload"])).code).toBe(0);
     await service.convertToIcu(SYSTEM, {});
     const finished = await cli(["convert-to-icu"]);
-    assertEquals(finished.code, 0, finished.stderr);
-    assertStringIncludes(finished.stdout, "Converted the source files to match the instance");
-    assertEquals(await read("src/locales/en/common.json"), CONVERTED);
-    assertEquals(await read("docs/en/news.md"), CONVERTED_NEWS);
+    expect(finished.code, finished.stderr).toBe(0);
+    expect(finished.stdout).toContain("Converted the source files to match the instance");
+    expect(await read("src/locales/en/common.json")).toStrictEqual(CONVERTED);
+    expect(await read("docs/en/news.md")).toStrictEqual(CONVERTED_NEWS);
   });
 });
 
 test("convert-to-icu --dry-run reports both sides and writes nothing", async () => {
   await withInstance(PROJECT, async ({ service, cli, read }) => {
-    assertEquals((await cli(["upload"])).code, 0);
+    expect((await cli(["upload"])).code).toBe(0);
     const preview = await cli(["convert-to-icu", "--dry-run", "--json"]);
-    assertEquals(preview.code, 0, preview.stderr);
+    expect(preview.code, preview.stderr).toBe(0);
     const report = JSON.parse(preview.stdout).result;
-    assertEquals([report.dryRun, report.converted, report.instance.strings], [true, false, 4]);
-    assertEquals(report.files, [
+    expect([report.dryRun, report.converted, report.instance.strings]).toStrictEqual([
+      true,
+      false,
+      4,
+    ]);
+    expect(report.files).toStrictEqual([
       { file: "src/locales/en/common.json", changed: true, merged: ["coins"], escapes: 2 },
       { file: "docs/en/news.md", changed: true, merged: [], escapes: 2 },
     ]);
-    assertEquals(await read("src/locales/en/common.json"), `${JSON.stringify(ENGLISH, null, 2)}\n`);
-    assertEquals((await service.getProject(SYSTEM, {})).syntax.icu, false);
+    expect(await read("src/locales/en/common.json")).toStrictEqual(
+      `${JSON.stringify(ENGLISH, null, 2)}\n`,
+    );
+    expect((await service.getProject(SYSTEM, {})).syntax.icu).toBe(false);
   });
 });
 
@@ -202,40 +205,35 @@ test("convert-to-icu refuses texts ICU can't say, and changes nothing", async ()
     "src/locales/en/common.json": { ...ENGLISH, title: "$t(back) and {{price, number}}" },
   };
   await withInstance(files, async ({ service, cli, read }) => {
-    assertEquals((await cli(["upload"])).code, 0);
+    expect((await cli(["upload"])).code).toBe(0);
     const refused = await cli(["convert-to-icu"]);
-    assertEquals(refused.code, 6);
-    assertStringIncludes(
-      refused.stdout,
-      "src/locales/en/common.json › title: $t(back) is an i18next",
-    );
-    assertStringIncludes(refused.stdout, "Nothing was converted.");
-    assertEquals(
-      await read("src/locales/en/common.json"),
+    expect(refused.code).toBe(6);
+    expect(refused.stdout).toContain("src/locales/en/common.json › title: $t(back) is an i18next");
+    expect(refused.stdout).toContain("Nothing was converted.");
+    expect(await read("src/locales/en/common.json")).toStrictEqual(
       `${JSON.stringify(files["src/locales/en/common.json"], null, 2)}\n`,
     );
-    assertEquals((await service.getProject(SYSTEM, {})).syntax.icu, false);
+    expect((await service.getProject(SYSTEM, {})).syntax.icu).toBe(false);
   });
 });
 
 test("convert-to-icu refuses source files that differ from the instance's", async () => {
   await withInstance(PROJECT, async ({ dir, cli }) => {
-    assertEquals((await cli(["upload"])).code, 0);
+    expect((await cli(["upload"])).code).toBe(0);
     await fs.writeFile(join(dir, "src/locales/en/common.json"), '{"greeting": "Hi {{name}}"}');
     const refused = await cli(["convert-to-icu"]);
-    assertEquals(refused.code, 2);
-    assertStringIncludes(refused.stderr, "The source files differ from the instance's.");
+    expect(refused.code).toBe(2);
+    expect(refused.stderr).toContain("The source files differ from the instance's.");
   });
 });
 
 test("convert-to-icu with a read key says which key it needs", async () => {
   await withInstance(PROJECT, async ({ service, cli }) => {
-    assertEquals((await cli(["upload"])).code, 0);
+    expect((await cli(["upload"])).code).toBe(0);
     const read = await service.createApiToken(SYSTEM, { name: "Reader", scope: "read" });
     const refused = await cli(["convert-to-icu"], read.secret);
-    assertEquals(refused.code, 3);
-    assertStringIncludes(
-      refused.stderr,
+    expect(refused.code).toBe(3);
+    expect(refused.stderr).toContain(
       "an API key with the upload scope that an administrator created",
     );
   });

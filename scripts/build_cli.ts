@@ -1,17 +1,18 @@
 // SPDX-License-Identifier: MIT
 import * as fs from "node:fs/promises";
 /**
- * `deno task build:cli` (design §5.10, S4.1, S4.10): bundles the CLI into one JavaScript
- * file for npm, `packages/cli/dist/quaso.mjs`, that runs on Node ≥ 22 and Deno ≥ 2.9, and
+ * `npm run build:cli` (design §5.10, S4.1, S4.10): bundles the CLI with rolldown into one
+ * JavaScript file for npm, `packages/cli/dist/quaso.mjs`, that runs on Node ≥ 22, and
  * writes the npm package around it (`package.json`, `README.md`, `LICENSE`).
  *
- * The build fails if the bundle could start a process (`child_process`, `Deno.Command`,
- * `Deno.run`, `spawn(`) or imports anything but `node:` built-ins. The package's version is
+ * The build fails if the bundle could start a process (`child_process`, `spawn(`) or
+ * imports anything but `node:` built-ins. The package's version is
  * the repository's, from the root package.json.
  */
 import { fileURLToPath as fromFileUrl } from "node:url";
 import { dirname, join } from "node:path";
 import { createRequire } from "node:module";
+import { build } from "rolldown";
 
 const ROOT = fromFileUrl(new URL("..", import.meta.url));
 const CLI = join(ROOT, "packages", "cli");
@@ -20,7 +21,7 @@ const DIST = join(CLI, "dist");
 const BUNDLE = "quaso.mjs";
 
 /** What the bundle must never contain (CLI-5): code that starts processes. */
-export const FORBIDDEN = ["child_process", "Deno.Command", "Deno.run", "spawn("];
+export const FORBIDDEN = ["child_process", "spawn("];
 
 /** The first lines of the bundle: the shebang for npm's `bin`, then the licence. */
 export const HEADER = "#!/usr/bin/env node\n// SPDX-License-Identifier: MIT\n";
@@ -38,7 +39,6 @@ export function checkBundle(code: string): string[] {
     const specifier = match[1] ?? match[2] ?? match[3] ?? match[4];
     if (!specifier.startsWith("node:")) problems.push(`imports "${specifier}"`);
   }
-  if (/\bDeno\.[A-Za-z]/.test(code)) problems.push("uses the Deno namespace");
   return problems;
 }
 
@@ -76,14 +76,18 @@ export function packageJson(
  * found (the file is removed when there are any).
  */
 export async function bundleCli(output: string): Promise<string[]> {
-  const { code, stderr } = await new Deno.Command(Deno.execPath(), {
-    // The "deno" platform leaves `node:` imports as they are, which Node runs too.
-    args: ["bundle", "--platform=deno", "--output", output, ENTRY],
-    cwd: ROOT,
-    stdout: "inherit",
-    stderr: "piped",
-  }).output();
-  if (code !== 0) return [`deno bundle failed:\n${new TextDecoder().decode(stderr)}`];
+  try {
+    // The "node" platform leaves `node:` imports as they are and bundles everything else.
+    await build({
+      input: ENTRY,
+      cwd: ROOT,
+      platform: "node",
+      logLevel: "warn",
+      output: { file: output, format: "esm" },
+    });
+  } catch (error) {
+    return [`rolldown failed:\n${error instanceof Error ? error.message : String(error)}`];
+  }
   let text = await fs.readFile(output, "utf8");
   if (text.startsWith("#!")) text = text.slice(text.indexOf("\n") + 1);
   const problems = checkBundle(text);

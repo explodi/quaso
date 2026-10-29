@@ -24,10 +24,10 @@ This reference describes the current `main` branch. The examples install the `ma
 For a tagged release, use its matching CLI package and documentation; older releases can lack
 options described here.
 
-The CLI runs on Node 22 or later and on Deno 2.9 or later. The published package contains one JavaScript file with no
+The CLI runs on Node 22 or later. The published package contains one JavaScript file with no
 separate runtime dependencies.
 
-**With npm**, install it in your game and commit the package lockfile so the team and CI use the
+Install it in your game and commit the package lockfile so the team and CI use the
 same version:
 
 ```sh
@@ -37,21 +37,10 @@ npx quaso status
 
 Or run a version without installing it: `npx @quaso-i18n/cli@main status`.
 
-**With Deno**, run it from npm:
-
-```sh
-deno run -A npm:@quaso-i18n/cli@main status
-```
-
-To install a global `quaso` command, run `deno install --global -A --name quaso npm:@quaso-i18n/cli@main`.
-
 Successful main builds publish a version ending in `main.g<commit>` under the npm tag `main`.
 The separator is `.` after a version such as `1.0.0-rc.2`, or `-` after a version such as `1.0.0`.
 Use the package version for the commit your instance runs. Because `main` moves, keep the package
 lockfile and use `npm ci` for later installs.
-
-Deno can hold back npm packages published in the last day. To install a newly published package
-in a Deno project, use `deno install --min-dep-age 0`.
 
 ## Connecting to your instance
 

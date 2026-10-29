@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
+import { serve } from "../../server/src/http/serve.ts";
 import { createD1Sql } from "../../service/src/adapters/d1_sql.ts";
 import { resetUploadSql, UPLOAD_CASES } from "../../service/src/testing/upload_cases.ts";
 import { measureUploads } from "../../service/src/testing/upload_measurements.ts";
 
-Deno.serve({ port: 8000 }, async (request) => {
+await serve({ port: 8000 }, async (request) => {
   if (new URL(request.url).pathname === "/container-ready") return Response.json({ ready: true });
   if (new URL(request.url).pathname !== "/upload") return new Response(null, { status: 404 });
   const sql = createD1Sql();

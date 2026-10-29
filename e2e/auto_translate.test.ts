@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
-/// <reference lib="dom" />
+import { assert, expect } from "vitest";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import type { CreateJobResult, JobInfo, JobsResult } from "@quaso/core";
 import { ANONYMOUS, createFakeTranslator, SYSTEM, type Service } from "@quaso/service";
 import type { Page } from "puppeteer";
@@ -89,62 +88,57 @@ browserTest(
     await page.goto(server.url, { waitUntil: "networkidle0" });
     await clickButton(page, "Auto-translate");
     await ready(page);
-    assertStringIncludes(
-      await text(page, ".reference-languages"),
-      "French (proofread strings only)",
-    );
-    assertEquals(
-      await page.$eval(".reference-languages a", (link) => link.getAttribute("href")),
+    expect(await text(page, ".reference-languages")).toContain("French (proofread strings only)");
+    expect(await page.$eval(".reference-languages a", (link) => link.getAttribute("href"))).toBe(
       "/settings?section=llm#reference-languages",
     );
-    assertStringIncludes(await text(page, ".estimate-languages"), "German: 3 strings · 7 words");
-    assertStringIncludes(await text(page, ".estimate-languages"), "French: 3 strings · 7 words");
+    expect(await text(page, ".estimate-languages")).toContain("German: 3 strings · 7 words");
+    expect(await text(page, ".estimate-languages")).toContain("French: 3 strings · 7 words");
     const root = '[role="tree"][aria-label="Files to translate"] [data-path=""]';
     await page.focus(root);
     await press(page, " ");
-    assertEquals(await page.$eval(root, (node) => node.getAttribute("aria-checked")), "false");
+    expect(await page.$eval(root, (node) => node.getAttribute("aria-checked"))).toStrictEqual(
+      "false",
+    );
     await press(page, "ArrowDown");
     await waitFor(page, () => document.activeElement?.getAttribute("data-path") === "src/");
-    assertEquals(
-      await page.evaluate(() => document.activeElement?.getAttribute("data-path")),
+    expect(await page.evaluate(() => document.activeElement?.getAttribute("data-path"))).toBe(
       "src/",
     );
     await press(page, "ArrowLeft");
     await waitFor(page, () => document.activeElement?.getAttribute("aria-expanded") === "false");
-    assertEquals(
-      await page.evaluate(() => document.activeElement?.getAttribute("aria-expanded")),
+    expect(await page.evaluate(() => document.activeElement?.getAttribute("aria-expanded"))).toBe(
       "false",
     );
     await press(page, "ArrowLeft");
     await waitFor(page, () => document.activeElement?.getAttribute("data-path") === "");
-    assertEquals(await page.evaluate(() => document.activeElement?.getAttribute("data-path")), "");
+    expect(await page.evaluate(() => document.activeElement?.getAttribute("data-path"))).toBe("");
     await press(page, "ArrowRight");
     await waitFor(page, () => document.activeElement?.getAttribute("data-path") === "src/");
     await press(page, "ArrowRight");
     await waitFor(page, () => document.activeElement?.getAttribute("aria-expanded") === "true");
     await page.focus('[data-path="src/locales/en/menus/"]');
     await press(page, " ");
-    assertEquals(
+    expect(
       await page.$eval('[data-path="src/locales/en/menus/"]', (node) =>
         node.getAttribute("aria-checked"),
       ),
-      "true",
-    );
+    ).toBe("true");
     await press(page, "End");
     await waitFor(page, () => document.activeElement?.getAttribute("data-path") === "common.json");
-    assertEquals(
-      await page.evaluate(() => document.activeElement?.getAttribute("data-path")),
+    expect(await page.evaluate(() => document.activeElement?.getAttribute("data-path"))).toBe(
       "common.json",
     );
     await page.focus('[data-path="menus/quit.json"]');
     await press(page, " ");
-    assertEquals(
+    expect(
       await page.$eval('[data-path="src/locales/en/menus/"]', (node) =>
         node.getAttribute("aria-checked"),
       ),
+    ).toBe("mixed");
+    expect(await page.$eval(root, (node) => node.getAttribute("aria-checked"))).toStrictEqual(
       "mixed",
     );
-    assertEquals(await page.$eval(root, (node) => node.getAttribute("aria-checked")), "mixed");
     await ready(page);
     const dry = await server.api<CreateJobResult>("/jobs", {
       method: "POST",
@@ -155,17 +149,14 @@ browserTest(
         outdated: true,
       }),
     });
-    assertEquals(dry.estimate?.files, [{ file: "menus/play.json", strings: 2, words: 4 }]);
-    assertEquals(
-      await text(page, '[data-path="menus/play.json"] > .tree-row .tree-stats'),
+    expect(dry.estimate?.files).toStrictEqual([{ file: "menus/play.json", strings: 2, words: 4 }]);
+    expect(await text(page, '[data-path="menus/play.json"] > .tree-row .tree-stats')).toStrictEqual(
       "4 words to translate",
     );
-    assertEquals(
-      await text(page, '[data-path="src/locales/en/menus/"] > .tree-row .tree-stats'),
+    expect(await text(page, '[data-path="src/locales/en/menus/"] > .tree-row .tree-stats')).toBe(
       "4 words to translate",
     );
-    assertEquals(
-      await text(page, '[data-path="menus/quit.json"] > .tree-row .tree-stats'),
+    expect(await text(page, '[data-path="menus/quit.json"] > .tree-row .tree-stats')).toStrictEqual(
       "0 words to translate",
     );
     const cdp = await page.createCDPSession();
@@ -191,9 +182,9 @@ browserTest(
         response.json(),
       )) as JobInfo;
     });
-    assertEquals(job.scope.files, ["menus/play.json"]);
-    assertEquals(job.progress.total, 2);
-    assertEquals(problems, []);
+    expect(job.scope.files).toStrictEqual(["menus/play.json"]);
+    expect(job.progress.total).toBe(2);
+    expect(problems).toStrictEqual([]);
   },
 );
 
@@ -210,10 +201,9 @@ browserTest(
     await page.goto(`${server.url}/languages/fr`, { waitUntil: "networkidle0" });
     await clickButton(page, "Auto-translate");
     await ready(page);
-    assertStringIncludes(await text(page, ".reference-languages"), "No reference languages.");
-    assertEquals(await text(page, ".estimate-languages"), "French: 3 strings · 7 words");
-    assertEquals(
-      await page.$eval('[data-path=""]', (node) => node.getAttribute("aria-checked")),
+    expect(await text(page, ".reference-languages")).toContain("No reference languages.");
+    expect(await text(page, ".estimate-languages")).toBe("French: 3 strings · 7 words");
+    expect(await page.$eval('[data-path=""]', (node) => node.getAttribute("aria-checked"))).toBe(
       "true",
     );
     await press(page, "Escape");
@@ -222,30 +212,27 @@ browserTest(
     });
     await clickButton(page, "Auto-translate");
     await ready(page);
-    assertEquals(
+    expect(
       await page.$eval('dialog[open] [data-path="menus/play.json"]', (node) =>
         node.getAttribute("aria-checked"),
       ),
-      "true",
-    );
-    assertEquals(
+    ).toBe("true");
+    expect(
       await page.$eval('dialog[open] [data-path="menus/quit.json"]', (node) =>
         node.getAttribute("aria-checked"),
       ),
-      "false",
-    );
-    assertEquals(await text(page, ".estimate-languages"), "French: 1 string · 2 words");
+    ).toBe("false");
+    expect(await text(page, ".estimate-languages")).toBe("French: 1 string · 2 words");
     await press(page, "Escape");
     await page.goto(`${server.url}/translate/fr?file=menus/`, { waitUntil: "networkidle0" });
     await clickButton(page, "Auto-translate");
     await ready(page);
-    assertEquals(
+    expect(
       await page.$eval('dialog[open] [data-path="src/locales/en/menus/"]', (node) =>
         node.getAttribute("aria-checked"),
       ),
-      "true",
-    );
-    assertEquals(await text(page, ".estimate-languages"), "French: 2 strings · 5 words");
+    ).toBe("true");
+    expect(await text(page, ".estimate-languages")).toBe("French: 2 strings · 5 words");
     await page.click(".reference-languages a");
     await waitFor(
       page,
@@ -253,10 +240,9 @@ browserTest(
         location.pathname === "/settings" &&
         document.querySelector("#reference-languages") !== null,
     );
-    assertEquals(
-      await page.$eval("main select", (select) => (select as HTMLSelectElement).value),
+    expect(await page.$eval("main select", (select) => (select as HTMLSelectElement).value)).toBe(
       "llm",
     );
-    assertEquals(problems, []);
+    expect(problems).toStrictEqual([]);
   },
 );

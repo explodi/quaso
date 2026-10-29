@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 /** Markdown documents through the CLI: uploaded, downloaded and deleted as whole files. */
 import * as fs from "node:fs/promises";
-import { test } from "node:test";
-import { assert, assertEquals, assertStringIncludes } from "@std/assert";
+import { assert, expect, test } from "vitest";
 import { join } from "node:path";
 import { type ExportFile, type ExportResult, sha256Hex } from "@quaso/core";
 import { DownloadState } from "../download_state.ts";
@@ -52,13 +51,10 @@ const exists = (dir: string, path: string) =>
 test("Markdown files are source files, known to the instance below their glob's folder", async () => {
   await withProject(PROJECT, async (dir) => {
     const sources = await collectSources(await loadProject(dir));
-    assertEquals(
-      sources.files.map((source) => [source.server, source.local]),
-      [
-        ["common.json", "src/locales/en/common.json"],
-        ["news/city_founded.md", "text/en/news/city_founded.md"],
-      ],
-    );
+    expect(sources.files.map((source) => [source.server, source.local])).toStrictEqual([
+      ["common.json", "src/locales/en/common.json"],
+      ["news/city_founded.md", "text/en/news/city_founded.md"],
+    ]);
   });
 });
 
@@ -83,9 +79,9 @@ test("upload sends a document's text as it is, without looking for a description
       }),
     );
     const run = await runCli(["upload"], { cwd: dir, env: ENV, fetch });
-    assertEquals(run.code, 0, run.stderr);
+    expect(run.code, run.stderr).toBe(0);
     const request = await fetch.requests[0].json();
-    assertEquals(request.files, [
+    expect(request.files).toStrictEqual([
       {
         path: "common.json",
         repoPath: "src/locales/en/common.json",
@@ -103,11 +99,11 @@ test("download writes a document where the translation pattern says, and leaves 
       file("news/city_founded.md", "de", GERMAN),
     ]);
     const first = await runCli(["download"], { cwd: dir, env: ENV, fetch });
-    assertEquals(first.code, 0, first.stderr);
-    assertEquals(await read(dir, "text/de/news/city_founded.md"), GERMAN);
-    assertStringIncludes(first.stdout, "created      text/de/news/city_founded.md");
+    expect(first.code, first.stderr).toBe(0);
+    expect(await read(dir, "text/de/news/city_founded.md")).toStrictEqual(GERMAN);
+    expect(first.stdout).toContain("created      text/de/news/city_founded.md");
     const second = await runCli(["download"], { cwd: dir, env: ENV, fetch });
-    assertStringIncludes(second.stdout, "Everything is up to date (2 files).");
+    expect(second.stdout).toContain("Everything is up to date (2 files).");
   });
 });
 
@@ -115,19 +111,19 @@ test("download deletes a document the instance has nothing for, and reports it",
   await withProject(PROJECT, async (dir) => {
     const translated = server([file("news/city_founded.md", "de", GERMAN)]);
     const first = await runCli(["download"], { cwd: dir, env: ENV, fetch: translated });
-    assertEquals(first.code, 0, first.stderr);
+    expect(first.code, first.stderr).toBe(0);
     const fetch = server([file("news/city_founded.md", "de", "")]);
     const dry = await runCli(["download", "--dry-run"], { cwd: dir, env: ENV, fetch });
-    assertStringIncludes(dry.stdout, "would delete text/de/news/city_founded.md");
-    assertEquals(await exists(dir, "text/de/news/city_founded.md"), true);
+    expect(dry.stdout).toContain("would delete text/de/news/city_founded.md");
+    expect(await exists(dir, "text/de/news/city_founded.md")).toBe(true);
     const run = await runCli(["download", "--json"], { cwd: dir, env: ENV, fetch });
-    assertEquals(run.code, 0, run.stderr);
-    assertEquals(JSON.parse(run.stdout).result.removed, [
+    expect(run.code, run.stderr).toBe(0);
+    expect(JSON.parse(run.stdout).result.removed).toStrictEqual([
       { path: "text/de/news/city_founded.md", file: "news/city_founded.md", language: "de" },
     ]);
-    assertEquals(await exists(dir, "text/de/news/city_founded.md"), false);
+    expect(await exists(dir, "text/de/news/city_founded.md")).toBe(false);
     const again = await runCli(["download"], { cwd: dir, env: ENV, fetch });
-    assertStringIncludes(again.stdout, "Everything is up to date (1 file).");
+    expect(again.stdout).toContain("Everything is up to date (1 file).");
   });
 });
 
@@ -135,24 +131,24 @@ test("download keeps a document edited in the repository, even when the instance
   await withProject(PROJECT, async (dir) => {
     const fetch = server([file("news/city_founded.md", "de", GERMAN)]);
     const first = await runCli(["download"], { cwd: dir, env: ENV, fetch });
-    assertEquals(first.code, 0, first.stderr);
+    expect(first.code, first.stderr).toBe(0);
     const edited = GERMAN.replace("Namen.", "Namen!");
     await fs.writeFile(join(dir, "text/de/news/city_founded.md"), edited);
     const kept = await runCli(["download"], { cwd: dir, env: ENV, fetch });
-    assertEquals(kept.code, 6);
-    assertStringIncludes(kept.stdout, "local edit   de  news/city_founded.md › (whole file)");
-    assertEquals(await read(dir, "text/de/news/city_founded.md"), edited);
+    expect(kept.code).toBe(6);
+    expect(kept.stdout).toContain("local edit   de  news/city_founded.md › (whole file)");
+    expect(await read(dir, "text/de/news/city_founded.md")).toStrictEqual(edited);
     const nothing = server([file("news/city_founded.md", "de", "")]);
     const stillKept = await runCli(["download"], { cwd: dir, env: ENV, fetch: nothing });
-    assertEquals(stillKept.code, 6);
-    assertEquals(await exists(dir, "text/de/news/city_founded.md"), true);
+    expect(stillKept.code).toBe(6);
+    expect(await exists(dir, "text/de/news/city_founded.md")).toBe(true);
     const overwritten = await runCli(["download", "--overwrite-local"], {
       cwd: dir,
       env: ENV,
       fetch,
     });
-    assertEquals(overwritten.code, 0, overwritten.stderr);
-    assertEquals(await read(dir, "text/de/news/city_founded.md"), GERMAN);
+    expect(overwritten.code, overwritten.stderr).toBe(0);
+    expect(await read(dir, "text/de/news/city_founded.md")).toStrictEqual(GERMAN);
   });
 });
 
@@ -166,10 +162,10 @@ test("download --prune deletes a document whose source is gone, never other kind
     async (dir) => {
       const fetch = server([file("news/city_founded.md", "de", GERMAN)]);
       const run = await runCli(["download", "--prune"], { cwd: dir, env: ENV, fetch });
-      assertEquals(run.code, 0, run.stderr);
-      assertStringIncludes(run.stdout, "deleted      text/de/news/old_story.md");
-      assertEquals(await exists(dir, "text/de/news/old_story.md"), false);
-      assertEquals(await exists(dir, "text/de/news/notes.txt"), true);
+      expect(run.code, run.stderr).toBe(0);
+      expect(run.stdout).toContain("deleted      text/de/news/old_story.md");
+      expect(await exists(dir, "text/de/news/old_story.md")).toBe(false);
+      expect(await exists(dir, "text/de/news/notes.txt")).toBe(true);
     },
   );
 });
@@ -187,9 +183,9 @@ test("a folder mapping downloads its server paths to {path}, and prunes only wha
     async (dir) => {
       const fetch = server([file("paper/news/city_founded.md", "de", GERMAN)]);
       const run = await runCli(["download", "--prune"], { cwd: dir, env: ENV, fetch });
-      assertEquals(run.code, 0, run.stderr);
-      assertEquals(await read(dir, "text/de/news/city_founded.md"), GERMAN);
-      assertEquals(await exists(dir, "text/de/news/old_story.md"), false);
+      expect(run.code, run.stderr).toBe(0);
+      expect(await read(dir, "text/de/news/city_founded.md")).toStrictEqual(GERMAN);
+      expect(await exists(dir, "text/de/news/old_story.md")).toBe(false);
     },
   );
 });
@@ -202,9 +198,9 @@ test("the download baseline compares a document whole, whatever its final newlin
     const bytes = (text: string) => new TextEncoder().encode(text);
     const path = "text/de/news/city_founded.md";
     const noBaseline = state.conflicts(path, bytes(GERMAN), bytes(GERMAN), ARTICLE, "markdown");
-    assertEquals(noBaseline, []);
+    expect(noBaseline).toStrictEqual([]);
     const sourceCopy = state.conflicts(path, bytes(ARTICLE), bytes(GERMAN), ARTICLE, "markdown");
-    assertEquals(sourceCopy, [], "a copy of the English isn't an edit");
+    expect(sourceCopy, "a copy of the English isn't an edit").toStrictEqual([]);
     const edited = state.conflicts(
       path,
       bytes("Anders\n\nText."),
@@ -212,7 +208,7 @@ test("the download baseline compares a document whole, whatever its final newlin
       ARTICLE,
       "markdown",
     );
-    assertEquals(edited, ["(whole file)"]);
+    expect(edited).toStrictEqual(["(whole file)"]);
     state.remember(path, bytes(GERMAN));
     const finalNewline = state.conflicts(
       path,
@@ -221,7 +217,9 @@ test("the download baseline compares a document whole, whatever its final newlin
       ARTICLE,
       "markdown",
     );
-    assertEquals(finalNewline, [], "the last download, without its final newline, is no edit");
+    expect(finalNewline, "the last download, without its final newline, is no edit").toStrictEqual(
+      [],
+    );
     assert(state.conflicts(path, bytes("Edited"), bytes(""), ARTICLE, "markdown").length === 1);
   });
 });

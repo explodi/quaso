@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assert, assertEquals, assertMatch } from "@std/assert";
+import { assert, expect, test } from "vitest";
 import { FakeService } from "./testing/fake_service.ts";
 import { call, testApp } from "./testing/helpers.ts";
 
@@ -8,8 +7,8 @@ test("app: /healthz reports the service's health, never cached", async () => {
   const service = new FakeService();
   const { app, log } = testApp(service);
   const response = await call(app, "/healthz");
-  assertEquals(response.status, 200);
-  assertEquals(await response.json(), {
+  expect(response.status).toBe(200);
+  expect(await response.json()).toStrictEqual({
     ok: true,
     version: "9.9.9",
     storage: "local",
@@ -18,60 +17,56 @@ test("app: /healthz reports the service's health, never cached", async () => {
     busy: false,
     nextWakeUp: null,
   });
-  assertEquals(response.headers.get("Cache-Control"), "private, no-store");
-  assertEquals(log.lines.at(-1)?.level, "debug");
+  expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+  expect(log.lines.at(-1)?.level).toBe("debug");
 
   service.busy = true;
   service.nextWakeUp = 200;
   const active = await (await call(app, "/healthz")).json();
-  assertEquals([active.busy, active.nextWakeUp], [true, 200]);
+  expect([active.busy, active.nextWakeUp]).toStrictEqual([true, 200]);
 
   service.healthy = false;
   const failing = await call(app, "/healthz");
-  assertEquals(failing.status, 503);
-  assertEquals((await failing.json()).ok, false);
+  expect(failing.status).toBe(503);
+  expect((await failing.json()).ok).toBe(false);
 });
 
 test("app: anonymous API reads are JSON, public for 30 seconds, and logged", async () => {
   const service = new FakeService();
   const { app, log } = testApp(service);
   const response = await call(app, "/api/v1/project");
-  assertEquals(response.status, 200);
-  assertEquals(response.headers.get("Content-Type"), "application/json; charset=utf-8");
-  assertEquals(
-    response.headers.get("Cache-Control"),
+  expect(response.status).toBe(200);
+  expect(response.headers.get("Content-Type")).toBe("application/json; charset=utf-8");
+  expect(response.headers.get("Cache-Control")).toStrictEqual(
     "public, max-age=30, stale-while-revalidate=300",
   );
-  assertEquals(response.headers.get("Vary"), "Authorization, Cookie, Accept-Encoding");
-  assertEquals(response.headers.get("X-Content-Type-Options"), "nosniff");
-  assertEquals(response.headers.get("X-Frame-Options"), "DENY");
-  assertEquals((await response.json()).name, "Demo");
-  assertEquals(service.calls.at(-1), {
+  expect(response.headers.get("Vary")).toBe("Authorization, Cookie, Accept-Encoding");
+  expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
+  expect(response.headers.get("X-Frame-Options")).toBe("DENY");
+  expect((await response.json()).name).toBe("Demo");
+  expect(service.calls.at(-1)).toStrictEqual({
     method: "getProject",
     actor: { type: "anonymous" },
     input: {},
   });
 
   const id = response.headers.get("X-Request-Id")!;
-  assertMatch(id, /^[0-9a-f-]{36}$/);
+  expect(id).toMatch(/^[0-9a-f-]{36}$/);
   const line = log.lines.at(-1)!;
-  assertEquals(line.msg, "request");
-  assertEquals(line.level, "info");
-  assertEquals(
-    { ...line, time: undefined, duration: undefined },
-    {
-      time: undefined,
-      level: "info",
-      msg: "request",
-      method: "GET",
-      path: "/api/v1/project",
-      status: 200,
-      duration: undefined,
-      requestId: id,
-      ip: "192.0.2.1",
-    },
-  );
-  assertEquals(typeof line.duration, "number");
+  expect(line.msg).toBe("request");
+  expect(line.level).toBe("info");
+  expect({ ...line, time: undefined, duration: undefined }).toStrictEqual({
+    time: undefined,
+    level: "info",
+    msg: "request",
+    method: "GET",
+    path: "/api/v1/project",
+    status: 200,
+    duration: undefined,
+    requestId: id,
+    ip: "192.0.2.1",
+  });
+  expect(typeof line.duration).toBe("number");
 });
 
 test("app: requests with an API key are private, and the service sees the key", async () => {
@@ -79,9 +74,9 @@ test("app: requests with an API key are private, and the service sees the key", 
   const { secret, id } = service.addToken("read");
   const { app } = testApp(service);
   const response = await call(app, "/api/v1/export?languages=de,fr", { key: secret });
-  assertEquals(response.status, 200);
-  assertEquals(response.headers.get("Cache-Control"), "private, no-store");
-  assertEquals(service.calls.at(-1), {
+  expect(response.status).toBe(200);
+  expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+  expect(service.calls.at(-1)).toStrictEqual({
     method: "exportFiles",
     actor: { type: "token", tokenId: id },
     input: { languages: ["de", "fr"] },
@@ -96,20 +91,20 @@ test("app: the service decides who may do what", async () => {
   const body = { files: [{ path: "common.json", repoPath: "common.json", content: "{}" }] };
 
   const anonymous = await call(app, "/api/v1/sources", { method: "POST", json: body });
-  assertEquals(anonymous.status, 401);
-  assertEquals((await anonymous.json()).error.code, "unauthorized");
+  expect(anonymous.status).toBe(401);
+  expect((await anonymous.json()).error.code).toBe("unauthorized");
   const wrongScope = await call(app, "/api/v1/sources", { method: "POST", json: body, key: read });
-  assertEquals(wrongScope.status, 403);
+  expect(wrongScope.status).toBe(403);
   await wrongScope.body?.cancel();
   const ok = await call(app, "/api/v1/sources", { method: "POST", json: body, key: upload });
-  assertEquals(ok.status, 200);
-  assertEquals(ok.headers.get("Cache-Control"), "private, no-store");
-  assertEquals((await ok.json()).uploadId, 1);
-  assertEquals(service.calls.at(-1)?.input, body);
+  expect(ok.status).toBe(200);
+  expect(ok.headers.get("Cache-Control")).toBe("private, no-store");
+  expect((await ok.json()).uploadId).toBe(1);
+  expect(service.calls.at(-1)?.input).toStrictEqual(body);
 
   const badKey = await call(app, "/api/v1/project", { key: "qso_nope" });
-  assertEquals(badKey.status, 401);
-  assertEquals(badKey.headers.get("Cache-Control"), "private, no-store");
+  expect(badKey.status).toBe(401);
+  expect(badKey.headers.get("Cache-Control")).toBe("private, no-store");
   await badKey.body?.cancel();
 });
 
@@ -135,15 +130,15 @@ test("app: callers who can't upload are refused before the body is read", async 
     return [response.status, pulled];
   };
   for (const path of ["/api/v1/sources", "/api/v1/imports", "/api/v1/api-tokens"]) {
-    assertEquals(await send(path), [401, false], path);
+    expect(await send(path), path).toStrictEqual([401, false]);
   }
   for (const path of ["/api/v1/sources", "/api/v1/imports"]) {
-    assertEquals(await send(path, read), [403, false], path);
+    expect(await send(path, read), path).toStrictEqual([403, false]);
   }
-  assertEquals((await send("/api/v1/sources", upload))[1], true);
+  expect((await send("/api/v1/sources", upload))[1]).toBe(true);
   // A read key revoked meanwhile is a 401, as always.
   service.tokens.get(read)!.revoked = true;
-  assertEquals(await send("/api/v1/sources", read), [401, false]);
+  expect(await send("/api/v1/sources", read)).toStrictEqual([401, false]);
 });
 
 test("app: a long or malformed key is unknown, not a validation error", async () => {
@@ -151,18 +146,20 @@ test("app: a long or malformed key is unknown, not a validation error", async ()
   const { app } = testApp(service);
   for (const key of [`qso_${"a".repeat(300)}`, "qso_a.b", "qso_"]) {
     const response = await call(app, "/api/v1/project", { key });
-    assertEquals(response.status, 401, key);
-    assertEquals((await response.json()).error.message, "This API key is unknown or was revoked.");
+    expect(response.status, key).toBe(401);
+    expect((await response.json()).error.message).toStrictEqual(
+      "This API key is unknown or was revoked.",
+    );
   }
-  assertEquals(service.count("authenticateToken"), 0);
+  expect(service.count("authenticateToken")).toBe(0);
 });
 
 test("app: validation errors are 400 with details, before the service is called", async () => {
   const service = new FakeService();
   const { app } = testApp(service);
   const missing = await call(app, "/api/v1/strings");
-  assertEquals(missing.status, 400);
-  assertEquals(await missing.json(), {
+  expect(missing.status).toBe(400);
+  expect(await missing.json()).toStrictEqual({
     error: {
       code: "validation_failed",
       message: "Invalid request: language: is required.",
@@ -170,7 +167,7 @@ test("app: validation errors are 400 with details, before the service is called"
     },
   });
   const badId = await call(app, "/api/v1/strings/abc?language=de");
-  assertEquals((await badId.json()).error.details, [
+  expect((await badId.json()).error.details).toStrictEqual([
     { path: "id", message: "must be an integer, not a string" },
   ]);
   const upload = service.addToken("upload").secret;
@@ -179,15 +176,16 @@ test("app: validation errors are 400 with details, before the service is called"
     key: upload,
     json: { language: "xx-invalid-", files: [], as: "purple" },
   });
-  assertEquals(badBody.status, 400);
-  assertEquals(
-    (await badBody.json()).error.details.map((d: { path: string }) => d.path),
-    ["language", "files", "as"],
-  );
+  expect(badBody.status).toBe(400);
+  expect((await badBody.json()).error.details.map((d: { path: string }) => d.path)).toStrictEqual([
+    "language",
+    "files",
+    "as",
+  ]);
   const notJson = await call(app, "/api/v1/sources", { method: "POST", key: upload, body: "{" });
-  assertEquals(notJson.status, 400);
-  assertEquals((await notJson.json()).error.code, "bad_request");
-  assertEquals(service.count("upload") + service.count("importTranslations"), 0);
+  expect(notJson.status).toBe(400);
+  expect((await notJson.json()).error.code).toBe("bad_request");
+  expect(service.count("upload") + service.count("importTranslations")).toBe(0);
 });
 
 test("app: bodies are limited: 50 MB for uploads and imports, 1 MB otherwise", async () => {
@@ -200,15 +198,15 @@ test("app: bodies are limited: 50 MB for uploads and imports, 1 MB otherwise", a
     key: upload,
     json: { files: [{ path: "common.json", repoPath: "common.json", content }] },
   });
-  assertEquals(big.status, 200);
+  expect(big.status).toBe(200);
   await big.body?.cancel();
   const tooBig = await call(app, "/api/v1/api-tokens", {
     method: "POST",
     key: upload,
     json: { name: content, scope: "read" },
   });
-  assertEquals(tooBig.status, 413);
-  assertEquals((await tooBig.json()).error.code, "payload_too_large");
+  expect(tooBig.status).toBe(413);
+  expect((await tooBig.json()).error.code).toBe("payload_too_large");
 });
 
 test("app: parameters reach the service as the core schemas describe them", async () => {
@@ -226,48 +224,45 @@ test("app: parameters reach the service as the core schemas describe them", asyn
   const key = service.addToken("read").secret;
   for (const path of paths) {
     const response = await call(app, path, path.startsWith("/api/v1/status") ? { key } : {});
-    assertEquals(response.status, 200, path);
+    expect(response.status, path).toBe(200);
     await response.body?.cancel();
   }
   const calls = service.calls.filter((c) => c.method !== "authenticateToken");
-  assertEquals(
-    calls.map((c) => [c.method, c.input]),
+  expect(calls.map((c) => [c.method, c.input])).toStrictEqual([
+    ["listFiles", { language: "de" }],
     [
-      ["listFiles", { language: "de" }],
-      [
-        "listStrings",
-        {
-          language: "de",
-          file: "menus/",
-          state: "outdated",
-          q: "play",
-          ids: [1, 2],
-          limit: 20,
-        },
-      ],
-      ["getHistory", { id: 7 }],
-      ["getHistory", { id: 7, language: "pl" }],
-      ["getActivity", { cursor: "abc", limit: 5 }],
-      ["getStatus", {}],
-      ["getStatus", { language: "ja" }],
+      "listStrings",
+      {
+        language: "de",
+        file: "menus/",
+        state: "outdated",
+        q: "play",
+        ids: [1, 2],
+        limit: 20,
+      },
     ],
-  );
+    ["getHistory", { id: 7 }],
+    ["getHistory", { id: 7, language: "pl" }],
+    ["getActivity", { cursor: "abc", limit: 5 }],
+    ["getStatus", {}],
+    ["getStatus", { language: "ja" }],
+  ]);
   const detail = await call(app, "/api/v1/strings/7?language=de");
-  assertEquals(detail.status, 404);
-  assertEquals((await detail.json()).error.message, "String 7 was not found.");
+  expect(detail.status).toBe(404);
+  expect((await detail.json()).error.message).toBe("String 7 was not found.");
 });
 
 test("app: unknown paths and methods get the API's error shape", async () => {
   const { app } = testApp(new FakeService());
   for (const path of ["/api/v1/nothing", "/api/v2/project", "/auth/session", "/schema/v9.json"]) {
     const response = await call(app, path);
-    assertEquals(response.status, 404, path);
-    assertEquals((await response.json()).error.code, "not_found");
+    expect(response.status, path).toBe(404);
+    expect((await response.json()).error.code).toBe("not_found");
   }
   const wrong = await call(app, "/api/v1/project", { method: "PUT" });
-  assertEquals(wrong.status, 405);
-  assertEquals(wrong.headers.get("Allow"), "GET, HEAD");
-  assertEquals((await wrong.json()).error.code, "bad_request");
+  expect(wrong.status).toBe(405);
+  expect(wrong.headers.get("Allow")).toBe("GET, HEAD");
+  expect((await wrong.json()).error.code).toBe("bad_request");
 });
 
 test("app: a crash is a 500 with the request ID, logged", async () => {
@@ -275,15 +270,15 @@ test("app: a crash is a 500 with the request ID, logged", async () => {
   service.projectError = new Error("disk on fire");
   const { app, log } = testApp(service);
   const response = await call(app, "/api/v1/project");
-  assertEquals(response.status, 500);
+  expect(response.status).toBe(500);
   const id = response.headers.get("X-Request-Id")!;
-  assertEquals((await response.json()).error, {
+  expect((await response.json()).error).toStrictEqual({
     code: "internal",
     message: `Something went wrong on the server. The request ID is ${id}.`,
   });
   const error = log.lines.find((line) => line.level === "error")!;
-  assertEquals(error.requestId, id);
-  assertEquals(log.recentErrors().length, 1);
+  expect(error.requestId).toStrictEqual(id);
+  expect(log.recentErrors().length).toBe(1);
 });
 
 test("app: behind a trusted proxy, its request ID and client address are used", async () => {
@@ -291,33 +286,33 @@ test("app: behind a trusted proxy, its request ID and client address are used", 
   const trusted = testApp(new FakeService(), { TRUST_PROXY: "true" });
   const response = await call(trusted.app, "/api/v1/project", { headers });
   await response.body?.cancel();
-  assertEquals(response.headers.get("X-Request-Id"), "caddy-42");
-  assertEquals(trusted.log.lines.at(-1)?.ip, "203.0.113.9");
+  expect(response.headers.get("X-Request-Id")).toBe("caddy-42");
+  expect(trusted.log.lines.at(-1)?.ip).toBe("203.0.113.9");
 
   const direct = testApp(new FakeService());
   const other = await call(direct.app, "/api/v1/project", { headers });
   await other.body?.cancel();
   assert(other.headers.get("X-Request-Id") !== "caddy-42");
-  assertEquals(direct.log.lines.at(-1)?.ip, "192.0.2.1");
+  expect(direct.log.lines.at(-1)?.ip).toBe("192.0.2.1");
 });
 
 test("app: HEAD answers like GET, without a body", async () => {
   const { app } = testApp(new FakeService());
   const response = await call(app, "/api/v1/project", { method: "HEAD" });
-  assertEquals(response.status, 200);
-  assertEquals(response.headers.get("Content-Type"), "application/json; charset=utf-8");
-  assertEquals(response.body, null);
+  expect(response.status).toBe(200);
+  expect(response.headers.get("Content-Type")).toBe("application/json; charset=utf-8");
+  expect(response.body).toBe(null);
 });
 
 test("app: revoking a key through the API stops it at once", async () => {
   const service = new FakeService();
   const { secret, id } = service.addToken("upload");
   const { app } = testApp(service);
-  assertEquals((await call(app, "/api/v1/status", { key: secret })).status, 200);
+  expect((await call(app, "/api/v1/status", { key: secret })).status).toBe(200);
   const revoke = await call(app, `/api/v1/api-tokens/${id}`, { method: "DELETE", key: secret });
-  assertEquals(await revoke.json(), { ok: true });
+  expect(await revoke.json()).toStrictEqual({ ok: true });
   const after = await call(app, "/api/v1/status", { key: secret });
-  assertEquals(after.status, 401);
+  expect(after.status).toBe(401);
   await after.body?.cancel();
 });
 
@@ -329,23 +324,25 @@ test("app: creating an API key answers 201, with the secret", async () => {
     json: { name: "CI", scope: "upload" },
     key: service.addToken("upload").secret,
   });
-  assertEquals(response.status, 201);
-  assertEquals(response.headers.get("Cache-Control"), "private, no-store");
+  expect(response.status).toBe(201);
+  expect(response.headers.get("Cache-Control")).toBe("private, no-store");
   const created = await response.json();
-  assertEquals([created.name, created.scope], ["CI", "upload"]);
-  assertMatch(created.secret, /^qso_/);
-  assertEquals(service.calls.at(-1)?.input, { name: "CI", scope: "upload" });
+  expect([created.name, created.scope]).toStrictEqual(["CI", "upload"]);
+  expect(created.secret).toMatch(/^qso_/);
+  expect(service.calls.at(-1)?.input).toStrictEqual({ name: "CI", scope: "upload" });
 });
 
 test("app: the config schema and the OpenAPI document", async () => {
   const { app } = testApp(new FakeService(), { PUBLIC_URL: "https://translate.example.com" });
   const schema = await (await call(app, "/schema/config-v1.json")).json();
-  assertEquals(schema.$id, "https://translate.example.com/schema/config-v1.json");
-  assertEquals(schema.$schema, "https://json-schema.org/draft/2020-12/schema");
-  assertEquals(schema.required, ["sourceLanguage", "languages", "files"]);
+  expect(schema.$id).toBe("https://translate.example.com/schema/config-v1.json");
+  expect(schema.$schema).toBe("https://json-schema.org/draft/2020-12/schema");
+  expect(schema.required).toStrictEqual(["sourceLanguage", "languages", "files"]);
 
   const openApi = await call(app, "/api/v1/openapi.json");
-  assertEquals((await openApi.json()).servers, [{ url: "https://translate.example.com/api/v1" }]);
+  expect((await openApi.json()).servers).toStrictEqual([
+    { url: "https://translate.example.com/api/v1" },
+  ]);
 });
 
 test("app: CORS only for the configured origins, with credentials", async () => {
@@ -354,34 +351,36 @@ test("app: CORS only for the configured origins, with credentials", async () => 
     method: "OPTIONS",
     headers: { Origin: "https://web.example.com", "Access-Control-Request-Method": "POST" },
   });
-  assertEquals(preflight.status, 204);
-  assertEquals(preflight.headers.get("Access-Control-Allow-Origin"), "https://web.example.com");
-  assertEquals(preflight.headers.get("Access-Control-Allow-Credentials"), "true");
-  assertMatch(preflight.headers.get("Access-Control-Allow-Headers")!, /Authorization/);
+  expect(preflight.status).toBe(204);
+  expect(preflight.headers.get("Access-Control-Allow-Origin")).toStrictEqual(
+    "https://web.example.com",
+  );
+  expect(preflight.headers.get("Access-Control-Allow-Credentials")).toBe("true");
+  expect(preflight.headers.get("Access-Control-Allow-Headers")!).toMatch(/Authorization/);
 
   const read = await call(app, "/api/v1/project", {
     headers: { Origin: "https://web.example.com" },
   });
   await read.body?.cancel();
-  assertEquals(read.headers.get("Access-Control-Allow-Origin"), "https://web.example.com");
-  assertEquals(read.headers.get("Vary"), "Authorization, Cookie, Origin, Accept-Encoding");
+  expect(read.headers.get("Access-Control-Allow-Origin")).toBe("https://web.example.com");
+  expect(read.headers.get("Vary")).toBe("Authorization, Cookie, Origin, Accept-Encoding");
 
   const other = await call(app, "/api/v1/project", { headers: { Origin: "https://evil.example" } });
   await other.body?.cancel();
-  assertEquals(other.headers.get("Access-Control-Allow-Origin"), null);
+  expect(other.headers.get("Access-Control-Allow-Origin")).toBe(null);
   // Every API response varies by Origin, so a cache never gives one origin another's copy.
-  assertEquals(other.headers.get("Vary"), "Authorization, Cookie, Origin, Accept-Encoding");
+  expect(other.headers.get("Vary")).toBe("Authorization, Cookie, Origin, Accept-Encoding");
   const none = await call(app, "/api/v1/project");
   await none.body?.cancel();
-  assertEquals(none.headers.get("Vary"), "Authorization, Cookie, Origin, Accept-Encoding");
+  expect(none.headers.get("Vary")).toBe("Authorization, Cookie, Origin, Accept-Encoding");
   const { app: sameOrigin } = testApp(new FakeService());
   const plain = await call(sameOrigin, "/api/v1/project");
   await plain.body?.cancel();
-  assertEquals(plain.headers.get("Vary"), "Authorization, Cookie, Accept-Encoding");
+  expect(plain.headers.get("Vary")).toBe("Authorization, Cookie, Accept-Encoding");
   const otherPreflight = await call(app, "/api/v1/project", {
     method: "OPTIONS",
     headers: { Origin: "https://evil.example" },
   });
-  assertEquals(otherPreflight.status, 405);
+  expect(otherPreflight.status).toBe(405);
   await otherPreflight.body?.cancel();
 });

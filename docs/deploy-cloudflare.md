@@ -14,7 +14,8 @@ Before you start, check that you have the following:
 - A Cloudflare account on the **Workers Paid** plan with Containers enabled, and a domain on
   Cloudflare, such as `yourgame.com`. See
   [Cloudflare Containers](https://developers.cloudflare.com/containers/).
-- [Deno](https://deno.com) 2.9.6 and git, to run the commands from the repository. Docker is not
+- [Node.js](https://nodejs.org/) at the version in the repository's `.nvmrc` (26) and git, to run
+  the commands from the repository. Docker is not
   needed for this deployment: Cloudflare pulls the published image. See
   [Cloudflare image management](https://developers.cloudflare.com/containers/guides/image-management/).
 
@@ -25,7 +26,7 @@ documentation in that release's checkout. Get the current source and matching im
 ```sh
 git clone --branch main 'https://github.com/explodi/quaso.git'
 cd quaso
-deno install --frozen-lockfile
+npm ci
 QUASO_IMAGE="explodi/quaso:sha-$(git rev-parse --short=7 HEAD)"
 printf '%s\n' "$QUASO_IMAGE"
 ```
@@ -34,14 +35,14 @@ Wait for that commit's **Docker image** workflow to publish the image before set
 has not published an image is not ready for these commands. Do not pair its Worker with an older
 server image.
 
-Run every `deno task cf:*` command from the repository root. Replace the example hostname with one
+Run every `npm run cf:*` command from the repository root. Replace the example hostname with one
 in your account.
 
 ## 1. Sign in to Cloudflare
 
 ```sh
 cd packages/cloudflare
-deno run -A npm:wrangler login
+npx wrangler login
 cd ../..
 ```
 
@@ -59,7 +60,7 @@ For automation, Wrangler reads an API token from `CLOUDFLARE_API_TOKEN` (and the
 `cf:setup` creates everything an instance needs and deploys it:
 
 ```sh
-deno task cf:setup --env production --hostname translate.yourgame.com \
+npm run cf:setup -- --env production --hostname translate.yourgame.com \
   --location weur --image "$QUASO_IMAGE"
 ```
 
@@ -186,7 +187,7 @@ Set one as a Worker secret, which Wrangler asks for:
 
 ```sh
 cd packages/cloudflare
-deno run -A npm:wrangler secret put GITHUB_CLIENT_SECRET --name quaso-production
+npx wrangler secret put GITHUB_CLIENT_SECRET --name quaso-production
 cd ../..
 ```
 
@@ -196,7 +197,7 @@ To change the hostname, the image or how long the container stays awake, edit th
 `quaso.cloudflare.jsonc` (`hostname`, `image`, `sleepAfter` such as `10m`), then deploy:
 
 ```sh
-deno task cf:deploy --env production
+npm run cf:deploy -- --env production
 ```
 
 `cf:deploy` requires `--env`. `cf:setup` can resume incomplete setup, but refuses changed settings
@@ -230,11 +231,11 @@ rates and allowances.
 
 Take a backup and record the current source commit, image and UTC time before an update. Test the
 backup and new version on staging. Check out the target source commit or tag in a clean checkout,
-run `deno install --frozen-lockfile`, and set `image` in `quaso.cloudflare.jsonc` to the matching
+run `npm ci`, and set `image` in `quaso.cloudflare.jsonc` to the matching
 published image. Keep the instance configuration in the repository root, then deploy:
 
 ```sh
-deno task cf:deploy --env production
+npm run cf:deploy -- --env production
 ```
 
 Wrangler activates the new Worker before updating the container. A failure can leave those versions
@@ -262,7 +263,7 @@ an empty instance. Keep a copy outside the hosting account. The options are:
   To restore D1 to a point in that window, discarding database writes made since then:
 
   ```sh
-  deno task cf:restore --env production --at 2026-10-03T00:00:00Z
+  npm run cf:restore -- --env production --at 2026-10-03T00:00:00Z
   ```
 
   This overwrites D1 in place. The command deploys maintenance mode, stops the container, and
@@ -275,7 +276,7 @@ an empty instance. Keep a copy outside the hosting account. The options are:
   To undo, replace the quoted placeholder with the saved bookmark:
 
   ```sh
-  deno task cf:restore --env production --bookmark '<undo-bookmark>'
+  npm run cf:restore -- --env production --bookmark '<undo-bookmark>'
   ```
 
   Successful restoration removes maintenance mode and checks `/healthz`. The new deployment starts a
@@ -283,7 +284,7 @@ an empty instance. Keep a copy outside the hosting account. The options are:
   leave the instance paused. After checking D1 and confirming the earlier command is no longer
   running, retry the intended timestamp or bookmark with `--takeover`; this retains the pause
   through the retry. To keep the database as it is and return to service, use
-  `deno task cf:restore --env production --resume`. The command removes generated configuration and
+  `npm run cf:restore -- --env production --resume`. The command removes generated configuration and
   its temporary control secret; check any cleanup error. R2 is not rewound by D1 Time Travel.
   Restored D1 rows can only serve older files if those R2 objects still exist. File-history cleanup
   can remove them. Check downloads after recovery. Time Travel also restores database secrets and
@@ -297,7 +298,7 @@ an empty instance. Keep a copy outside the hosting account. The options are:
 
   ```sh
   cd packages/cloudflare
-  deno run -A npm:wrangler r2 object get \
+  npx wrangler r2 object get \
     quaso-production-store/backups/quaso-20260924T030000Z.json.gz \
     --file ../../backup.json.gz --remote
   cd ../..
@@ -328,7 +329,7 @@ restore didn't finish, and the backup only goes into another, empty instance.
   restore command with the setup key it printed:
 
   ```sh
-  deno task cf:restore --env production --file backup.json.gz
+  npm run cf:restore -- --env production --file backup.json.gz
   ```
 
   The command asks for the setup key; automation can supply `QUASO_SETUP_KEY` through its
@@ -347,11 +348,11 @@ Quaso first. Backups from 1.0.0-rc.1 are not supported; see
 
 If you manage D1 databases, R2 buckets, zone settings or secrets with infrastructure code such as
 Terraform, use `cf:deploy` for the Worker and container. Check out the matching Quaso source, run
-`deno install --frozen-lockfile`, and provide your own instance file and secrets. For files in the
+`npm ci`, and provide your own instance file and secrets. For files in the
 repository root, use absolute paths because the deployment task changes its working directory:
 
 ```sh
-deno task cf:deploy --env production \
+npm run cf:deploy -- --env production \
   --instance-config "$PWD/instance.jsonc" --secrets-file "$PWD/secrets.json"
 ```
 
@@ -378,10 +379,10 @@ package disables Worker preview URLs. Use staging to test a release before produ
 
 ## Measure it
 
-`scripts/measure.ts` times an instance from the outside, and prints a table:
+`node scripts/measure.ts` times an instance from the outside, and prints a table:
 
 ```sh
-deno run -A scripts/measure.ts --url https://translate.yourgame.com \
+node scripts/measure.ts --url https://translate.yourgame.com \
   --key qso_… --requests 50
 ```
 
@@ -397,13 +398,13 @@ Run it from where your team works, and against a Docker Compose instance for com
 
 ## Local runs
 
-`deno task cf:dev` runs the Worker and the container on your machine with Wrangler, on Wrangler's
+`npm run cf:dev` runs the Worker and the container on your machine with Wrangler, on Wrangler's
 local D1 and R2. Docker must be running; the first run builds the image from `deploy/Dockerfile`.
 Copy `packages/cloudflare/.dev.vars.example` to `packages/cloudflare/.dev.vars`. Set `SECRET_KEY`
 and `SETUP_KEY` as described in [the contributor guide](contributing/cloudflare.md#run-locally).
 Then open <http://localhost:8787>.
 
-`deno task cf:test` runs the package's tests in `workerd`, without Docker or an account.
+`npm run cf:test` runs the package's tests in `workerd`, without Docker or an account.
 
 ## Troubleshooting
 
@@ -415,7 +416,7 @@ Use these checks when deployment or startup fails:
 
   ```sh
   cd packages/cloudflare
-  deno run -A npm:wrangler tail quaso-production --format json
+  npx wrangler tail quaso-production --format json
   cd ../..
   ```
 

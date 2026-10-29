@@ -73,13 +73,13 @@ Choose the guide for your task:
 
 ## Working on Quaso
 
-Use the Deno version in `.dvmrc` and Git to start a local development instance:
+Use the Node version in `.nvmrc` and Git to start a local development instance:
 
 ```sh
 git clone https://github.com/explodi/quaso.git
 cd quaso
-deno install --frozen-lockfile
-deno task dev
+npm ci
+npm run dev
 ```
 
 The development instance includes sample data, an administrator account, and a test translator.

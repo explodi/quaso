@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals } from "@std/assert";
+import { expect, test } from "vitest";
 import type { FileProgress, SourceFileInfo } from "@quaso/core";
 import { buildTree, filterTree, leaves, parentPath, sumProgress, visibleNodes } from "./tree.ts";
 
@@ -34,29 +33,20 @@ test("folders come from the paths, first, sorted by name", () => {
     file("menus/deep/level10.json"),
     file("menus/deep/level2.json"),
   ]);
-  assertEquals(
-    tree.map((node) => node.path),
-    ["menus/", "common.json", "store.json"],
-  );
+  expect(tree.map((node) => node.path)).toStrictEqual(["menus/", "common.json", "store.json"]);
   const menus = tree[0];
-  assertEquals(menus.type, "folder");
+  expect(menus.type).toBe("folder");
   if (menus.type !== "folder") return;
-  assertEquals(
-    menus.children.map((node) => [node.name, node.depth]),
-    [
-      ["deep", 1],
-      ["main.json", 1],
-      ["pause.json", 1],
-    ],
-  );
+  expect(menus.children.map((node) => [node.name, node.depth])).toStrictEqual([
+    ["deep", 1],
+    ["main.json", 1],
+    ["pause.json", 1],
+  ]);
   const deep = menus.children[0];
   if (deep.type !== "folder") throw new Error("deep is a folder");
-  assertEquals(
-    deep.children.map((node) => node.name),
-    ["level2.json", "level10.json"],
-  );
-  assertEquals(leaves(tree).length, 6);
-  assertEquals(menus.progress.strings, 40);
+  expect(deep.children.map((node) => node.name)).toStrictEqual(["level2.json", "level10.json"]);
+  expect(leaves(tree).length).toBe(6);
+  expect(menus.progress.strings).toBe(40);
 });
 
 test("progress adds up: translated words exactly, proofread words estimated", () => {
@@ -64,11 +54,11 @@ test("progress adds up: translated words exactly, proofread words estimated", ()
     file("a.json", { words: 100, wordsLeft: 0, translatedPercent: 100, proofreadPercent: 100 }),
     file("b.json", { words: 300, wordsLeft: 300, translatedPercent: 0, proofreadPercent: 0 }),
   ]);
-  assertEquals(total.words, 400);
-  assertEquals(total.wordsLeft, 300);
-  assertEquals(total.translatedPercent, 25);
-  assertEquals(total.proofreadPercent, 25);
-  assertEquals(sumProgress([]).translatedPercent, 0);
+  expect(total.words).toBe(400);
+  expect(total.wordsLeft).toBe(300);
+  expect(total.translatedPercent).toBe(25);
+  expect(total.proofreadPercent).toBe(25);
+  expect(sumProgress([]).translatedPercent).toBe(0);
 });
 
 test("filtering by name and hiding completed files", () => {
@@ -78,31 +68,28 @@ test("filtering by name and hiding completed files", () => {
     file("menus/pause.json"),
     file("common.json", done),
   ]);
-  assertEquals(
-    leaves(filterTree(tree, "PAUSE", false)).map((f) => f.path),
-    ["menus/pause.json"],
-  );
-  assertEquals(
-    leaves(filterTree(tree, "", true)).map((f) => f.path),
-    ["menus/pause.json"],
-  );
-  assertEquals(filterTree(tree, "nothing", false), []);
-  assertEquals(leaves(filterTree(tree, "", false)).length, 3);
+  expect(leaves(filterTree(tree, "PAUSE", false)).map((f) => f.path)).toStrictEqual([
+    "menus/pause.json",
+  ]);
+  expect(leaves(filterTree(tree, "", true)).map((f) => f.path)).toStrictEqual(["menus/pause.json"]);
+  expect(filterTree(tree, "nothing", false)).toStrictEqual([]);
+  expect(leaves(filterTree(tree, "", false)).length).toBe(3);
 });
 
 test("visible nodes skip collapsed folders", () => {
   const tree = buildTree([file("menus/main.json"), file("common.json")]);
-  assertEquals(
-    visibleNodes(tree, new Set()).map((n) => n.path),
-    ["menus/", "menus/main.json", "common.json"],
-  );
-  assertEquals(
-    visibleNodes(tree, new Set(["menus/"])).map((n) => n.path),
-    ["menus/", "common.json"],
-  );
-  assertEquals(parentPath("menus/main.json"), "menus/");
-  assertEquals(parentPath("menus/deep/"), "menus/");
-  assertEquals(parentPath("common.json"), undefined);
+  expect(visibleNodes(tree, new Set()).map((n) => n.path)).toStrictEqual([
+    "menus/",
+    "menus/main.json",
+    "common.json",
+  ]);
+  expect(visibleNodes(tree, new Set(["menus/"])).map((n) => n.path)).toStrictEqual([
+    "menus/",
+    "common.json",
+  ]);
+  expect(parentPath("menus/main.json")).toBe("menus/");
+  expect(parentPath("menus/deep/")).toBe("menus/");
+  expect(parentPath("common.json")).toBe(undefined);
 });
 
 test("repository paths build displayed folders while leaves retain server identities", () => {
@@ -110,22 +97,15 @@ test("repository paths build displayed folders while leaves retain server identi
     file("common.json", { repoPath: "src/locales/en/common.json" }),
     file("menus/play.json", { repoPath: "packages/game/en/play.json" }),
   ]);
-  assertEquals(
-    tree.map((node) => node.path),
-    ["packages/", "src/"],
-  );
-  assertEquals(
-    leaves(tree).map((leaf) => [leaf.path, leaf.repoPath, leaf.depth]),
-    [
-      ["menus/play.json", "packages/game/en/play.json", 3],
-      ["common.json", "src/locales/en/common.json", 3],
-    ],
-  );
-  assertEquals(
-    leaves(filterTree(tree, "packages/game", false)).map((leaf) => leaf.path),
-    ["menus/play.json"],
-  );
-  assertEquals(parentPath(leaves(tree)[0].repoPath), "packages/game/en/");
+  expect(tree.map((node) => node.path)).toStrictEqual(["packages/", "src/"]);
+  expect(leaves(tree).map((leaf) => [leaf.path, leaf.repoPath, leaf.depth])).toStrictEqual([
+    ["menus/play.json", "packages/game/en/play.json", 3],
+    ["common.json", "src/locales/en/common.json", 3],
+  ]);
+  expect(leaves(filterTree(tree, "packages/game", false)).map((leaf) => leaf.path)).toStrictEqual([
+    "menus/play.json",
+  ]);
+  expect(parentPath(leaves(tree)[0].repoPath)).toBe("packages/game/en/");
 });
 
 test("source trees sum counts without inventing translation progress", () => {
@@ -150,10 +130,7 @@ test("source trees sum counts without inventing translation progress", () => {
     },
   ];
   const tree = buildTree(files);
-  assertEquals(tree[0].progress, { strings: 3, words: 8 });
-  assertEquals(
-    leaves(tree).map((leaf) => leaf.progress),
-    files,
-  );
-  assertEquals(leaves(filterTree(tree, "", true)).length, 2);
+  expect(tree[0].progress).toStrictEqual({ strings: 3, words: 8 });
+  expect(leaves(tree).map((leaf) => leaf.progress)).toStrictEqual(files);
+  expect(leaves(filterTree(tree, "", true)).length).toBe(2);
 });

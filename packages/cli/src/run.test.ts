@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assert, assertEquals, assertStringIncludes } from "@std/assert";
+import { assert, expect, test } from "vitest";
 import { join } from "node:path";
 import { EXIT_CODES } from "./errors.ts";
 import { COMMANDS, wantsJson } from "./run.ts";
@@ -9,53 +8,52 @@ import { VERSION } from "./version.ts";
 
 test("--help lists the commands, the options and every exit code", async () => {
   const run = await runCli(["--help"]);
-  assertEquals(run.code, 0);
-  for (const command of COMMANDS) assertStringIncludes(run.stdout, `  ${command.name}`);
+  expect(run.code).toBe(0);
+  for (const command of COMMANDS) expect(run.stdout).toContain(`  ${command.name}`);
   for (const { code, meaning } of EXIT_CODES) {
-    assertStringIncludes(run.stdout, `  ${code}  ${meaning}`);
+    expect(run.stdout).toContain(`  ${code}  ${meaning}`);
   }
-  assertStringIncludes(run.stdout, "QUASO_HOSTNAME");
-  assertEquals((await runCli(["help"])).stdout, run.stdout);
+  expect(run.stdout).toContain("QUASO_HOSTNAME");
+  expect((await runCli(["help"])).stdout).toStrictEqual(run.stdout);
 });
 
 test("each command's --help lists its options and exit codes", async () => {
   for (const command of COMMANDS) {
     const run = await runCli([command.name, "--help"]);
-    assertEquals(run.code, 0);
-    assertStringIncludes(run.stdout, `Usage: quaso ${command.name} [options]`);
-    for (const option of command.options) assertStringIncludes(run.stdout, `--${option.name}`);
+    expect(run.code).toBe(0);
+    expect(run.stdout).toContain(`Usage: quaso ${command.name} [options]`);
+    for (const option of command.options) expect(run.stdout).toContain(`--${option.name}`);
     for (const code of command.exitCodes) {
       const { meaning } = EXIT_CODES.find((entry) => entry.code === code)!;
-      assertStringIncludes(run.stdout, `  ${code}  ${meaning}`);
+      expect(run.stdout).toContain(`  ${code}  ${meaning}`);
     }
-    assertEquals((await runCli(["help", command.name])).stdout, run.stdout);
+    expect((await runCli(["help", command.name])).stdout).toStrictEqual(run.stdout);
   }
 });
 
 test("--help --json describes the commands as data", async () => {
   const run = await runCli(["upload", "--help", "--json"]);
   const document = JSON.parse(run.stdout);
-  assertEquals(document.command, "help");
-  assertEquals(
-    document.result.commands.map((command: { name: string }) => command.name),
-    ["upload"],
-  );
+  expect(document.command).toBe("help");
+  expect(document.result.commands.map((command: { name: string }) => command.name)).toStrictEqual([
+    "upload",
+  ]);
   assert(
     document.result.commands[0].options.some(
       (option: { name: string }) => option.name === "--rename",
     ),
   );
-  assertEquals(document.result.exitCodes.length, 8);
+  expect(document.result.exitCodes.length).toBe(8);
 });
 
 test("version and --version", async () => {
   const text = await runCli(["version"]);
-  assertEquals(text.code, 0);
-  assert(text.stdout.startsWith(`quaso ${VERSION} (deno `));
-  assertEquals((await runCli(["--version"])).stdout, text.stdout);
+  expect(text.code).toBe(0);
+  assert(text.stdout.startsWith(`quaso ${VERSION} (node `));
+  expect((await runCli(["--version"])).stdout).toStrictEqual(text.stdout);
   const json = JSON.parse((await runCli(["--version", "--json"])).stdout);
-  assertEquals(json.result.version, VERSION);
-  assertEquals(json.result.runtime.name, "deno");
+  expect(json.result.version).toStrictEqual(VERSION);
+  expect(json.result.runtime.name).toBe("node");
 });
 
 test("usage errors exit with code 2 and never print a stack trace", async () => {
@@ -70,24 +68,24 @@ test("usage errors exit with code 2 and never print a stack trace", async () => 
   ];
   for (const [args, message] of cases) {
     const run = await runCli(args);
-    assertEquals(run.code, 2, args.join(" "));
-    assertStringIncludes(run.stderr, message);
+    expect(run.code, args.join(" ")).toBe(2);
+    expect(run.stderr).toContain(message);
     assert(!run.stderr.includes("    at "), "no stack trace");
-    assertEquals(run.stdout, "");
+    expect(run.stdout).toBe("");
   }
 });
 
 test("with --json, errors are one JSON document on stdout too", async () => {
   const parse = await runCli(["upload", "--nope", "--json"]);
-  assertEquals(parse.code, 2);
+  expect(parse.code).toBe(2);
   const document = JSON.parse(parse.stdout);
-  assertEquals(document.command, "upload");
-  assertEquals(document.ok, false);
-  assertEquals(document.error.code, "usage");
+  expect(document.command).toBe("upload");
+  expect(document.ok).toBe(false);
+  expect(document.error.code).toBe("usage");
   await withProject({ "quaso.config.json": CONFIG, "src/locales/en/a.json": "{}" }, async (dir) => {
     const run = await runCli(["status", "--json"], { cwd: dir, env: { QUASO_HOSTNAME: "x.test" } });
-    assertEquals(run.code, 3);
-    assertEquals(JSON.parse(run.stdout).error.code, "missing_key");
+    expect(run.code).toBe(3);
+    expect(JSON.parse(run.stdout).error.code).toBe("missing_key");
   });
 });
 
@@ -98,18 +96,18 @@ test("--json=true gets the error document too, when the arguments can't be parse
     ["--json", "status", "--bogus"],
   ]) {
     const run = await runCli(args);
-    assertEquals(run.code, 2);
-    assertEquals(JSON.parse(run.stdout).error.message, "Unknown option --bogus.");
+    expect(run.code).toBe(2);
+    expect(JSON.parse(run.stdout).error.message).toBe("Unknown option --bogus.");
   }
   for (const args of [
     ["status", "--json=false", "--bogus"],
     ["status", "--bogus", "--", "--json"],
   ]) {
     const run = await runCli(args);
-    assertEquals(run.code, 2);
-    assertEquals(run.stdout, "", args.join(" "));
+    expect(run.code).toBe(2);
+    expect(run.stdout, args.join(" ")).toBe("");
   }
-  assertEquals(wantsJson(["--json", "--json=false"]), false);
+  expect(wantsJson(["--json", "--json=false"])).toBe(false);
 });
 
 test("--cwd and --config choose the project", async () => {
@@ -123,22 +121,22 @@ test("--cwd and --config choose the project", async () => {
       const fetch = fakeFetch(() => new Response("{}", { status: 500 }));
       const env = { QUASO_HOSTNAME: "x.test", QUASO_API_KEY: "k" };
       const none = await runCli(["download", "--dry-run"], { cwd: dir, env, fetch });
-      assertEquals(none.code, 2);
-      assertStringIncludes(none.stderr, "No quaso.config.json in");
+      expect(none.code).toBe(2);
+      expect(none.stderr).toContain("No quaso.config.json in");
       const cwd = await runCli(["download", "--dry-run", "--cwd", "game"], {
         cwd: dir,
         env,
         fetch,
       });
-      assertEquals(cwd.code, 4, cwd.stderr);
-      assertEquals(new URL(fetch.requests[0].url).searchParams.get("languages"), "de,pl");
+      expect(cwd.code, cwd.stderr).toBe(4);
+      expect(new URL(fetch.requests[0].url).searchParams.get("languages")).toBe("de,pl");
       const config = await runCli(["download", "--dry-run", "--config", "other.json"], {
         cwd: join(dir, "game"),
         env,
         fetch,
       });
-      assertEquals(config.code, 4, config.stderr);
-      assertEquals(new URL(fetch.requests.at(-1)!.url).searchParams.get("languages"), "fr");
+      expect(config.code, config.stderr).toBe(4);
+      expect(new URL(fetch.requests.at(-1)!.url).searchParams.get("languages")).toBe("fr");
     },
   );
 });
@@ -150,10 +148,10 @@ test("an unexpected error is exit code 1, with the stack for the bug report", as
   try {
     await withProject({ "quaso.config.json": CONFIG }, async (dir) => {
       const run = await runCli(["status"], { cwd: dir });
-      assertEquals(run.code, 1);
-      assertStringIncludes(run.stderr, "Unexpected error: undefined is not a function");
-      assertStringIncludes(run.stderr, "This is a bug in quaso");
-      assertStringIncludes(run.stderr, "    at ");
+      expect(run.code).toBe(1);
+      expect(run.stderr).toContain("Unexpected error: undefined is not a function");
+      expect(run.stderr).toContain("This is a bug in quaso");
+      expect(run.stderr).toContain("    at ");
     });
   } finally {
     failing.run = original;

@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
+import { serve } from "../../server/src/http/serve.ts";
 import { createD1Sql } from "../../service/src/adapters/d1_sql.ts";
 import { BATCH_SQL_CASES, initializeBatchSql } from "../../service/src/testing/batch_sql_cases.ts";
 
-Deno.serve({ port: 8000 }, async (request) => {
+await serve({ port: 8000 }, async (request) => {
   if (new URL(request.url).pathname === "/container-ready") return Response.json({ ready: true });
   if (new URL(request.url).pathname !== "/contract") return new Response(null, { status: 404 });
   const sql = createD1Sql();

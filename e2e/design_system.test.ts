@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
-import { assert, assertEquals } from "@std/assert";
+import { spawnSync } from "node:child_process";
 import { join } from "node:path";
+import { assert, expect } from "vitest";
+import { serve } from "../packages/server/src/http/serve.ts";
 import { createWebHandler } from "../packages/server/src/static.ts";
 import { browserTest, openTab, ROOT, type Tab } from "./_setup.ts";
 
@@ -8,16 +10,14 @@ browserTest(
   "the app, catalog, and static website share the design system across themes and screen sizes",
   { seed: true },
   async ({ server, browser }) => {
-    const build = await new Deno.Command(Deno.execPath(), {
-      args: ["task", "site:build"],
+    const build = spawnSync("npm", ["run", "site:build"], {
       cwd: ROOT,
-      stdout: "null",
-      stderr: "inherit",
-    }).output();
-    assert(build.success, "the static website must build using package exports");
+      stdio: ["ignore", "ignore", "inherit"],
+    });
+    assert(build.status === 0, "the static website must build using package exports");
     const handle = createWebHandler(join(ROOT, "site/dist"));
-    const website = Deno.serve({ hostname: "127.0.0.1", port: 0, onListen() {} }, handle);
-    const site = { url: `http://127.0.0.1:${website.addr.port}` };
+    const website = await serve({ hostname: "127.0.0.1", port: 0 }, handle);
+    const site = { url: `http://127.0.0.1:${website.port}` };
     const tabs: Tab[] = [];
     try {
       for (const [host, path] of [
@@ -77,19 +77,21 @@ browserTest(
           await page.evaluate(() => document.head.querySelector("style:last-of-type")?.remove());
         }
         for (const sample of samples) {
-          assertEquals(sample.body, samples[0].body, `shared body styles in ${theme} mode`);
-          assertEquals(
-            sample.headingFont,
+          expect(sample.body, `shared body styles in ${theme} mode`).toStrictEqual(samples[0].body);
+          expect(sample.headingFont, `shared heading font in ${theme} mode`).toStrictEqual(
             samples[0].headingFont,
-            `shared heading font in ${theme} mode`,
           );
           assert(sample.loadedFonts, "packaged Jersey font loads successfully");
         }
         assert(samples[0].button && samples[1].button && samples[2].button);
-        assertEquals(samples[1].button, samples[0].button, `catalog buttons in ${theme} mode`);
-        assertEquals(samples[2].button, samples[0].button, `website buttons in ${theme} mode`);
+        expect(samples[1].button, `catalog buttons in ${theme} mode`).toStrictEqual(
+          samples[0].button,
+        );
+        expect(samples[2].button, `website buttons in ${theme} mode`).toStrictEqual(
+          samples[0].button,
+        );
       }
-      for (const tab of tabs) assertEquals(tab.problems, [], tab.page.url());
+      for (const tab of tabs) expect(tab.problems, tab.page.url()).toStrictEqual([]);
     } finally {
       await website.shutdown();
     }

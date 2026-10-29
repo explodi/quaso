@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: MIT
-import { parse as parseJsonc } from "@std/jsonc";
 /** Operator-owned instance settings generate deployment bindings without editing the checkout. */
 import * as fs from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
@@ -100,7 +99,7 @@ export async function readInstanceConfig(path = DEFAULT_INSTANCE_CONFIG): Promis
     text = await fs.readFile(path, "utf8");
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT")
-      throw new Error(`No instance configuration at ${path}. Run deno task cf:setup first.`, {
+      throw new Error(`No instance configuration at ${path}. Run npm run cf:setup first.`, {
         cause: error,
       });
     throw error;
@@ -123,7 +122,7 @@ export async function saveInstanceConfig(path: string, config: InstanceConfig): 
 export function configuredInstance(config: InstanceConfig, environment: Environment): Instance {
   const instance = config.environments[environment];
   if (instance === undefined)
-    throw new Error(`No ${environment} instance is configured. Run deno task cf:setup first.`);
+    throw new Error(`No ${environment} instance is configured. Run npm run cf:setup first.`);
   return instance;
 }
 
@@ -201,4 +200,18 @@ export async function readDeploymentTemplate(): Promise<Record<string, unknown>>
     parseJsonc(await fs.readFile(resolve(PACKAGE_DIR, "wrangler.jsonc"), "utf8")),
     "Wrangler template",
   );
+}
+
+/** JSON with comments and trailing commas, as `wrangler.jsonc` and the instance settings use. */
+function parseJsonc(text: string): unknown {
+  // Each pass matches whole strings first and keeps them, so `//` or `,}` inside one stays.
+  const withoutComments = text.replace(
+    /("(?:\\.|[^"\\])*")|\/\/[^\n]*|\/\*[\s\S]*?\*\//g,
+    (match, string?: string) => string ?? "",
+  );
+  const withoutTrailingCommas = withoutComments.replace(
+    /("(?:\\.|[^"\\])*")|,(?=\s*[\]}])/g,
+    (match, string?: string) => string ?? "",
+  );
+  return JSON.parse(withoutTrailingCommas);
 }

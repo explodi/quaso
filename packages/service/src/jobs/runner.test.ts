@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
+import { assert, expect, test } from "vitest";
 /**
  * The job runner (S5.1, S5.4, S5.8): priorities, the concurrency limit, retries with the
  * reasons, failures, pauses, the budget, restarts, and acceptance tests 3 and 9.
  */
-import { assert, assertEquals, assertRejects, assertStringIncludes } from "@std/assert";
 import { openNodeSqlite } from "../adapters/node_sqlite.ts";
 import { TimerScheduler } from "../adapters/timer_scheduler.ts";
 import { ANONYMOUS, SYSTEM } from "../api.ts";
@@ -66,21 +65,18 @@ test("runner: single strings first, then uploads, then bulk jobs", async () => {
   const title = stringId(instance.sql, "common.json", "title");
   const single = await instance.service.createJob(SYSTEM, { strings: [title], languages: ["de"] });
   await instance.service.alarm();
-  assertEquals(
-    provider.requests[0].batch?.strings.map((s) => s.id),
-    [`s${title}`],
-  );
+  expect(provider.requests[0].batch?.strings.map((s) => s.id)).toStrictEqual([`s${title}`]);
   const status = async (id: number) => (await instance.service.getJob(SYSTEM, { id })).status;
-  assertEquals(await status(single.job!.id), "done");
-  assertEquals(await status(upload.id), "queued", "one job per alarm run");
-  assertEquals(await status(bulk.job!.id), "queued");
+  expect(await status(single.job!.id)).toBe("done");
+  expect(await status(upload.id), "one job per alarm run").toBe("queued");
+  expect(await status(bulk.job!.id)).toBe("queued");
   await instance.service.alarm();
-  assertEquals(await status(upload.id), "done");
-  assertEquals((await instance.service.getJob(SYSTEM, { id: upload.id })).progress.translated, 3);
+  expect(await status(upload.id)).toBe("done");
+  expect((await instance.service.getJob(SYSTEM, { id: upload.id })).progress.translated).toBe(3);
   // Nothing was left for the bulk job.
-  assertEquals(await status(bulk.job!.id), "done");
-  assertEquals((await instance.service.getJob(SYSTEM, { id: bulk.job!.id })).progress.total, 0);
-  assertEquals(provider.requests.length, 2);
+  expect(await status(bulk.job!.id)).toBe("done");
+  expect((await instance.service.getJob(SYSTEM, { id: bulk.job!.id })).progress.total).toBe(0);
+  expect(provider.requests.length).toBe(2);
 });
 
 test("runner: at most LLM_CONCURRENCY batches at once, 3 × that per alarm run", async () => {
@@ -97,12 +93,12 @@ test("runner: at most LLM_CONCURRENCY batches at once, 3 × that per alarm run",
   llmSettings(instance, { batchSize: 1 });
   await instance.service.createJob(SYSTEM, {});
   await instance.service.alarm();
-  assertEquals(provider.requests.length, 6);
-  assertEquals(most, 2);
-  assertEquals(nextWakeUp(instance.sql)! <= instance.clock.now + 1, true, "more work: now");
+  expect(provider.requests.length).toBe(6);
+  expect(most).toBe(2);
+  expect(nextWakeUp(instance.sql)! <= instance.clock.now + 1, "more work: now").toBe(true);
   await drain(instance);
-  assertEquals(provider.requests.length, 8);
-  assertEquals(count(instance.sql, "translations"), 8);
+  expect(provider.requests.length).toBe(8);
+  expect(count(instance.sql, "translations")).toBe(8);
 });
 
 test("runner: a new service on the same database finishes the job (a restart)", async () => {
@@ -131,12 +127,12 @@ test("runner: a new service on the same database finishes the job (a restart)", 
       provider: createFakeTranslator(),
     });
     await second.start();
-    assertEquals(scheduler.scheduled.length > 0, true, "start() arms the wake-up again");
+    expect(scheduler.scheduled.length > 0, "start() arms the wake-up again").toBe(true);
     await second.alarm();
     const [job] = (await second.listJobs(SYSTEM, {})).jobs;
-    assertEquals(job.status, "done");
-    assertEquals(job.progress.translated, 8);
-    assertEquals(database.sql.query("SELECT COUNT(*) AS n FROM translations")[0].n, 8);
+    expect(job.status).toBe("done");
+    expect(job.progress.translated).toBe(8);
+    expect(database.sql.query("SELECT COUNT(*) AS n FROM translations")[0].n).toBe(8);
   } finally {
     database.close();
   }
@@ -165,25 +161,26 @@ test("checks and retries: the reason goes into the retry, which passes (acceptan
   using instance = await quietProject(provider, {}, ["pl"]);
   await instance.service.createJob(SYSTEM, {});
   await drain(instance);
-  assertEquals(provider.requests.length, 2);
+  expect(provider.requests.length).toBe(2);
   const retry = provider.requests[1];
-  assertEquals(
+  expect(
     retry.batch?.strings.map((s) => s.kind),
-    ["plural"],
     "only the string that failed",
-  );
-  assertStringIncludes(retry.prompt, "Placeholder {{count}} is missing from the few form.");
-  assertStringIncludes(retry.prompt, '"answer":{"one":"{{count}} moneta","few":"kilka monet"');
+  ).toStrictEqual(["plural"]);
+  expect(retry.prompt).toContain("Placeholder {{count}} is missing from the few form.");
+  expect(retry.prompt).toContain('"answer":{"one":"{{count}} moneta","few":"kilka monet"');
   const coins = (await instance.service.listStrings(ANONYMOUS, { language: "pl" })).strings.find(
     (s) => s.key === "coins",
   )!;
-  assertEquals(coins.translation?.colour, "green");
-  assertEquals((coins.translation?.value as Record<string, string>).few, "[{{count}} çöíñś]");
-  assertEquals(coins.llmFailure, null);
+  expect(coins.translation?.colour).toBe("green");
+  expect((coins.translation?.value as Record<string, string>).few).toStrictEqual(
+    "[{{count}} çöíñś]",
+  );
+  expect(coins.llmFailure).toBe(null);
   const outcomes = instance.sql
     .query<{ outcome: string }>("SELECT outcome FROM llm_requests ORDER BY id")
     .map((row) => row.outcome);
-  assertEquals(outcomes, ["partial", "ok"]);
+  expect(outcomes).toStrictEqual(["partial", "ok"]);
 });
 
 test("checks and retries: a string failing 3 times stays untranslated, its failure recorded", async () => {
@@ -197,12 +194,12 @@ test("checks and retries: a string failing 3 times stays untranslated, its failu
   using instance = await quietProject(provider, {}, ["pl"]);
   const { job } = await instance.service.createJob(SYSTEM, {});
   await drain(instance);
-  assertEquals(provider.requests.length, 3, "the first try and 2 retries");
+  expect(provider.requests.length, "the first try and 2 retries").toBe(3);
   const done = await instance.service.getJob(SYSTEM, { id: job!.id });
-  assertEquals(done.status, "done");
-  assertEquals(done.progress.failed, 1);
-  assertEquals(done.progress.translated, 3);
-  assertEquals(done.failures, [
+  expect(done.status).toBe("done");
+  expect(done.progress.failed).toBe(1);
+  expect(done.progress.translated).toBe(3);
+  expect(done.failures).toStrictEqual([
     {
       stringId: stringId(instance.sql, "common.json", "coins"),
       language: "pl",
@@ -213,10 +210,10 @@ test("checks and retries: a string failing 3 times stays untranslated, its failu
   ]);
   const page = await instance.service.listStrings(ANONYMOUS, { language: "pl" });
   const coins = page.strings.find((s) => s.key === "coins")!;
-  assertEquals(coins.translation, null);
-  assertEquals(coins.llmFailure, "No translation was returned.");
+  expect(coins.translation).toBe(null);
+  expect(coins.llmFailure).toBe("No translation was returned.");
   const detail = await instance.service.getString(ANONYMOUS, { id: coins.id, language: "pl" });
-  assertEquals(detail.llmFailure, "No translation was returned.");
+  expect(detail.llmFailure).toBe("No translation was returned.");
 
   // A person's translation clears it.
   write(
@@ -237,7 +234,7 @@ test("checks and retries: a string failing 3 times stays untranslated, its failu
     },
   );
   const after = await instance.service.getString(ANONYMOUS, { id: coins.id, language: "pl" });
-  assertEquals(after.llmFailure, null);
+  expect(after.llmFailure).toBe(null);
 });
 
 test("provider errors: failures per string; blocked answers retried in halves", async () => {
@@ -259,21 +256,17 @@ test("provider errors: failures per string; blocked answers retried in halves", 
   await instance.service.createJob(SYSTEM, {});
   await drain(instance);
   // Blocked with 4 strings: two halves of 2; the half with "Wayfarer" fails for good.
-  assertEquals(
-    provider.requests.map((r) => r.batch!.strings.length),
-    [4, 2, 2],
-  );
-  assertStringIncludes(provider.requests[1].prompt, "blocked by the safety filters (SAFETY)");
+  expect(provider.requests.map((r) => r.batch!.strings.length)).toStrictEqual([4, 2, 2]);
+  expect(provider.requests[1].prompt).toContain("blocked by the safety filters (SAFETY)");
   const [job] = (await instance.service.listJobs(SYSTEM, {})).jobs;
-  assertEquals(job.progress.failed, 2);
-  assertEquals(job.progress.translated, 2);
-  assertEquals(job.failures[0].reason, "HTTP 500: An internal error has occurred.");
-  assertEquals(
+  expect(job.progress.failed).toBe(2);
+  expect(job.progress.translated).toBe(2);
+  expect(job.failures[0].reason).toBe("HTTP 500: An internal error has occurred.");
+  expect(
     instance.sql
       .query<{ outcome: string }>("SELECT outcome FROM llm_requests ORDER BY id")
       .map((row) => row.outcome),
-    ["blocked", "failed", "ok"],
-  );
+  ).toStrictEqual(["blocked", "failed", "ok"]);
 });
 
 test("a file's context that can't be generated is asked for once per job, not every run", async () => {
@@ -293,22 +286,22 @@ test("a file's context that can't be generated is asked for once per job, not ev
   });
   const { job } = await instance.service.createJob(SYSTEM, {});
   assert((await drain(instance)) > 1, "several alarm runs");
-  assertEquals(provider.texts.length, 1);
+  expect(provider.texts.length).toBe(1);
   const done = await instance.service.getJob(SYSTEM, { id: job!.id });
-  assertEquals([done.status, done.progress.translated], ["done", 4]);
+  expect([done.status, done.progress.translated]).toStrictEqual(["done", 4]);
   const contextRequests = () =>
     instance.sql
       .query<{
         outcome: string;
       }>("SELECT outcome FROM llm_requests WHERE language IS NULL ORDER BY id")
       .map((row) => row.outcome);
-  assertEquals(contextRequests(), ["blocked"]);
+  expect(contextRequests()).toStrictEqual(["blocked"]);
 
   // A later job asks again, once.
   await instance.service.createJob(SYSTEM, { retranslate: true });
   await drain(instance);
-  assertEquals(provider.texts.length, 2);
-  assertEquals(contextRequests(), ["blocked", "blocked"]);
+  expect(provider.texts.length).toBe(2);
+  expect(contextRequests()).toStrictEqual(["blocked", "blocked"]);
 });
 
 test("an API key the provider refuses pauses the job; a restart resumes it", async () => {
@@ -329,10 +322,10 @@ test("an API key the provider refuses pauses the job; a restart resumes it", asy
     await uploadJson(first, { "common.json": COMMON }, { languages: ["de"] });
     await first.alarm();
     const [paused] = (await first.listJobs(SYSTEM, {})).jobs;
-    assertEquals([paused.status, paused.error], ["paused", AUTH_ERROR]);
-    assertEquals(paused.progress.failed, 0, "not a failure per string");
-    assertEquals(database.sql.query("SELECT COUNT(*) AS n FROM llm_failures")[0].n, 0);
-    assertEquals(nextWakeUp(database.sql), null, "no more wake-ups");
+    expect([paused.status, paused.error]).toStrictEqual(["paused", AUTH_ERROR]);
+    expect(paused.progress.failed, "not a failure per string").toBe(0);
+    expect(database.sql.query("SELECT COUNT(*) AS n FROM llm_failures")[0].n).toBe(0);
+    expect(nextWakeUp(database.sql), "no more wake-ups").toBe(null);
 
     const second = createService({
       sql: database.sql,
@@ -343,7 +336,7 @@ test("an API key the provider refuses pauses the job; a restart resumes it", asy
     });
     await second.start();
     await second.alarm();
-    assertEquals((await second.getJob(SYSTEM, { id: paused.id })).status, "done");
+    expect((await second.getJob(SYSTEM, { id: paused.id })).status).toBe("done");
 
     // Without a provider, jobs pause with a clear message.
     const third = createService({
@@ -364,7 +357,7 @@ test("an API key the provider refuses pauses the job; a restart resumes it", asy
     await none.start();
     await none.alarm();
     const [latest] = (await none.listJobs(SYSTEM, {})).jobs;
-    assertEquals([latest.status, latest.error], ["paused", NO_PROVIDER_ERROR]);
+    expect([latest.status, latest.error]).toStrictEqual(["paused", NO_PROVIDER_ERROR]);
   } finally {
     database.close();
   }
@@ -379,16 +372,16 @@ test("a failed alarm run is retried with backoff; the job fails after 5 in a row
   for (let attempt = 1; attempt < MAX_ATTEMPTS; attempt++) {
     await instance.service.alarm();
     const current = await instance.service.getJob(SYSTEM, { id: job!.id });
-    assertEquals([current.status, current.error], ["running", "Something unexpected"]);
+    expect([current.status, current.error]).toStrictEqual(["running", "Something unexpected"]);
     const wait = RETRY_BASE_MS * 2 ** (attempt - 1);
-    assertEquals(nextWakeUp(instance.sql), instance.clock.now + wait);
+    expect(nextWakeUp(instance.sql)).toStrictEqual(instance.clock.now + wait);
     instance.clock.advance(wait);
   }
   await instance.service.alarm();
   const failed = await instance.service.getJob(SYSTEM, { id: job!.id });
-  assertEquals(failed.status, "failed");
-  assertEquals(failed.error, "The job failed 5 times in a row: Something unexpected");
-  assertEquals(nextWakeUp(instance.sql), null);
+  expect(failed.status).toBe("failed");
+  expect(failed.error).toBe("The job failed 5 times in a row: Something unexpected");
+  expect(nextWakeUp(instance.sql)).toBe(null);
 });
 
 test("the monthly budget pauses jobs, and they resume in the next month", async () => {
@@ -405,26 +398,27 @@ test("the monthly budget pauses jobs, and they resume in the next month", async 
   const { job } = await instance.service.createJob(SYSTEM, {});
   // The run stops as soon as the budget is used up, with the job paused.
   await instance.service.alarm();
-  assertEquals(provider.requests.length, 2);
+  expect(provider.requests.length).toBe(2);
   const paused = await instance.service.getJob(SYSTEM, { id: job!.id });
-  assertEquals([paused.status, paused.error], ["paused", BUDGET_ERROR]);
-  assertEquals(paused.progress.translated, 2);
+  expect([paused.status, paused.error]).toStrictEqual(["paused", BUDGET_ERROR]);
+  expect(paused.progress.translated).toBe(2);
   const month = nextMonthStart(instance.clock.now);
-  assertEquals(nextWakeUp(instance.sql), month);
+  expect(nextWakeUp(instance.sql)).toStrictEqual(month);
   await instance.service.alarm();
-  assertEquals(provider.requests.length, 2);
-  const refused = await assertRejects(() => instance.service.createJob(SYSTEM, {}), ServiceError);
-  assertEquals([refused.code, refused.status], ["budget_exceeded", 429]);
+  expect(provider.requests.length).toBe(2);
+  const refused = await instance.service.createJob(SYSTEM, {}).catch((error: unknown) => error);
+  assert(refused instanceof ServiceError);
+  expect([refused.code, refused.status]).toStrictEqual(["budget_exceeded", 429]);
   const usage = await instance.service.getUsage(SYSTEM, { period: "month" });
-  assertEquals(usage.budget.monthlyTokens, 200);
-  assertEquals(usage.budget.paused, true);
+  expect(usage.budget.monthlyTokens).toBe(200);
+  expect(usage.budget.paused).toBe(true);
 
   instance.clock.now = month;
   await drain(instance);
   const done = await instance.service.getJob(SYSTEM, { id: job!.id });
-  assertEquals(done.status, "done");
-  assertEquals(done.error, null);
-  assertEquals(done.progress.translated, 4);
+  expect(done.status).toBe("done");
+  expect(done.error).toBe(null);
+  expect(done.progress.translated).toBe(4);
 });
 
 test("the budget is checked before every request, so a run stops once it is used up", async () => {
@@ -442,12 +436,12 @@ test("the budget is checked before every request, so a run stops once it is used
   const { job } = await instance.service.createJob(SYSTEM, {});
   await instance.service.alarm();
   // Only the requests already on their way (LLM_CONCURRENCY = 4), not the whole slice of 12.
-  assertEquals(provider.requests.length, 4);
+  expect(provider.requests.length).toBe(4);
   const paused = await instance.service.getJob(SYSTEM, { id: job!.id });
-  assertEquals([paused.status, paused.error], ["paused", BUDGET_ERROR]);
-  assertEquals(paused.progress.translated, 4);
-  assertEquals(count(instance.sql, "job_items"), 4, "the rest is left for next month");
-  assertEquals(nextWakeUp(instance.sql), nextMonthStart(instance.clock.now));
+  expect([paused.status, paused.error]).toStrictEqual(["paused", BUDGET_ERROR]);
+  expect(paused.progress.translated).toBe(4);
+  expect(count(instance.sql, "job_items"), "the rest is left for next month").toBe(4);
+  expect(nextWakeUp(instance.sql)).toStrictEqual(nextMonthStart(instance.clock.now));
   // A retry is a request too: an answer that fails its checks isn't retried past the budget.
   const retrying = scriptedProvider((request) =>
     answered({
@@ -460,9 +454,11 @@ test("the budget is checked before every request, so a run stops once it is used
   llmSettings(other, { batchSize: 1 });
   await other.service.createJob(SYSTEM, {});
   await other.service.alarm();
-  assertEquals(retrying.requests.length, 1);
-  assertEquals(count(other.sql, "llm_failures"), 0, "not a failure: tried again next month");
-  assertEquals((await other.service.listJobs(SYSTEM, {})).jobs[0].status, "paused");
+  expect(retrying.requests.length).toBe(1);
+  expect(count(other.sql, "llm_failures"), "not a failure: tried again next month").toStrictEqual(
+    0,
+  );
+  expect((await other.service.listJobs(SYSTEM, {})).jobs[0].status).toBe("paused");
 });
 
 test("usage: requests and tokens per day and month, by language and by model", async () => {
@@ -476,16 +472,16 @@ test("usage: requests and tokens per day and month, by language and by model", a
     instance.clock.now,
   );
   const days = await instance.service.getUsage(SYSTEM, { period: "day" });
-  assertEquals(days.period, "day");
-  assertEquals(days.rows.length, 30);
+  expect(days.period).toBe("day");
+  expect(days.rows.length).toBe(30);
   const [yesterday, today] = days.rows.slice(-2);
-  assertEquals([yesterday.period, today.period], ["2026-09-24", "2026-09-25"]);
-  assertEquals(yesterday.requests, 2);
-  assertEquals(yesterday.failures, 0);
-  assertEquals(Object.keys(yesterday.byLanguage).sort(), ["de", "pl"]);
-  assertEquals(Object.keys(yesterday.byModel), ["fake-translator"]);
+  expect([yesterday.period, today.period]).toStrictEqual(["2026-09-24", "2026-09-25"]);
+  expect(yesterday.requests).toBe(2);
+  expect(yesterday.failures).toBe(0);
+  expect(Object.keys(yesterday.byLanguage).sort()).toStrictEqual(["de", "pl"]);
+  expect(Object.keys(yesterday.byModel)).toStrictEqual(["fake-translator"]);
   assert(yesterday.inputTokens > 0);
-  assertEquals(today, {
+  expect(today).toStrictEqual({
     period: "2026-09-25",
     requests: 1,
     failures: 1,
@@ -510,14 +506,11 @@ test("usage: requests and tokens per day and month, by language and by model", a
     from: "2026-08",
     to: "2026-09",
   });
-  assertEquals(
-    months.rows.map((row) => [row.period, row.requests]),
-    [
-      ["2026-08", 0],
-      ["2026-09", 3],
-    ],
-  );
-  assertEquals(months.budget, {
+  expect(months.rows.map((row) => [row.period, row.requests])).toStrictEqual([
+    ["2026-08", 0],
+    ["2026-09", 3],
+  ]);
+  expect(months.budget).toStrictEqual({
     monthlyTokens: null,
     usedThisMonth:
       months.rows[1].inputTokens + months.rows[1].outputTokens + months.rows[1].thinkingTokens,
@@ -528,10 +521,7 @@ test("usage: requests and tokens per day and month, by language and by model", a
     from: "2026-09-25",
     to: "2026-09-25",
   });
-  assertEquals(
-    range.rows.map((row) => row.period),
-    ["2026-09-25"],
-  );
+  expect(range.rows.map((row) => row.period)).toStrictEqual(["2026-09-25"]);
   for (const query of [
     { period: "day", from: "2026-13-01" },
     {
@@ -541,14 +531,15 @@ test("usage: requests and tokens per day and month, by language and by model", a
     },
     { period: "month", from: "1990-01" },
   ] as const) {
-    const error = await assertRejects(() => instance.service.getUsage(SYSTEM, query), ServiceError);
-    assertEquals(error.code, "bad_request", JSON.stringify(query));
+    const error = await instance.service.getUsage(SYSTEM, query).catch((error: unknown) => error);
+    assert(error instanceof ServiceError);
+    expect(error.code, JSON.stringify(query)).toBe("bad_request");
   }
-  const anonymous = await assertRejects(
-    () => instance.service.getUsage(ANONYMOUS, { period: "day" }),
-    ServiceError,
-  );
-  assertEquals(anonymous.code, "unauthorized");
+  const anonymous = await instance.service
+    .getUsage(ANONYMOUS, { period: "day" })
+    .catch((error: unknown) => error);
+  assert(anonymous instanceof ServiceError);
+  expect(anonymous.code).toBe("unauthorized");
 });
 
 test("the fake translator's plural zero forms pass the checks, Latvian's native zero too", async () => {
@@ -557,15 +548,15 @@ test("the fake translator's plural zero forms pass the checks, Latvian's native 
   await uploadJson(instance.service, { "common.json": coins }, { languages: ["lv", "de"] });
   await drain(instance);
   const [job] = (await instance.service.listJobs(SYSTEM, {})).jobs;
-  assertEquals([job.status, job.progress.translated, job.progress.failed], ["done", 2, 0]);
-  assertEquals(count(instance.sql, "llm_failures"), 0);
+  expect([job.status, job.progress.translated, job.progress.failed]).toStrictEqual(["done", 2, 0]);
+  expect(count(instance.sql, "llm_failures")).toBe(0);
   const zero = async (language: string) =>
     (
       (await instance.service.listStrings(ANONYMOUS, { language })).strings[0].translation
         ?.value as Record<string, string>
     ).zero;
-  assertEquals(await zero("lv"), "[{{count}} çöíñś]", "Latvian zero is 0, 10–20, 30, …");
-  assertEquals(await zero("de"), "[Ñö çöíñś]");
+  expect(await zero("lv"), "Latvian zero is 0, 10–20, 30, …").toBe("[{{count}} çöíñś]");
+  expect(await zero("de")).toBe("[Ñö çöíñś]");
 });
 
 test("acceptance test 3: one new string is green in 10 languages well within a minute", async () => {

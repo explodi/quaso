@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 import * as fs from "node:fs/promises";
-import { test } from "node:test";
+import { assert, expect, test } from "vitest";
 /** `deploy/` stays in step with the server: every setting is listed in `.env.example`. */
-import { assert, assertEquals } from "@std/assert";
 import { SHUTDOWN_DEADLINE_MS } from "./shutdown.ts";
 
 const read = (path: string) => fs.readFile(new URL(path, import.meta.url), "utf8");
@@ -16,22 +15,16 @@ test("deploy: .env.example lists every setting the server reads", async () => {
   assert(names.size >= 15, [...names].join(", "));
   const example = await read("../../../deploy/.env.example");
   const listed = new Set([...example.matchAll(/^(?:# )?([A-Z][A-Z0-9_]*)=/gm)].map((m) => m[1]));
-  assertEquals(
-    [...names].filter((name) => !listed.has(name)),
-    [],
-  );
-  assertEquals(
-    [...listed].filter((name) => !names.has(name)),
-    [],
-  );
+  expect([...names].filter((name) => !listed.has(name))).toStrictEqual([]);
+  expect([...listed].filter((name) => !names.has(name))).toStrictEqual([]);
   const set = [...example.matchAll(/^([A-Z][A-Z0-9_]*)=/gm)].map((m) => m[1]);
-  assertEquals(set, ["QUASO_DOMAIN", "SETUP_KEY", "TRUST_PROXY"]);
+  expect(set).toStrictEqual(["QUASO_DOMAIN", "SETUP_KEY", "TRUST_PROXY"]);
 });
 
 test("deploy: the Docker and Compose files carry the licence header", async () => {
   for (const file of ["Dockerfile", "compose.yaml", "Caddyfile", ".env.example"]) {
     const text = await read(`../../../deploy/${file}`);
-    assertEquals(text.split("\n")[0], "# SPDX-License-Identifier: MIT", file);
+    expect(text.split("\n")[0], file).toBe("# SPDX-License-Identifier: MIT");
   }
 });
 

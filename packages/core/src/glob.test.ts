@@ -1,25 +1,24 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assert, assertEquals, assertFalse, assertThrows } from "@std/assert";
+import { assert, expect, test } from "vitest";
 import { expandBraces, globBase, globProblem, globToRegExp } from "./glob.ts";
 
 test("globBase: the folder where the glob starts", () => {
-  assertEquals(globBase("src/locales/en/**/*.json"), "src/locales/en");
-  assertEquals(globBase("src/locales/en/*.json"), "src/locales/en");
-  assertEquals(globBase("locales/en.json"), "locales");
-  assertEquals(globBase("common.json"), "");
-  assertEquals(globBase("**/*.json"), "");
-  assertEquals(globBase("{src,lib}/en/*.json"), "");
-  assertEquals(globBase("i18n/en/[ab]*.json"), "i18n/en");
+  expect(globBase("src/locales/en/**/*.json")).toBe("src/locales/en");
+  expect(globBase("src/locales/en/*.json")).toBe("src/locales/en");
+  expect(globBase("locales/en.json")).toBe("locales");
+  expect(globBase("common.json")).toBe("");
+  expect(globBase("**/*.json")).toBe("");
+  expect(globBase("{src,lib}/en/*.json")).toBe("");
+  expect(globBase("i18n/en/[ab]*.json")).toBe("i18n/en");
 });
 
 test("expandBraces expands groups, nested ones too, and keeps others literal", () => {
-  assertEquals(expandBraces("a/{b,c}/d"), ["a/b/d", "a/c/d"]);
-  assertEquals(expandBraces("{a,b{c,d}}.json"), ["a.json", "bc.json", "bd.json"]);
-  assertEquals(expandBraces("{a}{b,c}"), ["{a}b", "{a}c"]);
-  assertEquals(expandBraces("a{b,c"), ["a{b,c"]);
-  assertEquals(expandBraces("[{]x"), ["[{]x"]);
-  assertThrows(() => expandBraces("{a,b}".repeat(11)));
+  expect(expandBraces("a/{b,c}/d")).toStrictEqual(["a/b/d", "a/c/d"]);
+  expect(expandBraces("{a,b{c,d}}.json")).toStrictEqual(["a.json", "bc.json", "bd.json"]);
+  expect(expandBraces("{a}{b,c}")).toStrictEqual(["{a}b", "{a}c"]);
+  expect(expandBraces("a{b,c")).toStrictEqual(["a{b,c"]);
+  expect(expandBraces("[{]x")).toStrictEqual(["[{]x"]);
+  expect(() => expandBraces("{a,b}".repeat(11))).toThrow();
 });
 
 test("globToRegExp: *, **, ?, classes and braces", () => {
@@ -44,17 +43,16 @@ test("globToRegExp: *, **, ?, classes and braces", () => {
 
 test("globToRegExp over key paths: * stays within a key, ** spans keys", () => {
   assert(globToRegExp("posts.*", ".").test("posts.welcome"));
-  assertFalse(globToRegExp("posts.*", ".").test("posts.welcome.title"));
-  assertFalse(globToRegExp("posts.*", ".").test("postsXwelcome"));
+  expect(globToRegExp("posts.*", ".").test("posts.welcome.title")).toBeFalsy();
+  expect(globToRegExp("posts.*", ".").test("postsXwelcome")).toBeFalsy();
   assert(globToRegExp("posts.**", ".").test("posts.welcome.title"));
   assert(globToRegExp("{posts,replies}.*", ".").test("replies.first"));
   assert(globToRegExp("menu/*", ".").test("menu/play"));
 });
 
 test("globProblem names a pattern that can't be used", () => {
-  assertEquals(globProblem("posts.*", "."), null);
-  assertEquals(
-    globProblem("a/[z-a].json"),
+  expect(globProblem("posts.*", ".")).toBe(null);
+  expect(globProblem("a/[z-a].json")).toStrictEqual(
     "isn't a valid glob: Invalid regular expression: /^(?:a\\/[z-a]\\.json)$/: Range out of order in character class",
   );
 });

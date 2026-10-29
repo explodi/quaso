@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 /** Markdown documents through the service: one string per file, translated whole. */
-import { test } from "node:test";
-import { assert, assertEquals, assertStringIncludes, assertThrows } from "@std/assert";
+import { assert, expect, test } from "vitest";
 import { MAX_DOCUMENT_WORDS, sha256Hex } from "@quaso/core";
 import { SYSTEM } from "./api.ts";
 import { ServiceError } from "./errors.ts";
@@ -53,23 +52,20 @@ test("upload: a Markdown file is one document string, whose key is empty", async
     "SELECT format FROM files WHERE path = ?",
     PATH,
   );
-  assertEquals(stored, [{ format: '{"type":"markdown"}' }]);
+  expect(stored).toStrictEqual([{ format: '{"type":"markdown"}' }]);
   const strings = await instance.service.listStrings(SYSTEM, { language: "de", file: PATH });
-  assertEquals(strings.total, 1);
+  expect(strings.total).toBe(1);
   const [summary] = strings.strings;
-  assertEquals(
-    {
-      file: summary.file,
-      key: summary.key,
-      kind: summary.kind,
-      document: summary.document,
-      source: summary.source,
-    },
-    { file: PATH, key: "", kind: "text", document: true, source: ARTICLE },
-  );
+  expect({
+    file: summary.file,
+    key: summary.key,
+    kind: summary.kind,
+    document: summary.document,
+    source: summary.source,
+  }).toStrictEqual({ file: PATH, key: "", kind: "text", document: true, source: ARTICLE });
   assert(summary.words > 20, `${summary.words} words`);
   const json = await instance.service.listStrings(SYSTEM, { language: "de", file: "common.json" });
-  assertEquals(json.strings[0].document, false);
+  expect(json.strings[0].document).toBe(false);
 });
 
 test("upload: a blank Markdown file holds nothing to translate", async () => {
@@ -79,9 +75,9 @@ test("upload: a blank Markdown file holds nothing to translate", async () => {
     languages: ["de"],
   });
   const strings = await instance.service.listStrings(SYSTEM, { language: "de" });
-  assertEquals(strings.total, 0);
+  expect(strings.total).toBe(0);
   const exported = await instance.service.exportFiles(SYSTEM, { languages: ["de"] });
-  assertEquals(exported.files, [
+  expect(exported.files).toStrictEqual([
     { path: "empty.md", language: "de", content: "", sha256: sha256Hex("") },
   ]);
 });
@@ -95,21 +91,21 @@ test("export: an untranslated document is the English with a final newline, or n
         Object.fromEntries(result.files.map((file) => [`${file.language}/${file.path}`, file])),
       );
   const plain = await files({ languages: ["de"] });
-  assertEquals(plain[`de/${PATH}`].content, `${ARTICLE}\n`);
+  expect(plain[`de/${PATH}`].content).toStrictEqual(`${ARTICLE}\n`);
   const omit = await files({ languages: ["de"], untranslated: "omit" });
-  assertEquals(omit[`de/${PATH}`].content, "");
-  assertEquals(omit[`de/${PATH}`].sha256, sha256Hex(""));
-  assertEquals(omit["de/common.json"].content, "{}\n", "JSON files are never empty");
+  expect(omit[`de/${PATH}`].content).toBe("");
+  expect(omit[`de/${PATH}`].sha256).toStrictEqual(sha256Hex(""));
+  expect(omit["de/common.json"].content, "JSON files are never empty").toBe("{}\n");
 });
 
 test("export: a translated document is its translation, normalized, byte-stable", async () => {
   using instance = await project();
   write(instance, PATH, "", "de", GERMAN.replaceAll("\n", "\r\n") + "\r\n");
   const first = await instance.service.exportFiles(SYSTEM, { languages: ["de"], files: [PATH] });
-  assertEquals(first.files[0].content, `${GERMAN}\n`);
-  assertEquals(first.files[0].sha256, sha256Hex(`${GERMAN}\n`));
+  expect(first.files[0].content).toStrictEqual(`${GERMAN}\n`);
+  expect(first.files[0].sha256).toStrictEqual(sha256Hex(`${GERMAN}\n`));
   const second = await instance.service.exportFiles(SYSTEM, { languages: ["de"], files: [PATH] });
-  assertEquals(second.files, first.files);
+  expect(second.files).toStrictEqual(first.files);
 });
 
 test("export: an outdated document is reported, and left out with outdated: omit", async () => {
@@ -120,37 +116,36 @@ test("export: an outdated document is reported, and left out with outdated: omit
     partial: true,
   });
   const written = await instance.service.exportFiles(SYSTEM, { languages: ["de"], files: [PATH] });
-  assertEquals(written.files[0].content, `${GERMAN}\n`);
-  assertEquals(
-    written.files[0].outdated?.map((entry) => entry.key),
-    [""],
-  );
+  expect(written.files[0].content).toStrictEqual(`${GERMAN}\n`);
+  expect(written.files[0].outdated?.map((entry) => entry.key)).toStrictEqual([""]);
   const omitted = await instance.service.exportFiles(SYSTEM, {
     languages: ["de"],
     files: [PATH],
     outdated: "omit",
   });
-  assertEquals(omitted.files[0].content, "");
-  assertEquals(omitted.files[0].outdated, undefined);
+  expect(omitted.files[0].content).toBe("");
+  expect(omitted.files[0].outdated).toBe(undefined);
 });
 
 test("writing a document stores it normalized, so a final newline is never a change", async () => {
   using instance = await project();
-  assertEquals(write(instance, PATH, "", "de", `${GERMAN}\r\n`).status, "written");
+  expect(write(instance, PATH, "", "de", `${GERMAN}\r\n`).status).toBe("written");
   const strings = await instance.service.listStrings(SYSTEM, { language: "de", file: PATH });
-  assertEquals(strings.strings[0].translation?.value, GERMAN);
-  assertEquals(write(instance, PATH, "", "de", `${GERMAN}\n\n`).status, "unchanged");
+  expect(strings.strings[0].translation?.value).toStrictEqual(GERMAN);
+  expect(write(instance, PATH, "", "de", `${GERMAN}\n\n`).status).toBe("unchanged");
 });
 
 test("a document translation with a merged paragraph is refused by the checks", async () => {
   using instance = await project();
   const merged = GERMAN.replace("\n\nManche", " Manche");
-  const error = assertThrows(() => write(instance, PATH, "", "de", merged), ServiceError);
-  assertEquals(error.code, "qa_failed");
-  assertEquals(
-    error.details?.map((detail) => [detail.check, detail.message]),
-    [["paragraphs", "The English has 3 paragraphs; the translation has 2."]],
+  const error = await Promise.try(() => write(instance, PATH, "", "de", merged)).catch(
+    (error: unknown) => error,
   );
+  assert(error instanceof ServiceError);
+  expect(error.code).toBe("qa_failed");
+  expect(error.details?.map((detail) => [detail.check, detail.message])).toStrictEqual([
+    ["paragraphs", "The English has 3 paragraphs; the translation has 2."],
+  ]);
 });
 
 test("import: Markdown translation files are imported whole, blank ones skipped, broken ones refused", async () => {
@@ -163,37 +158,34 @@ test("import: Markdown translation files are imported whole, blank ones skipped,
       { path: "news/missing.md", content: "Nicht hochgeladen" },
     ],
   });
-  assertEquals(
-    { imported: result.imported, unknownFiles: result.unknownFiles, refused: result.refused },
-    { imported: 1, unknownFiles: ["news/missing.md"], refused: [] },
-  );
+  expect({
+    imported: result.imported,
+    unknownFiles: result.unknownFiles,
+    refused: result.refused,
+  }).toStrictEqual({ imported: 1, unknownFiles: ["news/missing.md"], refused: [] });
   const strings = await instance.service.listStrings(SYSTEM, { language: "de", file: PATH });
-  assertEquals(strings.strings[0].translation?.value, GERMAN);
-  assertEquals(strings.strings[0].translation?.colour, "blue");
+  expect(strings.strings[0].translation?.value).toStrictEqual(GERMAN);
+  expect(strings.strings[0].translation?.colour).toBe("blue");
 
   const blank = await instance.service.importTranslations(SYSTEM, {
     language: "pl",
     as: "green",
     files: [{ path: PATH, content: "\n" }],
   });
-  assertEquals(
-    { imported: blank.imported, skippedEmpty: blank.skippedEmpty },
-    {
-      imported: 0,
-      skippedEmpty: 1,
-    },
-  );
+  expect({ imported: blank.imported, skippedEmpty: blank.skippedEmpty }).toStrictEqual({
+    imported: 0,
+    skippedEmpty: 1,
+  });
 
   const broken = await instance.service.importTranslations(SYSTEM, {
     language: "pl",
     as: "green",
     files: [{ path: PATH, content: GERMAN.replace("\n\nManche", " Manche") }],
   });
-  assertEquals(broken.imported, 0);
-  assertEquals(
+  expect(broken.imported).toBe(0);
+  expect(
     broken.refused.map((refusal) => [refusal.key, refusal.checks.map((check) => check.check)]),
-    [["", ["paragraphs"]]],
-  );
+  ).toStrictEqual([["", ["paragraphs"]]]);
 });
 
 test("a translation job translates a document as one text, marked as such in the prompt", async () => {
@@ -212,17 +204,17 @@ test("a translation job translates a document as one text, marked as such in the
   const documentRequests = provider.requests.filter((request) =>
     request.prompt.includes('"document":true'),
   );
-  assertEquals(documentRequests.length, 1, "the document is a batch of its own");
-  assertStringIncludes(documentRequests[0].system, "whole file");
-  assertEquals(documentRequests[0].batch?.strings.length, 1);
+  expect(documentRequests.length, "the document is a batch of its own").toBe(1);
+  expect(documentRequests[0].system).toContain("whole file");
+  expect(documentRequests[0].batch?.strings.length).toBe(1);
   const strings = await instance.service.listStrings(SYSTEM, { language: "de", file: PATH });
   const translation = strings.strings[0].translation;
   assert(translation !== null, "the document was translated");
-  assertEquals(translation.colour, "green");
-  assertEquals(translation.qa, { errors: 0, warnings: 0 });
+  expect(translation.colour).toBe("green");
+  expect(translation.qa).toStrictEqual({ errors: 0, warnings: 0 });
   const value = translation.value as string;
-  assertEquals(value.split("\n\n").length, 3, "the paragraphs survive the fake translator");
-  assertStringIncludes(value, "{{cityName}}");
+  expect(value.split("\n\n").length, "the paragraphs survive the fake translator").toBe(3);
+  expect(value).toContain("{{cityName}}");
 });
 
 test("an update of a document sends the English it was made for, and keeps untouched paragraphs", async () => {
@@ -250,10 +242,10 @@ test("an update of a document sends the English it was made for, and keeps untou
   await instance.service.createJob(SYSTEM, { languages: ["de"] });
   await drain(instance);
 
-  assertEquals(provider.requests.length, 1);
+  expect(provider.requests.length).toBe(1);
   const line = provider.requests[0].prompt.split("\n").find((text) => text.startsWith('{"id"'))!;
-  assertStringIncludes(line, `"outdatedEnglish":${JSON.stringify(ARTICLE)}`);
-  assertStringIncludes(line, `"outdatedTranslation":${JSON.stringify(GERMAN)}`);
+  expect(line).toContain(`"outdatedEnglish":${JSON.stringify(ARTICLE)}`);
+  expect(line).toContain(`"outdatedTranslation":${JSON.stringify(GERMAN)}`);
   const strings = await instance.service.listStrings(SYSTEM, { language: "de", file: PATH });
   const expected = [
     "Der Moment ist gekommen: {{cityName}} ist gegründet",
@@ -262,7 +254,7 @@ test("an update of a document sends the English it was made for, and keeps untou
     "",
     "Einige hielten sie.",
   ].join("\n");
-  assertEquals(strings.strings[0].translation?.value, expected);
+  expect(strings.strings[0].translation?.value).toStrictEqual(expected);
 });
 
 test("a document longer than the limit is a warning on upload, and fails in a job without a request", async () => {
@@ -276,15 +268,12 @@ test("a document longer than the limit is a warning on upload, and fails in a jo
     files: [document("long.md", `${long}\n`)],
     languages: ["de"],
   });
-  assertEquals(upload.warnings, [
+  expect(upload.warnings).toStrictEqual([
     `long.md has ${(MAX_DOCUMENT_WORDS + 1).toLocaleString("en")} words, more than the ${MAX_DOCUMENT_WORDS.toLocaleString("en")} the LLM translates in one answer: split it, or translate it in the editor`,
   ]);
   const { job } = await instance.service.createJob(SYSTEM, { languages: ["de"] });
   await drain(instance);
-  assertEquals(provider.requests.length, 0);
+  expect(provider.requests.length).toBe(0);
   const done = await instance.service.getJob(SYSTEM, { id: job!.id });
-  assertEquals(
-    done.failures.map((failure) => failure.reason),
-    [TOO_LONG],
-  );
+  expect(done.failures.map((failure) => failure.reason)).toStrictEqual([TOO_LONG]);
 });

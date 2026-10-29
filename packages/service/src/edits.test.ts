@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals, assertRejects } from "@std/assert";
+import { assert, expect, test } from "vitest";
 import { ANONYMOUS } from "./api.ts";
 import { ServiceError } from "./errors.ts";
 import { addUser, stringId, type TestInstance, uploadJson, write } from "./test_helpers.ts";
 import { ENGLISH, projectService } from "./testing/people.ts";
 
 async function rejectsWith(promise: Promise<unknown>, code: string) {
-  const error = await assertRejects(() => promise, ServiceError);
-  assertEquals(error.code, code, error.message);
+  const error = await promise.catch((error: unknown) => error);
+  assert(error instanceof ServiceError);
+  expect(error.code, error.message).toStrictEqual(code);
   return error;
 }
 
@@ -26,11 +26,12 @@ test("edits: a manager's save is blue and approved by them; stale saves conflict
     baseRevision: 0,
   });
   const translation = saved.translation!;
-  assertEquals(
-    [translation.value, translation.colour, translation.outdated],
-    ["Spielen", "blue", false],
-  );
-  assertEquals([translation.author.name, translation.approver?.name], ["Morgan", "Morgan"]);
+  expect([translation.value, translation.colour, translation.outdated]).toStrictEqual([
+    "Spielen",
+    "blue",
+    false,
+  ]);
+  expect([translation.author.name, translation.approver?.name]).toStrictEqual(["Morgan", "Morgan"]);
 
   const conflict = await rejectsWith(
     service.saveTranslation(manager, {
@@ -40,22 +41,19 @@ test("edits: a manager's save is blue and approved by them; stale saves conflict
     }),
     "conflict",
   );
-  assertEquals(conflict.current?.value, "Spielen");
-  assertEquals(conflict.current?.revision, translation.revision);
+  expect(conflict.current?.value).toBe("Spielen");
+  expect(conflict.current?.revision).toStrictEqual(translation.revision);
   const again = await service.saveTranslation(manager, {
     ...target(instance, "play"),
     value: "Los geht's",
     baseRevision: translation.revision,
   });
-  assertEquals(again.translation?.value, "Los geht's");
+  expect(again.translation?.value).toBe("Los geht's");
   const history = await service.getHistory(ANONYMOUS, { ...target(instance, "play") });
-  assertEquals(
-    history.entries.slice(0, 2).map((e) => [e.event, e.actor.name, e.after]),
-    [
-      ["translation_saved", "Morgan", "Los geht's"],
-      ["translation_saved", "Morgan", "Spielen"],
-    ],
-  );
+  expect(history.entries.slice(0, 2).map((e) => [e.event, e.actor.name, e.after])).toStrictEqual([
+    ["translation_saved", "Morgan", "Los geht's"],
+    ["translation_saved", "Morgan", "Spielen"],
+  ]);
 });
 
 test("edits: a save that drops a placeholder is refused (acceptance test 9, person path)", async () => {
@@ -69,12 +67,10 @@ test("edits: a save that drops a placeholder is refused (acceptance test 9, pers
     }),
     "qa_failed",
   );
-  assertEquals(
-    error.details?.map((d) => [d.check, d.value, d.form]),
-    [["placeholder_missing", "{{count}}", "other"]],
-  );
-  assertEquals(
-    (await instance.service.getString(ANONYMOUS, target(instance, "items"))).translation,
+  expect(error.details?.map((d) => [d.check, d.value, d.form])).toStrictEqual([
+    ["placeholder_missing", "{{count}}", "other"],
+  ]);
+  expect((await instance.service.getString(ANONYMOUS, target(instance, "items"))).translation).toBe(
     null,
   );
 });
@@ -92,24 +88,30 @@ test("edits: approve a green one as it is; an outdated one becomes current", asy
     ...target(instance, "play"),
     baseRevision: green.revision,
   });
-  assertEquals([approved.translation?.colour, approved.translation?.value], ["blue", "Spielen"]);
-  assertEquals(
-    [approved.translation?.author.name, approved.translation?.approver?.name],
-    ["test-model", "Morgan"],
-  );
+  expect([approved.translation?.colour, approved.translation?.value]).toStrictEqual([
+    "blue",
+    "Spielen",
+  ]);
+  expect([approved.translation?.author.name, approved.translation?.approver?.name]).toStrictEqual([
+    "test-model",
+    "Morgan",
+  ]);
 
   // The English changes: the green translation is outdated until someone confirms it.
   const quit = write(instance, "common.json", "quit", "de", "Beenden");
   await uploadJson(service, { "common.json": { ...ENGLISH, quit: "Exit" } });
   const outdated = await service.getString(ANONYMOUS, target(instance, "quit"));
-  assertEquals(outdated.translation?.outdated, true);
+  expect(outdated.translation?.outdated).toBe(true);
   const confirmed = await service.approveTranslation(manager, {
     ...target(instance, "quit"),
     baseRevision: quit.revision,
   });
-  assertEquals([confirmed.translation?.colour, confirmed.translation?.outdated], ["blue", false]);
+  expect([confirmed.translation?.colour, confirmed.translation?.outdated]).toStrictEqual([
+    "blue",
+    false,
+  ]);
   const events = (await service.getHistory(ANONYMOUS, target(instance, "quit"))).entries;
-  assertEquals(events[0].event, "translation_approved");
+  expect(events[0].event).toBe("translation_approved");
 });
 
 test("edits: approving runs the checks against the current English", async () => {
@@ -143,13 +145,13 @@ test("edits: unapprove makes blue green; delete makes it red", async () => {
       baseRevision: saved.revision,
     })
   ).translation!;
-  assertEquals([green.colour, green.value, green.approver], ["green", "Spielen", null]);
+  expect([green.colour, green.value, green.approver]).toStrictEqual(["green", "Spielen", null]);
   // Unapproving a green one changes nothing.
   const same = await service.unapproveTranslation(manager, {
     ...target(instance, "play"),
     baseRevision: green.revision,
   });
-  assertEquals(same.translation?.revision, green.revision);
+  expect(same.translation?.revision).toStrictEqual(green.revision);
   await rejectsWith(
     service.deleteTranslation(manager, {
       ...target(instance, "play"),
@@ -157,22 +159,18 @@ test("edits: unapprove makes blue green; delete makes it red", async () => {
     }),
     "conflict",
   );
-  assertEquals(
+  expect(
     await service.deleteTranslation(manager, {
       ...target(instance, "play"),
       baseRevision: green.revision,
     }),
-    { translation: null },
-  );
+  ).toStrictEqual({ translation: null });
   const events = (await service.getHistory(ANONYMOUS, target(instance, "play"))).entries;
-  assertEquals(
-    events.slice(0, 3).map((e) => [e.event, e.beforeColour, e.afterColour]),
-    [
-      ["translation_deleted", "green", null],
-      ["translation_unapproved", "blue", "green"],
-      ["translation_saved", null, "blue"],
-    ],
-  );
+  expect(events.slice(0, 3).map((e) => [e.event, e.beforeColour, e.afterColour])).toStrictEqual([
+    ["translation_deleted", "green", null],
+    ["translation_unapproved", "blue", "green"],
+    ["translation_saved", null, "blue"],
+  ]);
 });
 
 test("edits: only managers and administrators, in their languages", async () => {
@@ -195,9 +193,9 @@ test("edits: only managers and administrators, in their languages", async () => 
     }),
     "forbidden",
   );
-  assertEquals((await service.saveTranslation(admin, input)).translation?.colour, "blue");
+  expect((await service.saveTranslation(admin, input)).translation?.colour).toBe("blue");
   const limited = addUser(instance.sql, "manager", ["FR"]);
-  assertEquals(
+  expect(
     (
       await service.saveTranslation(limited, {
         ...target(instance, "quit", "fr"),
@@ -205,6 +203,5 @@ test("edits: only managers and administrators, in their languages", async () => 
         baseRevision: 0,
       })
     ).translation?.value,
-    "Quitter",
-  );
+  ).toBe("Quitter");
 });

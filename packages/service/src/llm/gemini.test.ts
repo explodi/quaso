@@ -1,14 +1,7 @@
 // SPDX-License-Identifier: MIT
 import type { Fetch } from "@quaso/core";
 import * as fs from "node:fs/promises";
-import { test } from "node:test";
-import {
-  assert,
-  assertEquals,
-  assertFalse,
-  assertRejects,
-  assertStringIncludes,
-} from "@std/assert";
+import { assert, expect, test } from "vitest";
 import {
   createGeminiProvider,
   GEMINI_BASE_URL,
@@ -90,43 +83,48 @@ const REQUEST: ProviderRequest = {
 test("gemini: a normal answer is parsed, with its usage and without its thoughts", async () => {
   const { gemini, sent } = provider([json(await recorded("generate_ok.json"))]);
   const result = await gemini.translate(REQUEST);
-  assertEquals(result.answer, {
+  expect(result.answer).toStrictEqual({
     translations: [
       { id: "s1", text: "Willkommen zurück, {{name}}!" },
       { id: "s2", forms: { one: "{{count}} Münze", other: "{{count}} Münzen" } },
     ],
   });
-  assertEquals(result.usage, { inputTokens: 812, outputTokens: 64, thinkingTokens: 304 });
-  assertEquals(result.blocked, undefined);
-  assertEquals(sent.length, 1);
-  assertEquals(sent[0].url, `${GEMINI_BASE_URL}/v1beta/models/gemini-flash-latest:generateContent`);
-  assertEquals(sent[0].method, "POST");
+  expect(result.usage).toStrictEqual({ inputTokens: 812, outputTokens: 64, thinkingTokens: 304 });
+  expect(result.blocked).toBe(undefined);
+  expect(sent.length).toBe(1);
+  expect(sent[0].url).toStrictEqual(
+    `${GEMINI_BASE_URL}/v1beta/models/gemini-flash-latest:generateContent`,
+  );
+  expect(sent[0].method).toBe("POST");
 });
 
 test("gemini: the request body has the system instruction, the schema and safety", async () => {
   const { gemini, sent } = provider([json(await recorded("generate_ok.json"))]);
   await gemini.translate(REQUEST);
   const body = sent[0].body as any;
-  assertEquals(body.systemInstruction, { parts: [{ text: "You are a translator." }] });
-  assertEquals(body.contents, [{ role: "user", parts: [{ text: "Translate these strings." }] }]);
-  assertEquals(body.generationConfig.responseMimeType, "application/json");
-  assertEquals(body.generationConfig.temperature, 0.2);
+  expect(body.systemInstruction).toStrictEqual({ parts: [{ text: "You are a translator." }] });
+  expect(body.contents).toStrictEqual([
+    { role: "user", parts: [{ text: "Translate these strings." }] },
+  ]);
+  expect(body.generationConfig.responseMimeType).toBe("application/json");
+  expect(body.generationConfig.temperature).toBe(0.2);
   const schema = body.generationConfig.responseSchema;
-  assertEquals(schema.type, "OBJECT");
-  assertEquals(schema.required, ["translations"]);
-  assertEquals(schema.properties.translations.type, "ARRAY");
-  assertEquals(schema.properties.translations.items.type, "OBJECT");
-  assertEquals(schema.properties.translations.items.properties.id.type, "STRING");
-  assertEquals(schema.properties.translations.items.properties.forms.properties.few.type, "STRING");
-  assertEquals(schema.properties.translations.items.propertyOrdering, [
+  expect(schema.type).toBe("OBJECT");
+  expect(schema.required).toStrictEqual(["translations"]);
+  expect(schema.properties.translations.type).toBe("ARRAY");
+  expect(schema.properties.translations.items.type).toBe("OBJECT");
+  expect(schema.properties.translations.items.properties.id.type).toBe("STRING");
+  expect(schema.properties.translations.items.properties.forms.properties.few.type).toStrictEqual(
+    "STRING",
+  );
+  expect(schema.properties.translations.items.propertyOrdering).toStrictEqual([
     "id",
     "text",
     "forms",
     "referenceNotes",
     "ambiguous",
   ]);
-  assertEquals(
-    body.safetySettings,
+  expect(body.safetySettings).toStrictEqual(
     HARM_CATEGORIES.map((category) => ({
       category,
       threshold: "BLOCK_NONE",
@@ -135,22 +133,20 @@ test("gemini: the request body has the system instruction, the schema and safety
 });
 
 test("gemini: safety settings for each level", () => {
-  assertEquals(
-    safetySettings("permissive").map((s) => s.threshold),
-    ["BLOCK_NONE", "BLOCK_NONE", "BLOCK_NONE", "BLOCK_NONE"],
-  );
-  assertEquals(
-    safetySettings("permissive").map((s) => s.category),
-    [
-      "HARM_CATEGORY_HARASSMENT",
-      "HARM_CATEGORY_HATE_SPEECH",
-      "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-      "HARM_CATEGORY_DANGEROUS_CONTENT",
-    ],
-  );
-  assertEquals(safetySettings("default"), []);
-  assertEquals(
-    safetySettings("strict").map((s) => s.threshold),
+  expect(safetySettings("permissive").map((s) => s.threshold)).toStrictEqual([
+    "BLOCK_NONE",
+    "BLOCK_NONE",
+    "BLOCK_NONE",
+    "BLOCK_NONE",
+  ]);
+  expect(safetySettings("permissive").map((s) => s.category)).toStrictEqual([
+    "HARM_CATEGORY_HARASSMENT",
+    "HARM_CATEGORY_HATE_SPEECH",
+    "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+    "HARM_CATEGORY_DANGEROUS_CONTENT",
+  ]);
+  expect(safetySettings("default")).toStrictEqual([]);
+  expect(safetySettings("strict").map((s) => s.threshold)).toStrictEqual(
     new Array(4).fill("BLOCK_LOW_AND_ABOVE"),
   );
 });
@@ -159,14 +155,14 @@ test("gemini: each safety level reaches the request", async () => {
   for (const safety of ["default", "strict"] as const) {
     const { gemini, sent } = provider([json(await recorded("generate_ok.json"))]);
     await gemini.translate({ ...REQUEST, safety });
-    assertEquals((sent[0].body as any).safetySettings, safetySettings(safety));
+    expect((sent[0].body as any).safetySettings).toStrictEqual(safetySettings(safety));
   }
 });
 
 test("gemini: a request that doesn't ask for less thinking leaves the model's own", async () => {
   const { gemini, sent } = provider([json(await recorded("generate_ok.json"))]);
   await gemini.translate(REQUEST);
-  assertEquals((sent[0].body as any).generationConfig.thinkingConfig, undefined);
+  expect((sent[0].body as any).generationConfig.thinkingConfig).toBe(undefined);
 });
 
 test("gemini: low thinking is a level for Gemini 3 and the latest aliases", async () => {
@@ -176,18 +172,22 @@ test("gemini: low thinking is a level for Gemini 3 and the latest aliases", asyn
   ]);
   await gemini.translate({ ...REQUEST, model: "gemini-3.8-flash", thinking: "low" });
   await gemini.translate({ ...REQUEST, thinking: "low" });
-  assertEquals((sent[0].body as any).generationConfig.thinkingConfig, { thinkingLevel: "low" });
-  assertEquals((sent[1].body as any).generationConfig.thinkingConfig, { thinkingLevel: "low" });
+  expect((sent[0].body as any).generationConfig.thinkingConfig).toStrictEqual({
+    thinkingLevel: "low",
+  });
+  expect((sent[1].body as any).generationConfig.thinkingConfig).toStrictEqual({
+    thinkingLevel: "low",
+  });
 });
 
 test("gemini: low thinking is a token budget for Gemini 2.5, and Pro can't go to none", () => {
-  assertEquals(lowThinking("gemini-2.5-flash"), { thinkingBudget: 0 });
-  assertEquals(lowThinking("gemini-2.5-flash-lite"), { thinkingBudget: 0 });
-  assertEquals(lowThinking("gemini-2.5-pro"), { thinkingBudget: 128 });
+  expect(lowThinking("gemini-2.5-flash")).toStrictEqual({ thinkingBudget: 0 });
+  expect(lowThinking("gemini-2.5-flash-lite")).toStrictEqual({ thinkingBudget: 0 });
+  expect(lowThinking("gemini-2.5-pro")).toStrictEqual({ thinkingBudget: 128 });
 });
 
 test("gemini: a model that isn't Gemini gets no thinking settings", () => {
-  assertEquals(lowThinking("gemma-3-27b-it"), undefined);
+  expect(lowThinking("gemma-3-27b-it")).toBe(undefined);
 });
 
 test("gemini: a model that refuses the thinking settings is asked again without them, for good", async () => {
@@ -201,16 +201,18 @@ test("gemini: a model that refuses the thinking settings is asked again without 
   ]);
   await gemini.translate({ ...REQUEST, thinking: "low" });
   await gemini.translate({ ...REQUEST, thinking: "low" });
-  assertEquals(sent.length, 3);
-  assertEquals((sent[0].body as any).generationConfig.thinkingConfig, { thinkingLevel: "low" });
-  assertEquals((sent[1].body as any).generationConfig.thinkingConfig, undefined);
-  assertEquals((sent[2].body as any).generationConfig.thinkingConfig, undefined);
+  expect(sent.length).toBe(3);
+  expect((sent[0].body as any).generationConfig.thinkingConfig).toStrictEqual({
+    thinkingLevel: "low",
+  });
+  expect((sent[1].body as any).generationConfig.thinkingConfig).toBe(undefined);
+  expect((sent[2].body as any).generationConfig.thinkingConfig).toBe(undefined);
 });
 
 test("gemini: a 400 that isn't about thinking isn't asked again", async () => {
   const { gemini, sent } = provider([json(await recorded("error_400.json"), 400)]);
-  await assertRejects(() => gemini.translate({ ...REQUEST, thinking: "low" }), ProviderError);
-  assertEquals(sent.length, 1);
+  await expect(gemini.translate({ ...REQUEST, thinking: "low" })).rejects.toThrow(ProviderError);
+  expect(sent.length).toBe(1);
 });
 
 test("gemini: the key is only in the x-goog-api-key header", async () => {
@@ -221,32 +223,33 @@ test("gemini: the key is only in the x-goog-api-key header", async () => {
   await gemini.translate(REQUEST);
   await gemini.listModels();
   for (const request of sent) {
-    assertEquals(request.headers.get("x-goog-api-key"), KEY);
-    assertFalse(request.url.includes(KEY), request.url);
-    assertFalse(JSON.stringify(request.body ?? "").includes(KEY));
-    assertEquals(request.headers.get("Authorization"), null);
+    expect(request.headers.get("x-goog-api-key")).toStrictEqual(KEY);
+    expect(request.url.includes(KEY), request.url).toBeFalsy();
+    expect(JSON.stringify(request.body ?? "").includes(KEY)).toBeFalsy();
+    expect(request.headers.get("Authorization")).toBe(null);
   }
 });
 
 test("gemini: a safety-blocked answer is reported as blocked, with its usage", async () => {
   const { gemini } = provider([json(await recorded("generate_blocked.json"))]);
   const result = await gemini.translate(REQUEST);
-  assertEquals(result.blocked, "SAFETY");
-  assertEquals(result.answer, null);
-  assertEquals(result.usage, { inputTokens: 640, outputTokens: 0, thinkingTokens: 0 });
+  expect(result.blocked).toBe("SAFETY");
+  expect(result.answer).toBe(null);
+  expect(result.usage).toStrictEqual({ inputTokens: 640, outputTokens: 0, thinkingTokens: 0 });
 
   const prompt = provider([json(await recorded("generate_prompt_blocked.json"))]);
   const blocked = await prompt.gemini.translate(REQUEST);
-  assertEquals(blocked.blocked, "PROHIBITED_CONTENT");
+  expect(blocked.blocked).toBe("PROHIBITED_CONTENT");
 });
 
 test("gemini: an answer cut off at MAX_TOKENS is an invalid answer, with its usage", async () => {
   const { gemini, sent } = provider([json(await recorded("generate_max_tokens.json"))]);
-  const error = await assertRejects(() => gemini.translate(REQUEST), ProviderError);
-  assertEquals(error.kind, "invalid_answer");
-  assertStringIncludes(error.message, "MAX_TOKENS");
-  assertEquals(error.usage, { inputTokens: 812, outputTokens: 40, thinkingTokens: 7340 });
-  assertEquals(sent.length, 1, "not retried");
+  const error = await gemini.translate(REQUEST).catch((error: unknown) => error);
+  assert(error instanceof ProviderError);
+  expect(error.kind).toBe("invalid_answer");
+  expect(error.message).toContain("MAX_TOKENS");
+  expect(error.usage).toStrictEqual({ inputTokens: 812, outputTokens: 40, thinkingTokens: 7340 });
+  expect(sent.length, "not retried").toBe(1);
 });
 
 test("gemini: a 429 with Retry-After is retried after the wait it asks for", async () => {
@@ -255,9 +258,9 @@ test("gemini: a 429 with Retry-After is retried after the wait it asks for", asy
     json(await recorded("generate_ok.json")),
   ]);
   const result = await gemini.translate(REQUEST);
-  assertEquals(result.usage.inputTokens, 812);
-  assertEquals(sent.length, 2);
-  assertEquals(waits, [3000]);
+  expect(result.usage.inputTokens).toBe(812);
+  expect(sent.length).toBe(2);
+  expect(waits).toStrictEqual([3000]);
 });
 
 test("gemini: without Retry-After, a 429 waits for the answer's retryDelay", async () => {
@@ -266,7 +269,7 @@ test("gemini: without Retry-After, a 429 waits for the answer's retryDelay", asy
     json(await recorded("generate_ok.json")),
   ]);
   await gemini.translate(REQUEST);
-  assertEquals(waits, [7000]);
+  expect(waits).toStrictEqual([7000]);
 });
 
 test("gemini: a 500 is retried with exponential backoff and full jitter", async () => {
@@ -280,9 +283,9 @@ test("gemini: a 500 is retried with exponential backoff and full jitter", async 
   );
   const result = await gemini.translate(REQUEST);
   assert(result.answer !== null);
-  assertEquals(sent.length, 3);
+  expect(sent.length).toBe(3);
   // Half of 1 s, then half of 2 s.
-  assertEquals(waits, [500, 1000]);
+  expect(waits).toStrictEqual([500, 1000]);
 });
 
 test("gemini: network errors are retried; after 4 attempts the error stays", async () => {
@@ -295,27 +298,30 @@ test("gemini: network errors are retried; after 4 attempts the error stays", asy
     ],
     { random: () => 1 },
   );
-  const error = await assertRejects(() => gemini.translate(REQUEST), ProviderError);
-  assertEquals(error.kind, "server");
-  assertEquals(error.status, 500);
-  assertEquals(sent.length, 4);
-  assertEquals(waits, [1000, 2000, 4000]);
+  const error = await gemini.translate(REQUEST).catch((error: unknown) => error);
+  assert(error instanceof ProviderError);
+  expect(error.kind).toBe("server");
+  expect(error.status).toBe(500);
+  expect(sent.length).toBe(4);
+  expect(waits).toStrictEqual([1000, 2000, 4000]);
 });
 
 test("gemini: a network error that survives the retries is a network error", async () => {
   const { gemini } = provider(new Array(4).fill(new TypeError("dns error: no such host")));
-  const error = await assertRejects(() => gemini.translate(REQUEST), ProviderError);
-  assertEquals(error.kind, "network");
-  assertStringIncludes(error.message, "no such host");
+  const error = await gemini.translate(REQUEST).catch((error: unknown) => error);
+  assert(error instanceof ProviderError);
+  expect(error.kind).toBe("network");
+  expect(error.message).toContain("no such host");
 });
 
 test("gemini: a 400 is an invalid request, not retried", async () => {
   const { gemini, sent } = provider([json(await recorded("error_400.json"), 400)]);
-  const error = await assertRejects(() => gemini.translate(REQUEST), ProviderError);
-  assertEquals(error.kind, "invalid_request");
-  assertEquals(error.status, 400);
-  assertStringIncludes(error.message, "Unknown name");
-  assertEquals(sent.length, 1);
+  const error = await gemini.translate(REQUEST).catch((error: unknown) => error);
+  assert(error instanceof ProviderError);
+  expect(error.kind).toBe("invalid_request");
+  expect(error.status).toBe(400);
+  expect(error.message).toContain("Unknown name");
+  expect(sent.length).toBe(1);
 });
 
 test("gemini: a redirect isn't followed (not with redirect: error, which workerd refuses)", async () => {
@@ -337,35 +343,40 @@ test("gemini: a redirect isn't followed (not with redirect: error, which workerd
     }) as Fetch,
     sleep: () => Promise.resolve(),
   });
-  const moved = await assertRejects(() => gemini.translate(REQUEST), ProviderError);
-  assertEquals([moved.kind, moved.status], ["invalid_request", 302]);
-  assertStringIncludes(moved.message, "redirect (HTTP 302)");
-  const opaque = await assertRejects(() => gemini.listModels(), ProviderError);
-  assertEquals([opaque.kind, opaque.status], ["invalid_request", null]);
-  assertEquals(modes, ["manual", "manual"], "one attempt each, never following");
+  const moved = await gemini.translate(REQUEST).catch((error: unknown) => error);
+  assert(moved instanceof ProviderError);
+  expect([moved.kind, moved.status]).toStrictEqual(["invalid_request", 302]);
+  expect(moved.message).toContain("redirect (HTTP 302)");
+  const opaque = await gemini.listModels().catch((error: unknown) => error);
+  assert(opaque instanceof ProviderError);
+  expect([opaque.kind, opaque.status]).toStrictEqual(["invalid_request", null]);
+  expect(modes, "one attempt each, never following").toStrictEqual(["manual", "manual"]);
 });
 
 test("gemini: a 403, or an invalid key, is an auth error, not retried", async () => {
   const forbidden = provider([json(await recorded("error_403.json"), 403)]);
-  const error = await assertRejects(() => forbidden.gemini.translate(REQUEST), ProviderError);
-  assertEquals(error.kind, "auth");
-  assertEquals(forbidden.sent.length, 1);
-  assertFalse(error.message.includes(KEY));
+  const error = await forbidden.gemini.translate(REQUEST).catch((error: unknown) => error);
+  assert(error instanceof ProviderError);
+  expect(error.kind).toBe("auth");
+  expect(forbidden.sent.length).toBe(1);
+  expect(error.message.includes(KEY)).toBeFalsy();
 
   const invalid = provider([json(await recorded("error_400_key.json"), 400)]);
-  const bad = await assertRejects(() => invalid.gemini.translate(REQUEST), ProviderError);
-  assertEquals(bad.kind, "auth");
-  assertStringIncludes(bad.message, "API key not valid");
+  const bad = await invalid.gemini.translate(REQUEST).catch((error: unknown) => error);
+  assert(bad instanceof ProviderError);
+  expect(bad.kind).toBe("auth");
+  expect(bad.message).toContain("API key not valid");
 });
 
 test("gemini: a Retry-After longer than a minute ends the retries", async () => {
   const { gemini, sent } = provider([
     json(await recorded("error_429.json"), 429, { "Retry-After": "3600" }),
   ]);
-  const error = await assertRejects(() => gemini.translate(REQUEST), ProviderError);
-  assertEquals(error.kind, "rate_limited");
-  assertEquals(error.retryAfterMs, 3_600_000);
-  assertEquals(sent.length, 1);
+  const error = await gemini.translate(REQUEST).catch((error: unknown) => error);
+  assert(error instanceof ProviderError);
+  expect(error.kind).toBe("rate_limited");
+  expect(error.retryAfterMs).toBe(3_600_000);
+  expect(sent.length).toBe(1);
 });
 
 test("gemini: models, from every page, only those that generate content", async () => {
@@ -373,19 +384,18 @@ test("gemini: models, from every page, only those that generate content", async 
     json(await recorded("models_page1.json")),
     json(await recorded("models_page2.json")),
   ]);
-  assertEquals(await gemini.listModels(), [
+  expect(await gemini.listModels()).toStrictEqual([
     "gemini-2.5-flash",
     "gemini-flash-latest",
     "gemini-2.5-pro",
   ]);
-  assertEquals(sent.length, 2);
-  assertEquals(new URL(sent[0].url).pathname, "/v1beta/models");
-  assertEquals(new URL(sent[0].url).searchParams.get("pageToken"), null);
-  assertEquals(
-    new URL(sent[1].url).searchParams.get("pageToken"),
+  expect(sent.length).toBe(2);
+  expect(new URL(sent[0].url).pathname).toBe("/v1beta/models");
+  expect(new URL(sent[0].url).searchParams.get("pageToken")).toBe(null);
+  expect(new URL(sent[1].url).searchParams.get("pageToken")).toStrictEqual(
     "Chdtb2RlbHMvZ2VtaW5pLTIuNS1mbGFzaA==",
   );
-  assertEquals(sent[0].method, "GET");
+  expect(sent[0].method).toBe("GET");
 });
 
 test("gemini: models for speech, images, audio and robots aren't offered to translate with", async () => {
@@ -410,7 +420,7 @@ test("gemini: models for speech, images, audio and robots aren't offered to tran
       }),
     ),
   ]);
-  assertEquals(await gemini.listModels(), ["gemini-3.8-flash", "gemini-flash-latest"]);
+  expect(await gemini.listModels()).toStrictEqual(["gemini-3.8-flash", "gemini-flash-latest"]);
 });
 
 test("gemini: generateText returns the text without thoughts", async () => {
@@ -431,9 +441,9 @@ test("gemini: generateText returns the text without thoughts", async () => {
     system: "S",
     prompt: "P",
   });
-  assertEquals(result.text, "The main menu of a game.");
-  assertEquals(result.usage, { inputTokens: 100, outputTokens: 8, thinkingTokens: 0 });
-  assertEquals((sent[0].body as any).generationConfig.responseMimeType, undefined);
+  expect(result.text).toBe("The main menu of a game.");
+  expect(result.usage).toStrictEqual({ inputTokens: 100, outputTokens: 8, thinkingTokens: 0 });
+  expect((sent[0].body as any).generationConfig.responseMimeType).toBe(undefined);
 });
 
 test("gemini: an answer that isn't JSON is an invalid answer", async () => {
@@ -441,40 +451,40 @@ test("gemini: an answer that isn't JSON is an invalid answer", async () => {
     candidates: [{ content: { parts: [{ text: "Sure! Here you go:" }] }, finishReason: "STOP" }],
   };
   const { gemini } = provider([json(JSON.stringify(answer))]);
-  const error = await assertRejects(() => gemini.translate(REQUEST), ProviderError);
-  assertEquals(error.kind, "invalid_answer");
+  const error = await gemini.translate(REQUEST).catch((error: unknown) => error);
+  assert(error instanceof ProviderError);
+  expect(error.kind).toBe("invalid_answer");
 });
 
 test("gemini: model names that aren't names are refused before any request", async () => {
   const { gemini, sent } = provider([]);
-  const error = await assertRejects(
-    () => gemini.translate({ ...REQUEST, model: "../v1/files?x=" }),
-    ProviderError,
-  );
-  assertEquals(error.kind, "invalid_request");
-  assertEquals(sent.length, 0);
+  const error = await gemini
+    .translate({ ...REQUEST, model: "../v1/files?x=" })
+    .catch((error: unknown) => error);
+  assert(error instanceof ProviderError);
+  expect(error.kind).toBe("invalid_request");
+  expect(sent.length).toBe(0);
 });
 
 test("gemini: JSON schemas become Gemini's schema subset", () => {
-  assertEquals(
+  expect(
     toGeminiSchema({
       type: "object",
       additionalProperties: false,
       properties: { a: { type: "array", items: { type: "string", enum: ["x"] } } },
       required: ["a"],
     }),
-    {
-      type: "OBJECT",
-      properties: { a: { type: "ARRAY", items: { type: "STRING", enum: ["x"] } } },
-      required: ["a"],
-    },
-  );
+  ).toStrictEqual({
+    type: "OBJECT",
+    properties: { a: { type: "ARRAY", items: { type: "STRING", enum: ["x"] } } },
+    required: ["a"],
+  });
 });
 
 test("gemini: Retry-After as seconds or as an HTTP date", () => {
   const now = Date.UTC(2026, 8, 24, 12);
-  assertEquals(parseRetryAfter("5", now), 5000);
-  assertEquals(parseRetryAfter(new Date(now + 9000).toUTCString(), now), 9000);
-  assertEquals(parseRetryAfter("soon", now), null);
-  assertEquals(parseRetryAfter(null, now), null);
+  expect(parseRetryAfter("5", now)).toBe(5000);
+  expect(parseRetryAfter(new Date(now + 9000).toUTCString(), now)).toBe(9000);
+  expect(parseRetryAfter("soon", now)).toBe(null);
+  expect(parseRetryAfter(null, now)).toBe(null);
 });

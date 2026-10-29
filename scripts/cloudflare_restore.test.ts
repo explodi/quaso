@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { gzipSync } from "node:zlib";
-import { test } from "node:test";
-import { expect } from "@std/expect";
+import { expect, test } from "vitest";
 import * as fs from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

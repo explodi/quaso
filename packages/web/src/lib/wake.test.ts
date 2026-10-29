@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 import type { Fetch } from "@quaso/core";
-import { test } from "node:test";
-import { assertEquals } from "@std/assert";
+import { expect, test } from "vitest";
 import {
   askServer,
   AWAKE,
@@ -24,7 +23,7 @@ const starting = (elapsedMs: number) =>
   Response.json({ state: "starting", elapsedMs, expectedMs: 60_000 });
 
 test("parseWake reads a start in progress", () => {
-  assertEquals(parseWake({ state: "starting", elapsedMs: 5000, expectedMs: 60_000 }, NOW), {
+  expect(parseWake({ state: "starting", elapsedMs: 5000, expectedMs: 60_000 }, NOW)).toStrictEqual({
     state: "starting",
     elapsedMs: 5000,
     expectedMs: 60_000,
@@ -33,26 +32,26 @@ test("parseWake reads a start in progress", () => {
 });
 
 test("parseWake reads a pause", () => {
-  assertEquals(parseWake({ state: "paused" }, NOW), { state: "paused" });
+  expect(parseWake({ state: "paused" }, NOW)).toStrictEqual({ state: "paused" });
 });
 
 test("parseWake takes a ready server, and anything else, as awake", () => {
-  assertEquals(parseWake({ state: "ready" }, NOW), AWAKE);
-  assertEquals(parseWake({ state: "starting" }, NOW), AWAKE);
-  assertEquals(parseWake("<!doctype html>", NOW), AWAKE);
-  assertEquals(parseWake(null, NOW), AWAKE);
+  expect(parseWake({ state: "ready" }, NOW)).toStrictEqual(AWAKE);
+  expect(parseWake({ state: "starting" }, NOW)).toStrictEqual(AWAKE);
+  expect(parseWake("<!doctype html>", NOW)).toStrictEqual(AWAKE);
+  expect(parseWake(null, NOW)).toStrictEqual(AWAKE);
 });
 
 test("askServer takes a server without /wake as awake", async () => {
   const page = new Response("<!doctype html>", { headers: { "Content-Type": "text/html" } });
-  assertEquals(await askServer(answering(page).fetcher), AWAKE);
+  expect(await askServer(answering(page).fetcher)).toStrictEqual(AWAKE);
   const missing = new Response("Not found", { status: 404 });
-  assertEquals(await askServer(answering(missing).fetcher), AWAKE);
+  expect(await askServer(answering(missing).fetcher)).toStrictEqual(AWAKE);
 });
 
 test("askServer takes a network failure as awake", async () => {
   const failing = (() => Promise.reject(new TypeError("offline"))) as Fetch;
-  assertEquals(await askServer(failing), AWAKE);
+  expect(await askServer(failing)).toStrictEqual(AWAKE);
 });
 
 test("waitUntilAwake asks until the server is ready, then says it is awake", async () => {
@@ -63,9 +62,9 @@ test("waitUntilAwake asks until the server is ready, then says it is awake", asy
     seen.push(serverStateForTests().state);
     return Promise.resolve();
   });
-  assertEquals(wake.asked.count, 3);
-  assertEquals(seen, ["starting", "starting"]);
-  assertEquals(serverStateForTests(), AWAKE);
+  expect(wake.asked.count).toBe(3);
+  expect(seen).toStrictEqual(["starting", "starting"]);
+  expect(serverStateForTests()).toStrictEqual(AWAKE);
 });
 
 test("waitUntilAwake shares one wait between callers", async () => {
@@ -73,5 +72,5 @@ test("waitUntilAwake shares one wait between callers", async () => {
   const wake = answering(starting(1000), Response.json({ state: "ready" }));
   const sleep = () => Promise.resolve();
   await Promise.all([waitUntilAwake(wake.fetcher, sleep), waitUntilAwake(wake.fetcher, sleep)]);
-  assertEquals(wake.asked.count, 2);
+  expect(wake.asked.count).toBe(2);
 });

@@ -6,8 +6,8 @@ permission to publish the npm package, Docker image and GitHub release.
 Use semantic versions: patch releases fix behavior without breaking compatibility, minor releases
 add compatible features, and major releases change public contracts. Test a release candidate before
 a stable tag. Document recovery from schema changes, including changes in minor releases. Use the
-Deno version in `.dvmrc`, install the locked dependencies with `deno install --frozen-lockfile`, and
-have Docker available for the image tests.
+Node version in `.nvmrc`, install the locked dependencies with `npm ci`, and have Docker available
+for the image tests.
 
 ## Prepare the files
 
@@ -23,18 +23,18 @@ game, and commit both its `package.json` and `package-lock.json`.
 The following example prepares `1.0.0-rc.3`. Replace it with the next unused version:
 
 ```sh
-deno task release 1.0.0-rc.3
-deno task fmt
-deno task check
-deno task build
-deno task build:cli
-deno task test:binary
-deno task site:build
-deno task e2e:browser
-deno task e2e
-deno task cf:check
-deno task docker:smoke
-deno task docker:workflow
+npm run release -- 1.0.0-rc.3
+npm run fmt
+npm run check
+npm run build
+npm run build:cli
+npm run test:server
+npm run site:build
+npm run e2e:browser
+npm run e2e
+npm run cf:check
+npm run docker:smoke
+npm run docker:workflow
 ```
 
 `release` accepts one semantic version, sets it in `package.json`, moves Unreleased changelog
@@ -44,7 +44,7 @@ changelog section. A prepared `1.0.0 - unreleased` section is replaced when that
 chosen. With no new changes, final 1.0.0 notes copy the latest 1.0.0 candidate's notes. Describe
 changes made after a candidate under Unreleased.
 
-For a final release, run `deno task release 1.0.0`, repeat the checks, and have the team approve the
+For a final release, run `npm run release -- 1.0.0`, repeat the checks, and have the team approve the
 candidate and migration results before running the printed tag/push commands. Tag a commit that is
 already on main: the release and website workflows fail for any other commit. Never reuse a
 published version. If publication succeeds in one registry and fails in another, a new version might
@@ -94,7 +94,7 @@ The `npm trust` command below needs npm 11.15.0 or later; see
 `packages/cli/package.json`:
 
 ```sh
-GITHUB_REPOSITORY=explodi/quaso deno task build:cli
+GITHUB_REPOSITORY=explodi/quaso npm run build:cli
 cd packages/cli/dist
 npm publish --access public
 npm trust github @quaso-i18n/cli --file release.yml --repo explodi/quaso
@@ -116,7 +116,7 @@ and recovery guide. Review notes for operator-visible configuration or schema ch
 - A backup reminder and the target image version.
 - Docker: pin the target image, then `docker compose pull` and `docker compose up -d`.
 - Cloudflare: use the tested source tag and matching image, then run
-  `deno task cf:deploy --env production`.
+  `npm run cf:deploy -- --env production`.
 - Expected migration behavior, `/healthz` checks and a link to [rollback steps](operations.md).
 
 Do not tag the release until the documented upgrade path has been exercised on retained historical

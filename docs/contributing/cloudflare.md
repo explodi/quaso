@@ -1,6 +1,6 @@
 # Working on the Cloudflare package
 
-Develop and test the Cloudflare deployment in `packages/cloudflare`, an optional part of the Deno
+Develop and test the Cloudflare deployment in `packages/cloudflare`, an optional package in the npm
 workspace. It uses Wrangler to run the Worker and Vitest to test it in the `workerd` runtime. You
 can work on core, the CLI or website without running the Cloudflare tools; use them when your change
 affects this deployment.
@@ -39,7 +39,7 @@ indefinitely, and a restart must not cut off an LLM job or export.
 From the repository root, with Docker running:
 
 ```sh
-deno install
+npm ci
 cp packages/cloudflare/.dev.vars.example packages/cloudflare/.dev.vars
 ```
 
@@ -48,7 +48,7 @@ the output of `openssl rand -hex 16`; the server needs it to allow first setup. 
 in **Settings** after setup if you want real translation. Then run:
 
 ```sh
-deno task cf:dev
+npm run cf:dev
 ```
 
 Open <http://localhost:8787/setup> and create the first administrator with your setup key. Wrangler
@@ -65,9 +65,9 @@ environment: `cf:setup` and `cf:deploy` generate a temporary configuration from 
 ## Types, fixtures and tests
 
 ```sh
-deno task cf:types
-deno task cf:fixtures
-deno task cf:check
+npm run cf:types
+npm run cf:fixtures
+npm run cf:check
 ```
 
 After changing `wrangler.jsonc`, commit regenerated `worker-configuration.d.ts`. After changing
@@ -75,7 +75,7 @@ shared behavior, review and commit the fixture from `packages/cloudflare/scripts
 `cf:check` checks both generated outputs, compiles the package, runs its tests in workerd, and
 bundles the Worker without deploying it. Tests compare the same service scenario with local SQLite.
 
-Keep service and core portable: no Deno or Node runtime imports in their production code. Worker
+Keep service and core portable: no runtime-specific imports, such as `node:`, in their production code. Worker
 modules may export only supported handlers and classes. The D1 adapter
 (`packages/service/src/adapters/d1_sql.ts`) sends each commit as one batch, guarded by the database
 revision. Use the asynchronous `Sql.read`, `Sql.commit` and `Sql.migrate` methods and the retry

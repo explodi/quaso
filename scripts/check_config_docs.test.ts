@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals } from "@std/assert";
+import { expect, test } from "vitest";
 import {
   checkConfigurationDocs,
   configurationVariables,
@@ -12,14 +11,14 @@ test("configuration variables include grouped secrets and ignore example prose",
   read.pair("OAUTH_ID", "OAUTH_SECRET", "id", "secret");
   read.together("EMAIL_FROM", "EMAIL_KEY");
   read.integer("PORT", 8000, 1, 65535); read.has("PORT");`;
-  assertEquals(configurationVariables(source), [
+  expect(configurationVariables(source)).toStrictEqual([
     "EMAIL_FROM",
     "EMAIL_KEY",
     "OAUTH_ID",
     "OAUTH_SECRET",
     "PORT",
   ]);
-  assertEquals(missingConfigurationDocs(source, "# PORT=8000", "`PORT`"), [
+  expect(missingConfigurationDocs(source, "# PORT=8000", "`PORT`")).toStrictEqual([
     "EMAIL_FROM is missing from deploy/.env.example",
     "EMAIL_FROM is missing from docs/configuration.md",
     "EMAIL_KEY is missing from deploy/.env.example",
@@ -32,5 +31,5 @@ test("configuration variables include grouped secrets and ignore example prose",
 });
 
 test("all server configuration is documented", async () => {
-  assertEquals(await checkConfigurationDocs(), []);
+  expect(await checkConfigurationDocs()).toStrictEqual([]);
 });

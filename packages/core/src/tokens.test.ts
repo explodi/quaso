@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assert, assertEquals } from "@std/assert";
+import { assert, expect, test } from "vitest";
 import {
   maskReferences,
   maskToken,
@@ -37,7 +36,7 @@ function assertCovers(text: string, tokens: Token[]): void {
     }
     at = token.end;
   }
-  assertEquals(at, text.length);
+  expect(at).toStrictEqual(text.length);
   for (let i = 1; i < tokens.length; i++) {
     assert(
       tokens[i].type !== "text" || tokens[i - 1].type !== "text",
@@ -47,13 +46,13 @@ function assertCovers(text: string, tokens: Token[]): void {
 }
 
 test("tokenize: plain text is one token, empty text none", () => {
-  assertEquals(tokenize(""), []);
-  assertEquals(tokenize("Play"), [{ type: "text", text: "Play", start: 0, end: 4 }]);
+  expect(tokenize("")).toStrictEqual([]);
+  expect(tokenize("Play")).toStrictEqual([{ type: "text", text: "Play", start: 0, end: 4 }]);
 });
 
 test("tokenize: placeholders and their offsets", () => {
   const text = "You have {{count}} coins, {{name}}!";
-  assertEquals(tokenize(text), [
+  expect(tokenize(text)).toStrictEqual([
     { type: "text", text: "You have ", start: 0, end: 9 },
     { type: "placeholder", raw: "{{count}}", name: "count", unescaped: false, start: 9, end: 18 },
     { type: "text", text: " coins, ", start: 18, end: 26 },
@@ -96,15 +95,14 @@ test("tokenize: placeholder spacing, formats and unescaped variants", () => {
   ];
   for (const [text, expected] of cases) {
     const tokens = tokenize(text);
-    assertEquals(tokens.length, 1, text);
+    expect(tokens.length, text).toBe(1);
     const [token] = tokens;
     assert(token.type === "placeholder", text);
-    assertEquals(
+    expect(
       { name: token.name, format: token.format, unescaped: token.unescaped },
-      { format: undefined, ...expected },
       text,
-    );
-    assertEquals(token.raw, text);
+    ).toStrictEqual({ format: undefined, ...expected });
+    expect(token.raw).toStrictEqual(text);
     assert(!("format" in token) || token.format !== "", "an empty format is left out");
   }
 });
@@ -112,10 +110,10 @@ test("tokenize: placeholder spacing, formats and unescaped variants", () => {
 test("tokenize: a prefix without a name or suffix is text", () => {
   const texts = ["{{}}", "{{ }}", "{{-}}", "{{-  }}", "{{, number}}", "{{-, x}}", "{{name", "}}"];
   for (const text of texts) {
-    assertEquals(describe(tokenize(text)), [`text:${text}`], text);
+    expect(describe(tokenize(text)), text).toStrictEqual([`text:${text}`]);
   }
-  assertEquals(describe(tokenize("{{a {{b}}")), ["placeholder:{{a {{b}}"]);
-  assertEquals(tokenize("{{a {{b}}")[0], {
+  expect(describe(tokenize("{{a {{b}}"))).toStrictEqual(["placeholder:{{a {{b}}"]);
+  expect(tokenize("{{a {{b}}")[0]).toStrictEqual({
     type: "placeholder",
     raw: "{{a {{b}}",
     name: "a {{b",
@@ -123,29 +121,36 @@ test("tokenize: a prefix without a name or suffix is text", () => {
     start: 0,
     end: 9,
   });
-  assertEquals(describe(tokenize("{{{a}}}")), ["placeholder:{{{a}}", "text:}"]);
-  assertEquals(describe(tokenize("{{a}}{{b}}")), ["placeholder:{{a}}", "placeholder:{{b}}"]);
-  assertEquals(describe(tokenize("{{a}} {{b")), ["placeholder:{{a}}", "text: {{b"]);
+  expect(describe(tokenize("{{{a}}}"))).toStrictEqual(["placeholder:{{{a}}", "text:}"]);
+  expect(describe(tokenize("{{a}}{{b}}"))).toStrictEqual([
+    "placeholder:{{a}}",
+    "placeholder:{{b}}",
+  ]);
+  expect(describe(tokenize("{{a}} {{b"))).toStrictEqual(["placeholder:{{a}}", "text: {{b"]);
 });
 
 test("tokenize: placeholders follow i18next's pattern, {{(.+?)}}", () => {
   // Regression: an empty {{}} was skipped and the next {{count}} became a placeholder, but
   // i18next pairs the empty prefix with the next suffix and never fills {{count}} in.
-  assertEquals(describe(tokenize("Du hast {{}} {{count}} Münzen")), [
+  expect(describe(tokenize("Du hast {{}} {{count}} Münzen"))).toStrictEqual([
     "text:Du hast ",
     "placeholder:{{}} {{count}}",
     "text: Münzen",
   ]);
-  assertEquals(placeholdersOf("{{}} {{count}}")[0].name, "}} {{count");
-  assertEquals(describe(tokenize("{{}}}")), ["placeholder:{{}}}"]);
+  expect(placeholdersOf("{{}} {{count}}")[0].name).toBe("}} {{count");
+  expect(describe(tokenize("{{}}}"))).toStrictEqual(["placeholder:{{}}}"]);
   // A blank name is text, and so is every prefix inside it: i18next consumes the span.
-  assertEquals(describe(tokenize("{{ ,{{count}} {{x}}")), [
+  expect(describe(tokenize("{{ ,{{count}} {{x}}"))).toStrictEqual([
     "text:{{ ,{{count}} ",
     "placeholder:{{x}}",
   ]);
-  assertEquals(describe(tokenize("{{ }}count}}")), ["text:{{ }}count}}"]);
+  expect(describe(tokenize("{{ }}count}}"))).toStrictEqual(["text:{{ }}count}}"]);
   // A reference inside a blank placeholder is still a reference.
-  assertEquals(describe(tokenize("{{ ,$t(a)}}")), ["text:{{ ,", "reference:$t(a)", "text:}}"]);
+  expect(describe(tokenize("{{ ,$t(a)}}"))).toStrictEqual([
+    "text:{{ ,",
+    "reference:$t(a)",
+    "text:}}",
+  ]);
   // Regression: placeholders spanned line breaks, which i18next's "." doesn't match.
   for (const text of [
     "{{\ncount}}",
@@ -154,20 +159,20 @@ test("tokenize: placeholders follow i18next's pattern, {{(.+?)}}", () => {
     "{{a\u2028}}",
     "{{\u2029a}}",
   ]) {
-    assertEquals(describe(tokenize(text)), [`text:${text}`], JSON.stringify(text));
+    expect(describe(tokenize(text)), JSON.stringify(text)).toStrictEqual([`text:${text}`]);
   }
-  assertEquals(describe(tokenize("{{a\n{{b}}")), ["text:{{a\n", "placeholder:{{b}}"]);
-  assertEquals(describe(tokenize("{{a\n}} {{b}}")), ["text:{{a\n}} ", "placeholder:{{b}}"]);
+  expect(describe(tokenize("{{a\n{{b}}"))).toStrictEqual(["text:{{a\n", "placeholder:{{b}}"]);
+  expect(describe(tokenize("{{a\n}} {{b}}"))).toStrictEqual(["text:{{a\n}} ", "placeholder:{{b}}"]);
   // Other white space is fine.
-  assertEquals(placeholdersOf("{{\tcount\u00a0}}")[0].name, "count");
+  expect(placeholdersOf("{{\tcount\u00a0}}")[0].name).toBe("count");
   // With a one-character prefix and suffix, the inner text still needs a character.
   const single = { prefix: "_", suffix: "_" };
-  assertEquals(describe(tokenize("__a_", single)), ["placeholder:__a_"]);
-  assertEquals(describe(tokenize("__", single)), ["text:__"]);
+  expect(describe(tokenize("__a_", single))).toStrictEqual(["placeholder:__a_"]);
+  expect(describe(tokenize("__", single))).toStrictEqual(["text:__"]);
 });
 
 test("tokenize: custom syntaxes", () => {
-  assertEquals(describe(tokenize("Hi {name}, {{x}}", { prefix: "{", suffix: "}" })), [
+  expect(describe(tokenize("Hi {name}, {{x}}", { prefix: "{", suffix: "}" }))).toStrictEqual([
     "text:Hi ",
     "placeholder:{name}",
     "text:, ",
@@ -175,11 +180,11 @@ test("tokenize: custom syntaxes", () => {
     "text:}",
   ]);
   const percent = { prefix: "%{", suffix: "}" };
-  assertEquals(describe(tokenize("%{count} coins, {{count}}", percent)), [
+  expect(describe(tokenize("%{count} coins, {{count}}", percent))).toStrictEqual([
     "placeholder:%{count}",
     "text: coins, {{count}}",
   ]);
-  assertEquals(tokenize("%{ n, number }", percent)[0], {
+  expect(tokenize("%{ n, number }", percent)[0]).toStrictEqual({
     type: "placeholder",
     raw: "%{ n, number }",
     name: "n",
@@ -189,25 +194,25 @@ test("tokenize: custom syntaxes", () => {
     end: 14,
   });
   const same = { prefix: "__", suffix: "__" };
-  assertEquals(describe(tokenize("__a__ and __b__", same)), [
+  expect(describe(tokenize("__a__ and __b__", same))).toStrictEqual([
     "placeholder:__a__",
     "text: and ",
     "placeholder:__b__",
   ]);
-  assertEquals(describe(tokenize("[[- x]]", { prefix: "[[", suffix: "]]" })), [
+  expect(describe(tokenize("[[- x]]", { prefix: "[[", suffix: "]]" }))).toStrictEqual([
     "placeholder:[[- x]]",
   ]);
   // A syntax without delimiters finds no placeholders rather than looping.
-  assertEquals(describe(tokenize("{{a}}", { prefix: "", suffix: "}}" })), ["text:{{a}}"]);
-  assertEquals(describe(tokenize("{{a}}", { prefix: "{{", suffix: "" })), ["text:{{a}}"]);
+  expect(describe(tokenize("{{a}}", { prefix: "", suffix: "}}" }))).toStrictEqual(["text:{{a}}"]);
+  expect(describe(tokenize("{{a}}", { prefix: "{{", suffix: "" }))).toStrictEqual(["text:{{a}}"]);
 });
 
 test("tokenize: nesting references", () => {
-  assertEquals(tokenize("$t(play) again"), [
+  expect(tokenize("$t(play) again")).toStrictEqual([
     { type: "reference", raw: "$t(play)", key: "play", start: 0, end: 8 },
     { type: "text", text: " again", start: 8, end: 14 },
   ]);
-  assertEquals(tokenize("$t(common:back)"), [
+  expect(tokenize("$t(common:back)")).toStrictEqual([
     {
       type: "reference",
       raw: "$t(common:back)",
@@ -217,7 +222,7 @@ test("tokenize: nesting references", () => {
       end: 15,
     },
   ]);
-  assertEquals(tokenize('$t(coins, {"count": {{n}}})'), [
+  expect(tokenize('$t(coins, {"count": {{n}}})')).toStrictEqual([
     {
       type: "reference",
       raw: '$t(coins, {"count": {{n}}})',
@@ -227,7 +232,7 @@ test("tokenize: nesting references", () => {
       end: 27,
     },
   ]);
-  assertEquals(tokenize("$t( ns : a.b:c ,  uppercase )")[0], {
+  expect(tokenize("$t( ns : a.b:c ,  uppercase )")[0]).toStrictEqual({
     type: "reference",
     raw: "$t( ns : a.b:c ,  uppercase )",
     key: "a.b:c",
@@ -236,41 +241,47 @@ test("tokenize: nesting references", () => {
     start: 0,
     end: 29,
   });
-  assertEquals(tokenize("$t()")[0], { type: "reference", raw: "$t()", key: "", start: 0, end: 4 });
+  expect(tokenize("$t()")[0]).toStrictEqual({
+    type: "reference",
+    raw: "$t()",
+    key: "",
+    start: 0,
+    end: 4,
+  });
 });
 
 test("tokenize: reference options with quotes, brackets and placeholders", () => {
   const quoted = '$t(a, { "x": "a)b" })';
-  assertEquals(describe(tokenize(`${quoted}!`)), [`reference:${quoted}`, "text:!"]);
-  assertEquals(referencesOf(quoted)[0].options, '{ "x": "a)b" }');
+  expect(describe(tokenize(`${quoted}!`))).toStrictEqual([`reference:${quoted}`, "text:!"]);
+  expect(referencesOf(quoted)[0].options).toBe('{ "x": "a)b" }');
   const single = "$t(a, { 'x': 'a)b, c' })";
-  assertEquals(describe(tokenize(single)), [`reference:${single}`]);
-  assertEquals(referencesOf(single)[0].key, "a");
+  expect(describe(tokenize(single))).toStrictEqual([`reference:${single}`]);
+  expect(referencesOf(single)[0].key).toBe("a");
   const mixed = `$t(a, {"x": "it's (fine"}) and more`;
-  assertEquals(describe(tokenize(mixed)), [
+  expect(describe(tokenize(mixed))).toStrictEqual([
     `reference:$t(a, {"x": "it's (fine"})`,
     "text: and more",
   ]);
   const parens = '$t(a, {"x": "(b)", "y": (1 + (2))}) z';
-  assertEquals(describe(tokenize(parens)), [`reference:${parens.slice(0, -2)}`, "text: z"]);
+  expect(describe(tokenize(parens))).toStrictEqual([`reference:${parens.slice(0, -2)}`, "text: z"]);
   // A `)` inside braces is skipped with them; a stray `}` is ignored.
-  assertEquals(describe(tokenize("$t(a, {x: 1)}) z")), ["reference:$t(a, {x: 1)})", "text: z"]);
-  assertEquals(describe(tokenize("$t(a}) z")), ["reference:$t(a})", "text: z"]);
+  expect(describe(tokenize("$t(a, {x: 1)}) z"))).toStrictEqual([
+    "reference:$t(a, {x: 1)})",
+    "text: z",
+  ]);
+  expect(describe(tokenize("$t(a}) z"))).toStrictEqual(["reference:$t(a})", "text: z"]);
   // Placeholders in the options belong to the reference.
   const options = 'Hi {{name}}, $t(coins, {"count": {{count}}, "x": "{{y}}"})';
-  assertEquals(describe(tokenize(options)), [
+  expect(describe(tokenize(options))).toStrictEqual([
     "text:Hi ",
     "placeholder:{{name}}",
     "text:, ",
     'reference:$t(coins, {"count": {{count}}, "x": "{{y}}"})',
   ]);
-  assertEquals(
-    placeholdersOf(options).map((p) => p.name),
-    ["name"],
-  );
+  expect(placeholdersOf(options).map((p) => p.name)).toStrictEqual(["name"]);
   // The same with a custom syntax.
   const percent = { prefix: "%{", suffix: "}" };
-  assertEquals(describe(tokenize('%{a} $t(k, {"n": %{n}}) %{b}', percent)), [
+  expect(describe(tokenize('%{a} $t(k, {"n": %{n}}) %{b}', percent))).toStrictEqual([
     "placeholder:%{a}",
     "text: ",
     'reference:$t(k, {"n": %{n}})',
@@ -278,30 +289,40 @@ test("tokenize: reference options with quotes, brackets and placeholders", () =>
     "placeholder:%{b}",
   ]);
   // Commas inside the options' brackets or quotes don't split the key.
-  assertEquals(
-    referencesOf('$t(k, {"a": "x,y", "b": [1, 2]})')[0].options,
+  expect(referencesOf('$t(k, {"a": "x,y", "b": [1, 2]})')[0].options).toStrictEqual(
     '{"a": "x,y", "b": [1, 2]}',
   );
-  assertEquals(referencesOf('$t("a,b", c)')[0].key, '"a,b"');
+  expect(referencesOf('$t("a,b", c)')[0].key).toBe('"a,b"');
 });
 
 test("tokenize: an unmatched $t( is text", () => {
-  assertEquals(describe(tokenize("$t(b")), ["text:$t(b"]);
-  assertEquals(describe(tokenize("$t(")), ["text:$t("]);
-  assertEquals(describe(tokenize("$t(a {{n}}")), ["text:$t(a ", "placeholder:{{n}}"]);
-  assertEquals(describe(tokenize("$t($t(a)")), ["text:$t(", "reference:$t(a)"]);
-  assertEquals(describe(tokenize("$t($t($t(a)")), ["text:$t($t(", "reference:$t(a)"]);
-  assertEquals(describe(tokenize("$t(x, (y) $t(z)")), ["text:$t(x, (y) ", "reference:$t(z)"]);
+  expect(describe(tokenize("$t(b"))).toStrictEqual(["text:$t(b"]);
+  expect(describe(tokenize("$t("))).toStrictEqual(["text:$t("]);
+  expect(describe(tokenize("$t(a {{n}}"))).toStrictEqual(["text:$t(a ", "placeholder:{{n}}"]);
+  expect(describe(tokenize("$t($t(a)"))).toStrictEqual(["text:$t(", "reference:$t(a)"]);
+  expect(describe(tokenize("$t($t($t(a)"))).toStrictEqual(["text:$t($t(", "reference:$t(a)"]);
+  expect(describe(tokenize("$t(x, (y) $t(z)"))).toStrictEqual([
+    "text:$t(x, (y) ",
+    "reference:$t(z)",
+  ]);
   // An apostrophe opens a quote that never closes, so the first reference has no `)`.
-  assertEquals(describe(tokenize("$t(don't) $t(ok)")), ["text:$t(don't) ", "reference:$t(ok)"]);
-  assertEquals(describe(tokenize('$t(a, "x) $t(b)')), ['text:$t(a, "x) ', "reference:$t(b)"]);
-  assertEquals(describe(tokenize("$t(a, {) $t(b)")), ["text:$t(a, {) ", "reference:$t(b)"]);
-  assertEquals(describe(tokenize("$t (a) t(a) $(a) $T(a)")), ["text:$t (a) t(a) $(a) $T(a)"]);
+  expect(describe(tokenize("$t(don't) $t(ok)"))).toStrictEqual([
+    "text:$t(don't) ",
+    "reference:$t(ok)",
+  ]);
+  expect(describe(tokenize('$t(a, "x) $t(b)'))).toStrictEqual([
+    'text:$t(a, "x) ',
+    "reference:$t(b)",
+  ]);
+  expect(describe(tokenize("$t(a, {) $t(b)"))).toStrictEqual(["text:$t(a, {) ", "reference:$t(b)"]);
+  expect(describe(tokenize("$t (a) t(a) $(a) $T(a)"))).toStrictEqual([
+    "text:$t (a) t(a) $(a) $T(a)",
+  ]);
 });
 
 test("tokenize: references nested inside references", () => {
   const nested = '$t(a, {"x": "$t(b)"}) $t(c, ($t(d)))';
-  assertEquals(describe(tokenize(nested)), [
+  expect(describe(tokenize(nested))).toStrictEqual([
     'reference:$t(a, {"x": "$t(b)"})',
     "text: ",
     "reference:$t(c, ($t(d)))",
@@ -312,7 +333,7 @@ test("tokenize: Unicode, surrogate pairs and CRLF keep UTF-16 offsets", () => {
   const text = "👨‍👩‍👧 {{name}}\r\n$t(e\u0301)🇵🇱{{ 😀 }}";
   const tokens = tokenize(text);
   assertCovers(text, tokens);
-  assertEquals(describe(tokens), [
+  expect(describe(tokens)).toStrictEqual([
     "text:👨‍👩‍👧 ",
     "placeholder:{{name}}",
     "text:\r\n",
@@ -320,131 +341,132 @@ test("tokenize: Unicode, surrogate pairs and CRLF keep UTF-16 offsets", () => {
     "text:🇵🇱",
     "placeholder:{{ 😀 }}",
   ]);
-  assertEquals(tokens[1].start, 9);
-  assertEquals(placeholdersOf(text)[1].name, "😀");
-  assertEquals(referencesOf(text)[0].key, "e\u0301");
+  expect(tokens[1].start).toBe(9);
+  expect(placeholdersOf(text)[1].name).toBe("😀");
+  expect(referencesOf(text)[0].key).toBe("e\u0301");
   // References may span lines, as in files with CRLF line endings; placeholders may not.
   const lines = '{{\r\n  count\r\n}} $t(k, {\r\n  "n": 1\r\n})';
-  assertEquals(describe(tokenize(lines)), [
+  expect(describe(tokenize(lines))).toStrictEqual([
     "text:{{\r\n  count\r\n}} ",
     'reference:$t(k, {\r\n  "n": 1\r\n})',
   ]);
-  assertEquals(placeholdersOf(lines), []);
+  expect(placeholdersOf(lines)).toStrictEqual([]);
 });
 
 test("placeholderKey normalizes to the default delimiters", () => {
   const keys = (text: string, syntax?: { prefix: string; suffix: string }) =>
     placeholdersOf(text, syntax).map(placeholderKey);
-  assertEquals(keys("{{count}} {{ count }} {{\tcount}}"), ["{{count}}", "{{count}}", "{{count}}"]);
-  assertEquals(keys("{{- html}} {{-html}} {{-  html }}"), [
+  expect(keys("{{count}} {{ count }} {{\tcount}}")).toStrictEqual([
+    "{{count}}",
+    "{{count}}",
+    "{{count}}",
+  ]);
+  expect(keys("{{- html}} {{-html}} {{-  html }}")).toStrictEqual([
     "{{- html}}",
     "{{- html}}",
     "{{- html}}",
   ]);
   // Regression: a "-" after white space isn't i18next's unescape, so the keys differ.
-  assertEquals(keys("{{ - html }} {{ -html}} {{--x}}"), ["{{ - html}}", "{{ -html}}", "{{- -x}}"]);
-  assertEquals(keys("{{count, number}} {{count,number}} {{ count ,number }}"), [
+  expect(keys("{{ - html }} {{ -html}} {{--x}}")).toStrictEqual([
+    "{{ - html}}",
+    "{{ -html}}",
+    "{{- -x}}",
+  ]);
+  expect(keys("{{count, number}} {{count,number}} {{ count ,number }}")).toStrictEqual([
     "{{count, number}}",
     "{{count, number}}",
     "{{count, number}}",
   ]);
-  assertEquals(keys("{{-x,y}}"), ["{{- x, y}}"]);
-  assertEquals(keys("%{count} %{ date, datetime }", { prefix: "%{", suffix: "}" }), [
+  expect(keys("{{-x,y}}")).toStrictEqual(["{{- x, y}}"]);
+  expect(keys("%{count} %{ date, datetime }", { prefix: "%{", suffix: "}" })).toStrictEqual([
     "{{count}}",
     "{{date, datetime}}",
   ]);
-  assertEquals(keys("{{count,}}"), ["{{count}}"]);
+  expect(keys("{{count,}}")).toStrictEqual(["{{count}}"]);
   // Regression: formats are normalized as i18next reads them.
-  assertEquals(keys("{{val, Number}} {{val,NUMBER }} {{val, number, uppercase}}"), [
+  expect(keys("{{val, Number}} {{val,NUMBER }} {{val, number, uppercase}}")).toStrictEqual([
     "{{val, number}}",
     "{{val, number}}",
     "{{val, number, uppercase}}",
   ]);
-  assertEquals(
+  expect(
     keys(
       "{{val, number(minimumFractionDigits: 2)}} {{val, Number( minimumFractionDigits:2 )}} " +
         "{{val,number(minimumFractionDigits:'2';)}}",
     ),
-    Array(3).fill("{{val, number(minimumFractionDigits: 2)}}"),
-  );
-  assertEquals(
+  ).toStrictEqual(Array(3).fill("{{val, number(minimumFractionDigits: 2)}}"));
+  expect(
     keys("{{d, datetime(year: numeric; month: long)}} {{d, DateTime(year:numeric;month:long)}}"),
-    Array(2).fill("{{d, datetime(year: numeric; month: long)}}"),
-  );
-  assertEquals(keys("{{v, currency( EUR ),uppercase}} {{v,, currency(EUR) ,}}"), [
+  ).toStrictEqual(Array(2).fill("{{d, datetime(year: numeric; month: long)}}"));
+  expect(keys("{{v, currency( EUR ),uppercase}} {{v,, currency(EUR) ,}}")).toStrictEqual([
     "{{v, currency(EUR), uppercase}}",
     "{{v, currency(EUR)}}",
   ]);
-  assertEquals(keys("{{v, number(a: 1)x}} {{v, list(a: 1, b)}}"), [
+  expect(keys("{{v, number(a: 1)x}} {{v, list(a: 1, b)}}")).toStrictEqual([
     "{{v, number(a: 1)x}}",
     "{{v, list(a: 1, b)}}",
   ]);
   // Names and option keys stay case-sensitive.
-  assertEquals(
-    new Set(keys("{{Val, number}} {{val, number(A: 1)}} {{val, number(a: 1)}}")).size,
-    3,
-  );
+  expect(new Set(keys("{{Val, number}} {{val, number(A: 1)}} {{val, number(a: 1)}}")).size).toBe(3);
   // Different names, formats or escaping are different placeholders.
-  assertEquals(new Set(keys("{{a}} {{A}} {{- a}} {{a, x}}")).size, 4);
+  expect(new Set(keys("{{a}} {{A}} {{- a}} {{a, x}}")).size).toBe(4);
 });
 
 test("placeholdersOf and referencesOf", () => {
   const text = '{{a}} $t(x) {{b}} $t(ns:y, {"n": {{c}}})';
-  assertEquals(
-    placeholdersOf(text).map((p) => p.name),
-    ["a", "b"],
-  );
-  assertEquals(
-    referencesOf(text).map((r) => [r.namespace, r.key]),
-    [
-      [undefined, "x"],
-      ["ns", "y"],
-    ],
-  );
-  assertEquals(placeholdersOf("no tokens"), []);
-  assertEquals(referencesOf("no tokens"), []);
+  expect(placeholdersOf(text).map((p) => p.name)).toStrictEqual(["a", "b"]);
+  expect(referencesOf(text).map((r) => [r.namespace, r.key])).toStrictEqual([
+    [undefined, "x"],
+    ["ns", "y"],
+  ]);
+  expect(placeholdersOf("no tokens")).toStrictEqual([]);
+  expect(referencesOf("no tokens")).toStrictEqual([]);
 });
 
 test("maskReferences numbers each reference in order", () => {
   const text = 'Go $t(a) and $t(b, {"n": {{n}}}), then $t(a) with {{name}}';
   const masked = maskReferences(text);
-  assertEquals(masked, {
+  expect(masked).toStrictEqual({
     text: "Go ⟦1⟧ and ⟦2⟧, then ⟦3⟧ with {{name}}",
     references: ["$t(a)", '$t(b, {"n": {{n}}})', "$t(a)"],
   });
-  assertEquals(unmaskReferences(masked.text, masked.references), text);
-  assertEquals(maskReferences("No references"), { text: "No references", references: [] });
-  assertEquals(maskReferences(""), { text: "", references: [] });
-  assertEquals(maskToken(12), "⟦12⟧");
+  expect(unmaskReferences(masked.text, masked.references)).toStrictEqual(text);
+  expect(maskReferences("No references")).toStrictEqual({ text: "No references", references: [] });
+  expect(maskReferences("")).toStrictEqual({ text: "", references: [] });
+  expect(maskToken(12)).toBe("⟦12⟧");
   const percent = maskReferences('%{a} $t(k, {"n": %{n}})', { prefix: "%{", suffix: "}" });
-  assertEquals(percent.text, "%{a} ⟦1⟧");
+  expect(percent.text).toBe("%{a} ⟦1⟧");
 });
 
 test("maskReferences locks text that already looks like a masked reference", () => {
   // Regression: a literal ⟦1⟧ in the text came back as the first reference.
   const text = "Press ⟦1⟧ then $t(keys.jump)";
   const masked = maskReferences(text);
-  assertEquals(masked, { text: "Press ⟦1⟧ then ⟦2⟧", references: ["⟦1⟧", "$t(keys.jump)"] });
-  assertEquals(unmaskReferences(masked.text, masked.references), text);
+  expect(masked).toStrictEqual({
+    text: "Press ⟦1⟧ then ⟦2⟧",
+    references: ["⟦1⟧", "$t(keys.jump)"],
+  });
+  expect(unmaskReferences(masked.text, masked.references)).toStrictEqual(text);
   const twice = "⟦2⟧ $t(a) $t(b) {{x⟦1⟧}} ⟦0⟧ ⟦x⟧";
   const again = maskReferences(twice);
-  assertEquals(again.text, "⟦1⟧ ⟦2⟧ ⟦3⟧ {{x⟦4⟧}} ⟦0⟧ ⟦x⟧");
-  assertEquals(unmaskReferences(again.text, again.references), twice);
+  expect(again.text).toBe("⟦1⟧ ⟦2⟧ ⟦3⟧ {{x⟦4⟧}} ⟦0⟧ ⟦x⟧");
+  expect(unmaskReferences(again.text, again.references)).toStrictEqual(twice);
 });
 
 test("unmaskReferences: moved references, unknown tokens and special characters", () => {
   const references = ["$t(a)", "$t(b)"];
-  assertEquals(unmaskReferences("⟦2⟧ before ⟦1⟧", references), "$t(b) before $t(a)");
-  assertEquals(unmaskReferences("⟦1⟧⟦1⟧", references), "$t(a)$t(a)");
-  assertEquals(
-    unmaskReferences("⟦9⟧ ⟦0⟧ ⟦01⟧ ⟦-1⟧ ⟦ 1 ⟧ ⟦x⟧ ⟦1", references),
+  expect(unmaskReferences("⟦2⟧ before ⟦1⟧", references)).toBe("$t(b) before $t(a)");
+  expect(unmaskReferences("⟦1⟧⟦1⟧", references)).toBe("$t(a)$t(a)");
+  expect(unmaskReferences("⟦9⟧ ⟦0⟧ ⟦01⟧ ⟦-1⟧ ⟦ 1 ⟧ ⟦x⟧ ⟦1", references)).toStrictEqual(
     "⟦9⟧ ⟦0⟧ ⟦01⟧ ⟦-1⟧ ⟦ 1 ⟧ ⟦x⟧ ⟦1",
   );
-  assertEquals(unmaskReferences("⟦99999999999999999999⟧", references), "⟦99999999999999999999⟧");
+  expect(unmaskReferences("⟦99999999999999999999⟧", references)).toStrictEqual(
+    "⟦99999999999999999999⟧",
+  );
   // Replacement patterns in a reference are inserted literally.
-  assertEquals(unmaskReferences("x⟦1⟧y", ['$t(a, "$&$\'$`$1")']), 'x$t(a, "$&$\'$`$1")y');
-  assertEquals(unmaskReferences("no tokens", references), "no tokens");
-  assertEquals(unmaskReferences("", []), "");
+  expect(unmaskReferences("x⟦1⟧y", ['$t(a, "$&$\'$`$1")'])).toBe('x$t(a, "$&$\'$`$1")y');
+  expect(unmaskReferences("no tokens", references)).toBe("no tokens");
+  expect(unmaskReferences("", [])).toBe("");
 });
 
 /** A small deterministic random number generator (mulberry32), for reproducible tests. */
@@ -531,8 +553,8 @@ test("property: each token is what a fresh tokenizer finds at its position", () 
     for (const token of tokenize(text, syntax)) {
       if (token.type !== "text") {
         const [first] = tokenize(text.slice(token.start), syntax);
-        assertEquals(rawOf(first), token.raw, JSON.stringify(text));
-        assertEquals(first.type, token.type);
+        expect(rawOf(first), JSON.stringify(text)).toStrictEqual(token.raw);
+        expect(first.type).toStrictEqual(token.type);
         continue;
       }
       for (let at = token.start; at < token.end; at++) {
@@ -541,7 +563,7 @@ test("property: each token is what a fresh tokenizer finds at its position", () 
         if (first.type === "placeholder" && inBlankPlaceholder(text, token.start, at, syntax)) {
           continue;
         }
-        assertEquals(first.type, "text", `${JSON.stringify(text)} at ${at}`);
+        expect(first.type, `${JSON.stringify(text)} at ${at}`).toBe("text");
       }
     }
   }
@@ -589,7 +611,7 @@ test("property: placeholders are what i18next's interpolation pattern matches", 
       .filter((match) => !isBlankName(match[1]))
       .map((match) => `${match.index}:${match[0]}`);
     const found = placeholdersOf(text, syntax).map((token) => `${token.start}:${token.raw}`);
-    assertEquals(found, expected, JSON.stringify(text));
+    expect(found, JSON.stringify(text)).toStrictEqual(expected);
   }
 });
 
@@ -599,8 +621,8 @@ test("property: masking and unmasking give the text back", () => {
     const text = randomText(next, Math.floor(next() * 30));
     const masked = maskReferences(text);
     assert(masked.references.length >= referencesOf(text).length);
-    assertEquals(referencesOf(masked.text), []);
-    assertEquals(unmaskReferences(masked.text, masked.references), text);
+    expect(referencesOf(masked.text)).toStrictEqual([]);
+    expect(unmaskReferences(masked.text, masked.references)).toStrictEqual(text);
   }
 });
 
@@ -631,14 +653,14 @@ const BRACES = { prefix: "{{", suffix: "}}", extra: [{ prefix: "{", suffix: "}" 
 test("extra delimiters: the app's {name} beside i18next's {{count}}", () => {
   const text = "{companyName} has {{count}} jobs";
   const tokens = tokenize(text, BRACES);
-  assertEquals(describe(tokens), [
+  expect(describe(tokens)).toStrictEqual([
     "placeholder:{companyName}",
     "text: has ",
     "placeholder:{{count}}",
     "text: jobs",
   ]);
   assertCovers(text, tokens);
-  assertEquals(tokens[0], {
+  expect(tokens[0]).toStrictEqual({
     type: "placeholder",
     raw: "{companyName}",
     name: "companyName",
@@ -650,7 +672,7 @@ test("extra delimiters: the app's {name} beside i18next's {{count}}", () => {
 });
 
 test("extra delimiters: without them, {name} is plain text", () => {
-  assertEquals(describe(tokenize("{companyName} has {{count}} jobs")), [
+  expect(describe(tokenize("{companyName} has {{count}} jobs"))).toStrictEqual([
     "text:{companyName} has ",
     "placeholder:{{count}}",
     "text: jobs",
@@ -659,18 +681,22 @@ test("extra delimiters: without them, {name} is plain text", () => {
 
 test("extra delimiters: the prefix nearest the suffix starts the placeholder", () => {
   const text = "{a {b} c";
-  assertEquals(describe(tokenize(text, BRACES)), ["text:{a ", "placeholder:{b}", "text: c"]);
+  expect(describe(tokenize(text, BRACES))).toStrictEqual([
+    "text:{a ",
+    "placeholder:{b}",
+    "text: c",
+  ]);
   assertCovers(text, tokenize(text, BRACES));
 });
 
 test("extra delimiters: a blank name or a line break is plain text", () => {
-  assertEquals(describe(tokenize("{ } and {a\nb}", BRACES)), ["text:{ } and {a\nb}"]);
-  assertEquals(describe(tokenize("{a\n{b}", BRACES)), ["text:{a\n", "placeholder:{b}"]);
+  expect(describe(tokenize("{ } and {a\nb}", BRACES))).toStrictEqual(["text:{ } and {a\nb}"]);
+  expect(describe(tokenize("{a\n{b}", BRACES))).toStrictEqual(["text:{a\n", "placeholder:{b}"]);
 });
 
 test("extra delimiters: a reference's options stay in the reference", () => {
   const text = '$t(key, {"count": 3}) {name}';
-  assertEquals(describe(tokenize(text, BRACES)), [
+  expect(describe(tokenize(text, BRACES))).toStrictEqual([
     'reference:$t(key, {"count": 3})',
     "text: ",
     "placeholder:{name}",
@@ -679,13 +705,13 @@ test("extra delimiters: a reference's options stay in the reference", () => {
 
 test("extra delimiters: the key keeps them and trims the name", () => {
   const [spaced, braced] = placeholdersOf("{ name } {{name}}", BRACES);
-  assertEquals([placeholderKey(spaced), placeholderKey(braced)], ["{name}", "{{name}}"]);
+  expect([placeholderKey(spaced), placeholderKey(braced)]).toStrictEqual(["{name}", "{{name}}"]);
 });
 
 test("extra delimiters: many prefixes without a suffix stay linear", () => {
   const text = "{".repeat(200_000) + "x";
   const started = performance.now();
-  assertEquals(describe(tokenize(text, BRACES)), [`text:${text}`]);
+  expect(describe(tokenize(text, BRACES))).toStrictEqual([`text:${text}`]);
   assert(performance.now() - started < 2000);
 });
 
@@ -701,20 +727,20 @@ const MAYOR = `{style, select,
 test("tokenize, ICU: arguments are placeholders, with their format", () => {
   const tokens = tokenize("Hi {name}, you have {n, number} points", ICU);
   assertCovers("Hi {name}, you have {n, number} points", tokens);
-  assertEquals(describe(tokens), [
+  expect(describe(tokens)).toStrictEqual([
     "text:Hi ",
     "placeholder:{name}",
     "text:, you have ",
     "placeholder:{n, number}",
     "text: points",
   ]);
-  assertEquals(placeholdersOf("{n,number}", ICU).map(placeholderKey), ["{n, number}"]);
+  expect(placeholdersOf("{n,number}", ICU).map(placeholderKey)).toStrictEqual(["{n, number}"]);
 });
 
 test("tokenize, ICU: a select block's syntax is apart from the text of its cases", () => {
   const tokens = tokenize(MAYOR, ICU);
   assertCovers(MAYOR, tokens);
-  assertEquals(describe(tokens), [
+  expect(describe(tokens)).toStrictEqual([
     "syntax:{style, select,\n  masculine {",
     "text:El alcalde ",
     "placeholder:{name}",
@@ -728,7 +754,7 @@ test("tokenize, ICU: a select block's syntax is apart from the text of its cases
 });
 
 test("tokenize, ICU: # is a placeholder in plural cases only", () => {
-  assertEquals(describe(tokenize("{n, plural, offset:1 =0 {none} other {# items}}", ICU)), [
+  expect(describe(tokenize("{n, plural, offset:1 =0 {none} other {# items}}", ICU))).toStrictEqual([
     "syntax:{n, plural, offset:1 =0 {",
     "text:none",
     "syntax:} other {",
@@ -736,30 +762,33 @@ test("tokenize, ICU: # is a placeholder in plural cases only", () => {
     "text: items",
     "syntax:}}",
   ]);
-  assertEquals(describe(tokenize("Step #1 of {n}", ICU)), ["text:Step #1 of ", "placeholder:{n}"]);
+  expect(describe(tokenize("Step #1 of {n}", ICU))).toStrictEqual([
+    "text:Step #1 of ",
+    "placeholder:{n}",
+  ]);
 });
 
 test("tokenize, ICU: a brace that starts no argument is text, and the rest is still read", () => {
   const text = "Code: `{ a: 1 }`, {#anchor}, {name}";
-  assertEquals(describe(tokenize(text, ICU)), [
+  expect(describe(tokenize(text, ICU))).toStrictEqual([
     "text:Code: `{ a: 1 }`, {#anchor}, ",
     "placeholder:{name}",
   ]);
 });
 
 test("tokenize, ICU: a broken block is text", () => {
-  assertEquals(describe(tokenize("{n, plural, one {# item} other {# items}", ICU)), [
+  expect(describe(tokenize("{n, plural, one {# item} other {# items}", ICU))).toStrictEqual([
     "text:{n, plural, one {# item} other {# items}",
   ]);
 });
 
 test("tokenize, ICU: quoted braces are text; a lone apostrophe is an apostrophe", () => {
-  assertEquals(describe(tokenize("'{name}' l'alcalde {name}", ICU)), [
+  expect(describe(tokenize("'{name}' l'alcalde {name}", ICU))).toStrictEqual([
     "text:'{name}' l'alcalde ",
     "placeholder:{name}",
   ]);
 });
 
 test("tokenize, ICU: i18next nesting is text", () => {
-  assertEquals(describe(tokenize("$t(key)", ICU)), ["text:$t(key)"]);
+  expect(describe(tokenize("$t(key)", ICU))).toStrictEqual(["text:$t(key)"]);
 });

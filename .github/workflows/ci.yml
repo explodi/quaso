@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
 # Every push and pull request: formatting, lint, types, headers, licences and tests
-# (`deno task check`), plus the builds and the optional packages' tests.
+# (`npm run check`), plus the builds and the optional packages' tests.
 name: CI
 
 on:
@@ -17,28 +17,30 @@ concurrency:
 
 jobs:
   check:
-    name: deno task check
+    name: npm run check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          deno-version-file: .dvmrc
-      - run: deno install --frozen-lockfile
-      - run: deno task check
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run check
 
   build:
-    name: Build the website and the server binary
+    name: Build the website and run the server from outside the checkout
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          deno-version-file: .dvmrc
-      - run: deno install --frozen-lockfile
-      - run: deno task build
-      - run: ./dist/quaso version
-      - run: deno task test:binary
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: node packages/server/main.ts version
+      - run: npm run test:server
 
   example-game:
     name: Quaso Quest tests and build
@@ -62,41 +64,43 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          deno-version-file: .dvmrc
-      - run: deno install --frozen-lockfile
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
       # Puppeteer installs Chromium before the browser tests.
       - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.cache/puppeteer
-          key: puppeteer-${{ runner.os }}-${{ hashFiles('deno.lock') }}
-      - run: deno task build:web
-      - run: deno task e2e:browser
-      - run: deno task e2e
+          key: puppeteer-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - run: npm run build:web
+      - run: npm run e2e:browser
+      - run: npm run e2e
 
   cli:
-    # S4.1 and S4.11: the CLI's bundle on every system and runtime it supports, against a
-    # development server (Deno runs the server either way).
-    name: CLI (${{ matrix.os }}, ${{ matrix.runtime.name }})
+    # S4.1 and S4.11: the CLI's bundle on every system and every Node the npm package supports,
+    # against a development server (the repository's Node runs the server and the tooling).
+    name: CLI (${{ matrix.os }}, node ${{ matrix.node }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        runtime:
-          - { name: node 22, command: node, node: "22" }
-          - { name: node 24, command: node, node: "24" }
-          - { name: deno, command: deno }
+        node: ["22", "24", "26"]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          deno-version-file: .dvmrc
-      - run: deno install --frozen-lockfile
-      - if: matrix.runtime.command == 'node'
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+          node-version: ${{ matrix.node }}
+      - name: Remember the Node that runs the bundle
+        shell: bash
+        run: echo "CLI_NODE=$(node -p process.execPath)" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: ${{ matrix.runtime.node }}
-      - run: deno task build:cli
-      - run: deno run -A scripts/cli_e2e.ts --runtime ${{ matrix.runtime.command }}
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run build:cli
+      - run: node scripts/cli_e2e.ts --node "$CLI_NODE"
+        shell: bash

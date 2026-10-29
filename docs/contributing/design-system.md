@@ -3,9 +3,9 @@
 Use the shared design system to build controls and layouts that fit the Quaso app and project
 website. The component catalog shows working examples and their states.
 
-After [development setup](README.md), run `deno task dev` and open
+After [development setup](README.md), run `npm run dev` and open
 [the catalog](http://localhost:5173/design.html). The catalog needs no account or project data and
-makes no API calls. `deno task build:web` also includes `design.html` in the app build.
+makes no API calls. `npm run build:web` also includes `design.html` in the app build.
 
 The app, catalog, and public website depend on the workspace package `@quaso/design-system` in
 `packages/design-system`. It owns the base React components, shared CSS, theme tokens, icons, mascot,
@@ -74,8 +74,8 @@ distinguish colors to understand a state.
 After editing the palette or theme roles, run:
 
 ```sh
-deno task design:tokens
-deno test -A packages/design-system
+npm run design:tokens
+npx vitest run packages/design-system
 ```
 
 The generator updates `theme.css` and both favicons. Commit the generated files with the palette.
@@ -141,11 +141,11 @@ Check the affected examples in light and dark mode, then the real workflow that 
 narrow screens, keyboard focus, and long or right-to-left text when relevant. Targeted checks are:
 
 ```sh
-deno task lint:react
-deno task typecheck
-deno test -A packages/design-system
-deno test -A e2e/catalog.test.ts e2e/design_system.test.ts
-deno task site:build
+npm run lint:react
+npm run typecheck
+npx vitest run packages/design-system
+npx vitest run e2e/catalog.test.ts e2e/design_system.test.ts
+npm run site:build
 ```
 
 The Jersey fonts are distributed under the SIL Open Font License. Each font's license ships in

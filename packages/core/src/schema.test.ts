@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals, assertThrows } from "@std/assert";
+import { assert, expect, test } from "vitest";
 import { formatPath, type Infer, parse, s, SchemaError, toJsonSchema, validate } from "./schema.ts";
 
 const Upload = s.object({
@@ -19,12 +18,12 @@ const Upload = s.object({
 test("validates a correct value and infers its type", () => {
   const value = { files: [{ path: "common.json", content: "{}" }], dryRun: true };
   const result = validate(Upload, value);
-  assertEquals(result, { ok: true, value });
+  expect(result).toStrictEqual({ ok: true, value });
   if (result.ok) {
     const typed: Infer<typeof Upload> = result.value;
     const path: string = typed.files[0].path;
     const dryRun: boolean | undefined = typed.dryRun;
-    assertEquals([path, dryRun], ["common.json", true]);
+    expect([path, dryRun]).toStrictEqual(["common.json", true]);
   }
 });
 
@@ -34,9 +33,9 @@ test("reports precise paths", () => {
     extra: true,
     mode: "other",
   });
-  assertEquals(result.ok, false);
+  expect(result.ok).toBe(false);
   if (!result.ok) {
-    assertEquals(result.issues, [
+    expect(result.issues).toStrictEqual([
       { path: ["files", 0, "path"], message: "must not be empty" },
       { path: ["files", 0, "content"], message: "must be a string, not a number" },
       { path: ["files", 1, "content"], message: "is required" },
@@ -47,61 +46,71 @@ test("reports precise paths", () => {
 });
 
 test("optional, nullable and strip", () => {
-  assertEquals(validate(Upload, { files: [{ path: "a", content: "" }], limit: null }).ok, true);
-  assertEquals(validate(Upload, { files: [{ path: "a", content: "" }], limit: 0 }).ok, false);
+  expect(validate(Upload, { files: [{ path: "a", content: "" }], limit: null }).ok).toStrictEqual(
+    true,
+  );
+  expect(validate(Upload, { files: [{ path: "a", content: "" }], limit: 0 }).ok).toStrictEqual(
+    false,
+  );
   const Loose = s.object({ a: s.string() }, { unknown: "strip" });
-  assertEquals(parse(Loose, { a: "x", b: 1 }), { a: "x" });
+  expect(parse(Loose, { a: "x", b: 1 })).toStrictEqual({ a: "x" });
 });
 
 test("records, unions, literals and refinements", () => {
   const Forms = s.record(s.string(), {
     key: s.enum(["zero", "one", "two", "few", "many", "other"]),
   });
-  assertEquals(validate(Forms, { one: "a", other: "b" }).ok, true);
+  expect(validate(Forms, { one: "a", other: "b" }).ok).toBe(true);
   const bad = validate(Forms, { plural: "a" });
-  assertEquals(bad.ok, false);
+  expect(bad.ok).toBe(false);
   const Value = s.union([s.string(), Forms]);
-  assertEquals(parse(Value, "x"), "x");
-  assertEquals(parse(Value, { other: "y" }), { other: "y" });
+  expect(parse(Value, "x")).toBe("x");
+  expect(parse(Value, { other: "y" })).toStrictEqual({ other: "y" });
   const nested = validate(Value, { other: 3 });
-  assertEquals(nested.ok ? [] : nested.issues, [
+  expect(nested.ok ? [] : nested.issues).toStrictEqual([
     { path: ["other"], message: "must be a string, not a number" },
   ]);
   const Even = s.refine(s.integer(), (n) => (n % 2 === 0 ? undefined : "must be even"));
-  assertEquals(validate(Even, 3), { ok: false, issues: [{ path: [], message: "must be even" }] });
-  assertEquals(parse(s.literal(1), 1), 1);
-  assertEquals(validate(s.array(s.string(), { unique: true }), ["a", "a"]).ok, false);
+  expect(validate(Even, 3)).toStrictEqual({
+    ok: false,
+    issues: [{ path: [], message: "must be even" }],
+  });
+  expect(parse(s.literal(1), 1)).toBe(1);
+  expect(validate(s.array(s.string(), { unique: true }), ["a", "a"]).ok).toBe(false);
 });
 
-test("parse throws a SchemaError with a readable message", () => {
-  const error = assertThrows(() => parse(Upload, { files: [] }), SchemaError);
-  assertEquals(error.message, "files: must not be empty");
-  assertEquals(formatPath(["files", 0, "a-b", "c"]), 'files[0]["a-b"].c');
+test("parse throws a SchemaError with a readable message", async () => {
+  const error = await Promise.try(() => parse(Upload, { files: [] })).catch(
+    (error: unknown) => error,
+  );
+  assert(error instanceof SchemaError);
+  expect(error.message).toBe("files: must not be empty");
+  expect(formatPath(["files", 0, "a-b", "c"])).toBe('files[0]["a-b"].c');
 });
 
 test("emits JSON Schema", () => {
   const schema = toJsonSchema(Upload, { id: "https://example.com/upload.json" });
-  assertEquals(schema.$schema, "https://json-schema.org/draft/2020-12/schema");
-  assertEquals(schema.$id, "https://example.com/upload.json");
-  assertEquals(schema.required, ["files"]);
-  assertEquals(schema.additionalProperties, false);
+  expect(schema.$schema).toBe("https://json-schema.org/draft/2020-12/schema");
+  expect(schema.$id).toBe("https://example.com/upload.json");
+  expect(schema.required).toStrictEqual(["files"]);
+  expect(schema.additionalProperties).toBe(false);
   const files = (schema.properties as Record<string, Record<string, unknown>>).files;
-  assertEquals(files.minItems, 1);
+  expect(files.minItems).toBe(1);
   const item = files.items as Record<string, Record<string, Record<string, unknown>>>;
-  assertEquals(item.properties.path, {
+  expect(item.properties.path).toStrictEqual({
     type: "string",
     minLength: 1,
     description: "Path below the source folder",
   });
   const limit = (schema.properties as Record<string, unknown>).limit;
-  assertEquals(limit, { anyOf: [{ type: "integer", minimum: 1 }, { type: "null" }] });
+  expect(limit).toStrictEqual({ anyOf: [{ type: "integer", minimum: 1 }, { type: "null" }] });
 });
 
 test("partial and extend", () => {
   const Settings = s.object({ name: s.string(), languages: s.array(s.string()) });
   const Patch = Settings.partial();
-  assertEquals(parse(Patch, {}), {});
-  assertEquals(parse(Patch, { name: "x" }), { name: "x" });
+  expect(parse(Patch, {})).toStrictEqual({});
+  expect(parse(Patch, { name: "x" })).toStrictEqual({ name: "x" });
   const More = Settings.extend({ extra: s.boolean() });
-  assertEquals(validate(More, { name: "a", languages: [], extra: true }).ok, true);
+  expect(validate(More, { name: "a", languages: [], extra: true }).ok).toBe(true);
 });

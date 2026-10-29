@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
+import { expect, test } from "vitest";
 import * as fs from "node:fs/promises";
-import { assertEquals, assertStringIncludes } from "@std/assert";
 import { join } from "node:path";
 import { runCli, withProject } from "../test_helpers.ts";
 import { defaultTranslation } from "./init.ts";
@@ -23,19 +22,17 @@ test("init language mappings preserve nested translation destinations", async ()
       ],
       { cwd: dir },
     );
-    assertEquals(run.code, 0, run.stderr);
-    assertEquals(JSON.parse(run.stdout).result.config.languageMapping, {
+    expect(run.code, run.stderr).toBe(0);
+    expect(JSON.parse(run.stdout).result.config.languageMapping).toStrictEqual({
       "zh-Hans": "zh",
       "pt-PT": "pt",
     });
     const project = await loadProject(dir);
     const sources = await collectSources(project);
-    assertEquals(
-      translationPath(project, sources.files[0], "zh-Hans"),
+    expect(translationPath(project, sources.files[0], "zh-Hans")).toStrictEqual(
       "src/locales/zh/menu/play.json",
     );
-    assertEquals(
-      translationPath(project, sources.files[0], "pt-PT"),
+    expect(translationPath(project, sources.files[0], "pt-PT")).toStrictEqual(
       "src/locales/pt/menu/play.json",
     );
   });
@@ -47,9 +44,9 @@ test("init refuses conflicting language mappings before writing", async () => {
       ["init", "--languages", "pt-PT", "--language-mapping", "pt-PT=pt,pt-pt=portuguese"],
       { cwd: dir },
     );
-    assertEquals(run.code, 2);
-    assertStringIncludes(run.stderr, "more than one folder");
-    assertEquals(await fs.readdir(dir), []);
+    expect(run.code).toBe(2);
+    expect(run.stderr).toContain("more than one folder");
+    expect(await fs.readdir(dir)).toStrictEqual([]);
   });
 });
 
@@ -58,9 +55,9 @@ test("init refuses a mapped language outside its targets", async () => {
     const run = await runCli(["init", "--languages", "de", "--language-mapping", "zh-Hans=zh"], {
       cwd: dir,
     });
-    assertEquals(run.code, 2);
-    assertStringIncludes(run.stderr, "not one of --languages");
-    assertEquals(await fs.readdir(dir), []);
+    expect(run.code).toBe(2);
+    expect(run.stderr).toContain("not one of --languages");
+    expect(await fs.readdir(dir)).toStrictEqual([]);
   });
 });
 
@@ -69,9 +66,9 @@ test("init refuses unsafe language folder names", async () => {
     const run = await runCli(["init", "--languages", "de", "--language-mapping", "de=../outside"], {
       cwd: dir,
     });
-    assertEquals(run.code, 2);
-    assertStringIncludes(run.stderr, "can't be a folder or file name");
-    assertEquals(await fs.readdir(dir), []);
+    expect(run.code).toBe(2);
+    expect(run.stderr).toContain("can't be a folder or file name");
+    expect(await fs.readdir(dir)).toStrictEqual([]);
   });
 });
 
@@ -80,21 +77,24 @@ test("init refuses malformed mapping entries", async () => {
     const run = await runCli(["init", "--languages", "de", "--language-mapping", "de"], {
       cwd: dir,
     });
-    assertEquals(run.code, 2);
-    assertStringIncludes(run.stderr, "must be a language tag followed by =folder");
-    assertEquals(await fs.readdir(dir), []);
+    expect(run.code).toBe(2);
+    expect(run.stderr).toContain("must be a language tag followed by =folder");
+    expect(await fs.readdir(dir)).toStrictEqual([]);
   });
 });
 
 test("defaultTranslation replaces the source language's folder or file name", () => {
-  assertEquals(defaultTranslation("src/locales/en/**/*.json", "en"), "src/locales/{lang}/{path}");
-  assertEquals(
-    defaultTranslation("public/locales/en/*.json", "en"),
+  expect(defaultTranslation("src/locales/en/**/*.json", "en")).toStrictEqual(
+    "src/locales/{lang}/{path}",
+  );
+  expect(defaultTranslation("public/locales/en/*.json", "en")).toStrictEqual(
     "public/locales/{lang}/{path}",
   );
-  assertEquals(defaultTranslation("locales/en/app/*.json", "en"), "locales/{lang}/app/{path}");
-  assertEquals(defaultTranslation("locales/en.json", "en"), "locales/{lang}.json");
-  assertEquals(defaultTranslation("i18n/*.json", "en"), null);
+  expect(defaultTranslation("locales/en/app/*.json", "en")).toStrictEqual(
+    "locales/{lang}/app/{path}",
+  );
+  expect(defaultTranslation("locales/en.json", "en")).toBe("locales/{lang}.json");
+  expect(defaultTranslation("i18n/*.json", "en")).toBe(null);
 });
 
 test("init writes a starter config and never overwrites one", async () => {
@@ -103,19 +103,21 @@ test("init writes a starter config and never overwrites one", async () => {
       cwd: dir,
       env: { QUASO_HOSTNAME: "translate.game.test" },
     });
-    assertEquals(run.code, 0, run.stderr);
-    assertStringIncludes(run.stdout, "src/locales/en/**/*.json (1 file found)");
+    expect(run.code, run.stderr).toBe(0);
+    expect(run.stdout).toContain("src/locales/en/**/*.json (1 file found)");
     const config = JSON.parse(await fs.readFile(join(dir, "quaso.config.json"), "utf8"));
-    assertEquals(config, {
+    expect(config).toStrictEqual({
       $schema: "https://translate.game.test/schema/config-v1.json",
       sourceLanguage: "en",
       languages: ["de", "fr", "pt-BR"],
       files: [{ source: "src/locales/en/**/*.json", translation: "src/locales/{lang}/{path}" }],
     });
     const again = await runCli(["init", "--languages", "ja"], { cwd: dir });
-    assertEquals(again.code, 2);
-    assertStringIncludes(again.stderr, "init never overwrites it");
-    assertEquals(JSON.parse(await fs.readFile(join(dir, "quaso.config.json"), "utf8")), config);
+    expect(again.code).toBe(2);
+    expect(again.stderr).toContain("init never overwrites it");
+    expect(JSON.parse(await fs.readFile(join(dir, "quaso.config.json"), "utf8"))).toStrictEqual(
+      config,
+    );
   });
 });
 
@@ -125,15 +127,15 @@ test("init takes --source, --files and --translation, without $schema when no ho
       ["init", "--json", "--source", "de", "--languages", "en", "--files", "i18n/{source}.json"],
       { cwd: dir },
     );
-    assertEquals(run.code, 0, run.stderr);
+    expect(run.code, run.stderr).toBe(0);
     const document = JSON.parse(run.stdout);
-    assertEquals(document.command, "init");
-    assertEquals(document.result.config, {
+    expect(document.command).toBe("init");
+    expect(document.result.config).toStrictEqual({
       sourceLanguage: "de",
       languages: ["en"],
       files: [{ source: "i18n/de.json", translation: "i18n/{lang}.json" }],
     });
-    assertStringIncludes(run.stderr, "i18n/de.json matches no files yet.");
+    expect(run.stderr).toContain("i18n/de.json matches no files yet.");
   });
 });
 
@@ -175,13 +177,13 @@ test("init refuses bad options", async () => {
     ];
     for (const [args, message] of cases) {
       const run = await runCli(args, { cwd: dir });
-      assertEquals(run.code, 2, args.join(" "));
-      assertStringIncludes(run.stderr, message);
-      assertEquals(run.stderr.includes("a bug in quaso"), false);
+      expect(run.code, args.join(" ")).toBe(2);
+      expect(run.stderr).toContain(message);
+      expect(run.stderr.includes("a bug in quaso")).toBe(false);
     }
     const files = [];
     for await (const entry of await fs.readdir(dir, { withFileTypes: true }))
       files.push(entry.name);
-    assertEquals(files, []);
+    expect(files).toStrictEqual([]);
   });
 });

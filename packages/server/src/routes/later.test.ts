@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 import type { Fetch } from "@quaso/core";
-import { test } from "node:test";
+import { assert, expect, test } from "vitest";
 /** Public routes with the real service: input validation, access, limits and human checks. */
-import { assert, assertEquals } from "@std/assert";
 import { type Actor, ANONYMOUS, SYSTEM } from "@quaso/service";
 import {
   addUser,
@@ -39,17 +38,16 @@ test("community routes: glossary CRUD, comments and language approval", async ()
   });
   const request = (path: string, method = "GET", json?: unknown, key?: string) =>
     call(app, "/api/v1" + path, { method, json, key });
-  assertEquals((await request("/glossary")).status, 200);
-  assertEquals((await request("/glossary", "POST", { term: "Quaso", kind: "keep" })).status, 401);
+  expect((await request("/glossary")).status).toBe(200);
+  expect((await request("/glossary", "POST", { term: "Quaso", kind: "keep" })).status).toBe(401);
   const created = await request("/glossary", "POST", { term: "Quaso", kind: "keep" }, "admin");
-  assertEquals(created.status, 201);
+  expect(created.status).toBe(201);
   const term = await created.json();
-  assertEquals(
-    (await request(`/glossary/${term.id}`, "PATCH", { note: "Brand" }, "admin")).status,
+  expect((await request(`/glossary/${term.id}`, "PATCH", { note: "Brand" }, "admin")).status).toBe(
     200,
   );
-  assertEquals((await (await request("/glossary?q=brand")).json()).terms.length, 1);
-  assertEquals((await request(`/glossary/${term.id}`, "DELETE", undefined, "admin")).status, 200);
+  expect((await (await request("/glossary?q=brand")).json()).terms.length).toBe(1);
+  expect((await request(`/glossary/${term.id}`, "DELETE", undefined, "admin")).status).toBe(200);
   const comment = await request(
     `/strings/${id}/comments`,
     "POST",
@@ -59,39 +57,37 @@ test("community routes: glossary CRUD, comments and language approval", async ()
     },
     "contributor",
   );
-  assertEquals(comment.status, 201);
+  expect(comment.status).toBe(201);
   const note = await comment.json();
-  assertEquals((await (await request(`/strings/${id}/comments`)).json()).comments[0].id, note.id);
-  assertEquals((await request("/comments?sourceIssue=true&resolved=false")).status, 401);
-  assertEquals(
+  expect((await (await request(`/strings/${id}/comments`)).json()).comments[0].id).toStrictEqual(
+    note.id,
+  );
+  expect((await request("/comments?sourceIssue=true&resolved=false")).status).toBe(401);
+  expect(
     (
       await (
         await request("/comments?sourceIssue=true&resolved=false", "GET", undefined, "admin")
       ).json()
     ).comments.length,
-    1,
-  );
-  assertEquals(
+  ).toBe(1);
+  expect(
     (await request(`/comments/${note.id}/resolve`, "POST", undefined, "contributor")).status,
+  ).toBe(200);
+  expect((await request(`/comments/${note.id}`, "DELETE", undefined, "contributor")).status).toBe(
     200,
   );
-  assertEquals(
-    (await request(`/comments/${note.id}`, "DELETE", undefined, "contributor")).status,
-    200,
-  );
-  assertEquals(
+  expect(
     (await request("/language-requests", "POST", { tag: "not a tag" }, "contributor")).status,
-    400,
-  );
+  ).toBe(400);
   const pending = await request(
     "/language-requests",
     "POST",
     { tag: "pt-br", message: "Please" },
     "contributor",
   );
-  assertEquals(pending.status, 201);
+  expect(pending.status).toBe(201);
   const language = await pending.json();
-  assertEquals(
+  expect(
     (
       await request(
         `/language-requests/${language.id}/review`,
@@ -100,9 +96,8 @@ test("community routes: glossary CRUD, comments and language approval", async ()
         "contributor",
       )
     ).status,
-    403,
-  );
-  assertEquals(
+  ).toBe(403);
+  expect(
     (
       await request(
         `/language-requests/${language.id}/review`,
@@ -111,9 +106,8 @@ test("community routes: glossary CRUD, comments and language approval", async ()
         "admin",
       )
     ).status,
-    200,
-  );
-  assertEquals((await (await request("/language-requests")).json()).requests, []);
+  ).toBe(200);
+  expect((await (await request("/language-requests")).json()).requests).toStrictEqual([]);
   assert(
     (await t.service.getProject(SYSTEM, {})).languages.some((language) => language.tag === "pt-BR"),
   );
@@ -138,23 +132,22 @@ test("community routes: creation shares per-user rate limits and returns Retry-A
     },
   });
   for (let n = 0; n < RATE_RULES.communityPerUser.limit; n++) {
-    assertEquals(
+    expect(
       (
         await call(app, `/api/v1/strings/${id}/comments`, {
           method: "POST",
           json: { body: "A note" },
         })
       ).status,
-      201,
-    );
+    ).toBe(201);
   }
   const refused = await call(app, "/api/v1/language-requests", {
     method: "POST",
     json: { tag: "fr" },
   });
-  assertEquals(refused.status, 429);
+  expect(refused.status).toBe(429);
   assert(Number(refused.headers.get("Retry-After")) > 0);
-  assertEquals((await t.service.listLanguageRequests(ANONYMOUS, {})).requests, []);
+  expect((await t.service.listLanguageRequests(ANONYMOUS, {})).requests).toStrictEqual([]);
 });
 
 test("language request route: optional human check runs before a request is stored", async () => {
@@ -180,9 +173,9 @@ test("language request route: optional human check runs before a request is stor
   });
   const post = (humanCheck?: string) =>
     call(app, "/api/v1/language-requests", { method: "POST", json: { tag: "fr", humanCheck } });
-  assertEquals((await post()).status, 400);
-  assertEquals((await post("bot")).status, 400);
-  assertEquals((await t.service.listLanguageRequests(ANONYMOUS, {})).requests, []);
-  assertEquals((await post("human")).status, 201);
-  assertEquals(checked, ["bot", "human"]);
+  expect((await post()).status).toBe(400);
+  expect((await post("bot")).status).toBe(400);
+  expect((await t.service.listLanguageRequests(ANONYMOUS, {})).requests).toStrictEqual([]);
+  expect((await post("human")).status).toBe(201);
+  expect(checked).toStrictEqual(["bot", "human"]);
 });

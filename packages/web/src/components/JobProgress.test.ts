@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals } from "@std/assert";
+import { expect, test } from "vitest";
 import type { JobInfo } from "@quaso/core";
 import { jobProgress } from "./JobProgress.tsx";
 import { completionMessage } from "./JobIndicator.tsx";
@@ -25,13 +24,13 @@ test("multi-job progress counts strings instead of averaging job percentages", (
     { progress: { ...JOB.progress, done: 30, total: 60 } },
     { progress: { ...JOB.progress, done: 30, total: 240 } },
   ]);
-  assertEquals(progress, {
+  expect(progress).toStrictEqual({
     done: 60,
     total: 300,
     percent: 20,
     label: "20 percent, 60 of 300 strings",
   });
-  assertEquals(jobProgress([]), {
+  expect(jobProgress([])).toStrictEqual({
     done: 0,
     total: 0,
     percent: 0,
@@ -40,11 +39,10 @@ test("multi-job progress counts strings instead of averaging job percentages", (
 });
 
 test("completion messages distinguish outcomes and retain failure reasons", () => {
-  assertEquals(completionMessage(JOB), "Translation finished: 1,488 translated, 2 failed");
-  assertEquals(completionMessage({ ...JOB, status: "cancelled" }), "Translation cancelled");
-  assertEquals(
-    completionMessage({ ...JOB, status: "failed", error: "Provider unavailable" }),
+  expect(completionMessage(JOB)).toBe("Translation finished: 1,488 translated, 2 failed");
+  expect(completionMessage({ ...JOB, status: "cancelled" })).toBe("Translation cancelled");
+  expect(completionMessage({ ...JOB, status: "failed", error: "Provider unavailable" })).toBe(
     "Translation failed: Provider unavailable",
   );
-  assertEquals(completionMessage({ ...JOB, status: "queued" }), undefined);
+  expect(completionMessage({ ...JOB, status: "queued" })).toBe(undefined);
 });

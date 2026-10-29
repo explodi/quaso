@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals } from "@std/assert";
+import { expect, test } from "vitest";
 import {
   count,
   formatNumber,
@@ -14,44 +13,41 @@ import {
 } from "./format.ts";
 
 test("numbers, counts and percentages", () => {
-  assertEquals(formatNumber(5800), "5,800");
-  assertEquals(count(1, "word"), "1 word");
-  assertEquals(count(1200, "string"), "1,200 strings");
-  assertEquals(count(2, "entry", "entries"), "2 entries");
-  assertEquals(formatPercent(45.9), "45%");
-  assertEquals(formatPercent(120), "100%");
-  assertEquals(
-    progressText({ translatedPercent: 45, proofreadPercent: 10 }),
+  expect(formatNumber(5800)).toBe("5,800");
+  expect(count(1, "word")).toBe("1 word");
+  expect(count(1200, "string")).toBe("1,200 strings");
+  expect(count(2, "entry", "entries")).toBe("2 entries");
+  expect(formatPercent(45.9)).toBe("45%");
+  expect(formatPercent(120)).toBe("100%");
+  expect(progressText({ translatedPercent: 45, proofreadPercent: 10 })).toStrictEqual(
     "45% translated • 10% proofread",
   );
-  assertEquals(wordsLeftText({ wordsLeft: 0 }), "Nothing left");
-  assertEquals(wordsLeftText({ wordsLeft: 1 }), "1 word left");
-  assertEquals(wordsLeftText({ wordsLeft: 1234 }), "1,234 words left");
+  expect(wordsLeftText({ wordsLeft: 0 })).toBe("Nothing left");
+  expect(wordsLeftText({ wordsLeft: 1 })).toBe("1 word left");
+  expect(wordsLeftText({ wordsLeft: 1234 })).toBe("1,234 words left");
 });
 
 test("relative dates", () => {
   const now = Date.UTC(2026, 8, 24, 12);
-  assertEquals(formatRelative(now - 10_000, now), "just now");
-  assertEquals(formatRelative(now - 5 * 60_000, now), "5 minutes ago");
-  assertEquals(formatRelative(now - 3 * 3600_000, now), "3 hours ago");
-  assertEquals(formatRelative(now - 24 * 3600_000, now), "yesterday");
-  assertEquals(formatRelative(now - 3 * 24 * 3600_000, now), "3 days ago");
-  assertEquals(formatRelative(now - 400 * 24 * 3600_000, now), "last year");
-  assertEquals(formatRelative(now + 2 * 60_000, now), "in 2 minutes");
+  expect(formatRelative(now - 10_000, now)).toBe("just now");
+  expect(formatRelative(now - 5 * 60_000, now)).toBe("5 minutes ago");
+  expect(formatRelative(now - 3 * 3600_000, now)).toBe("3 hours ago");
+  expect(formatRelative(now - 24 * 3600_000, now)).toBe("yesterday");
+  expect(formatRelative(now - 3 * 24 * 3600_000, now)).toBe("3 days ago");
+  expect(formatRelative(now - 400 * 24 * 3600_000, now)).toBe("last year");
+  expect(formatRelative(now + 2 * 60_000, now)).toBe("in 2 minutes");
 });
 
 test("language names and values", () => {
-  assertEquals(languageLabel("de"), "German");
-  assertEquals(languageLabel("pt-BR"), "Portuguese (Brazil)");
-  assertEquals(valueText("Hallo"), "Hallo");
-  assertEquals(
-    valueText({ one: "1 Münze", other: "{{count}} Münzen" }),
+  expect(languageLabel("de")).toBe("German");
+  expect(languageLabel("pt-BR")).toBe("Portuguese (Brazil)");
+  expect(valueText("Hallo")).toBe("Hallo");
+  expect(valueText({ one: "1 Münze", other: "{{count}} Münzen" })).toStrictEqual(
     "one: 1 Münze · other: {{count}} Münzen",
   );
-  assertEquals(valueText(null), "");
-  assertEquals(
-    sourcePreview({ one: "{{count}} coin", other: "{{count}} coins" }),
+  expect(valueText(null)).toBe("");
+  expect(sourcePreview({ one: "{{count}} coin", other: "{{count}} coins" })).toStrictEqual(
     "{{count}} coins",
   );
-  assertEquals(sourcePreview("Play"), "Play");
+  expect(sourcePreview("Play")).toBe("Play");
 });

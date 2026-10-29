@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: MIT
-/// <reference lib="dom" />
 /**
  * Keyboard focus and what assistive technology gets, in a browser (S7.9, WCAG 2.2 AA): focus
  * never drops to the page's body after an action, never hides under the sticky header or
@@ -7,7 +6,8 @@
  * exist before their first message; targets are large enough; the current page isn't told
  * by colour alone; and filtering says how many things match.
  */
-import { assert, assertEquals, assertStringIncludes } from "@std/assert";
+import { assert, expect } from "vitest";
+
 import type { Page } from "puppeteer";
 import type { ActivityResult, FilesResult, ProjectInfo, StringDetail } from "@quaso/core";
 import {
@@ -122,9 +122,9 @@ browserTest(
     );
     await page.click(".theme-menu button");
     await page.click('.theme-menu input[value="dark"]');
-    assertEquals(await page.evaluate(() => document.documentElement.dataset.theme), "dark");
+    expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe("dark");
     await page.click('.theme-menu input[value="system"]');
-    assertEquals(await page.evaluate(() => localStorage.getItem("quaso.theme")), null);
+    expect(await page.evaluate(() => localStorage.getItem("quaso.theme"))).toBe(null);
     await press(page, "Escape");
     assert(await page.$eval(".theme-menu button", (button) => button === document.activeElement));
 
@@ -132,11 +132,12 @@ browserTest(
     assert(await headerFits());
     await page.focus(".nav-overflow button");
     await press(page, "Enter");
-    assertEquals(await focused(page), "A:Overview");
-    assertEquals(
+    expect(await focused(page)).toBe("A:Overview");
+    expect(
       await page.$$eval(".nav .menu a", (links) =>
         links.map((link) => link.getAttribute("href")).sort(),
       ),
+    ).toStrictEqual(
       [
         "/",
         "/activity",
@@ -160,11 +161,11 @@ browserTest(
     );
     await press(page, "Escape");
     assert(await page.$eval(".nav-overflow button", (button) => button === document.activeElement));
-    assertEquals(await page.$(".nav .menu"), null);
+    expect(await page.$(".nav .menu")).toBe(null);
     await page.click(".nav-overflow button");
     await page.click('.nav .menu a[href="/glossary"]');
     await waitFor(page, () => location.pathname === "/glossary");
-    assertEquals(await page.$(".nav .menu"), null);
+    expect(await page.$(".nav .menu")).toBe(null);
     await page.click(".user-button");
     await press(page, "Escape");
     assert(await page.$eval(".user-button", (button) => button === document.activeElement));
@@ -172,7 +173,7 @@ browserTest(
     await page.setViewport({ width: 1440, height: 1000 });
     await page.addStyleTag({ content: "html { font-size: 200%; }" });
     assert(await headerFits(), "The header must also fit enlarged text");
-    assertEquals(problems, []);
+    expect(problems).toStrictEqual([]);
   },
 );
 
@@ -208,7 +209,7 @@ browserTest(
     await press(page, "Enter");
     // Busy: announced as busy, still focused, and a second press does nothing.
     await waitFor(page, () => document.activeElement?.getAttribute("aria-busy") === "true");
-    assertEquals(await focused(page), "BUTTON:Save");
+    expect(await focused(page)).toBe("BUTTON:Save");
     await waitFor(
       page,
       () =>
@@ -218,11 +219,10 @@ browserTest(
           ?.textContent?.includes("The disk is full.") ??
           false),
     );
-    assertEquals(await focused(page), "BUTTON:Save");
-    assertEquals(
+    expect(await focused(page)).toBe("BUTTON:Save");
+    expect(
       tab.problems.filter((p) => !/status of 500 .*\/translations\/fr\)$/.test(p)),
-      [],
-    );
+    ).toStrictEqual([]);
   },
 );
 
@@ -280,13 +280,13 @@ browserTest(
     await focusButton(page, "Delete");
     await press(page, "Enter");
     await waitFor(page, () => document.querySelector("dialog[open]") !== null);
-    assertEquals(await focused(page), "BUTTON:Keep it");
+    expect(await focused(page)).toBe("BUTTON:Keep it");
     await focusButton(page, "Delete", "dialog[open]");
     await press(page, "Enter");
     await waitFor(page, () => document.querySelector("dialog[open]") === null);
     await waitFor(page, () => document.querySelector(".pane-panel .translation-text") === null);
     await waitFor(page, () => document.activeElement?.id === "translation-text");
-    assertEquals(tab.problems, []);
+    expect(tab.problems).toStrictEqual([]);
   },
 );
 
@@ -302,8 +302,7 @@ browserTest(
     await page.evaluate(() => document.getElementById("files-toggle")!.focus());
     await press(page, "Enter");
     await waitFor(page, () => document.querySelector("#editor-files.is-open") !== null);
-    assertEquals(
-      await page.evaluate(() => document.activeElement?.classList.contains("tree-all")),
+    expect(await page.evaluate(() => document.activeElement?.classList.contains("tree-all"))).toBe(
       true,
     );
     // Tab through the files and out: whatever has focus is visible, not under the overlay.
@@ -328,16 +327,15 @@ browserTest(
         };
       });
       if (report.inFiles) continue;
-      assertEquals(report.open, false, `the overlay stayed open over ${report.what}`);
+      expect(report.open, `the overlay stayed open over ${report.what}`).toBe(false);
       assert(report.visible, `${report.what} is hidden`);
     }
-    assertEquals(
+    expect(
       await page.evaluate(() =>
         document.getElementById("editor-files")!.contains(document.activeElement),
       ),
-      false,
-    );
-    assertEquals(tab.problems, []);
+    ).toBe(false);
+    expect(tab.problems).toStrictEqual([]);
   },
 );
 
@@ -388,8 +386,8 @@ browserTest(
         hidden.push(`${report.path} at ${report.top} < ${report.header}`);
       }
     }
-    assertEquals(hidden, []);
-    assertEquals(tab.problems, []);
+    expect(hidden).toStrictEqual([]);
+    expect(tab.problems).toStrictEqual([]);
   },
 );
 
@@ -423,7 +421,7 @@ browserTest(
       };
     };
     const before = await liveRegion();
-    assertEquals([before.ignored, before.live, before.text], [false, "polite", ""]);
+    expect([before.ignored, before.live, before.text]).toStrictEqual([false, "polite", ""]);
     await page.evaluate(() => {
       const input = document.querySelector<HTMLTextAreaElement>("#translation-text")!;
       input.focus();
@@ -437,9 +435,9 @@ browserTest(
         false,
     );
     const after = await liveRegion();
-    assertEquals([after.ignored, after.live], [false, "polite"]);
-    assertStringIncludes(after.text, "Error:");
-    assertEquals(tab.problems, []);
+    expect([after.ignored, after.live]).toStrictEqual([false, "polite"]);
+    expect(after.text).toContain("Error:");
+    expect(tab.problems).toStrictEqual([]);
   },
 );
 
@@ -457,20 +455,19 @@ browserTest(
     );
     await press(page, "ArrowDown", ["Alt"]);
     await waitFor(page, () => document.querySelector(".toast") !== null);
-    assertStringIncludes(await text(page, ".toast"), "That was the last string.");
+    expect(await text(page, ".toast")).toContain("That was the last string.");
     await page.evaluate(() =>
       document.querySelector<HTMLElement>('.toast button[aria-label="Dismiss"]')!.focus(),
     );
     await sleep(6_000);
-    assertEquals(await page.evaluate(() => document.querySelectorAll(".toast").length), 1);
-    assertEquals(
-      await page.evaluate(() => document.activeElement?.getAttribute("aria-label")),
+    expect(await page.evaluate(() => document.querySelectorAll(".toast").length)).toBe(1);
+    expect(await page.evaluate(() => document.activeElement?.getAttribute("aria-label"))).toBe(
       "Dismiss",
     );
     await press(page, "Enter");
     await waitFor(page, () => document.querySelector(".toast") === null);
     await waitFor(page, () => document.activeElement?.classList.contains("row-link") ?? false);
-    assertEquals(tab.problems, []);
+    expect(tab.problems).toStrictEqual([]);
   },
 );
 
@@ -510,9 +507,9 @@ browserTest(
       };
     });
     assert(styles.current.weight > styles.other.weight, JSON.stringify(styles));
-    assertEquals(styles.other.shadow, "none");
-    assertEquals(styles.current.shadow, "none");
-    assertEquals(tab.problems, []);
+    expect(styles.other.shadow).toBe("none");
+    expect(styles.current.shadow).toBe("none");
+    expect(tab.problems).toStrictEqual([]);
   },
 );
 
@@ -523,7 +520,7 @@ browserTest(
     const tab = await openTab(browser, server, "/");
     const { page } = tab;
     await waitFor(page, () => document.querySelector(".language-row") !== null);
-    assertEquals(await text(page, '.languages-card [role="status"]'), "6 languages");
+    expect(await text(page, '.languages-card [role="status"]')).toBe("6 languages");
     await page.evaluate(() =>
       document.querySelector<HTMLInputElement>("#language-search")!.focus(),
     );
@@ -547,7 +544,7 @@ browserTest(
       page,
       () => document.querySelectorAll('[role="treeitem"][aria-selected]').length === 3,
     );
-    assertEquals(await text(page, 'main [role="status"]'), "3 files");
+    expect(await text(page, 'main [role="status"]')).toBe("3 files");
     await page.evaluate(() => document.querySelector<HTMLInputElement>("#file-filter")!.focus());
     await page.keyboard.type("menu");
     await waitFor(
@@ -561,7 +558,7 @@ browserTest(
         document.querySelector('main [role="status"]')?.textContent ===
         "No file matches the filter.",
     );
-    assertEquals(tab.problems, []);
+    expect(tab.problems).toStrictEqual([]);
   },
 );
 
@@ -592,11 +589,11 @@ browserTest(
     await press(page, "Enter");
     await waitFor(page, () => document.activeElement?.getAttribute("aria-busy") === "true");
     await waitFor(page, () => document.querySelector('[data-id="older-2"]') !== null);
-    assertEquals(await focused(page), "BUTTON:Show older activity");
+    expect(await focused(page)).toBe("BUTTON:Show older activity");
     // The last page: the button goes, and focus moves to the first item it loaded.
     await press(page, "Enter");
     await waitFor(page, () => document.querySelector(".load-more") === null);
     await waitFor(page, () => document.activeElement?.getAttribute("data-id") === "older-3");
-    assertEquals(tab.problems, []);
+    expect(tab.problems).toStrictEqual([]);
   },
 );

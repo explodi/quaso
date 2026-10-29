@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
-/// <reference lib="dom" />
 /**
  * Signing in and out in a browser: where the website goes after signing in (never to
  * another site, however `next` is spelled), and what it does when the session ends while
  * someone is working (a 401).
  */
-import { assert, assertEquals, assertStringIncludes } from "@std/assert";
+import { assert, expect } from "vitest";
+
 import type { SessionInfo } from "@quaso/core";
 import { ANONYMOUS, SYSTEM } from "@quaso/service";
 import {
@@ -63,21 +63,17 @@ browserTest(
     const { page } = tab;
     await page.evaluate(() => document.querySelector<HTMLButtonElement>("main button")!.click());
     await waitFor(page, () => document.querySelector('[role="alert"] a') !== null);
-    assertStringIncludes(await text(page, '[role="alert"]'), "email address is unverified");
-    assertStringIncludes(await text(page, '[role="alert"]'), "Request a password reset");
-    assertEquals(
+    expect(await text(page, '[role="alert"]')).toContain("email address is unverified");
+    expect(await text(page, '[role="alert"]')).toContain("Request a password reset");
+    expect(
       await page.evaluate(() => document.querySelector('[role="alert"] a')!.getAttribute("href")),
-      "/forgot-password",
-    );
+    ).toBe("/forgot-password");
     await page.evaluate(() =>
       document.querySelector<HTMLAnchorElement>('[role="alert"] a')!.click(),
     );
     await waitFor(page, () => location.pathname === "/forgot-password");
     await waitFor(page, () => document.querySelector('main input[type="email"]') !== null);
-    assertStringIncludes(
-      await text(page, "main"),
-      "We'll send you a link to choose a new password.",
-    );
+    expect(await text(page, "main")).toContain("We'll send you a link to choose a new password.");
     // Issue the reset link directly: no mail provider is contacted by the browser test.
     const reset = await server.service.createEmailToken(SYSTEM, {
       email: "recovery@example.com",
@@ -106,11 +102,10 @@ browserTest(
       email: "recovery@example.com",
       password,
     });
-    assertEquals(signedIn.user.emailVerified, true);
-    assertEquals(
+    expect(signedIn.user.emailVerified).toBe(true);
+    expect(
       tab.problems.filter((p) => !/status of 403 .*\/auth\/email-link\)$/.test(p)),
-      [],
-    );
+    ).toStrictEqual([]);
   },
 );
 
@@ -126,14 +121,14 @@ browserTest(
       const target = await page.evaluate(
         () => document.querySelector<HTMLAnchorElement>(".auth-card a")!.href,
       );
-      assertEquals(target, `${server.url}/`, next);
+      expect(target, next).toStrictEqual(`${server.url}/`);
       await page.evaluate(() => document.querySelector<HTMLAnchorElement>(".auth-card a")!.click());
       await waitFor(
         page,
         () => location.pathname === "/" && document.querySelector("main h1") !== null,
       );
-      assertEquals(await page.evaluate(() => location.origin), server.url, next);
-      assertEquals(tab.problems, [], next);
+      expect(await page.evaluate(() => location.origin), next).toStrictEqual(server.url);
+      expect(tab.problems, next).toStrictEqual([]);
       await page.close();
     }
   },
@@ -156,7 +151,7 @@ browserTest(
         }
         if (path === "/api/v1/auth/signin" && request.method === "POST") {
           const body = await request.json();
-          assertEquals(body.email, "mia@example.com");
+          expect(body.email).toBe("mia@example.com");
           session = MANAGER_SESSION;
           return Response.json({}, { headers: { "Cache-Control": "no-store" } });
         }
@@ -169,14 +164,13 @@ browserTest(
     const { page } = tab;
     await waitFor(page, () => document.querySelector('input[type="password"]') !== null);
     // The GitHub link passes a harmless `next` to the server.
-    assertEquals(
+    expect(
       await page.evaluate(() =>
         [...document.querySelectorAll<HTMLAnchorElement>("a")]
           .find((a) => a.textContent?.includes("GitHub"))
           ?.getAttribute("href"),
       ),
-      "/auth/github?next=%2F",
-    );
+    ).toBe("/auth/github?next=%2F");
     await page.evaluate(() =>
       document.querySelector<HTMLInputElement>('input[type="email"]')!.focus(),
     );
@@ -188,8 +182,8 @@ browserTest(
     await press(page, "Enter");
     await waitFor(page, () => document.querySelector(".user-name")?.textContent === "Mia Manager");
     await waitFor(page, () => location.pathname === "/");
-    assertEquals(await page.evaluate(() => location.origin), server.url);
-    assertEquals(tab.problems, []);
+    expect(await page.evaluate(() => location.origin)).toStrictEqual(server.url);
+    expect(tab.problems).toStrictEqual([]);
   },
 );
 
@@ -255,17 +249,17 @@ browserTest(
       page,
       () => document.querySelector('.pane-panel [role="alert"] a')?.textContent === "Sign in",
     );
-    assertStringIncludes(await text(page, '.pane-panel [role="alert"]'), "You need to sign in");
+    expect(await text(page, '.pane-panel [role="alert"]')).toContain("You need to sign in");
     const signIn = await page.evaluate(() =>
       document
         .querySelector<HTMLAnchorElement>('.pane-panel [role="alert"] a')!
         .getAttribute("href"),
     );
     const here = await page.evaluate(() => location.pathname + location.search);
-    assertEquals(new URLSearchParams(here.split("?")[1]).get("id"), String(target.id));
-    assertEquals(signIn, `/signin?next=${encodeURIComponent(here)}`);
+    expect(new URLSearchParams(here.split("?")[1]).get("id")).toStrictEqual(String(target.id));
+    expect(signIn).toStrictEqual(`/signin?next=${encodeURIComponent(here)}`);
     const after = await counts();
-    assertEquals(after.saves, before.saves + 1);
+    expect(after.saves).toStrictEqual(before.saves + 1);
     assert(after.sessions > before.sessions, "the session wasn't fetched again");
 
     // Signed out meanwhile: the header says so at once, and the panel invites to sign in.
@@ -277,10 +271,9 @@ browserTest(
     await waitFor(page, () => document.querySelector(".header a.btn")?.textContent === "Sign in");
     await waitFor(page, () => document.querySelector(".pane-panel .signin-prompt") !== null);
     // The only problems are the refused saves.
-    assertEquals(
+    expect(
       tab.problems.filter((p) => !/status of 401 .*\/translations\/fr\)$/.test(p)),
-      [],
-    );
+    ).toStrictEqual([]);
   },
 );
 
@@ -290,12 +283,9 @@ browserTest(
   async ({ server, browser }) => {
     const { page, problems } = await openTab(browser, server, "/settings");
     await waitFor(page, () => location.pathname === "/setup");
-    assertStringIncludes(
-      await text(page, "main"),
-      "Set SETUP_KEY to at least 16 random characters",
-    );
-    assertEquals(await page.$("main form"), null);
-    assertEquals(problems, []);
+    expect(await text(page, "main")).toContain("Set SETUP_KEY to at least 16 random characters");
+    expect(await page.$("main form")).toBe(null);
+    expect(problems).toStrictEqual([]);
   },
 );
 
@@ -319,8 +309,8 @@ browserTest(
     await inputs[5].type("correct horse battery");
     await press(page, "Enter");
     await waitFor(page, () => location.pathname === "/");
-    assertEquals((await server.service.getSession(SYSTEM, {})).setupRequired, false);
-    assertEquals((await fetch(`${server.url}/setup`)).status, 404);
-    assertEquals(problems, []);
+    expect((await server.service.getSession(SYSTEM, {})).setupRequired).toBe(false);
+    expect((await fetch(`${server.url}/setup`)).status).toBe(404);
+    expect(problems).toStrictEqual([]);
   },
 );

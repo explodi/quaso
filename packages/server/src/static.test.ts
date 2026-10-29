@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
+import { tmpdir } from "node:os";
 import * as fs from "node:fs/promises";
-import { test } from "node:test";
-import { assertEquals, assertStringIncludes } from "@std/assert";
+import { expect, test } from "vitest";
 import { join } from "node:path";
 import { CONTENT_SECURITY_POLICY } from "./http/headers.ts";
 import { FakeService } from "./testing/fake_service.ts";
@@ -12,7 +12,7 @@ const INDEX =
   "</script></head><body><div id=root></div></body></html>";
 
 async function withWebsite(fn: (webDir: string) => Promise<void>): Promise<void> {
-  const webDir = await Deno.makeTempDir();
+  const webDir = await fs.mkdtemp(join(tmpdir(), "quaso-test-"));
   try {
     await fs.mkdir(join(webDir, "assets"));
     await fs.writeFile(join(webDir, "index.html"), INDEX);
@@ -28,19 +28,17 @@ test("website: the HTML shell, with the CSP, for a few minutes", () =>
   withWebsite(async (webDir) => {
     const { app } = testApp(new FakeService(), { WEB_DIR: webDir });
     const response = await call(app, "/");
-    assertEquals(response.status, 200);
-    assertEquals(await response.text(), INDEX);
-    assertEquals(response.headers.get("Content-Type"), "text/html; charset=UTF-8");
-    assertEquals(response.headers.get("Content-Security-Policy"), CONTENT_SECURITY_POLICY);
-    assertEquals(
-      response.headers.get("Cache-Control"),
+    expect(response.status).toBe(200);
+    expect(await response.text()).toStrictEqual(INDEX);
+    expect(response.headers.get("Content-Type")).toBe("text/html; charset=UTF-8");
+    expect(response.headers.get("Content-Security-Policy")).toStrictEqual(CONTENT_SECURITY_POLICY);
+    expect(response.headers.get("Cache-Control")).toStrictEqual(
       "public, max-age=300, stale-while-revalidate=600",
     );
     const etag = response.headers.get("ETag")!;
     const again = await call(app, "/", { headers: { "If-None-Match": etag } });
-    assertEquals(again.status, 304);
-    assertEquals(
-      again.headers.get("Cache-Control"),
+    expect(again.status).toBe(304);
+    expect(again.headers.get("Cache-Control")).toStrictEqual(
       "public, max-age=300, stale-while-revalidate=600",
     );
   }));
@@ -49,14 +47,15 @@ test("website: hashed build files are immutable", () =>
   withWebsite(async (webDir) => {
     const { app } = testApp(new FakeService(), { WEB_DIR: webDir });
     const response = await call(app, "/assets/index-abc123.js");
-    assertEquals(await response.text(), "console.log('hi');");
-    assertStringIncludes(response.headers.get("Content-Type")!, "javascript");
-    assertEquals(response.headers.get("Cache-Control"), "public, max-age=31536000, immutable");
-    assertEquals(response.headers.get("Content-Security-Policy"), null);
+    expect(await response.text()).toBe("console.log('hi');");
+    expect(response.headers.get("Content-Type")!).toContain("javascript");
+    expect(response.headers.get("Cache-Control")).toStrictEqual(
+      "public, max-age=31536000, immutable",
+    );
+    expect(response.headers.get("Content-Security-Policy")).toBe(null);
     const icon = await call(app, "/favicon.svg");
     await icon.body?.cancel();
-    assertEquals(
-      icon.headers.get("Cache-Control"),
+    expect(icon.headers.get("Cache-Control")).toStrictEqual(
       "public, max-age=300, stale-while-revalidate=600",
     );
   }));
@@ -66,23 +65,23 @@ test("website: other pages get index.html, but not missing build files or the AP
     const { app } = testApp(new FakeService(), { WEB_DIR: webDir });
     for (const path of ["/strings/5?language=de", "/settings/api-keys", "/de/common.json"]) {
       const page = await call(app, path);
-      assertEquals(page.status, 200, path);
-      assertEquals(await page.text(), INDEX);
+      expect(page.status, path).toBe(200);
+      expect(await page.text()).toStrictEqual(INDEX);
     }
     const missing = await call(app, "/assets/index-old999.js");
-    assertEquals(missing.status, 404);
-    assertEquals(missing.headers.get("Cache-Control"), "private, no-store");
+    expect(missing.status).toBe(404);
+    expect(missing.headers.get("Cache-Control")).toBe("private, no-store");
     await missing.body?.cancel();
     for (const path of ["/api/v1/missing", "/auth/callback", "/healthz/x", "/schema/other.json"]) {
       const response = await call(app, path);
-      assertEquals(response.status, 404, path);
-      assertEquals((await response.json()).error.code, "not_found");
+      expect(response.status, path).toBe(404);
+      expect((await response.json()).error.code).toBe("not_found");
     }
     const post = await call(app, "/settings", { method: "POST" });
-    assertEquals(post.status, 405);
+    expect(post.status).toBe(405);
     await post.body?.cancel();
     const head = await call(app, "/", { method: "HEAD" });
-    assertEquals([head.status, head.body], [200, null]);
+    expect([head.status, head.body]).toStrictEqual([200, null]);
   }));
 
 test("website: a path that can't be decoded is a 400, not a server error", () =>
@@ -90,22 +89,19 @@ test("website: a path that can't be decoded is a 400, not a server error", () =>
     const { app, log } = testApp(new FakeService(), { WEB_DIR: webDir });
     for (const path of ["/%E0%A4%A", "/%00", "/editor/%ff", "/assets/%ff.js"]) {
       const response = await call(app, path);
-      assertEquals(response.status, 400, path);
-      assertEquals((await response.json()).error.code, "bad_request");
+      expect(response.status, path).toBe(400);
+      expect((await response.json()).error.code).toBe("bad_request");
     }
-    assertEquals(
-      log.lines.filter((line) => line.level === "error"),
-      [],
-    );
+    expect(log.lines.filter((line) => line.level === "error")).toStrictEqual([]);
     const encoded = await call(app, "/strings/caf%C3%A9");
-    assertEquals([encoded.status, await encoded.text()], [200, INDEX]);
+    expect([encoded.status, await encoded.text()]).toStrictEqual([200, INDEX]);
   }));
 
 test("website: without a build, a placeholder says how to make one", async () => {
   const { app } = testApp(new FakeService());
   const response = await call(app, "/");
-  assertEquals(response.status, 200);
-  assertStringIncludes(await response.text(), "deno task build:web");
-  assertEquals(response.headers.get("Cache-Control"), "no-store");
-  assertEquals(response.headers.get("Content-Security-Policy"), CONTENT_SECURITY_POLICY);
+  expect(response.status).toBe(200);
+  expect(await response.text()).toContain("npm run build:web");
+  expect(response.headers.get("Cache-Control")).toBe("no-store");
+  expect(response.headers.get("Content-Security-Policy")).toStrictEqual(CONTENT_SECURITY_POLICY);
 });

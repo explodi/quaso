@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 /**
- * Vite, for `deno task site`: a development server for the landing page, with hot
+ * Vite, for `npm run site`: a development server for the landing page, with hot
  * reloading (src/main.tsx renders it in the browser).
  *
- * The documentation pages exist only in the built site: build.ts (`deno task site:build`)
+ * The documentation pages exist only in the built site: build.ts (`npm run site:build`)
  * renders the Markdown in docs/ to site/dist/, together with the landing page, and
- * `deno task site:preview` builds the site and serves site/dist/ with `vite preview`.
+ * `npm run site:preview` builds the site and serves site/dist/ with `vite preview`.
  * The published site doesn't come from `vite build`: it ships no JavaScript.
  */
 import { defineConfig } from "vite";

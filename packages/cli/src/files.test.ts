@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assert, assertEquals, assertRejects, assertThrows } from "@std/assert";
+import { assert, expect, test } from "vitest";
 import { join } from "node:path";
 import { loadProject } from "./config.ts";
 import { CliError } from "./errors.ts";
@@ -24,18 +23,15 @@ test("collectSources: server paths below the glob's folder, with / separators", 
   await withProject({ "quaso.config.json": CONFIG, ...ENGLISH }, async (dir) => {
     const project = await loadProject(dir);
     const sources = await collectSources(project);
-    assertEquals(
-      sources.files.map((file) => [file.server, file.local]),
-      [
-        ["common.json", "src/locales/en/common.json"],
-        ["menus/main.json", "src/locales/en/menus/main.json"],
-        ["menus/options.json", "src/locales/en/menus/options.json"],
-      ],
-    );
+    expect(sources.files.map((file) => [file.server, file.local])).toStrictEqual([
+      ["common.json", "src/locales/en/common.json"],
+      ["menus/main.json", "src/locales/en/menus/main.json"],
+      ["menus/options.json", "src/locales/en/menus/options.json"],
+    ]);
     for (const file of sources.files) {
       assert(!file.server.includes("\\") && !file.local.includes("\\"));
     }
-    assertEquals(sources.warnings, []);
+    expect(sources.warnings).toStrictEqual([]);
   });
 });
 
@@ -58,13 +54,17 @@ test("translationPath: {lang} after languageMapping, {path} with its folders", a
       const project = await loadProject(dir);
       const sources = await collectSources(project);
       const main = sources.byServer.get("menus/main.json")!;
-      assertEquals(translationPath(project, main, "de"), "src/locales/de/menus/main.json");
-      assertEquals(translationPath(project, main, "zh-Hans"), "src/locales/zh-CN/menus/main.json");
-      assertEquals(translationPath(project, main, "pt-BR"), "src/locales/pt_BR/menus/main.json");
-      assertEquals(translationPath(project, main, "fr"), "src/locales/fr/menus/main.json");
+      expect(translationPath(project, main, "de")).toBe("src/locales/de/menus/main.json");
+      expect(translationPath(project, main, "zh-Hans")).toStrictEqual(
+        "src/locales/zh-CN/menus/main.json",
+      );
+      expect(translationPath(project, main, "pt-BR")).toStrictEqual(
+        "src/locales/pt_BR/menus/main.json",
+      );
+      expect(translationPath(project, main, "fr")).toBe("src/locales/fr/menus/main.json");
       const store = sources.byServer.get("en.json")!;
-      assertEquals(store.local, "store/en.json");
-      assertEquals(translationPath(project, store, "zh-Hans"), "store/zh-CN.json");
+      expect(store.local).toBe("store/en.json");
+      expect(translationPath(project, store, "zh-Hans")).toBe("store/zh-CN.json");
     },
   );
 });
@@ -86,10 +86,9 @@ test("a mapping's folder: the server path is inside it, and {path} is not", asyn
       const project = await loadProject(dir);
       const sources = await collectSources(project);
       const storm = sources.byServer.get("text/news/storm.md")!;
-      assertEquals([storm.local, storm.path], ["text/en/news/storm.md", "news/storm.md"]);
-      assertEquals(translationPath(project, storm, "de"), "text/de/news/storm.md");
-      assertEquals(
-        sources.byServer.get("menus/main.json")?.local,
+      expect([storm.local, storm.path]).toStrictEqual(["text/en/news/storm.md", "news/storm.md"]);
+      expect(translationPath(project, storm, "de")).toBe("text/de/news/storm.md");
+      expect(sources.byServer.get("menus/main.json")?.local).toStrictEqual(
         "src/locales/en/menus/main.json",
       );
     },
@@ -111,26 +110,26 @@ test("collectSources refuses two files with one server path, and files of other 
       "b/en/readme.txt": "",
     },
     async (dir) => {
-      const error = await assertRejects(
-        async () => collectSources(await loadProject(dir)),
-        CliError,
+      const error = await (async () => collectSources(await loadProject(dir)))().catch(
+        (error: unknown) => error,
       );
-      assertEquals(error.exitCode, 2);
-      assertEquals(
-        error.details.map((detail) => detail.message),
-        [
-          "b/en/common.json and a/en/common.json would both be common.json on the server",
-          "b/en/readme.txt isn't a .json, .md or .markdown file: narrow the glob, or add it to exclude",
-        ],
-      );
+      assert(error instanceof CliError);
+      expect(error.exitCode).toBe(2);
+      expect(error.details.map((detail) => detail.message)).toStrictEqual([
+        "b/en/common.json and a/en/common.json would both be common.json on the server",
+        "b/en/readme.txt isn't a .json, .md or .markdown file: narrow the glob, or add it to exclude",
+      ]);
     },
   );
 });
 
 test("collectSources: no files at all is an error; an empty glob is a warning", async () => {
   await withProject({ "quaso.config.json": CONFIG }, async (dir) => {
-    const error = await assertRejects(async () => collectSources(await loadProject(dir)), CliError);
-    assertEquals(error.code, "no_source_files");
+    const error = await (async () => collectSources(await loadProject(dir)))().catch(
+      (error: unknown) => error,
+    );
+    assert(error instanceof CliError);
+    expect(error.code).toBe("no_source_files");
   });
   await withProject(
     {
@@ -142,7 +141,9 @@ test("collectSources: no files at all is an error; an empty glob is a warning", 
     },
     async (dir) => {
       const sources = await collectSources(await loadProject(dir));
-      assertEquals(sources.warnings, ["files[1].source (other/en/*.json) matches no files."]);
+      expect(sources.warnings).toStrictEqual([
+        "files[1].source (other/en/*.json) matches no files.",
+      ]);
     },
   );
 });
@@ -152,10 +153,13 @@ test("checkOutputPath refuses the source language, source files, the config and 
     const project = await loadProject(dir);
     const sources = await collectSources(project);
     checkOutputPath(project, sources, "src/locales/de/common.json", "de");
-    const refused = (path: string, language: string, why: string) => {
-      const error = assertThrows(() => checkOutputPath(project, sources, path, language), CliError);
-      assertEquals(error.exitCode, 2);
-      assertEquals(error.code, "unsafe_path");
+    const refused = async (path: string, language: string, why: string) => {
+      const error = await Promise.try(() =>
+        checkOutputPath(project, sources, path, language),
+      ).catch((error: unknown) => error);
+      assert(error instanceof CliError);
+      expect(error.exitCode).toBe(2);
+      expect(error.code).toBe("unsafe_path");
       assert(error.message.includes(why), error.message);
     };
     refused("src/locales/en/common.json", "en", "the source language");
@@ -176,19 +180,22 @@ test("resolveFileArgs: server paths and source paths, not translation paths", as
     const sources = await collectSources(project);
     const resolve = (args: string[], cwd = dir) =>
       resolveFileArgs(project, sources, cwd, args).map((file) => file.server);
-    assertEquals(resolve(["common.json"]), ["common.json"]);
-    assertEquals(resolve(["menus\\main.json", "./common.json"]), [
+    expect(resolve(["common.json"])).toStrictEqual(["common.json"]);
+    expect(resolve(["menus\\main.json", "./common.json"])).toStrictEqual([
       "common.json",
       "menus/main.json",
     ]);
-    assertEquals(resolve(["src/locales/en/menus/main.json"]), ["menus/main.json"]);
-    assertEquals(resolve(["main.json"], join(dir, "src", "locales", "en", "menus")), [
+    expect(resolve(["src/locales/en/menus/main.json"])).toStrictEqual(["menus/main.json"]);
+    expect(resolve(["main.json"], join(dir, "src", "locales", "en", "menus"))).toStrictEqual([
       "menus/main.json",
     ]);
-    const error = assertThrows(() => resolve(["src/locales/pl/menus/options.json"]), CliError);
-    assertEquals(error.exitCode, 2);
-    assertEquals(error.code, "unknown_file");
-    assertThrows(() => resolve(["../elsewhere.json"]), CliError);
+    const error = await Promise.try(() => resolve(["src/locales/pl/menus/options.json"])).catch(
+      (error: unknown) => error,
+    );
+    assert(error instanceof CliError);
+    expect(error.exitCode).toBe(2);
+    expect(error.code).toBe("unknown_file");
+    expect(() => resolve(["../elsewhere.json"])).toThrow(CliError);
   });
 });
 
@@ -208,32 +215,39 @@ test("selectTranslations: a translation file's path names its language only", as
         ),
       };
     };
-    assertEquals(select([], []).languages, ["de", "pl"]);
-    assertEquals(select(["DE"], []).languages, ["de"]);
-    assertEquals(select([], ["src/locales/pl/menus/options.json"]), {
+    expect(select([], []).languages).toStrictEqual(["de", "pl"]);
+    expect(select(["DE"], []).languages).toStrictEqual(["de"]);
+    expect(select([], ["src/locales/pl/menus/options.json"])).toStrictEqual({
       languages: ["pl"],
       pairs: ["pl:menus/options.json"],
     });
-    assertEquals(select([], ["common.json", "src/locales/pl/menus/options.json"]), {
+    expect(select([], ["common.json", "src/locales/pl/menus/options.json"])).toStrictEqual({
       languages: ["de", "pl"],
       pairs: ["de:common.json", "pl:common.json", "pl:menus/options.json"],
     });
-    assertEquals(select(["pl"], ["src/locales/pl/common.json"]).pairs, ["pl:common.json"]);
+    expect(select(["pl"], ["src/locales/pl/common.json"]).pairs).toStrictEqual(["pl:common.json"]);
     // A language outside the config, named by --language, has translation paths too.
-    assertEquals(select(["fr"], ["src/locales/fr/common.json"]).pairs, ["fr:common.json"]);
-    const conflict = assertThrows(() => select(["de"], ["src/locales/pl/common.json"]), CliError);
-    assertEquals(conflict.exitCode, 2);
+    expect(select(["fr"], ["src/locales/fr/common.json"]).pairs).toStrictEqual(["fr:common.json"]);
+    const conflict = await Promise.try(() => select(["de"], ["src/locales/pl/common.json"])).catch(
+      (error: unknown) => error,
+    );
+    assert(conflict instanceof CliError);
+    expect(conflict.exitCode).toBe(2);
     assert(conflict.message.includes("is a translation file of pl, but --language is de"));
-    assertEquals(assertThrows(() => select(["en"], []), CliError).exitCode, 2);
-    assertEquals(assertThrows(() => select(["../x"], []), CliError).exitCode, 2);
+    expect(() => select(["en"], [])).toThrow(
+      expect.objectContaining({ constructor: CliError, exitCode: 2 }),
+    );
+    expect(() => select(["../x"], [])).toThrow(
+      expect.objectContaining({ constructor: CliError, exitCode: 2 }),
+    );
   });
 });
 
 test("projectPath: relative with /, or null outside", async () => {
   await withProject({ "quaso.config.json": CONFIG, ...ENGLISH }, async (dir) => {
     const project = await loadProject(dir);
-    assertEquals(projectPath(project, join(dir, "src", "a.json")), "src/a.json");
-    assertEquals(projectPath(project, dir), null);
-    assertEquals(projectPath(project, join(dir, "..", "x.json")), null);
+    expect(projectPath(project, join(dir, "src", "a.json"))).toBe("src/a.json");
+    expect(projectPath(project, dir)).toBe(null);
+    expect(projectPath(project, join(dir, "..", "x.json"))).toBe(null);
   });
 });

@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assert, assertEquals } from "@std/assert";
+import { assert, expect, test } from "vitest";
 import {
   canonicalLanguageTag,
   countWords,
@@ -14,14 +13,14 @@ import {
 const COMBINING_ACUTE = String.fromCharCode(0x301);
 
 test("graphemeLength: ASCII, line endings and empty text", () => {
-  assertEquals(graphemeLength(""), 0);
-  assertEquals(graphemeLength("Play"), 4);
-  assertEquals(graphemeLength("{{count}} coins"), 15);
-  assertEquals(graphemeLength("a\r\nb"), 3);
-  assertEquals(graphemeLength("a\nb\rc"), 5);
-  assertEquals(graphemeLength("\r\n\r\n"), 2);
-  assertEquals(graphemeLength("\r\r\n\n"), 3);
-  assertEquals(graphemeLength("\t "), 2);
+  expect(graphemeLength("")).toBe(0);
+  expect(graphemeLength("Play")).toBe(4);
+  expect(graphemeLength("{{count}} coins")).toBe(15);
+  expect(graphemeLength("a\r\nb")).toBe(3);
+  expect(graphemeLength("a\nb\rc")).toBe(5);
+  expect(graphemeLength("\r\n\r\n")).toBe(2);
+  expect(graphemeLength("\r\r\n\n")).toBe(3);
+  expect(graphemeLength("\t ")).toBe(2);
 });
 
 test("graphemeLength: emoji, flags and combining marks count as one", () => {
@@ -45,7 +44,7 @@ test("graphemeLength: emoji, flags and combining marks count as one", () => {
     ["😀 {{name}} 🇵🇱", 12],
   ];
   for (const [text, expected] of cases) {
-    assertEquals(graphemeLength(text), expected, text);
+    expect(graphemeLength(text), text).toStrictEqual(expected);
   }
 });
 
@@ -58,59 +57,59 @@ test("graphemeLength: Indic conjuncts vary with the runtime's Unicode version", 
 test("graphemeLength: long text is fast", () => {
   const text = "👨‍👩‍👧 Zażółć {{name}}\r\n".repeat(50_000);
   const started = performance.now();
-  assertEquals(graphemeLength(text), 50_000 * 18);
+  expect(graphemeLength(text)).toStrictEqual(50_000 * 18);
   assert(performance.now() - started < 5000);
 });
 
 test("countWords: English, without placeholders and references", () => {
-  assertEquals(countWords("Play"), 1);
-  assertEquals(countWords("Hello, world!"), 2);
-  assertEquals(countWords("You have {{count}} coins"), 3);
-  assertEquals(countWords("{{count}}"), 0);
-  assertEquals(countWords("{{current}}/{{total}}"), 0);
-  assertEquals(countWords("$t(play) again"), 1);
-  assertEquals(countWords('Win $t(coins, {"count": {{n}}}) today'), 2);
-  assertEquals(countWords("$t(common:back)"), 0);
-  assertEquals(countWords("{{ user name }} left"), 1);
-  assertEquals(countWords("{{- html}} and {{date, datetime}}"), 1);
+  expect(countWords("Play")).toBe(1);
+  expect(countWords("Hello, world!")).toBe(2);
+  expect(countWords("You have {{count}} coins")).toBe(3);
+  expect(countWords("{{count}}")).toBe(0);
+  expect(countWords("{{current}}/{{total}}")).toBe(0);
+  expect(countWords("$t(play) again")).toBe(1);
+  expect(countWords('Win $t(coins, {"count": {{n}}}) today')).toBe(2);
+  expect(countWords("$t(common:back)")).toBe(0);
+  expect(countWords("{{ user name }} left")).toBe(1);
+  expect(countWords("{{- html}} and {{date, datetime}}")).toBe(1);
   // A placeholder separates the words around it.
-  assertEquals(countWords("a{{b}}c"), 2);
-  assertEquals(countWords("{{count}}coins"), 1);
-  assertEquals(countWords("It's 3.5 coins, don't worry"), 5);
-  assertEquals(countWords("co-op"), 2);
+  expect(countWords("a{{b}}c")).toBe(2);
+  expect(countWords("{{count}}coins")).toBe(1);
+  expect(countWords("It's 3.5 coins, don't worry")).toBe(5);
+  expect(countWords("co-op")).toBe(2);
 });
 
 test("countWords: empty text, punctuation, emoji and line endings", () => {
-  assertEquals(countWords(""), 0);
-  assertEquals(countWords("   \r\n\t"), 0);
-  assertEquals(countWords("!!! … ?"), 0);
-  assertEquals(countWords("👍 🇵🇱"), 0);
-  assertEquals(countWords("one\r\ntwo\nthree"), 3);
-  assertEquals(countWords(`cafe${COMBINING_ACUTE} au lait`), 3);
+  expect(countWords("")).toBe(0);
+  expect(countWords("   \r\n\t")).toBe(0);
+  expect(countWords("!!! … ?")).toBe(0);
+  expect(countWords("👍 🇵🇱")).toBe(0);
+  expect(countWords("one\r\ntwo\nthree")).toBe(3);
+  expect(countWords(`cafe${COMBINING_ACUTE} au lait`)).toBe(3);
 });
 
 test("countWords: custom syntax", () => {
   const syntax = { prefix: "%{", suffix: "}" };
-  assertEquals(countWords("%{count} coins", { syntax }), 1);
-  assertEquals(countWords("%{count} coins"), 2);
-  assertEquals(countWords("{{count}} coins", { syntax }), 2);
-  assertEquals(countWords('Get $t(coins, {"n": %{n}}) now', { syntax }), 2);
+  expect(countWords("%{count} coins", { syntax })).toBe(1);
+  expect(countWords("%{count} coins")).toBe(2);
+  expect(countWords("{{count}} coins", { syntax })).toBe(2);
+  expect(countWords('Get $t(coins, {"n": %{n}}) now', { syntax })).toBe(2);
 });
 
 test("countWords: other languages", () => {
-  assertEquals(countWords("Die Größe der Straße", { locale: "de" }), 4);
-  assertEquals(countWords("Zażółć gęślą jaźń", { locale: "pl" }), 3);
-  assertEquals(countWords("Masz {{count}} monet", { locale: "pl" }), 2);
-  assertEquals(countWords("مرحبا بالعالم", { locale: "ar" }), 2);
-  assertEquals(countWords("שלום עולם", { locale: "he" }), 2);
-  assertEquals(countWords("سلام دنیا", { locale: "fa" }), 2);
-  assertEquals(countWords("Olá, mundo", { locale: "pt-BR" }), 2);
-  assertEquals(countWords("Zdravo svete", { locale: "sr-Latn" }), 2);
+  expect(countWords("Die Größe der Straße", { locale: "de" })).toBe(4);
+  expect(countWords("Zażółć gęślą jaźń", { locale: "pl" })).toBe(3);
+  expect(countWords("Masz {{count}} monet", { locale: "pl" })).toBe(2);
+  expect(countWords("مرحبا بالعالم", { locale: "ar" })).toBe(2);
+  expect(countWords("שלום עולם", { locale: "he" })).toBe(2);
+  expect(countWords("سلام دنیا", { locale: "fa" })).toBe(2);
+  expect(countWords("Olá, mundo", { locale: "pt-BR" })).toBe(2);
+  expect(countWords("Zdravo svete", { locale: "sr-Latn" })).toBe(2);
 });
 
 test("countWords: Japanese and Chinese are segmented by ICU's dictionaries", () => {
   // Dictionaries change between ICU versions, so only the bounds are fixed.
-  assertEquals(countWords("東京", { locale: "ja" }), 1);
+  expect(countWords("東京", { locale: "ja" })).toBe(1);
   const japanese = countWords("私は東京に住んでいます。", { locale: "ja" });
   assert(japanese >= 5 && japanese <= 10, `${japanese}`);
   const withPlaceholder = countWords("{{name}}さん、こんにちは", { locale: "ja" });
@@ -120,26 +119,27 @@ test("countWords: Japanese and Chinese are segmented by ICU's dictionaries", () 
 });
 
 test("countWords: invalid locales fall back to English", () => {
-  assertEquals(countWords("Hello world", { locale: "en_US" }), 2);
-  assertEquals(countWords("Hello world", { locale: "" }), 2);
+  expect(countWords("Hello world", { locale: "en_US" })).toBe(2);
+  expect(countWords("Hello world", { locale: "" })).toBe(2);
 });
 
 test("sourceWords", () => {
-  assertEquals(sourceWords("text", "Play again"), 2);
-  assertEquals(sourceWords("text", "$t(play) again"), 1);
-  assertEquals(sourceWords("plural", { one: "{{count}} coin", other: "{{count}} coins" }), 2);
-  assertEquals(
-    sourceWords("plural", { zero: "No coins", one: "One coin", other: "{{count}} coins" }),
-    5,
+  expect(sourceWords("text", "Play again")).toBe(2);
+  expect(sourceWords("text", "$t(play) again")).toBe(1);
+  expect(sourceWords("plural", { one: "{{count}} coin", other: "{{count}} coins" })).toStrictEqual(
+    2,
   );
-  assertEquals(sourceWords("ordinal", { one: "{{count}}st place", other: "{{count}}th place" }), 4);
-  assertEquals(sourceWords("reference", "$t(common:back)"), 0);
-  assertEquals(sourceWords("reference", "Words that don't count"), 0);
-  assertEquals(sourceWords("literal", ""), 0);
-  assertEquals(sourceWords("text", undefined), 0);
-  assertEquals(sourceWords("plural", undefined), 0);
-  assertEquals(sourceWords("text", "%{n} coins", { syntax: { prefix: "%{", suffix: "}" } }), 1);
-  assertEquals(sourceWords("text", "東京", { locale: "ja" }), 1);
+  expect(
+    sourceWords("plural", { zero: "No coins", one: "One coin", other: "{{count}} coins" }),
+  ).toBe(5);
+  expect(sourceWords("ordinal", { one: "{{count}}st place", other: "{{count}}th place" })).toBe(4);
+  expect(sourceWords("reference", "$t(common:back)")).toBe(0);
+  expect(sourceWords("reference", "Words that don't count")).toBe(0);
+  expect(sourceWords("literal", "")).toBe(0);
+  expect(sourceWords("text", undefined)).toBe(0);
+  expect(sourceWords("plural", undefined)).toBe(0);
+  expect(sourceWords("text", "%{n} coins", { syntax: { prefix: "%{", suffix: "}" } })).toBe(1);
+  expect(sourceWords("text", "東京", { locale: "ja" })).toBe(1);
 });
 
 test("canonicalLanguageTag: canonical case and aliases", () => {
@@ -158,8 +158,8 @@ test("canonicalLanguageTag: canonical case and aliases", () => {
     ["und", "und"],
   ];
   for (const [tag, expected] of cases) {
-    assertEquals(canonicalLanguageTag(tag), expected, tag);
-    assertEquals(isValidLanguageTag(tag), true, tag);
+    expect(canonicalLanguageTag(tag), tag).toStrictEqual(expected);
+    expect(isValidLanguageTag(tag), tag).toBe(true);
   }
 });
 
@@ -186,10 +186,10 @@ test("canonicalLanguageTag: invalid tags", () => {
     "日本語",
   ];
   for (const tag of invalid) {
-    assertEquals(canonicalLanguageTag(tag), null, JSON.stringify(tag));
-    assertEquals(isValidLanguageTag(tag), false, JSON.stringify(tag));
+    expect(canonicalLanguageTag(tag), JSON.stringify(tag)).toBe(null);
+    expect(isValidLanguageTag(tag), JSON.stringify(tag)).toBe(false);
   }
-  assertEquals(canonicalLanguageTag(undefined as unknown as string), null);
+  expect(canonicalLanguageTag(undefined as unknown as string)).toBe(null);
 });
 
 const RTL = ["ar", "he", "fa", "ur", "ps", "sd", "yi", "dv", "ug", "ckb", "ar-EG", "iw", "pa-Arab"];
@@ -208,16 +208,16 @@ const LTR = [
 ];
 
 function assertDirections(): void {
-  for (const tag of RTL) assertEquals(textDirection(tag), "rtl", tag);
-  for (const tag of LTR) assertEquals(textDirection(tag), "ltr", tag);
+  for (const tag of RTL) expect(textDirection(tag), tag).toBe("rtl");
+  for (const tag of LTR) expect(textDirection(tag), tag).toBe("ltr");
 }
 
 test("textDirection", () => {
   assertDirections();
-  assertEquals(textDirection("xyz"), "ltr");
-  assertEquals(textDirection(""), "ltr");
-  assertEquals(textDirection("en_US"), "ltr");
-  assertEquals(textDirection("not a tag"), "ltr");
+  expect(textDirection("xyz")).toBe("ltr");
+  expect(textDirection("")).toBe("ltr");
+  expect(textDirection("en_US")).toBe("ltr");
+  expect(textDirection("not a tag")).toBe("ltr");
 });
 
 /** Runs `body` with a property of `Intl.Locale.prototype` replaced, then restores it. */
@@ -239,10 +239,10 @@ test("textDirection: runtimes without text info use scripts and languages", () =
   withLocaleProperty("getTextInfo", ABSENT, () => {
     withLocaleProperty("textInfo", ABSENT, () => {
       assertDirections();
-      assertEquals(textDirection("und-Arab"), "rtl");
-      assertEquals(textDirection("tr-Arab"), "rtl");
-      assertEquals(textDirection("ff-Adlm"), "rtl");
-      assertEquals(textDirection("xyz"), "ltr");
+      expect(textDirection("und-Arab")).toBe("rtl");
+      expect(textDirection("tr-Arab")).toBe("rtl");
+      expect(textDirection("ff-Adlm")).toBe("rtl");
+      expect(textDirection("xyz")).toBe("ltr");
       // Without likely subtags either, the language list decides.
       withLocaleProperty(
         "maximize",
@@ -254,10 +254,10 @@ test("textDirection: runtimes without text info use scripts and languages", () =
         },
         () => {
           for (const tag of ["ar", "he", "fa", "ur", "ckb", "yi", "dv"]) {
-            assertEquals(textDirection(tag), "rtl", tag);
+            expect(textDirection(tag), tag).toBe("rtl");
           }
-          assertEquals(textDirection("ar-Latn"), "ltr");
-          assertEquals(textDirection("en"), "ltr");
+          expect(textDirection("ar-Latn")).toBe("ltr");
+          expect(textDirection("en")).toBe("ltr");
         },
       );
     });
@@ -275,8 +275,8 @@ test("textDirection: the textInfo getter of older runtimes (Node 22)", () => {
       },
       () => {
         // The stub's deliberately wrong answers show that the getter is used.
-        assertEquals(textDirection("en"), "rtl");
-        assertEquals(textDirection("ar"), "ltr");
+        expect(textDirection("en")).toBe("rtl");
+        expect(textDirection("ar")).toBe("ltr");
       },
     );
   });
@@ -296,29 +296,29 @@ test("languageName: English names", () => {
     ["pt-br", "Portuguese (Brazil)"],
     ["sr-Latn", "Serbian (Latin)"],
   ];
-  for (const [tag, expected] of cases) assertEquals(languageName(tag), expected, tag);
+  for (const [tag, expected] of cases) expect(languageName(tag), tag).toStrictEqual(expected);
 });
 
 test("languageName: other display languages", () => {
-  assertEquals(languageName("pl", "de"), "Polnisch");
-  assertEquals(languageName("de", "fr"), "allemand");
-  assertEquals(languageName("pl", "pl"), "polski");
-  assertEquals(languageName("en", "ja"), "英語");
+  expect(languageName("pl", "de")).toBe("Polnisch");
+  expect(languageName("de", "fr")).toBe("allemand");
+  expect(languageName("pl", "pl")).toBe("polski");
+  expect(languageName("en", "ja")).toBe("英語");
   assert(["português (Brasil)", "Português (Brasil)"].includes(languageName("pt-BR", "pt-BR")));
 });
 
 test("languageName: falls back to the tag", () => {
-  assertEquals(languageName("xyz"), "xyz");
-  assertEquals(languageName("en_US"), "en_US");
-  assertEquals(languageName(""), "");
-  assertEquals(languageName("not a tag"), "not a tag");
-  assertEquals(languageName("de", "@@"), "de");
+  expect(languageName("xyz")).toBe("xyz");
+  expect(languageName("en_US")).toBe("en_US");
+  expect(languageName("")).toBe("");
+  expect(languageName("not a tag")).toBe("not a tag");
+  expect(languageName("de", "@@")).toBe("de");
 });
 
 test("canonicalLanguageTag: legacy aliases retain their region and explicit script", () => {
-  assertEquals(canonicalLanguageTag("tl-PH"), "fil-PH");
-  assertEquals(canonicalLanguageTag("sh-RS"), "sr-Latn-RS");
-  assertEquals(canonicalLanguageTag("sh-Cyrl-BA"), "sr-Cyrl-BA");
+  expect(canonicalLanguageTag("tl-PH")).toBe("fil-PH");
+  expect(canonicalLanguageTag("sh-RS")).toBe("sr-Latn-RS");
+  expect(canonicalLanguageTag("sh-Cyrl-BA")).toBe("sr-Cyrl-BA");
 });
 
 test("languageName: regional and script names follow the runtime's CLDR data", () => {

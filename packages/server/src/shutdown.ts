@@ -7,6 +7,7 @@
  */
 import type { App } from "./app.ts";
 import { errorResponse } from "./http/errors.ts";
+import type { Server } from "./http/serve.ts";
 
 /** How long a shutdown waits for the requests in flight. Docker waits longer (compose.yaml). */
 export const SHUTDOWN_DEADLINE_MS = 10_000;
@@ -51,7 +52,7 @@ export class InFlight {
  * connections still open close when the process exits.
  */
 export async function stopServer(
-  server: Pick<Deno.HttpServer, "shutdown">,
+  server: Pick<Server, "shutdown">,
   inFlight: InFlight,
   deadlineMs = SHUTDOWN_DEADLINE_MS,
 ): Promise<boolean> {

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
+import { expect, test } from "vitest";
 import * as fs from "node:fs/promises";
-import { assertEquals, assertStringIncludes, assertThrows } from "@std/assert";
 import { join } from "node:path";
 import type { UploadRequest, UploadResult } from "@quaso/core";
 import { CliError } from "../errors.ts";
@@ -48,16 +47,14 @@ test("upload notices new local translations and prints an import command without
         jsonResponse(result({ added: [{ file: "common.json", key: "title" }] })),
       );
       const run = await runCli(["upload"], { cwd: dir, env: ENV, fetch });
-      assertEquals(run.code, 0, run.stderr);
-      assertStringIncludes(
-        run.stdout,
+      expect(run.code, run.stderr).toBe(0);
+      expect(run.stdout).toContain(
         "1 new string already has translations in repository files (de).",
       );
-      assertStringIncludes(
-        run.stdout,
+      expect(run.stdout).toContain(
         "Import them: quaso import --as blue --language de --file common.json",
       );
-      assertEquals(fetch.requests.length, 1);
+      expect(fetch.requests.length).toBe(1);
     },
   );
 });
@@ -75,20 +72,15 @@ test("upload warns that local translations of changed strings translate the prev
         jsonResponse(result({ changed: [{ file: "common.json", key: "title" }] })),
       );
       const run = await runCli(["upload"], { cwd: dir, env: ENV, fetch });
-      assertEquals(run.code, 0, run.stderr);
-      assertStringIncludes(
-        run.stdout,
+      expect(run.code, run.stderr).toBe(0);
+      expect(run.stdout).toContain(
         "1 changed string still has its previous translations in repository files (de, fr).",
       );
-      assertStringIncludes(
-        run.stdout,
-        "Those translate the old source text, so they weren't imported",
-      );
-      assertStringIncludes(
-        run.stdout,
+      expect(run.stdout).toContain("Those translate the old source text, so they weren't imported");
+      expect(run.stdout).toContain(
         "If you updated them along with the source, import them: quaso import --as blue --language de --language fr --file common.json",
       );
-      assertEquals(run.stdout.includes("Import them:"), false);
+      expect(run.stdout.includes("Import them:")).toBe(false);
     },
   );
 });
@@ -109,15 +101,15 @@ test("repository-owned translations import as blue on every upload with overwrit
         ),
       );
       const run = await runCli(["upload", "--json"], { cwd: dir, env: ENV, fetch });
-      assertEquals(run.code, 0, run.stderr);
-      assertEquals(await fetch.requests[1].json(), {
+      expect(run.code, run.stderr).toBe(0);
+      expect(await fetch.requests[1].json()).toStrictEqual({
         language: "de",
         as: "blue",
         overwrite: true,
         keepIdentical: true,
         files: [{ path: "common.json", content: '{"title":"Abenteuer"}' }],
       });
-      assertEquals(JSON.parse(run.stdout).result.imports[0].imported, 1);
+      expect(JSON.parse(run.stdout).result.imports[0].imported).toBe(1);
     },
   );
 });
@@ -138,59 +130,63 @@ test("upload can import an explicitly selected language and dry runs only report
         env: ENV,
         fetch,
       });
-      assertEquals(run.code, 0, run.stderr);
-      assertEquals((await fetch.requests[1].json()).as, "green");
+      expect(run.code, run.stderr).toBe(0);
+      expect((await fetch.requests[1].json()).as).toBe("green");
       const dryFetch = fakeFetch(() => jsonResponse(result({ dryRun: true })));
       const dry = await runCli(["upload", "--import-translations", "de", "--dry-run"], {
         cwd: dir,
         env: ENV,
         fetch: dryFetch,
       });
-      assertEquals(dry.code, 0, dry.stderr);
-      assertEquals(dryFetch.requests.length, 1);
-      assertStringIncludes(dry.stdout, "Would import de as blue");
+      expect(dry.code, dry.stderr).toBe(0);
+      expect(dryFetch.requests.length).toBe(1);
+      expect(dry.stdout).toContain("Would import de as blue");
     },
   );
 });
 
 test("parseRename: old=new, file:old=new, and JSON array key paths", () => {
   const file = (name: string) => (name === "src/locales/en/common.json" ? "common.json" : name);
-  assertEquals(parseRename("menu.start=menu.play", file), { from: "menu.start", to: "menu.play" });
-  assertEquals(parseRename("common.json:coins#plural=gold#plural", file), {
+  expect(parseRename("menu.start=menu.play", file)).toStrictEqual({
+    from: "menu.start",
+    to: "menu.play",
+  });
+  expect(parseRename("common.json:coins#plural=gold#plural", file)).toStrictEqual({
     file: "common.json",
     from: "coins#plural",
     to: "gold#plural",
   });
-  assertEquals(parseRename("src/locales/en/common.json:a=b", file), {
+  expect(parseRename("src/locales/en/common.json:a=b", file)).toStrictEqual({
     file: "common.json",
     from: "a",
     to: "b",
   });
-  assertEquals(parseRename('common.json:["a=b", "c:d"]=["e"]', file), {
+  expect(parseRename('common.json:["a=b", "c:d"]=["e"]', file)).toStrictEqual({
     file: "common.json",
     from: '["a=b", "c:d"]',
     to: '["e"]',
   });
-  assertEquals(parseRename("a=b=c", file), { from: "a", to: "b=c" });
+  expect(parseRename("a=b=c", file)).toStrictEqual({ from: "a", to: "b=c" });
   for (const bad of ["a", "=b", "a=", '["a"', '["a"]b', "[1,{}]=a", "[]=a"]) {
-    assertEquals(assertThrows(() => parseRename(bad, file), CliError).exitCode, 2, bad);
+    expect(() => parseRename(bad, file), bad).toThrow(
+      expect.objectContaining({ constructor: CliError, exitCode: 2 }),
+    );
   }
 });
 
 test("renameCommand is quoted for the shell", () => {
-  assertEquals(
-    renameCommand({ file: "common.json", from: "coins#plural", to: "gold#plural" }),
+  expect(renameCommand({ file: "common.json", from: "coins#plural", to: "gold#plural" })).toBe(
     "quaso upload --rename common.json:coins#plural=gold#plural",
   );
-  assertEquals(
+  expect(
     renameCommand({ file: "menus/main.json", from: '["a.b"]', to: '["a", "b"]' }),
-    `quaso upload --rename 'menus/main.json:["a.b"]=["a", "b"]'`,
-  );
-  assertEquals(
+  ).toStrictEqual(`quaso upload --rename 'menus/main.json:["a.b"]=["a", "b"]'`);
+  expect(
     renameCommand(
       { file: "common.json", from: "saved", to: "gameSaved" },
       { file: "common.json", from: "hints.0", to: "tips.0" },
     ),
+  ).toStrictEqual(
     "quaso upload --rename common.json:saved=gameSaved --rename common.json:hints.0=tips.0",
   );
 });
@@ -214,28 +210,28 @@ test("every rename suggestion reads back as it was made", () => {
       .slice("quaso upload --rename ".length)
       .replace(/^'(.*)'$/, "$1")
       .replaceAll(`'"'"'`, "'");
-    assertEquals(
+    expect(
       parseRename(arg, (file) => file),
-      suggestion,
       command,
-    );
+    ).toStrictEqual(suggestion);
   }
-  assertEquals(
-    renameCommand(suggestions[0]),
+  expect(renameCommand(suggestions[0])).toStrictEqual(
     `quaso upload --rename 'common.json:"x = y"=equation'`,
   );
 });
 
 test("parseRename: a JSON string for a key with = in it", () => {
   const file = (name: string) => name;
-  assertEquals(parseRename('"x = y"=equation', file), { from: "x = y", to: "equation" });
-  assertEquals(parseRename('common.json:"a\\"b=c"="d"', file), {
+  expect(parseRename('"x = y"=equation', file)).toStrictEqual({ from: "x = y", to: "equation" });
+  expect(parseRename('common.json:"a\\"b=c"="d"', file)).toStrictEqual({
     file: "common.json",
     from: 'a"b=c',
     to: "d",
   });
   for (const bad of ['"x = y', '"x"y=z', '""=a', 'a=""', '["a"]#other=b']) {
-    assertEquals(assertThrows(() => parseRename(bad, file), CliError).exitCode, 2, bad);
+    expect(() => parseRename(bad, file), bad).toThrow(
+      expect.objectContaining({ constructor: CliError, exitCode: 2 }),
+    );
   }
 });
 
@@ -250,12 +246,11 @@ test("upload refuses to read a source file through a link that leads outside", a
       );
       const fetch = fakeFetch(() => jsonResponse(result()));
       const run = await runCli(["upload", "--dry-run"], { cwd: dir, env: ENV, fetch });
-      assertEquals(run.code, 2);
-      assertStringIncludes(
-        run.stderr,
+      expect(run.code).toBe(2);
+      expect(run.stderr).toContain(
         "Refusing to read src/locales/en/creds.json: src/locales/en/creds.json is a symbolic link",
       );
-      assertEquals(fetch.requests.length, 0);
+      expect(fetch.requests.length).toBe(0);
     });
   });
 });
@@ -269,13 +264,12 @@ test(
       await fs.symlink(join("..", "..", "..", ".env"), join(dir, "src", "locales", "en", "x.json"));
       const fetch = fakeFetch(() => jsonResponse(result()));
       const run = await runCli(["upload"], { cwd: dir, env: ENV, fetch });
-      assertEquals(run.code, 2);
-      assertStringIncludes(
-        run.stderr,
+      expect(run.code).toBe(2);
+      expect(run.stderr).toContain(
         "Refusing to read src/locales/en/x.json: src/locales/en/x.json is a symbolic link",
       );
-      assertStringIncludes(run.stderr, "Replace src/locales/en/x.json with a regular file");
-      assertEquals(fetch.requests.length, 0);
+      expect(run.stderr).toContain("Replace src/locales/en/x.json with a regular file");
+      expect(fetch.requests.length).toBe(0);
     });
   },
 );
@@ -291,12 +285,11 @@ test(
         await fs.symlink(join(dir, "shared", "en"), join(dir, "src", "locales", "en"));
         const fetch = fakeFetch(() => jsonResponse(result()));
         const run = await runCli(["upload"], { cwd: dir, env: ENV, fetch });
-        assertEquals(run.code, 2);
-        assertStringIncludes(
-          run.stderr,
+        expect(run.code).toBe(2);
+        expect(run.stderr).toContain(
           "Refusing to read src/locales/en/common.json: src/locales/en is a symbolic link",
         );
-        assertEquals(fetch.requests.length, 0);
+        expect(fetch.requests.length).toBe(0);
       },
     );
   },
@@ -306,11 +299,11 @@ test("upload sends every source file unchanged, with the config's settings", asy
   await withProject(PROJECT, async (dir) => {
     const fetch = fakeFetch(() => jsonResponse(result()));
     const run = await runCli(["upload"], { cwd: dir, env: ENV, fetch });
-    assertEquals(run.code, 0, run.stderr);
+    expect(run.code, run.stderr).toBe(0);
     const request = fetch.requests[0];
-    assertEquals(request.url, "https://quaso.test/api/v1/sources");
+    expect(request.url).toBe("https://quaso.test/api/v1/sources");
     const body: UploadRequest = await request.json();
-    assertEquals(body, {
+    expect(body).toStrictEqual({
       files: [
         {
           path: "common.json",
@@ -345,16 +338,13 @@ test("upload --file is partial; --dry-run and --rename are sent", async () => {
       ],
       { cwd: dir, env: ENV, fetch },
     );
-    assertEquals(run.code, 0, run.stderr);
+    expect(run.code, run.stderr).toBe(0);
     const body: UploadRequest = await fetch.requests[0].json();
-    assertEquals(
-      body.files.map((file) => file.path),
-      ["menus/main.json"],
-    );
-    assertEquals(body.partial, true);
-    assertEquals(body.dryRun, true);
-    assertEquals(body.renames, [{ from: "saved", to: "gameSaved" }]);
-    assertStringIncludes(run.stdout, "Dry run: nothing was saved.");
+    expect(body.files.map((file) => file.path)).toStrictEqual(["menus/main.json"]);
+    expect(body.partial).toBe(true);
+    expect(body.dryRun).toBe(true);
+    expect(body.renames).toStrictEqual([{ from: "saved", to: "gameSaved" }]);
+    expect(run.stdout).toContain("Dry run: nothing was saved.");
   });
 });
 
@@ -386,23 +376,22 @@ test("upload prints changes with local paths, rename commands and warnings", asy
           ),
     );
     const run = await runCli(["upload"], { cwd: dir, env: ENV, fetch });
-    assertEquals(run.code, 0);
-    assertStringIncludes(run.stdout, "src/locales/en/common.json  updated  1 added, 1 removed");
-    assertStringIncludes(run.stdout, "src/locales/en/common.json › gameSaved");
-    assertStringIncludes(run.stdout, "quaso upload --rename common.json:saved=gameSaved");
-    assertStringIncludes(run.stdout, "names a string the server doesn't have");
-    assertStringIncludes(run.stdout, "Translation job 7 is queued");
-    assertStringIncludes(run.stderr, "Uploading 2 files to https://quaso.test");
+    expect(run.code).toBe(0);
+    expect(run.stdout).toContain("src/locales/en/common.json  updated  1 added, 1 removed");
+    expect(run.stdout).toContain("src/locales/en/common.json › gameSaved");
+    expect(run.stdout).toContain("quaso upload --rename common.json:saved=gameSaved");
+    expect(run.stdout).toContain("names a string the server doesn't have");
+    expect(run.stdout).toContain("Translation job 7 is queued");
+    expect(run.stderr).toContain("Uploading 2 files to https://quaso.test");
 
     const json = await runCli(["upload", "--json", "--wait"], { cwd: dir, env: ENV, fetch });
     const document = JSON.parse(json.stdout);
-    assertEquals(
-      document.result.renameSuggestions[0].command,
+    expect(document.result.renameSuggestions[0].command).toStrictEqual(
       "quaso upload --rename common.json:saved=gameSaved",
     );
-    assertEquals(document.result.files[0].localPath, "src/locales/en/common.json");
-    assertEquals(document.result.wait.job.id, 7);
-    assertEquals(document.result.wait.job.status, "done");
+    expect(document.result.files[0].localPath).toBe("src/locales/en/common.json");
+    expect(document.result.wait.job.id).toBe(7);
+    expect(document.result.wait.job.status).toBe("done");
   });
 });
 
@@ -410,8 +399,8 @@ test("upload --wait says when no job was queued", async () => {
   await withProject(PROJECT, async (dir) => {
     const fetch = fakeFetch(() => jsonResponse(result({ uploadId: null })));
     const run = await runCli(["upload", "--wait"], { cwd: dir, env: ENV, fetch });
-    assertStringIncludes(run.stdout, "Nothing changed");
-    assertStringIncludes(run.stdout, "no automatic translation job");
+    expect(run.stdout).toContain("Nothing changed");
+    expect(run.stdout).toContain("no automatic translation job");
   });
 });
 
@@ -438,12 +427,9 @@ test("upload: invalid_source names the local file, line and column, exit code 5"
       ),
     );
     const run = await runCli(["upload"], { cwd: dir, env: ENV, fetch });
-    assertEquals(run.code, 5);
-    assertStringIncludes(run.stderr, "error: 1 source file can't be read.");
-    assertStringIncludes(
-      run.stderr,
-      'src/locales/en/menus/main.json:1:3 › play: duplicate key "play"',
-    );
+    expect(run.code).toBe(5);
+    expect(run.stderr).toContain("error: 1 source file can't be read.");
+    expect(run.stderr).toContain('src/locales/en/menus/main.json:1:3 › play: duplicate key "play"');
   });
 });
 
@@ -452,9 +438,9 @@ test("upload: a file that isn't UTF-8 is exit code 5, before anything is sent", 
     await fs.writeFile(`${dir}/src/locales/en/bad.json`, new Uint8Array([0x7b, 0xff, 0x7d]));
     const fetch = fakeFetch(() => jsonResponse(result()));
     const run = await runCli(["upload"], { cwd: dir, env: ENV, fetch });
-    assertEquals(run.code, 5);
-    assertStringIncludes(run.stderr, "src/locales/en/bad.json: isn't valid UTF-8 text");
-    assertEquals(fetch.requests.length, 0);
+    expect(run.code).toBe(5);
+    expect(run.stderr).toContain("src/locales/en/bad.json: isn't valid UTF-8 text");
+    expect(fetch.requests.length).toBe(0);
   });
 });
 
@@ -473,11 +459,8 @@ test("upload: validation errors about limits point to the config", async () => {
       ),
     );
     const run = await runCli(["upload"], { cwd: dir, env: ENV, fetch });
-    assertEquals(run.code, 2);
-    assertStringIncludes(
-      run.stderr,
-      "quaso.config.json › limits[0].maxLength: must be at most 100000",
-    );
+    expect(run.code).toBe(2);
+    expect(run.stderr).toContain("quaso.config.json › limits[0].maxLength: must be at most 100000");
   });
 });
 
@@ -488,15 +471,14 @@ test("upload sends a guarded descriptions sidecar as metadata and leaves both re
     async (dir) => {
       const fetch = fakeFetch(() => jsonResponse(result()));
       const run = await runCli(["upload"], { cwd: dir, env: ENV, fetch });
-      assertEquals(run.code, 0, run.stderr);
+      expect(run.code, run.stderr).toBe(0);
       const sent = (await fetch.requests[0].json()) as UploadRequest;
-      assertEquals(sent.files.length, 2);
-      assertEquals(sent.files[0].descriptions, sidecar);
-      assertEquals(sent.files[0].content, PROJECT["src/locales/en/common.json"]);
-      assertEquals(
+      expect(sent.files.length).toBe(2);
+      expect(sent.files[0].descriptions).toStrictEqual(sidecar);
+      expect(sent.files[0].content).toStrictEqual(PROJECT["src/locales/en/common.json"]);
+      expect(
         await fs.readFile(join(dir, "src/locales/en/common.descriptions.json"), "utf8"),
-        sidecar,
-      );
+      ).toStrictEqual(sidecar);
     },
   );
 });

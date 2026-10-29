@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
+import { expect, test } from "vitest";
 import * as fs from "node:fs/promises";
 import { join } from "node:path";
-import { assertEquals } from "@std/assert";
 import { SYSTEM, silentLogger } from "@quaso/service";
 import { openAsyncSqlite } from "../../service/src/adapters/node_async_sqlite.ts";
 import { createMemoryStore } from "../../service/src/adapters/memory_store.ts";
@@ -50,40 +49,44 @@ test("published files: HTTP validators, nested history routes and CLI downloads 
     });
 
     const current = await call(app, `/files/de/${path}`);
-    assertEquals(current.status, 200);
-    assertEquals(await current.text(), fresh);
-    assertEquals(
-      current.headers.get("Cache-Control"),
+    expect(current.status).toBe(200);
+    expect(await current.text()).toStrictEqual(fresh);
+    expect(current.headers.get("Cache-Control")).toStrictEqual(
       "public, max-age=30, stale-while-revalidate=300",
     );
     const etag = current.headers.get("ETag")!;
     const unchanged = await call(app, `/files/de/${path}`, {
       headers: { "If-None-Match": `W/${etag}` },
     });
-    assertEquals([unchanged.status, await unchanged.text()], [304, ""]);
+    expect([unchanged.status, await unchanged.text()]).toStrictEqual([304, ""]);
     const head = await call(app, `/files/de/${path}`, { method: "HEAD" });
-    assertEquals([head.status, head.headers.get("ETag"), await head.text()], [200, etag, ""]);
+    expect([head.status, head.headers.get("ETag"), await head.text()]).toStrictEqual([
+      200,
+      etag,
+      "",
+    ]);
     const privateRead = await call(app, `/files/de/${path}`, { key: token.secret });
-    assertEquals(privateRead.headers.get("Cache-Control"), "private, no-store");
-    assertEquals((await call(app, "/files/de/missing.json")).status, 404);
+    expect(privateRead.headers.get("Cache-Control")).toBe("private, no-store");
+    expect((await call(app, "/files/de/missing.json")).status).toBe(404);
     const crossOrigin = await call(app, `/files/de/${path}`, {
       headers: { Origin: "https://game.test" },
     });
-    assertEquals(crossOrigin.headers.get("Access-Control-Allow-Origin"), "https://game.test");
-    assertEquals((await call(app, `/files/de/${path}`, { method: "POST" })).status, 405);
-    assertEquals((await call(app, `/api/v1/files/${path}/versions?language=de`)).status, 401);
+    expect(crossOrigin.headers.get("Access-Control-Allow-Origin")).toStrictEqual(
+      "https://game.test",
+    );
+    expect((await call(app, `/files/de/${path}`, { method: "POST" })).status).toBe(405);
+    expect((await call(app, `/api/v1/files/${path}/versions?language=de`)).status).toStrictEqual(
+      401,
+    );
     const history = await call(app, `/api/v1/files/${path}/versions?language=de`, {
       key: token.secret,
     });
-    assertEquals(history.status, 200);
+    expect(history.status).toBe(200);
     const { versions } = await history.json();
-    assertEquals(
-      versions.map((version: { id: number }) => version.id),
-      [2, 1],
-    );
+    expect(versions.map((version: { id: number }) => version.id)).toStrictEqual([2, 1]);
     const version = await call(app, `/api/v1/files/${path}/versions/1`, { key: token.secret });
-    assertEquals(version.status, 200);
-    assertEquals((await version.json()).content, old);
+    expect(version.status).toBe(200);
+    expect((await version.json()).content).toStrictEqual(old);
 
     await withProject(
       {
@@ -101,13 +104,17 @@ test("published files: HTTP validators, nested history routes and CLI downloads 
           fetch: (input: RequestInfo | URL, init?: RequestInit) => app(new Request(input, init)),
         };
         const first = await runCli(["download", "--at", firstAt], options);
-        assertEquals(first.code, 0);
-        assertEquals(await fs.readFile(join(dir, "src/locales/de/menus/main.json"), "utf8"), old);
+        expect(first.code).toBe(0);
+        expect(
+          await fs.readFile(join(dir, "src/locales/de/menus/main.json"), "utf8"),
+        ).toStrictEqual(old);
         const second = await runCli(["download", "--at", secondAt], options);
-        assertEquals(second.code, 0);
-        assertEquals(await fs.readFile(join(dir, "src/locales/de/menus/main.json"), "utf8"), fresh);
+        expect(second.code).toBe(0);
+        expect(
+          await fs.readFile(join(dir, "src/locales/de/menus/main.json"), "utf8"),
+        ).toStrictEqual(fresh);
         const invalid = await runCli(["download", "--at", "2026-02-30T00:00Z"], options);
-        assertEquals(invalid.code, 2);
+        expect(invalid.code).toBe(2);
       },
     );
     const [rows] = await opened.sql.read([
@@ -115,10 +122,10 @@ test("published files: HTTP validators, nested history routes and CLI downloads 
     ]);
     await store.delete([String(rows[0].store_key)]);
     const expired = await call(app, `/api/v1/files/${path}/versions/1`, { key: token.secret });
-    assertEquals(expired.status, 410);
-    assertEquals((await expired.json()).error.code, "expired");
+    expect(expired.status).toBe(410);
+    expect((await expired.json()).error.code).toBe("expired");
     await service.revokeApiToken(SYSTEM, { id: token.id });
-    assertEquals((await call(app, `/files/de/${path}`, { key: token.secret })).status, 401);
+    expect((await call(app, `/files/de/${path}`, { key: token.secret })).status).toBe(401);
   } finally {
     opened.close();
   }

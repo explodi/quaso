@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
+import { test } from "vitest";
 import { openAsyncSqlite } from "./adapters/node_async_sqlite.ts";
 import { createMemoryStore } from "./adapters/memory_store.ts";
 import { NIGHTLY_BACKUP_CASES } from "./testing/nightly_backup_cases.ts";

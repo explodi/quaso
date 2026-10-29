@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals } from "@std/assert";
+import { expect, test } from "vitest";
 import { conflict, ServiceError } from "@quaso/service";
 import { memoryLogger } from "../testing/helpers.ts";
 import { methodNotAllowedResponse, notFoundResponse, toErrorResponse } from "./errors.ts";
@@ -17,9 +16,9 @@ test("errors: a service error becomes its status and body", async () => {
     details: [{ file: "common.json", key: "level", language: "pl", check: "placeholder_missing" }],
   });
   const response = toErrorResponse(error, context());
-  assertEquals(response.status, 422);
-  assertEquals(response.headers.get("Content-Type"), "application/json; charset=utf-8");
-  assertEquals(await response.json(), {
+  expect(response.status).toBe(422);
+  expect(response.headers.get("Content-Type")).toBe("application/json; charset=utf-8");
+  expect(await response.json()).toStrictEqual({
     error: {
       code: "qa_failed",
       message: "Placeholder {{total}} is missing.",
@@ -34,35 +33,37 @@ test("errors: a service error becomes its status and body", async () => {
     },
   });
   const clash = toErrorResponse(conflict("Changed meanwhile.", null), context());
-  assertEquals(clash.status, 409);
-  assertEquals((await clash.json()).error.current, null);
+  expect(clash.status).toBe(409);
+  expect((await clash.json()).error.current).toBe(null);
 });
 
 test("errors: anything else is a 500 with the request ID, and is logged", async () => {
   const log = memoryLogger();
   const response = toErrorResponse(new TypeError("undefined is not a function"), context(log));
-  assertEquals(response.status, 500);
-  assertEquals(await response.json(), {
+  expect(response.status).toBe(500);
+  expect(await response.json()).toStrictEqual({
     error: {
       code: "internal",
       message: "Something went wrong on the server. The request ID is req-1.",
     },
   });
-  assertEquals(log.lines.length, 1);
-  assertEquals(log.lines[0].level, "error");
-  assertEquals(log.lines[0].requestId, "req-1");
-  assertEquals((log.lines[0].error as { message: string }).message, "undefined is not a function");
-  assertEquals(log.recentErrors()[0].requestId, "req-1");
+  expect(log.lines.length).toBe(1);
+  expect(log.lines[0].level).toBe("error");
+  expect(log.lines[0].requestId).toBe("req-1");
+  expect((log.lines[0].error as { message: string }).message).toStrictEqual(
+    "undefined is not a function",
+  );
+  expect(log.recentErrors()[0].requestId).toBe("req-1");
 });
 
 test("errors: 404 and 405 have the API's shape", async () => {
   const missing = notFoundResponse("/api/v1/nothing");
-  assertEquals(missing.status, 404);
-  assertEquals((await missing.json()).error.code, "not_found");
+  expect(missing.status).toBe(404);
+  expect((await missing.json()).error.code).toBe("not_found");
   const wrong = methodNotAllowedResponse("PUT", "/api/v1/project", ["GET", "HEAD"]);
-  assertEquals(wrong.status, 405);
-  assertEquals(wrong.headers.get("Allow"), "GET, HEAD");
-  assertEquals(await wrong.json(), {
+  expect(wrong.status).toBe(405);
+  expect(wrong.headers.get("Allow")).toBe("GET, HEAD");
+  expect(await wrong.json()).toStrictEqual({
     error: {
       code: "bad_request",
       message: "PUT is not allowed on /api/v1/project. Allowed: GET, HEAD.",

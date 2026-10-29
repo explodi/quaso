@@ -6,7 +6,7 @@ import * as fs from "node:fs/promises";
  * `loadConfig` checks them all at once and reports every problem together, so an operator
  * fixes their `.env` in one go.
  */
-import { parse as parseDotenv } from "@std/dotenv";
+import { parseEnv } from "node:util";
 import { fileURLToPath as fromFileUrl } from "node:url";
 import { resolve } from "node:path";
 
@@ -14,7 +14,7 @@ export const LOG_LEVELS = ["debug", "info", "warn", "error"] as const;
 export type LogLevel = (typeof LOG_LEVELS)[number];
 
 export interface Config {
-  /** A development instance (`QUASO_DEV=1`, set by `deno task dev`). */
+  /** A development instance (`QUASO_DEV=1`, set by `npm run dev`). */
   dev: boolean;
   port: number;
   /** Absolute. */
@@ -46,14 +46,11 @@ export type ConfigResult = { ok: true; config: Config } | { ok: false; problems:
 export interface ConfigOptions {
   /** Relative paths resolve against it. Default: the working directory. */
   cwd?: string;
-  /** Default: `packages/web/dist` next to the source, or inside the compiled binary. */
+  /** Default: `packages/web/dist` next to the source. */
   webDir?: string;
 }
 
-/**
- * The website's build, next to the server's source. `deno compile --include` keeps that
- * path inside the binary too.
- */
+/** The website's build, next to the server's source. */
 export function defaultWebDir(): string {
   return fromFileUrl(new URL("../../web/dist", import.meta.url));
 }
@@ -65,7 +62,7 @@ export function defaultWebDir(): string {
 export async function readEnvironment(cwd = process.cwd()): Promise<Env> {
   let fromFile: Env = {};
   try {
-    fromFile = parseDotenv(await fs.readFile(resolve(cwd, ".env"), "utf8"));
+    fromFile = parseEnv(await fs.readFile(resolve(cwd, ".env"), "utf8"));
   } catch (error) {
     if (!((error as NodeJS.ErrnoException).code === "ENOENT")) throw error;
   }
@@ -113,7 +110,10 @@ export function loadConfig(env: Env, options: ConfigOptions = {}): ConfigResult 
 class Reader {
   readonly problems: string[] = [];
 
-  constructor(private readonly env: Env) {}
+  private readonly env: Env;
+  constructor(env: Env) {
+    this.env = env;
+  }
 
   problem(name: string, message: string): void {
     this.problems.push(`${name} ${message}.`);

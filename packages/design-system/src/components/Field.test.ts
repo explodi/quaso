@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertMatch } from "@std/assert";
+import { expect, test } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Field } from "./Field.tsx";
@@ -17,12 +16,12 @@ test("fields keep external descriptions alongside their own hint and error", () 
     }),
   );
 
-  assertMatch(html, /<label[^>]*for="email"/);
-  assertMatch(html, /<input[^>]*id="email"/);
-  assertMatch(html, /aria-describedby="account-help privacy-help email-hint email-error"/);
-  assertMatch(html, /aria-invalid="true"/);
-  assertMatch(html, /<p id="email-hint"[^>]*>Use your work address\.<\/p>/);
-  assertMatch(html, /<p id="email-error"[^>]*>Enter a valid email\.<\/p>/);
+  expect(html).toMatch(/<label[^>]*for="email"/);
+  expect(html).toMatch(/<input[^>]*id="email"/);
+  expect(html).toMatch(/aria-describedby="account-help privacy-help email-hint email-error"/);
+  expect(html).toMatch(/aria-invalid="true"/);
+  expect(html).toMatch(/<p id="email-hint"[^>]*>Use your work address\.<\/p>/);
+  expect(html).toMatch(/<p id="email-error"[^>]*>Enter a valid email\.<\/p>/);
 });
 
 test("fields preserve caller validation semantics when they have no error message", () => {
@@ -35,8 +34,8 @@ test("fields preserve caller validation semantics when they have no error messag
     }),
   );
 
-  assertMatch(html, /<label[^>]*for="word"/);
-  assertMatch(html, /<input[^>]*id="word"/);
-  assertMatch(html, /aria-describedby="spelling-help"/);
-  assertMatch(html, /aria-invalid="spelling"/);
+  expect(html).toMatch(/<label[^>]*for="word"/);
+  expect(html).toMatch(/<input[^>]*id="word"/);
+  expect(html).toMatch(/aria-describedby="spelling-help"/);
+  expect(html).toMatch(/aria-invalid="spelling"/);
 });

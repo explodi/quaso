@@ -17,7 +17,7 @@ import { type ServiceApi, SYSTEM } from "@quaso/service";
 
 export const SESSION_COOKIE = "quaso_session";
 
-// node:buffer rather than @std/encoding: the Cloudflare Worker imports this module too.
+// The Cloudflare Worker imports this module too; its nodejs_compat flag provides node:buffer.
 function encodeBase64Url(value: Uint8Array): string {
   return Buffer.from(value).toString("base64url");
 }

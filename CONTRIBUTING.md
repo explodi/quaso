@@ -13,7 +13,7 @@ existing project, use the [website guide](docs/website.md).
 Keep each change focused. Explain the problem, the resulting behavior, and how you checked it.
 Include screenshots for visible interface changes and a reason for each new dependency.
 
-Run `deno task check` before review. Use the [testing guide](docs/contributing/testing.md) to choose
+Run `npm run check` before review. Use the [testing guide](docs/contributing/testing.md) to choose
 additional browser, Cloudflare, or documentation checks for your change. Add a regression test for
 a bug that can lose or expose data.
 

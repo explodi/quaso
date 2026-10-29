@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals } from "@std/assert";
+import { expect, test } from "vitest";
 import { SYSTEM } from "@quaso/service";
 import { realService } from "../testing/real_service.ts";
 import { call, testApp } from "../testing/helpers.ts";
@@ -19,8 +18,8 @@ test("source uploads require repository display paths while imports keep identit
       key: token.secret,
       json: { files: [file] },
     });
-    assertEquals(missing.status, 400);
-    assertEquals((await missing.json()).error.details, [
+    expect(missing.status).toBe(400);
+    expect((await missing.json()).error.details).toStrictEqual([
       { path: "files[0].repoPath", message: "is required" },
     ]);
     const uploaded = await call(app, "/api/v1/sources", {
@@ -28,11 +27,11 @@ test("source uploads require repository display paths while imports keep identit
       key: token.secret,
       json: { files: [{ ...file, repoPath: "src/locales/en/menu.json" }], languages: ["de"] },
     });
-    assertEquals(uploaded.status, 200);
+    expect(uploaded.status).toBe(200);
     const sourceResponse = await call(app, "/api/v1/files");
-    assertEquals(sourceResponse.status, 200);
+    expect(sourceResponse.status).toBe(200);
     const sources = await sourceResponse.json();
-    assertEquals(sources, {
+    expect(sources).toStrictEqual({
       files: [
         {
           id: 1,
@@ -46,18 +45,15 @@ test("source uploads require repository display paths while imports keep identit
       ],
     });
     const languageResponse = await call(app, "/api/v1/files?language=DE");
-    assertEquals(languageResponse.status, 200);
+    expect(languageResponse.status).toBe(200);
     const language = await languageResponse.json();
-    assertEquals(
-      [
-        language.language,
-        language.files[0].path,
-        language.files[0].repoPath,
-        language.files[0].untranslated,
-      ],
-      ["de", "menu.json", "src/locales/en/menu.json", 1],
-    );
-    assertEquals((await call(app, "/api/v1/files?language=fr")).status, 404);
+    expect([
+      language.language,
+      language.files[0].path,
+      language.files[0].repoPath,
+      language.files[0].untranslated,
+    ]).toStrictEqual(["de", "menu.json", "src/locales/en/menu.json", 1]);
+    expect((await call(app, "/api/v1/files?language=fr")).status).toBe(404);
     const imported = await call(app, "/api/v1/imports", {
       method: "POST",
       key: token.secret,
@@ -67,13 +63,13 @@ test("source uploads require repository display paths while imports keep identit
         as: "blue",
       },
     });
-    assertEquals(imported.status, 200);
-    assertEquals(await (await call(app, "/api/v1/files")).json(), sources);
+    expect(imported.status).toBe(200);
+    expect(await (await call(app, "/api/v1/files")).json()).toStrictEqual(sources);
     const strings = await real.service.listStrings(SYSTEM, { language: "de", file: "menu.json" });
-    assertEquals(
-      [strings.strings[0].file, strings.strings[0].translation?.value],
-      ["menu.json", "Spielen"],
-    );
+    expect([strings.strings[0].file, strings.strings[0].translation?.value]).toStrictEqual([
+      "menu.json",
+      "Spielen",
+    ]);
   } finally {
     real.close();
   }

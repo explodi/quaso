@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals, assertThrows } from "@std/assert";
+import { expect, test } from "vitest";
 import { openNodeSqlite } from "./adapters/node_sqlite.ts";
 import {
   bumpRevision,
@@ -30,10 +29,10 @@ function withMeta(fn: (sql: ReturnType<typeof openNodeSqlite>["sql"]) => void) {
 }
 
 test("chunks splits a list into lists of at most the size", () => {
-  assertEquals(chunks([1, 2, 3, 4, 5], 2), [[1, 2], [3, 4], [5]]);
-  assertEquals(chunks([], 3), []);
-  assertEquals(chunks([1, 2], 5), [[1, 2]]);
-  assertThrows(() => chunks([1], 0), RangeError);
+  expect(chunks([1, 2, 3, 4, 5], 2)).toStrictEqual([[1, 2], [3, 4], [5]]);
+  expect(chunks([], 3)).toStrictEqual([]);
+  expect(chunks([1, 2], 5)).toStrictEqual([[1, 2]]);
+  expect(() => chunks([1], 0)).toThrow(RangeError);
 });
 
 test("forEachChunk keeps every statement within the parameter limit", () => {
@@ -43,48 +42,42 @@ test("forEachChunk keeps every statement within the parameter limit", () => {
     12,
     (chunk) => sizes.push(chunk.length),
   );
-  assertEquals(sizes, [8, 8, 8, 8, 8, 8, 2]);
-  for (const size of sizes) assertEquals(size * 12 <= SQL_MAX_PARAMS, true);
+  expect(sizes).toStrictEqual([8, 8, 8, 8, 8, 8, 2]);
+  for (const size of sizes) expect(size * 12 <= SQL_MAX_PARAMS).toBe(true);
   const withExtra: number[] = [];
   forEachChunk([1, 2, 3, 4, 5], 20, (chunk) => withExtra.push(chunk.length), 20);
-  assertEquals(withExtra, [4, 1]);
+  expect(withExtra).toStrictEqual([4, 1]);
 });
 
 test("placeholders and idList", () => {
-  assertEquals(placeholders(3), "?, ?, ?");
-  assertEquals(idList([1, 22, 333]), "1, 22, 333");
-  assertEquals(idList([]), "NULL");
-  assertThrows(() => idList([1.5]), TypeError);
-  assertThrows(() => idList([Number.NaN]), TypeError);
+  expect(placeholders(3)).toBe("?, ?, ?");
+  expect(idList([1, 22, 333])).toBe("1, 22, 333");
+  expect(idList([])).toBe("NULL");
+  expect(() => idList([1.5])).toThrow(TypeError);
+  expect(() => idList([Number.NaN])).toThrow(TypeError);
 });
 
 test(
   "meta values can be set, read and deleted",
   withMeta((sql) => {
-    assertEquals(getMeta(sql, "x"), null);
+    expect(getMeta(sql, "x")).toBe(null);
     setMeta(sql, "x", "1");
     setMeta(sql, "x", "2");
-    assertEquals(getMeta(sql, "x"), "2");
+    expect(getMeta(sql, "x")).toBe("2");
     deleteMeta(sql, "x");
-    assertEquals(getMeta(sql, "x"), null);
+    expect(getMeta(sql, "x")).toBe(null);
   }),
 );
 
 test(
   "bumpRevision raises the revision once per transaction",
   withMeta((sql) => {
-    assertEquals(getRevision(sql), 0);
-    assertEquals(
-      transaction(sql, () => [bumpRevision(sql), bumpRevision(sql)]),
-      [1, 1],
-    );
-    assertEquals(
-      transaction(sql, () => bumpRevision(sql)),
-      2,
-    );
-    assertEquals(getRevision(sql), 2);
-    assertEquals(bumpRevision(sql), 3, "outside a transaction, every call raises it");
-    assertEquals(bumpRevision(sql), 4);
+    expect(getRevision(sql)).toBe(0);
+    expect(transaction(sql, () => [bumpRevision(sql), bumpRevision(sql)])).toStrictEqual([1, 1]);
+    expect(transaction(sql, () => bumpRevision(sql))).toBe(2);
+    expect(getRevision(sql)).toBe(2);
+    expect(bumpRevision(sql), "outside a transaction, every call raises it").toBe(3);
+    expect(bumpRevision(sql)).toBe(4);
   }),
 );
 
@@ -92,37 +85,34 @@ test(
   "bumpRevision raises again after a savepoint rolled it back",
   withMeta((sql) => {
     const result = transaction(sql, () => {
-      assertThrows(() =>
+      expect(() =>
         transaction(sql, () => {
           bumpRevision(sql);
           throw new Error("rolled back");
         }),
-      );
+      ).toThrow();
       return bumpRevision(sql);
     });
-    assertEquals(result, 1);
-    assertEquals(getRevision(sql), 1);
+    expect(result).toBe(1);
+    expect(getRevision(sql)).toBe(1);
   }),
 );
 
 test(
   "a rolled-back transaction leaves the revision as it was",
   withMeta((sql) => {
-    assertThrows(() =>
+    expect(() =>
       transaction(sql, () => {
         bumpRevision(sql);
         throw new Error("no");
       }),
-    );
-    assertEquals(getRevision(sql), 0);
-    assertEquals(
-      transaction(sql, () => bumpRevision(sql)),
-      1,
-    );
+    ).toThrow();
+    expect(getRevision(sql)).toBe(0);
+    expect(transaction(sql, () => bumpRevision(sql))).toBe(1);
   }),
 );
 
 test("normalizeSearch uses NFKC and lower case", () => {
-  assertEquals(normalizeSearch("ＰＬＡＹ Straße ﬁ"), "play straße fi");
-  assertEquals(normalizeSearch("É"), "é");
+  expect(normalizeSearch("ＰＬＡＹ Straße ﬁ")).toBe("play straße fi");
+  expect(normalizeSearch("É")).toBe("é");
 });

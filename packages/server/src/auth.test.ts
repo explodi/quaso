@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assertEquals, assertRejects } from "@std/assert";
+import { assert, expect, test } from "vitest";
 import { ServiceError } from "@quaso/service";
 import { createAuthenticator } from "./auth.ts";
 import { FakeService } from "./testing/fake_service.ts";
@@ -12,24 +11,31 @@ function request(authorization?: string): Request {
 }
 
 async function unauthorized(promise: () => Promise<unknown>, message: string): Promise<void> {
-  const error = await assertRejects(promise, ServiceError);
-  assertEquals(error.code, "unauthorized");
-  assertEquals(error.status, 401);
-  assertEquals(error.message, message);
+  const error = await Promise.try(promise).catch((error: unknown) => error);
+  assert(error instanceof ServiceError);
+  expect(error.code).toBe("unauthorized");
+  expect(error.status).toBe(401);
+  expect(error.message).toStrictEqual(message);
 }
 
 test("auth: no credentials is anonymous", async () => {
   const auth = createAuthenticator(new FakeService());
-  assertEquals(await auth.actorFor(request()), { type: "anonymous" });
+  expect(await auth.actorFor(request())).toStrictEqual({ type: "anonymous" });
 });
 
 test("auth: an API key becomes its token actor, checked as the system", async () => {
   const service = new FakeService();
   const { secret, id } = service.addToken("read");
   const auth = createAuthenticator(service);
-  assertEquals(await auth.actorFor(request(`Bearer ${secret}`)), { type: "token", tokenId: id });
-  assertEquals(await auth.actorFor(request(`bearer   ${secret}`)), { type: "token", tokenId: id });
-  assertEquals(service.calls[0].actor, { type: "system" });
+  expect(await auth.actorFor(request(`Bearer ${secret}`))).toStrictEqual({
+    type: "token",
+    tokenId: id,
+  });
+  expect(await auth.actorFor(request(`bearer   ${secret}`))).toStrictEqual({
+    type: "token",
+    tokenId: id,
+  });
+  expect(service.calls[0].actor).toStrictEqual({ type: "system" });
 });
 
 test("auth: malformed, unknown and revoked keys are 401", async () => {
@@ -47,7 +53,7 @@ test("auth: malformed, unknown and revoked keys are 401", async () => {
     () => auth.actorFor(request("Bearer qso_unknown")),
     "This API key is unknown or was revoked.",
   );
-  assertEquals(service.count("authenticateToken"), 1);
+  expect(service.count("authenticateToken")).toBe(1);
 });
 
 test("auth: checks are cached for a minute, so a revoked key stops within a minute", async () => {
@@ -58,14 +64,14 @@ test("auth: checks are cached for a minute, so a revoked key stops within a minu
   await auth.actorFor(request(`Bearer ${secret}`));
   service.tokens.get(secret)!.revoked = true;
   now += 59_000;
-  assertEquals((await auth.actorFor(request(`Bearer ${secret}`))).type, "token");
-  assertEquals(service.count("authenticateToken"), 1);
+  expect((await auth.actorFor(request(`Bearer ${secret}`))).type).toBe("token");
+  expect(service.count("authenticateToken")).toBe(1);
   now += 2_000;
   await unauthorized(
     () => auth.actorFor(request(`Bearer ${secret}`)),
     "This API key is unknown or was revoked.",
   );
-  assertEquals(service.count("authenticateToken"), 2);
+  expect(service.count("authenticateToken")).toBe(2);
 });
 
 test("auth: forget() drops a revoked key at once", async () => {
@@ -87,7 +93,7 @@ test("auth: the cache is bounded", async () => {
   const auth = createAuthenticator(service, { maxEntries: 2 });
   for (const key of keys) await auth.actorFor(request(`Bearer ${key}`));
   await auth.actorFor(request(`Bearer ${keys[2]}`));
-  assertEquals(service.count("authenticateToken"), 3);
+  expect(service.count("authenticateToken")).toBe(3);
   await auth.actorFor(request(`Bearer ${keys[0]}`));
-  assertEquals(service.count("authenticateToken"), 4);
+  expect(service.count("authenticateToken")).toBe(4);
 });

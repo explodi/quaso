@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
+import { assert, expect, test } from "vitest";
 /**
  * The server with the real service on an in-memory database, through `createApp`, without
  * a network: the CLI's calls, anonymous reads, and acceptance tests 2 and 7 through the API.
  */
-import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import type { StatusResult, StringsPage } from "@quaso/core";
 import { DATABASE_VERSION, type Service, SYSTEM } from "@quaso/service";
 import { type App } from "./app.ts";
@@ -49,14 +48,14 @@ async function uploadBody() {
 async function json<T>(response: Promise<Response>, status = 200): Promise<T> {
   const answer = await response;
   const body = await answer.json();
-  assertEquals(answer.status, status, JSON.stringify(body));
+  expect(answer.status, JSON.stringify(body)).toStrictEqual(status);
   return body;
 }
 
 integration("/healthz reports the schema version", async ({ app }) => {
   const health = await json<Record<string, unknown>>(call(app, "/healthz"));
-  assertEquals(health.ok, true);
-  assertEquals(health.schemaVersion, DATABASE_VERSION);
+  expect(health.ok).toBe(true);
+  expect(health.schemaVersion).toStrictEqual(DATABASE_VERSION);
 });
 
 integration("an upload needs an API key with the upload scope", async ({ app, upload, read }) => {
@@ -65,19 +64,16 @@ integration("an upload needs an API key with the upload scope", async ({ app, up
     call(app, "/api/v1/sources", { method: "POST", json: body }),
     401,
   );
-  assertEquals(anonymous.error.code, "unauthorized");
+  expect(anonymous.error.code).toBe("unauthorized");
   await json(call(app, "/api/v1/sources", { method: "POST", json: body, key: read }), 403);
   const result = await json<{ files: { path: string; status: string }[] }>(
     call(app, "/api/v1/sources", { method: "POST", json: body, key: upload }),
   );
-  assertEquals(
-    result.files.map((f) => [f.path, f.status]),
-    [
-      ["common.json", "new"],
-      ["menus.json", "new"],
-      ["store.json", "new"],
-    ],
-  );
+  expect(result.files.map((f) => [f.path, f.status])).toStrictEqual([
+    ["common.json", "new"],
+    ["menus.json", "new"],
+    ["store.json", "new"],
+  ]);
 });
 
 integration("anyone reads the project, with each language's plural categories", async (s) => {
@@ -85,19 +81,20 @@ integration("anyone reads the project, with each language's plural categories", 
     call(s.app, "/api/v1/sources", { method: "POST", json: await uploadBody(), key: s.upload }),
   );
   const response = await call(s.app, "/api/v1/project");
-  assertEquals(
-    response.headers.get("Cache-Control"),
+  expect(response.headers.get("Cache-Control")).toStrictEqual(
     "public, max-age=30, stale-while-revalidate=300",
   );
   const project = await response.json();
-  assertEquals(project.languages.map((l: { tag: string }) => l.tag).sort(), [...LANGUAGES].sort());
-  const polish = project.languages.find((l: { tag: string }) => l.tag === "pl");
-  assertEquals(polish.plural, { cardinal: ["one", "few", "many", "other"], ordinal: ["other"] });
-  const files = await json<{ files: { path: string }[] }>(call(s.app, "/api/v1/files?language=de"));
-  assertEquals(
-    files.files.map((f) => f.path),
-    ["common.json", "menus.json", "store.json"],
+  expect(project.languages.map((l: { tag: string }) => l.tag).sort()).toStrictEqual(
+    [...LANGUAGES].sort(),
   );
+  const polish = project.languages.find((l: { tag: string }) => l.tag === "pl");
+  expect(polish.plural).toStrictEqual({
+    cardinal: ["one", "few", "many", "other"],
+    ordinal: ["other"],
+  });
+  const files = await json<{ files: { path: string }[] }>(call(s.app, "/api/v1/files?language=de"));
+  expect(files.files.map((f) => f.path)).toStrictEqual(["common.json", "menus.json", "store.json"]);
   const activity = await json<{ items: unknown[] }>(call(s.app, "/api/v1/activity"));
   assert(activity.items.length > 0);
 });
@@ -111,7 +108,7 @@ integration("a download needs an API key", async ({ app, upload, read }) => {
     const result = await json<{ files: { path: string; language: string }[] }>(
       call(app, "/api/v1/export?languages=de,ja&files=common.json", { key }),
     );
-    assertEquals(result.files.map((f) => `${f.language}/${f.path}`).sort(), [
+    expect(result.files.map((f) => `${f.language}/${f.path}`).sort()).toStrictEqual([
       "de/common.json",
       "ja/common.json",
     ]);
@@ -124,21 +121,21 @@ integration("a download is gzip-compressed for clients that accept it", async (s
   );
   const plain = await call(s.app, "/api/v1/export", { key: s.read });
   const expected = await plain.text();
-  assertEquals(plain.headers.get("Content-Encoding"), null);
+  expect(plain.headers.get("Content-Encoding")).toBe(null);
   const response = await call(s.app, "/api/v1/export", {
     key: s.read,
     headers: { "Accept-Encoding": "gzip, br" },
   });
-  assertEquals(response.status, 200);
-  assertEquals(response.headers.get("Content-Encoding"), "gzip");
-  assertEquals(response.headers.get("Vary"), "Authorization, Cookie, Accept-Encoding");
+  expect(response.status).toBe(200);
+  expect(response.headers.get("Content-Encoding")).toBe("gzip");
+  expect(response.headers.get("Vary")).toBe("Authorization, Cookie, Accept-Encoding");
   const compressed = new Uint8Array(await response.arrayBuffer());
   assert(compressed.length < expected.length / 2, `${compressed.length} of ${expected.length}`);
   const text = await new Response(
     new Blob([compressed]).stream().pipeThrough(new DecompressionStream("gzip")),
   ).text();
-  assertEquals(text, expected);
-  assertEquals(JSON.parse(text).files.length, LANGUAGES.length * 3);
+  expect(text).toStrictEqual(expected);
+  expect(JSON.parse(text).files.length).toStrictEqual(LANGUAGES.length * 3);
 });
 
 integration(
@@ -149,18 +146,18 @@ integration(
     );
     await json(call(s.app, "/api/v1/status"), 401);
     const status = await json<StatusResult>(call(s.app, "/api/v1/status", { key: s.read }));
-    assertEquals(status.languages.map((l) => l.tag).sort(), [...LANGUAGES].sort());
+    expect(status.languages.map((l) => l.tag).sort()).toStrictEqual([...LANGUAGES].sort());
     for (const language of status.languages) {
-      assertEquals(language.strings, 40, language.tag);
-      assertEquals(language.untranslated, language.strings, language.tag);
-      assertEquals(language.green + language.blue, 0, language.tag);
+      expect(language.strings, language.tag).toBe(40);
+      expect(language.untranslated, language.tag).toStrictEqual(language.strings);
+      expect(language.green + language.blue, language.tag).toBe(0);
     }
     for (const language of LANGUAGES) {
       const page = await json<StringsPage>(
         call(s.app, `/api/v1/strings?language=${language}&limit=500`),
       );
-      assertEquals(page.total, 40);
-      assertEquals(page.strings.length, 40);
+      expect(page.total).toBe(40);
+      expect(page.strings.length).toBe(40);
       assert(
         page.strings.every((string) => string.translation === null),
         language,
@@ -168,7 +165,7 @@ integration(
       const red = await json<StringsPage>(
         call(s.app, `/api/v1/strings?language=${language}&state=untranslated&limit=1`),
       );
-      assertEquals(red.total, 40);
+      expect(red.total).toBe(40);
     }
   },
 );
@@ -197,28 +194,22 @@ integration(
     const result = await json<{ changed: { key: string }[] }>(
       call(s.app, "/api/v1/sources", { method: "POST", json: changed, key: s.upload }),
     );
-    assertEquals(
-      result.changed.map((ref) => ref.key),
-      ["play"],
-    );
+    expect(result.changed.map((ref) => ref.key)).toStrictEqual(["play"]);
 
     const page = await json<StringsPage>(call(s.app, "/api/v1/strings?language=de&q=Play now"));
     const play = page.strings.find((string) => string.key === "play")!;
-    assertEquals(play.source, "Play now");
-    assertEquals(play.translation?.value, "Spielen");
-    assertEquals(play.translation?.outdated, true);
+    expect(play.source).toBe("Play now");
+    expect(play.translation?.value).toBe("Spielen");
+    expect(play.translation?.outdated).toBe(true);
     const outdated = await json<StringsPage>(
       call(s.app, "/api/v1/strings?language=de&state=outdated"),
     );
-    assertEquals(
-      outdated.strings.map((string) => string.key),
-      ["play"],
-    );
+    expect(outdated.strings.map((string) => string.key)).toStrictEqual(["play"]);
 
     const exported = await json<{ files: { content: string }[] }>(
       call(s.app, "/api/v1/export?languages=de&files=common.json", { key: s.read }),
     );
-    assertStringIncludes(exported.files[0].content, '"play": "Spielen"');
+    expect(exported.files[0].content).toContain('"play": "Spielen"');
     const history = await json<{ entries: { event: string }[] }>(
       call(s.app, `/api/v1/strings/${play.id}/history`),
     );
@@ -226,7 +217,7 @@ integration(
     const detail = await json<{ translation: { outdated: boolean } }>(
       call(s.app, `/api/v1/strings/${play.id}?language=de`),
     );
-    assertEquals(detail.translation.outdated, true);
+    expect(detail.translation.outdated).toBe(true);
 
     // Until it is updated: a new translation is current again, and downloaded instead.
     await json(
@@ -243,11 +234,11 @@ integration(
     const updated = await json<StringsPage>(
       call(s.app, "/api/v1/strings?language=de&state=outdated"),
     );
-    assertEquals(updated.total, 0);
+    expect(updated.total).toBe(0);
     const again = await json<{ files: { content: string }[] }>(
       call(s.app, "/api/v1/export?languages=de&files=common.json", { key: s.read }),
     );
-    assertStringIncludes(again.files[0].content, '"play": "Jetzt spielen"');
+    expect(again.files[0].content).toContain('"play": "Jetzt spielen"');
   },
 );
 
@@ -256,7 +247,7 @@ integration("API keys: only administrators manage them; a revoked key stops", as
     call(s.app, "/api/v1/api-tokens", { key: s.upload }),
     403,
   );
-  assertEquals(denied.error.code, "forbidden");
+  expect(denied.error.code).toBe("forbidden");
   await json(call(s.app, "/api/v1/api-tokens"), 401);
   const { tokens } = await s.service.listApiTokens(SYSTEM, {});
   const read = tokens.find((token) => token.name === "Read")!;
@@ -268,7 +259,7 @@ integration("API keys: only administrators manage them; a revoked key stops", as
     call(s.app, "/api/v1/export", { key: s.read }),
     401,
   );
-  assertEquals(revoked.error.message, "This API key is unknown or was revoked.");
+  expect(revoked.error.message).toBe("This API key is unknown or was revoked.");
   // A server without the key in its cache refuses it at once too.
   const { app: fresh } = testApp(s.service);
   await json(call(fresh, "/api/v1/status", { key: s.read }), 401);

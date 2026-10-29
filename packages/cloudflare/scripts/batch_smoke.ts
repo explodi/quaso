@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
+import { spawnSync } from "node:child_process";
 import { mkdtemp, writeFile, rm, mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
+import { build } from "rolldown";
 
 const root = resolve(import.meta.dirname!, "../../..");
 const cwd = resolve(root, "packages/cloudflare");
-const upload = Deno.args.includes("--upload");
+const upload = process.argv.slice(2).includes("--upload");
 const prefix = `quaso-beta2-${upload ? "upload" : "batch"}-${Date.now()}`;
 const name = `${prefix}-contractcontainer`;
 const folderRoot = resolve(root, ".quaso");
@@ -19,15 +21,13 @@ let report: { path: string; data: object } | undefined;
 const cleanupFailures: unknown[] = [];
 
 async function wrangler(args: string[], allowMissing = false): Promise<string> {
-  const output = await new Deno.Command(Deno.execPath(), {
-    args: ["run", "-A", "npm:wrangler", ...args],
+  const output = spawnSync("npx", ["wrangler", ...args], {
     cwd,
-    stdin: "null",
-  }).output();
-  const decoder = new TextDecoder();
-  const stdout = decoder.decode(output.stdout);
-  const stderr = decoder.decode(output.stderr);
-  if (!output.success) {
+    stdio: ["ignore", "pipe", "pipe"],
+    encoding: "utf8",
+  });
+  const { stdout, stderr } = output;
+  if (output.status !== 0) {
     const missing = /does not exist|not found/i.test(stdout + stderr);
     if (allowMissing && missing) return stdout;
     throw new Error(`wrangler ${args[0]}: ${stdout}\n${stderr}`);
@@ -42,13 +42,15 @@ try {
   const id = /"database_id":\s*"([^"]+)"/.exec(created)?.[1];
   if (!id) throw new Error("Wrangler did not return the database ID");
   const entry = resolve(cwd, upload ? "spike/upload_server.ts" : "spike/contract_server.ts");
-  const bundle = await new Deno.Command(Deno.execPath(), {
-    args: ["bundle", "--platform=deno", "--output", resolve(folder, "server.js"), entry],
-  }).output();
-  if (!bundle.success) throw new Error(new TextDecoder().decode(bundle.stderr));
+  await build({
+    input: entry,
+    platform: "node",
+    logLevel: "warn",
+    output: { file: resolve(folder, "server.js"), format: "esm" },
+  });
   await writeFile(
     resolve(folder, "Dockerfile"),
-    'FROM denoland/deno:2.9.6@sha256:2014dc167ece617ef7e7ba40631ac2234c59e75ce693e7cc2dc2602b3c87859d\nWORKDIR /probe\nCOPY server.js .\nEXPOSE 8000\nENTRYPOINT ["deno", "run", "-A", "server.js"]\n',
+    'FROM node:26-slim\nWORKDIR /probe\nCOPY server.js .\nEXPOSE 8000\nENTRYPOINT ["node", "server.js"]\n',
   );
   await writeFile(
     configPath,
@@ -211,20 +213,14 @@ try {
   }
   if (databaseCreated) await clean(() => wrangler(["d1", "delete", prefix, "--skip-confirmation"]));
   await clean(async () => {
-    const images = await new Deno.Command("docker", {
-      args: ["image", "ls", "--format", "{{.Repository}}:{{.Tag}}"],
-    }).output();
-    if (!images.success) throw new Error("Could not inspect local probe images");
-    const tags = new TextDecoder()
-      .decode(images.stdout)
-      .split("\n")
-      .filter((tag) => tag.includes(name));
+    const images = spawnSync("docker", ["image", "ls", "--format", "{{.Repository}}:{{.Tag}}"], {
+      encoding: "utf8",
+    });
+    if (images.status !== 0) throw new Error("Could not inspect local probe images");
+    const tags = images.stdout.split("\n").filter((tag) => tag.includes(name));
     for (const tag of tags) {
-      const removed = await new Deno.Command("docker", {
-        args: ["image", "rm", tag],
-        stdout: "null",
-      }).output();
-      if (!removed.success) throw new Error(`Could not remove local image ${tag}`);
+      const removed = spawnSync("docker", ["image", "rm", tag], { stdio: "ignore" });
+      if (removed.status !== 0) throw new Error(`Could not remove local image ${tag}`);
     }
   });
   await clean(async () => {

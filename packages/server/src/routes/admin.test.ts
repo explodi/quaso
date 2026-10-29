@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
+import { tmpdir } from "node:os";
+import { assert, expect, test } from "vitest";
 import * as fs from "node:fs/promises";
 import * as fsSync from "node:fs";
 /**
@@ -7,7 +8,6 @@ import * as fsSync from "node:fs";
  * renames, the admin page, backup downloads (JSON and SQLite, with local and Cloudflare
  * storage) and the restore at setup.
  */
-import { assert, assertEquals, assertMatch, assertStringIncludes } from "@std/assert";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { AdminInfo, BackupDocument, SettingsResult } from "@quaso/core";
@@ -144,8 +144,8 @@ test("Gemini test route probes the saved key, lists compatible models and return
     const people = await project(instance.service, instance.sql);
     const { app, log } = appFor(instance.service, people);
     const path = "/api/v1/settings/llm/test";
-    assertEquals((await call(app, path, { method: "POST", json: {} })).status, 401);
-    assertEquals(
+    expect((await call(app, path, { method: "POST", json: {} })).status).toBe(401);
+    expect(
       (
         await call(app, path, {
           method: "POST",
@@ -153,9 +153,8 @@ test("Gemini test route probes the saved key, lists compatible models and return
           json: {},
         })
       ).status,
-      403,
-    );
-    assertEquals(keys, []);
+    ).toBe(403);
+    expect(keys).toStrictEqual([]);
     const value = "stored-gemini-key-1234";
     const status = await instance.service.setSecret(SYSTEM, { name: "gemini_api_key", value });
     const response = await call(app, path, {
@@ -163,22 +162,22 @@ test("Gemini test route probes the saved key, lists compatible models and return
       headers: { Authorization: "Bearer admin" },
       json: {},
     });
-    assertEquals(response.status, 200);
-    assertEquals(await response.json(), {
+    expect(response.status).toBe(200);
+    expect(await response.json()).toStrictEqual({
       ok: true,
       models: ["model-a"],
       keyUpdatedAt: status.updatedAt,
     });
-    assertEquals(keys, [value]);
+    expect(keys).toStrictEqual([value]);
     refused = true;
     const failed = await call(app, path, {
       method: "POST",
       headers: { Authorization: "Bearer admin" },
       json: {},
     });
-    assertEquals(failed.status, 400);
-    assertEquals((await failed.text()).includes(value), false);
-    assertEquals(JSON.stringify(log.lines).includes(value), false);
+    expect(failed.status).toBe(400);
+    expect((await failed.text()).includes(value)).toBe(false);
+    expect(JSON.stringify(log.lines).includes(value)).toBe(false);
   } finally {
     instance.close();
   }
@@ -191,8 +190,8 @@ test("secret routes require an administrator and never echo credentials", async 
     const { app, log } = appFor(instance.service, people);
     const path = "/api/v1/settings/secrets/gemini_api_key";
     const value = "provider-secret-never-in-http-output-9231";
-    assertEquals((await call(app, "/api/v1/settings/secrets")).status, 401);
-    assertEquals(
+    expect((await call(app, "/api/v1/settings/secrets")).status).toBe(401);
+    expect(
       (
         await call(app, path, {
           method: "PUT",
@@ -200,15 +199,14 @@ test("secret routes require an administrator and never echo credentials", async 
           json: { value },
         })
       ).status,
-      403,
-    );
+    ).toBe(403);
     const response = await call(app, path, {
       method: "PUT",
       headers: { Authorization: "Bearer admin" },
       json: { value },
     });
-    assertEquals(response.status, 200);
-    assertEquals(await response.json(), {
+    expect(response.status).toBe(200);
+    expect(await response.json()).toStrictEqual({
       name: "gemini_api_key",
       set: true,
       ending: "9231",
@@ -217,18 +215,17 @@ test("secret routes require an administrator and never echo credentials", async 
     const status = await call(app, "/api/v1/settings/secrets", {
       headers: { Authorization: "Bearer admin" },
     });
-    assertEquals((await status.text()).includes(value), false);
+    expect((await status.text()).includes(value)).toBe(false);
     const activity = await call(app, "/api/v1/activity", {
       headers: { Authorization: "Bearer admin" },
     });
-    assertEquals((await activity.text()).includes(value), false);
-    assertEquals(JSON.stringify(log).includes(value), false);
-    assertEquals(
+    expect((await activity.text()).includes(value)).toBe(false);
+    expect(JSON.stringify(log).includes(value)).toBe(false);
+    expect(
       (await call(app, path, { method: "DELETE", headers: { Authorization: "Bearer admin" } }))
         .status,
-      200,
-    );
-    assertEquals(instance.sql.query("SELECT * FROM secrets"), []);
+    ).toBe(200);
+    expect(instance.sql.query("SELECT * FROM secrets")).toStrictEqual([]);
   } finally {
     instance.close();
   }
@@ -242,53 +239,50 @@ test("admin routes: settings, languages, files, strings and renames", async () =
     const as = (name: string, path: string, init: RequestInit & { json?: unknown } = {}) =>
       call(app, path, { ...init, headers: { Authorization: `Bearer ${name}` } });
 
-    assertEquals((await call(app, "/api/v1/settings")).status, 401);
-    assertEquals((await as("manager", "/api/v1/settings")).status, 403);
+    expect((await call(app, "/api/v1/settings")).status).toBe(401);
+    expect((await as("manager", "/api/v1/settings")).status).toBe(403);
     const settings: SettingsResult = await json(await as("admin", "/api/v1/settings"));
-    assertEquals(
-      settings.languages.map((language) => language.tag),
-      ["de", "pl"],
-    );
+    expect(settings.languages.map((language) => language.tag)).toStrictEqual(["de", "pl"]);
 
     const patched = await as("admin", "/api/v1/settings", {
       method: "PATCH",
       json: { name: "Wayfarer", llm: { context: { glossary: false } } },
     });
-    assertEquals(patched.status, 200);
+    expect(patched.status).toBe(200);
     const after: SettingsResult = await json(patched);
-    assertEquals(after.settings.name, "Wayfarer");
-    assertEquals(after.settings.llm.context.glossary, false);
-    assertEquals(after.settings.llm.context.fileContext, true);
+    expect(after.settings.name).toBe("Wayfarer");
+    expect(after.settings.llm.context.glossary).toBe(false);
+    expect(after.settings.llm.context.fileContext).toBe(true);
     const invalid = await as("admin", "/api/v1/settings", {
       method: "PATCH",
       json: { llm: { promptTemplate: "No strings" } },
     });
-    assertEquals(invalid.status, 400);
-    assertEquals((await json(invalid)).error.code, "bad_request");
+    expect(invalid.status).toBe(400);
+    expect((await json(invalid)).error.code).toBe("bad_request");
 
     const added = await as("admin", "/api/v1/languages", { method: "POST", json: { tag: "fr" } });
-    assertEquals(added.status, 201);
-    assertEquals((await json(added)).language.tag, "fr");
+    expect(added.status).toBe(201);
+    expect((await json(added)).language.tag).toBe("fr");
     const changed = await as("admin", "/api/v1/languages/pl", {
       method: "PATCH",
       json: { instructions: "Informal." },
     });
-    assertEquals((await json(changed)).instructions, "Informal.");
+    expect((await json(changed)).instructions).toBe("Informal.");
     const removed = await as("admin", "/api/v1/languages/de", { method: "DELETE" });
-    assertEquals(await json(removed), { ok: true });
+    expect(await json(removed)).toStrictEqual({ ok: true });
 
     const file = await as("manager", "/api/v1/files/1", {
       method: "PATCH",
       json: { context: "Menus." },
     });
-    assertEquals(file.status, 200);
-    assertEquals((await json(file)).context, "Menus.");
+    expect(file.status).toBe(200);
+    expect((await json(file)).context).toBe("Menus.");
 
     const string = await as("admin", "/api/v1/strings/1", {
       method: "PATCH",
       json: { description: "The title", maxLength: 20 },
     });
-    assertEquals(await json(string), {
+    expect(await json(string)).toStrictEqual({
       id: 1,
       description: "The title",
       maxLength: 20,
@@ -299,8 +293,8 @@ test("admin routes: settings, languages, files, strings and renames", async () =
       method: "POST",
       json: { file: "common.json", from: "menu.play", to: "menu.quit" },
     });
-    assertEquals(rename.status, 400);
-    assertStringIncludes((await json(rename)).error.message, "the English still has it");
+    expect(rename.status).toBe(400);
+    expect((await json(rename)).error.message).toContain("the English still has it");
   } finally {
     instance.close();
   }
@@ -315,20 +309,17 @@ test("GET /admin adds the server's version, setup and recent errors", async () =
     const response = await call(app, "/api/v1/admin", {
       headers: { Authorization: "Bearer admin" },
     });
-    assertEquals(response.status, 200);
+    expect(response.status).toBe(200);
     const info: AdminInfo = await response.json();
-    assertEquals(info.version, "9.9.9");
-    assertEquals(info.setup, "cloudflare");
-    assertEquals(
-      info.recentErrors.map((error) => error.message),
-      ["Something broke"],
-    );
-    assertEquals(info.recentErrors[0].requestId, "r-1");
+    expect(info.version).toBe("9.9.9");
+    expect(info.setup).toBe("cloudflare");
+    expect(info.recentErrors.map((error) => error.message)).toStrictEqual(["Something broke"]);
+    expect(info.recentErrors[0].requestId).toBe("r-1");
     assert(info.database.revision > 0);
     const denied = await call(app, "/api/v1/admin", {
       headers: { Authorization: "Bearer manager" },
     });
-    assertEquals(denied.status, 403);
+    expect(denied.status).toBe(403);
 
     // A restore that didn't finish comes first: the data may be incomplete.
     instance.sql.run(
@@ -340,11 +331,11 @@ test("GET /admin adds the server's version, setup and recent errors", async () =
         headers: { Authorization: "Bearer admin" },
       })
     ).json();
-    assertEquals(
-      unfinished.recentErrors.map((error) => error.at),
-      [1_000, info.recentErrors[0].at],
-    );
-    assertStringIncludes(unfinished.recentErrors[0].message, "restore of a backup didn't finish");
+    expect(unfinished.recentErrors.map((error) => error.at)).toStrictEqual([
+      1_000,
+      info.recentErrors[0].at,
+    ]);
+    expect(unfinished.recentErrors[0].message).toContain("restore of a backup didn't finish");
   } finally {
     instance.close();
   }
@@ -358,28 +349,26 @@ test("GET /backup?format=json streams the backup document", async () => {
     const response = await call(app, "/api/v1/backup?format=json", {
       headers: { Authorization: "Bearer admin" },
     });
-    assertEquals(response.status, 200);
-    assertMatch(
-      response.headers.get("Content-Disposition") ?? "",
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Disposition") ?? "").toMatch(
       /^attachment; filename="quaso-backup-\d{8}T\d{6}Z\.json"$/,
     );
-    assertEquals(response.headers.get("Cache-Control"), "private, no-store");
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
     const document: BackupDocument = await response.json();
-    assertEquals(document.format, "quaso-backup");
+    expect(document.format).toBe("quaso-backup");
     const strings = instance.sql.query("SELECT * FROM strings ORDER BY id");
-    assertEquals(document.tables.strings, strings);
+    expect(document.tables.strings).toStrictEqual(strings);
     const denied = await call(app, "/api/v1/backup?format=json", {
       headers: { Authorization: "Bearer manager" },
     });
-    assertEquals(denied.status, 403);
-    assertEquals(
+    expect(denied.status).toBe(403);
+    expect(
       (
         await call(app, "/api/v1/backup?format=zip", {
           headers: { Authorization: "Bearer admin" },
         })
       ).status,
-      400,
-    );
+    ).toBe(400);
   } finally {
     instance.close();
   }
@@ -387,17 +376,15 @@ test("GET /backup?format=json streams the backup document", async () => {
 
 /** Saves a response's body to a file and opens it as a SQLite database. */
 async function downloadDatabase(response: Response, dir: string): Promise<DatabaseSync> {
-  assertEquals(
+  expect(
     response.status,
-    200,
     await response
       .clone()
       .text()
       .catch(() => ""),
-  );
-  assertEquals(response.headers.get("Content-Type"), "application/vnd.sqlite3");
-  assertMatch(
-    response.headers.get("Content-Disposition") ?? "",
+  ).toBe(200);
+  expect(response.headers.get("Content-Type")).toBe("application/vnd.sqlite3");
+  expect(response.headers.get("Content-Disposition") ?? "").toMatch(
     /filename="quaso-backup-\d{8}T\d{6}Z\.sqlite"/,
   );
   const path = join(await fs.realpath(dir), "download.sqlite");
@@ -420,7 +407,7 @@ function plain(rows: Record<string, unknown>[]) {
 }
 
 test("GET /backup with local storage: a consistent SQLite copy, then the file is gone", async () => {
-  const dir = await Deno.makeTempDir();
+  const dir = await fs.mkdtemp(join(tmpdir(), "quaso-test-"));
   const config = testConfig({ DATA_DIR: dir, SECRET_KEY: "k".repeat(64) });
   const local = await startLocalService(config, silentLogger);
   try {
@@ -434,15 +421,17 @@ test("GET /backup with local storage: a consistent SQLite copy, then the file is
     const copy = await downloadDatabase(response, dir);
     try {
       const read = (sql: string) => plain(copy.prepare(sql).all() as Record<string, unknown>[]);
-      assertEquals(tables(read), { ...tables((sql) => local.storage.sql.query(sql)), secrets: [] });
+      expect(tables(read)).toStrictEqual({
+        ...tables((sql) => local.storage.sql.query(sql)),
+        secrets: [],
+      });
     } finally {
       copy.close();
     }
-    assertEquals(
+    expect(
       [...fsSync.readdirSync(local.storage.tempDir, { withFileTypes: true })],
-      [],
       "the temporary file is gone",
-    );
+    ).toStrictEqual([]);
   } finally {
     local.storage.close();
     await fs.rm(dir, { recursive: true });
@@ -450,7 +439,7 @@ test("GET /backup with local storage: a consistent SQLite copy, then the file is
 });
 
 test("GET /backup selects retained and pre-migration copies, checks permission and restores the earlier project", async () => {
-  const dir = await Deno.makeTempDir();
+  const dir = await fs.mkdtemp(join(tmpdir(), "quaso-test-"));
   const source = await startLocalService(
     testConfig({ DATA_DIR: join(dir, "source") }),
     silentLogger,
@@ -492,25 +481,22 @@ test("GET /backup selects retained and pre-migration copies, checks permission a
     });
     const auth = { headers: { Authorization: "Bearer admin" } };
     const at = encodeURIComponent(new Date(firstAt + 1000).toISOString());
-    assertEquals((await call(app, `/api/v1/backup?at=${at}`)).status, 401);
-    assertEquals(
+    expect((await call(app, `/api/v1/backup?at=${at}`)).status).toBe(401);
+    expect(
       (await call(app, `/api/v1/backup?at=${at}`, { headers: { Authorization: "Bearer manager" } }))
         .status,
-      403,
-    );
-    assertEquals(
-      (await call(app, "/api/v1/backup?file=published/de/common.json", auth)).status,
+    ).toBe(403);
+    expect((await call(app, "/api/v1/backup?file=published/de/common.json", auth)).status).toBe(
       400,
     );
-    assertEquals((await call(app, `/api/v1/backup?at=${at}&file=${firstKey}`, auth)).status, 400);
-    assertEquals((await call(app, "/api/v1/backup?at=2026-01-01T00:00Z", auth)).status, 404);
-    const jsonResponse = await call(app, `/api/v1/backup?at=${at}&format=json`, auth);
-    assertEquals(jsonResponse.status, 200);
-    const document: BackupDocument = await jsonResponse.json();
-    assertEquals(
-      document.tables.translations.map((row) => row.value),
-      ['"Wanderer"'],
+    expect((await call(app, `/api/v1/backup?at=${at}&file=${firstKey}`, auth)).status).toBe(400);
+    expect((await call(app, "/api/v1/backup?at=2026-01-01T00:00Z", auth)).status).toStrictEqual(
+      404,
     );
+    const jsonResponse = await call(app, `/api/v1/backup?at=${at}&format=json`, auth);
+    expect(jsonResponse.status).toBe(200);
+    const document: BackupDocument = await jsonResponse.json();
+    expect(document.tables.translations.map((row) => row.value)).toStrictEqual(['"Wanderer"']);
     const migration = await call(
       app,
       `/api/v1/backup?file=${encodeURIComponent(migrationKeys[0])}`,
@@ -518,8 +504,7 @@ test("GET /backup selects retained and pre-migration copies, checks permission a
     );
     const migratedCopy = await downloadDatabase(migration, dir);
     try {
-      assertEquals(
-        migratedCopy.prepare("SELECT value FROM translations").get()?.value,
+      expect(migratedCopy.prepare("SELECT value FROM translations").get()?.value).toStrictEqual(
         '"Later title"',
       );
     } finally {
@@ -531,13 +516,12 @@ test("GET /backup selects retained and pre-migration copies, checks permission a
     await restoreFile(target.service, join(dir, "download.sqlite"), {
       tempDir: target.storage.tempDir,
     });
-    assertEquals((await target.service.exportFiles(SYSTEM, {})).files, expected);
-    assertEquals(
+    expect((await target.service.exportFiles(SYSTEM, {})).files).toStrictEqual(expected);
+    expect(
       (await target.service.getPublishedFile(SYSTEM, { file: "common.json", language: "de" }))
         .content,
-      expected[0].content,
-    );
-    assertEquals(await fs.readdir(source.storage.tempDir), []);
+    ).toStrictEqual(expected[0].content);
+    expect(await fs.readdir(source.storage.tempDir)).toStrictEqual([]);
   } finally {
     source.storage.close();
     target.storage.close();
@@ -546,7 +530,7 @@ test("GET /backup selects retained and pre-migration copies, checks permission a
 });
 
 test("GET /backup with Cloudflare storage: a SQLite file built from the rows", async () => {
-  const dir = await Deno.makeTempDir();
+  const dir = await fs.mkdtemp(join(tmpdir(), "quaso-test-"));
   const instance = await memoryService();
   try {
     const people = await project(instance.service, instance.sql);
@@ -561,7 +545,7 @@ test("GET /backup with Cloudflare storage: a SQLite file built from the rows", a
       for (const secret of ["sessions", "email_tokens"]) {
         if (secret in expected) expected[secret] = [];
       }
-      assertEquals(tables(read), expected);
+      expect(tables(read)).toStrictEqual(expected);
     } finally {
       copy.close();
     }
@@ -597,27 +581,26 @@ test("POST /restore: only with the setup key, only before setup", async () => {
     ).text();
 
     const missing = await restore(target.app, backup);
-    assertEquals(missing.status, 401);
+    expect(missing.status).toBe(401);
     const wrong = await restore(target.app, backup, "not-the-token");
-    assertEquals(wrong.status, 403);
-    assertEquals((await json(wrong)).error.code, "forbidden");
+    expect(wrong.status).toBe(403);
+    expect((await json(wrong)).error.code).toBe("forbidden");
     const empty = await restore(target.app, "", target.token);
-    assertEquals(empty.status, 400);
+    expect(empty.status).toBe(400);
 
     const response = await restore(target.app, backup, target.token);
-    assertEquals(response.status, 200);
+    expect(response.status).toBe(200);
     const result = await response.json();
-    assertEquals(result.tables.strings, 4);
+    expect(result.tables.strings).toBe(4);
     const restored = await target.service.getProject(ANONYMOUS, {});
-    assertEquals(restored.details.strings, 4);
-    assertEquals(
-      (await target.service.exportFiles(SYSTEM, {})).files,
+    expect(restored.details.strings).toBe(4);
+    expect((await target.service.exportFiles(SYSTEM, {})).files).toStrictEqual(
       (await source.service.exportFiles(SYSTEM, {})).files,
     );
 
     // Set up now: the token is spent, and the instance isn't empty.
     const again = await restore(target.app, backup, target.token);
-    assertEquals(again.status, 403);
+    expect(again.status).toBe(403);
   } finally {
     source.close();
     target.close();
@@ -626,16 +609,16 @@ test("POST /restore: only with the setup key, only before setup", async () => {
 
 test("POST /restore takes SQLite files and gzip-compressed JSON too", async () => {
   const source = await memoryService();
-  const dir = await Deno.makeTempDir();
+  const dir = await fs.mkdtemp(join(tmpdir(), "quaso-test-"));
   try {
     const people = await project(source.service, source.sql);
     const { app } = appFor(source.service, people);
     const download = await call(app, "/api/v1/backup?format=sqlite", {
       headers: { Authorization: "Bearer admin" },
     });
-    assertEquals(download.status, 200);
+    expect(download.status).toBe(200);
     const sqlite = new Uint8Array(await download.arrayBuffer());
-    assertEquals(new TextDecoder().decode(sqlite.subarray(0, 15)), "SQLite format 3");
+    expect(new TextDecoder().decode(sqlite.subarray(0, 15))).toBe("SQLite format 3");
     const text = await (
       await call(app, "/api/v1/backup?format=json", {
         headers: { Authorization: "Bearer admin" },
@@ -649,9 +632,8 @@ test("POST /restore takes SQLite files and gzip-compressed JSON too", async () =
       const target = await newInstance();
       try {
         const response = await restore(target.app, body, target.token);
-        assertEquals(response.status, 200, await response.clone().text());
-        assertEquals(
-          (await target.service.exportFiles(SYSTEM, {})).files,
+        expect(response.status, await response.clone().text()).toBe(200);
+        expect((await target.service.exportFiles(SYSTEM, {})).files).toStrictEqual(
           (await source.service.exportFiles(SYSTEM, {})).files,
         );
       } finally {
@@ -661,8 +643,8 @@ test("POST /restore takes SQLite files and gzip-compressed JSON too", async () =
     const target = await newInstance();
     try {
       const garbage = await restore(target.app, "this is no backup", target.token);
-      assertEquals(garbage.status, 400);
-      assertEquals((await target.service.getProject(ANONYMOUS, {})).details.strings, 0);
+      expect(garbage.status).toBe(400);
+      expect((await target.service.getProject(ANONYMOUS, {})).details.strings).toBe(0);
     } finally {
       target.close();
     }
@@ -679,12 +661,12 @@ test("the OpenAPI document lists the administrators' routes", async () => {
     const document = await (await call(app, "/api/v1/openapi.json")).json();
     assert(document.paths["/settings"].patch);
     assert(document.paths["/languages/{tag}"].delete);
-    assertEquals(Object.keys(document.paths["/backup"].get.responses["200"].content), [
+    expect(Object.keys(document.paths["/backup"].get.responses["200"].content)).toStrictEqual([
       "application/vnd.sqlite3",
       "application/json",
     ]);
     assert(document.paths["/restore"].post.requestBody.content["application/vnd.sqlite3"]);
-    assertStringIncludes(document.paths["/restore"].post.description, "setup key");
+    expect(document.paths["/restore"].post.description).toContain("setup key");
   } finally {
     instance.close();
   }

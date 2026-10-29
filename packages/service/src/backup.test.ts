@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
-import { assert, assertEquals, assertRejects, assertStringIncludes } from "@std/assert";
+import { assert, expect, test } from "vitest";
 import type { BackupDocument } from "@quaso/core";
 import { type Actor, ANONYMOUS, SYSTEM } from "./api.ts";
 import {
@@ -97,53 +96,48 @@ function comparable(document: BackupDocument) {
 test("backup JSON round trip: an empty instance gets identical exports, statuses and history", async () => {
   using a = await richInstance();
   const document = await backupOf(a.service, a.admin);
-  assertEquals(document.format, "quaso-backup");
-  assertEquals(document.version, 1);
-  assertEquals(document.schemaVersion, DATABASE_VERSION);
-  assertEquals(document.revision, getRevision(a.sql));
-  assertEquals(document.tables.strings.length, count(a.sql, "strings"));
-  assertEquals(document.tables.history.length, count(a.sql, "history"));
-  for (const table of SECRET_TABLES) assertEquals(document.tables[table], undefined);
+  expect(document.format).toBe("quaso-backup");
+  expect(document.version).toBe(1);
+  expect(document.schemaVersion).toStrictEqual(DATABASE_VERSION);
+  expect(document.revision).toStrictEqual(getRevision(a.sql));
+  expect(document.tables.strings.length).toStrictEqual(count(a.sql, "strings"));
+  expect(document.tables.history.length).toStrictEqual(count(a.sql, "history"));
+  for (const table of SECRET_TABLES) expect(document.tables[table]).toBe(undefined);
 
   using b = await startTestService();
   const result = await restoreBackup(b.service, documentSource(document));
-  assertEquals(result.schemaVersion, { from: DATABASE_VERSION, to: DATABASE_VERSION });
-  assertEquals(result.tables.strings, count(a.sql, "strings"));
-  assertEquals(result.revision, document.revision + 1);
+  expect(result.schemaVersion).toStrictEqual({ from: DATABASE_VERSION, to: DATABASE_VERSION });
+  expect(result.tables.strings).toStrictEqual(count(a.sql, "strings"));
+  expect(result.revision).toStrictEqual(document.revision + 1);
 
   const exportA = await a.service.exportFiles(SYSTEM, {});
   const exportB = await b.service.exportFiles(SYSTEM, {});
-  assertEquals(exportB.files, exportA.files);
+  expect(exportB.files).toStrictEqual(exportA.files);
   const statusA = await a.service.getStatus(SYSTEM, {});
   const statusB = await b.service.getStatus(SYSTEM, {});
-  assertEquals(statusB.languages, statusA.languages);
+  expect(statusB.languages).toStrictEqual(statusA.languages);
   for (const [file, key] of [
     ["common.json", "title"],
     ["big.json", "key7"],
   ]) {
     const id = stringId(a.sql, file, key);
-    assertEquals(
-      await b.service.getHistory(ANONYMOUS, { id }),
+    expect(await b.service.getHistory(ANONYMOUS, { id })).toStrictEqual(
       await a.service.getHistory(ANONYMOUS, { id }),
     );
   }
-  assertEquals(
-    (await b.service.getSettings(SYSTEM, {})).settings,
+  expect((await b.service.getSettings(SYSTEM, {})).settings).toStrictEqual(
     (await a.service.getSettings(SYSTEM, {})).settings,
   );
   // A backup of the new instance is the same backup.
   const again = await backupOf(b.service);
-  assertEquals(comparable(again), comparable(document));
+  expect(comparable(again)).toStrictEqual(comparable(document));
   // The API key works on the new instance, and so does the administrator.
   const token = await b.service.authenticateToken(SYSTEM, { secret: a.secret });
-  assertEquals(token?.name, "CI");
+  expect(token?.name).toBe("CI");
   // The last backup was A's (a file of A's setup), not the new instance's.
-  assertEquals((await a.service.getAdminInfo(a.admin, {})).lastBackup?.at, START_TIME);
-  assertEquals(
-    document.tables.meta.some((row) => row.key === "last_backup"),
-    false,
-  );
-  assertEquals((await b.service.getAdminInfo(a.admin, {})).lastBackup, null);
+  expect((await a.service.getAdminInfo(a.admin, {})).lastBackup?.at).toStrictEqual(START_TIME);
+  expect(document.tables.meta.some((row) => row.key === "last_backup")).toBe(false);
+  expect((await b.service.getAdminInfo(a.admin, {})).lastBackup).toBe(null);
 });
 
 test("a restore never brings the last backup of the instance the backup comes from", async () => {
@@ -156,13 +150,12 @@ test("a restore never brings the last backup of the instance the backup comes fr
   });
   using b = await startTestService();
   const result = await restoreBackup(b.service, documentSource(document));
-  assertEquals(
-    result.tables.meta,
+  expect(result.tables.meta).toStrictEqual(
     document.tables.meta.filter(
       (row) => !["schema_version", "schema_generation", "last_backup"].includes(row.key as string),
     ).length,
   );
-  assertEquals((await b.service.getAdminInfo(a.admin, {})).lastBackup, null);
+  expect((await b.service.getAdminInfo(a.admin, {})).lastBackup).toBe(null);
 });
 
 /**
@@ -205,13 +198,14 @@ test("a backup is one moment's copy: a write while it is read fails it, and it s
   using a = await translatedInstance();
   // Without the check, key3's translation would be in the document twice (its old row and
   // its new one), and the document wouldn't restore.
-  const failed = await assertRejects(
-    () =>
-      new Response(backupJsonStream(writeWhileRead(a, a.admin, 1), a.admin, { chunk: 128 })).text(),
-    ServiceError,
-  );
-  assertEquals(failed.code, "conflict");
-  assertEquals(failed.message, BACKUP_CHANGED);
+  const failed = await new Response(
+    backupJsonStream(writeWhileRead(a, a.admin, 1), a.admin, { chunk: 128 }),
+  )
+    .text()
+    .catch((error: unknown) => error);
+  assert(failed instanceof ServiceError);
+  expect(failed.code).toBe("conflict");
+  expect(failed.message).toStrictEqual(BACKUP_CHANGED);
 
   let attempts = 0;
   const source = writeWhileRead(a, a.admin, 1);
@@ -220,62 +214,57 @@ test("a backup is one moment's copy: a write while it is read fails it, and it s
     const stream = backupJsonStream(source, a.admin, { chunk: 128 });
     return JSON.parse(await new Response(stream).text()) as BackupDocument;
   });
-  assertEquals(attempts, 2);
-  assertEquals(document.tables.translations.length, count(a.sql, "translations"));
-  assertEquals(document.tables.history.length, count(a.sql, "history"));
+  expect(attempts).toBe(2);
+  expect(document.tables.translations.length).toStrictEqual(count(a.sql, "translations"));
+  expect(document.tables.history.length).toStrictEqual(count(a.sql, "history"));
   const key3 = stringId(a.sql, "big.json", "key3");
-  assertEquals(
+  expect(
     document.tables.translations.filter((row) => row.string_id === key3).map((row) => row.value),
-    ['"Text 3 again (0)"'],
-  );
+  ).toStrictEqual(['"Text 3 again (0)"']);
   using b = await startTestService();
   const result = await restoreBackup(b.service, documentSource(document));
-  assertEquals(result.tables.translations, count(a.sql, "translations"));
-  assertEquals(comparable(await backupOf(b.service)), comparable(await backupOf(a.service)));
+  expect(result.tables.translations).toStrictEqual(count(a.sql, "translations"));
+  expect(comparable(await backupOf(b.service))).toStrictEqual(
+    comparable(await backupOf(a.service)),
+  );
 });
 
 test("a backup that writes keep interrupting fails loudly, as unavailable", async () => {
   using a = await translatedInstance();
   const source = writeWhileRead(a, a.admin, 10);
-  const error = await assertRejects(
-    () =>
-      withBackupRetries(() =>
-        new Response(backupJsonStream(source, a.admin, { chunk: 128 })).text(),
-      ),
-    ServiceError,
-  );
-  assertEquals(error.code, "unavailable");
-  assertStringIncludes(error.message, "3 times in a row");
+  const error = await withBackupRetries(() =>
+    new Response(backupJsonStream(source, a.admin, { chunk: 128 })).text(),
+  ).catch((error: unknown) => error);
+  assert(error instanceof ServiceError);
+  expect(error.code).toBe("unavailable");
+  expect(error.message).toContain("3 times in a row");
   // Other errors aren't tried again.
   let calls = 0;
-  const other = await assertRejects(
-    () =>
-      withBackupRetries(() => {
-        calls++;
-        return Promise.reject(new ServiceError("conflict", "Something else"));
-      }),
-    ServiceError,
-  );
-  assertEquals([other.message, calls], ["Something else", 1]);
+  const other = await withBackupRetries(() => {
+    calls++;
+    return Promise.reject(new ServiceError("conflict", "Something else"));
+  }).catch((error: unknown) => error);
+  assert(other instanceof ServiceError);
+  expect([other.message, calls]).toStrictEqual(["Something else", 1]);
 });
 
 test("a new row anywhere changes the state a backup is read at; reading a database needs no service", async () => {
   using a = await richInstance();
   const info = await a.service.backupInfo(a.admin, {});
   const chunk = await a.service.backupTables(a.admin, { table: "files", state: info.state });
-  assertEquals(chunk.rows.length, 2);
+  expect(chunk.rows.length).toBe(2);
   // An API key changes no revision, but it is a new row.
   await a.service.createApiToken(a.admin, { name: "Other", scope: "read" });
-  assertEquals(getRevision(a.sql), info.revision);
-  const error = await assertRejects(
-    () => a.service.backupTables(a.admin, { table: "files", state: info.state }),
-    ServiceError,
-  );
-  assertEquals(error.message, BACKUP_CHANGED);
+  expect(getRevision(a.sql)).toStrictEqual(info.revision);
+  const error = await a.service
+    .backupTables(a.admin, { table: "files", state: info.state })
+    .catch((error: unknown) => error);
+  assert(error instanceof ServiceError);
+  expect(error.message).toStrictEqual(BACKUP_CHANGED);
   // The same document from the database itself, as the server reads a snapshot.
   const reader = sqlBackupReader(a.sql, () => START_TIME);
   const direct = JSON.parse(await new Response(backupJsonStream(reader, SYSTEM)).text());
-  assertEquals(direct.tables, (await backupOf(a.service)).tables);
+  expect(direct.tables).toStrictEqual((await backupOf(a.service)).tables);
 });
 
 test("a restore that didn't finish may start again only until the instance is used", async () => {
@@ -286,13 +275,23 @@ test("a restore that didn't finish may start again only until the instance is us
   for (const use of ["settings and an upload", "an API key"]) {
     using b = await startTestService();
     const { token } = await b.service.ensureSetupToken(SYSTEM, {});
-    await assertRejects(() => restoreBackup(b.service, cut), ServiceError, "incomplete");
+    await expect(restoreBackup(b.service, cut)).rejects.toThrow(
+      expect.objectContaining({
+        constructor: ServiceError,
+        message: expect.stringContaining("incomplete"),
+      }),
+    );
     // Nothing else wrote here: the restore may start again, with the setup token too.
-    await assertRejects(() => restoreBackup(b.service, cut), ServiceError, "incomplete");
-    assertEquals((await b.service.checkRestoreToken(SYSTEM, { token: token! })).ok, true);
+    await expect(restoreBackup(b.service, cut)).rejects.toThrow(
+      expect.objectContaining({
+        constructor: ServiceError,
+        message: expect.stringContaining("incomplete"),
+      }),
+    );
+    expect((await b.service.checkRestoreToken(SYSTEM, { token: token! })).ok).toBe(true);
     // The admin page says the data is incomplete.
     const [shown] = (await b.service.getAdminInfo(a.admin, {})).recentErrors;
-    assertStringIncludes(shown.message, "Run the restore again");
+    expect(shown.message).toContain("Run the restore again");
 
     // The backup's administrator goes on working on it.
     if (use === "an API key") {
@@ -302,34 +301,40 @@ test("a restore that didn't finish may start again only until the instance is us
       await uploadJson(b.service, { "real.json": { a: "Months of work" } }, { partial: true });
     }
     const strings = count(b.sql, "strings");
-    assertEquals((await b.service.checkRestoreToken(SYSTEM, { token: token! })).ok, false, use);
-    const rows = await assertRejects(
-      () => b.service.restoreRows(SYSTEM, { table: "files", rows: [] }),
-      ServiceError,
+    expect((await b.service.checkRestoreToken(SYSTEM, { token: token! })).ok, use).toStrictEqual(
+      false,
     );
-    assertEquals(rows.code, "conflict");
-    const refused = await assertRejects(() => restoreBackup(b.service, source), ServiceError);
-    assertEquals(refused.code, "conflict", use);
-    assertStringIncludes(refused.message, "an earlier restore didn't finish");
-    assertEquals(count(b.sql, "strings"), strings, "nothing was touched");
+    const rows = await b.service
+      .restoreRows(SYSTEM, { table: "files", rows: [] })
+      .catch((error: unknown) => error);
+    assert(rows instanceof ServiceError);
+    expect(rows.code).toBe("conflict");
+    const refused = await restoreBackup(b.service, source).catch((error: unknown) => error);
+    assert(refused instanceof ServiceError);
+    expect(refused.code, use).toBe("conflict");
+    expect(refused.message).toContain("an earlier restore didn't finish");
+    expect(count(b.sql, "strings"), "nothing was touched").toStrictEqual(strings);
     const [still] = (await b.service.getAdminInfo(a.admin, {})).recentErrors;
-    assertStringIncludes(still.message, "into a new, empty instance");
+    expect(still.message).toContain("into a new, empty instance");
   }
 
   // A restore that finishes leaves nothing on the admin page.
   using c = await startTestService();
   await restoreBackup(c.service, source);
-  assertEquals((await c.service.getAdminInfo(a.admin, {})).recentErrors, []);
+  expect((await c.service.getAdminInfo(a.admin, {})).recentErrors).toStrictEqual([]);
 });
 
 test("a restart doesn't count as using an instance whose restore didn't finish", async () => {
   using a = await richInstance();
   const source = documentSource(await backupOf(a.service));
   using b = await startTestService();
-  await assertRejects(
-    () => restoreBackup(b.service, { ...source, counts: { ...source.counts, strings: 1 } }),
-    ServiceError,
-    "incomplete",
+  await expect(
+    restoreBackup(b.service, { ...source, counts: { ...source.counts, strings: 1 } }),
+  ).rejects.toThrow(
+    expect.objectContaining({
+      constructor: ServiceError,
+      message: expect.stringContaining("incomplete"),
+    }),
   );
   // The server starts on it (and prints a setup link, and takes a scheduled snapshot), or a
   // newer release migrates it.
@@ -338,7 +343,7 @@ test("a restart doesn't count as using an instance whose restore didn't finish",
   await b.service.recordBackup(SYSTEM, { at: START_TIME, file: "backups/quaso-x.sqlite" });
   b.sql.script("CREATE TABLE later_feature (id INTEGER PRIMARY KEY)");
   const result = await restoreBackup(b.service, source);
-  assertEquals(result.tables.strings, count(a.sql, "strings"));
+  expect(result.tables.strings).toStrictEqual(count(a.sql, "strings"));
 });
 
 test("no LLM job runs on a restore that didn't finish; they go on once it does", async () => {
@@ -353,32 +358,38 @@ test("no LLM job runs on a restore that didn't finish; they go on once it does",
   assert(upload.job !== null);
   const source = documentSource(await backupOf(a.service));
   using b = await startTestService({ provider: createFakeTranslator() });
-  await assertRejects(
-    () => restoreBackup(b.service, { ...source, counts: { ...source.counts, strings: 9 } }),
-    ServiceError,
-    "incomplete",
+  await expect(
+    restoreBackup(b.service, { ...source, counts: { ...source.counts, strings: 9 } }),
+  ).rejects.toThrow(
+    expect.objectContaining({
+      constructor: ServiceError,
+      message: expect.stringContaining("incomplete"),
+    }),
   );
   // A restart arms the stored wake-up: the queued job must wait for the data.
   await b.service.start();
   await b.service.alarm();
-  assertEquals(count(b.sql, "translations"), 0);
-  assertEquals((await b.service.getJob(SYSTEM, { id: upload.job.id })).status, "queued");
+  expect(count(b.sql, "translations")).toBe(0);
+  expect((await b.service.getJob(SYSTEM, { id: upload.job.id })).status).toBe("queued");
 
   // Once the instance is used anyway, the restore is over: the jobs go on.
   using c = await startTestService({ provider: createFakeTranslator() });
-  await assertRejects(
-    () => restoreBackup(c.service, { ...source, counts: { ...source.counts, strings: 9 } }),
-    ServiceError,
-    "incomplete",
+  await expect(
+    restoreBackup(c.service, { ...source, counts: { ...source.counts, strings: 9 } }),
+  ).rejects.toThrow(
+    expect.objectContaining({
+      constructor: ServiceError,
+      message: expect.stringContaining("incomplete"),
+    }),
   );
   await uploadJson(c.service, { "other.json": { hello: "Hello" } }, { partial: true });
   await drain(c);
-  assertEquals((await c.service.getJob(SYSTEM, { id: upload.job.id })).status, "done");
+  expect((await c.service.getJob(SYSTEM, { id: upload.job.id })).status).toBe("done");
 
   await restoreBackup(b.service, source);
   await drain(b);
-  assertEquals((await b.service.getJob(SYSTEM, { id: upload.job.id })).status, "done");
-  assertEquals(count(b.sql, "translations"), 1);
+  expect((await b.service.getJob(SYSTEM, { id: upload.job.id })).status).toBe("done");
+  expect(count(b.sql, "translations")).toBe(1);
 });
 
 test("restored LLM jobs go on, paused ones too, as after a restart", async () => {
@@ -398,12 +409,12 @@ test("restored LLM jobs go on, paused ones too, as after a restart", async () =>
 
   using b = await startTestService({ provider: createFakeTranslator() });
   await restoreBackup(b.service, documentSource(document));
-  assertEquals(b.scheduler.scheduled.at(-1), b.clock.now, "woken up at once");
-  assertEquals((await b.service.getJob(SYSTEM, { id: upload.job.id })).status, "queued");
+  expect(b.scheduler.scheduled.at(-1), "woken up at once").toStrictEqual(b.clock.now);
+  expect((await b.service.getJob(SYSTEM, { id: upload.job.id })).status).toBe("queued");
   await drain(b);
-  assertEquals((await b.service.getJob(SYSTEM, { id: upload.job.id })).status, "done");
+  expect((await b.service.getJob(SYSTEM, { id: upload.job.id })).status).toBe("done");
   const page = await b.service.listStrings(ANONYMOUS, { language: "de" });
-  assertEquals(page.strings[0].translation?.colour, "green");
+  expect(page.strings[0].translation?.colour).toBe("green");
 });
 
 test("a backup only restores into an empty instance", async () => {
@@ -411,32 +422,31 @@ test("a backup only restores into an empty instance", async () => {
   const document = await backupOf(a.service);
   using b = await startTestService();
   await uploadJson(b.service, { "x.json": { a: "A" } });
-  const error = await assertRejects(
-    () => restoreBackup(b.service, documentSource(document)),
-    ServiceError,
+  const error = await restoreBackup(b.service, documentSource(document)).catch(
+    (error: unknown) => error,
   );
-  assertEquals(error.code, "conflict");
-  assertStringIncludes(error.message, "it has strings");
-  assertEquals(count(b.sql, "strings"), 1, "nothing was touched");
+  assert(error instanceof ServiceError);
+  expect(error.code).toBe("conflict");
+  expect(error.message).toContain("it has strings");
+  expect(count(b.sql, "strings"), "nothing was touched").toBe(1);
 
   using c = await startTestService();
   addUser(c.sql, "administrator");
-  const refused = await assertRejects(
-    () => restoreBackup(c.service, documentSource(document)),
-    ServiceError,
+  const refused = await restoreBackup(c.service, documentSource(document)).catch(
+    (error: unknown) => error,
   );
-  assertStringIncludes(refused.message, "people with roles");
+  assert(refused instanceof ServiceError);
+  expect(refused.message).toContain("people with roles");
 
   // People who only signed up (no role) are replaced by the backup's.
   using d = await startTestService();
   addUser(d.sql, "none", null, "Early bird");
   await restoreBackup(d.service, documentSource(document));
-  assertEquals(
+  expect(
     d.sql
       .query<{ display_name: string }>("SELECT display_name FROM users ORDER BY id")
       .map((row) => row.display_name),
-    ["Ada", "Carl"],
-  );
+  ).toStrictEqual(["Ada", "Carl"]);
 });
 
 test("only the system restores; administrators read backups", async () => {
@@ -444,79 +454,81 @@ test("only the system restores; administrators read backups", async () => {
   const manager = addUser(a.sql, "manager");
   const header = { format: "quaso-backup", version: 1, schemaVersion: DATABASE_VERSION };
   for (const actor of [a.admin, manager, ANONYMOUS]) {
-    const begin = await assertRejects(() => a.service.beginRestore(actor, header), ServiceError);
-    assertEquals(begin.code, "forbidden");
-    const rows = await assertRejects(
-      () => a.service.restoreRows(actor, { table: "files", rows: [] }),
-      ServiceError,
-    );
-    assertEquals(rows.code, "forbidden");
-    const finish = await assertRejects(
-      () => a.service.finishRestore(actor, { counts: {} }),
-      ServiceError,
-    );
-    assertEquals(finish.code, "forbidden");
-    const record = await assertRejects(
-      () => a.service.recordBackup(actor, { at: 1, file: null }),
-      ServiceError,
-    );
-    assertEquals(record.code, "forbidden");
+    const begin = await a.service.beginRestore(actor, header).catch((error: unknown) => error);
+    assert(begin instanceof ServiceError);
+    expect(begin.code).toBe("forbidden");
+    const rows = await a.service
+      .restoreRows(actor, { table: "files", rows: [] })
+      .catch((error: unknown) => error);
+    assert(rows instanceof ServiceError);
+    expect(rows.code).toBe("forbidden");
+    const finish = await a.service
+      .finishRestore(actor, { counts: {} })
+      .catch((error: unknown) => error);
+    assert(finish instanceof ServiceError);
+    expect(finish.code).toBe("forbidden");
+    const record = await a.service
+      .recordBackup(actor, { at: 1, file: null })
+      .catch((error: unknown) => error);
+    assert(record instanceof ServiceError);
+    expect(record.code).toBe("forbidden");
   }
   const info = await a.service.backupInfo(a.admin, {});
   assert(info.tables.some((table) => table.name === "strings"));
-  const denied = await assertRejects(() => a.service.backupInfo(manager, {}), ServiceError);
-  assertEquals(denied.code, "forbidden");
-  const unknown = await assertRejects(
-    () => a.service.backupTables(a.admin, { table: "sqlite_master" }),
-    ServiceError,
-  );
-  assertEquals(unknown.code, "not_found");
+  const denied = await a.service.backupInfo(manager, {}).catch((error: unknown) => error);
+  assert(denied instanceof ServiceError);
+  expect(denied.code).toBe("forbidden");
+  const unknown = await a.service
+    .backupTables(a.admin, { table: "sqlite_master" })
+    .catch((error: unknown) => error);
+  assert(unknown instanceof ServiceError);
+  expect(unknown.code).toBe("not_found");
 });
 
 test("restores refuse newer schemas, other formats, and incomplete tables", async () => {
   using a = await richInstance();
   using b = await startTestService();
-  const future = await assertRejects(
-    () =>
-      b.service.beginRestore(SYSTEM, {
-        format: "quaso-backup",
-        version: 1,
-        schemaVersion: DATABASE_VERSION + 1,
-      }),
-    ServiceError,
-  );
-  assertStringIncludes(future.message, "Upgrade Quaso");
-  const other = await assertRejects(
-    () => b.service.beginRestore(SYSTEM, { format: "crowdin", version: 1, schemaVersion: 1 }),
-    ServiceError,
-  );
-  assertStringIncludes(other.message, "isn't a Quaso backup");
-  const early = await assertRejects(
-    () => b.service.restoreRows(SYSTEM, { table: "files", rows: [] }),
-    ServiceError,
-  );
-  assertStringIncludes(early.message, "No restore is in progress");
+  const future = await b.service
+    .beginRestore(SYSTEM, {
+      format: "quaso-backup",
+      version: 1,
+      schemaVersion: DATABASE_VERSION + 1,
+    })
+    .catch((error: unknown) => error);
+  assert(future instanceof ServiceError);
+  expect(future.message).toContain("Upgrade Quaso");
+  const other = await b.service
+    .beginRestore(SYSTEM, { format: "crowdin", version: 1, schemaVersion: 1 })
+    .catch((error: unknown) => error);
+  assert(other instanceof ServiceError);
+  expect(other.message).toContain("isn't a Quaso backup");
+  const early = await b.service
+    .restoreRows(SYSTEM, { table: "files", rows: [] })
+    .catch((error: unknown) => error);
+  assert(early instanceof ServiceError);
+  expect(early.message).toContain("No restore is in progress");
 
   const document = await backupOf(a.service);
   const source = documentSource(document);
-  const wrong = await assertRejects(
-    () => restoreBackup(b.service, { ...source, counts: { ...source.counts, strings: 9999 } }),
-    ServiceError,
-  );
-  assertStringIncludes(wrong.message, "The restore is incomplete: strings");
+  const wrong = await restoreBackup(b.service, {
+    ...source,
+    counts: { ...source.counts, strings: 9999 },
+  }).catch((error: unknown) => error);
+  assert(wrong instanceof ServiceError);
+  expect(wrong.message).toContain("The restore is incomplete: strings");
   // The restore can start again, since it didn't finish.
   const result = await restoreBackup(b.service, source);
-  assertEquals(result.tables.strings, count(a.sql, "strings"));
+  expect(result.tables.strings).toStrictEqual(count(a.sql, "strings"));
 });
 
 test("blobs travel as base64", () => {
   const bytes = new Uint8Array([0, 1, 2, 250, 255]);
   const json = toJsonValue(bytes);
-  assertEquals(json, { $base64: "AAEC+v8=" });
-  assertEquals(fromJsonValue(json, "t"), bytes);
-  assertEquals(fromJsonValue(7, "t"), 7);
-  assertEquals(fromJsonValue(null, "t"), null);
-  assertEquals(toJsonValue(12n), 12);
+  expect(json).toStrictEqual({ $base64: "AAEC+v8=" });
+  expect(fromJsonValue(json, "t")).toStrictEqual(bytes);
+  expect(fromJsonValue(7, "t")).toBe(7);
+  expect(fromJsonValue(null, "t")).toBe(null);
+  expect(toJsonValue(12n)).toBe(12);
   const error = (() => {
     try {
       fromJsonValue({ $base64: "not base64!" }, "t");
@@ -524,16 +536,16 @@ test("blobs travel as base64", () => {
       return error as ServiceError;
     }
   })();
-  assertEquals(error?.code, "bad_request");
+  expect(error?.code).toBe("bad_request");
 });
 
 test("recordBackup keeps the newest backup", async () => {
   using instance = await startTestService();
   const admin = addUser(instance.sql, "administrator");
-  assertEquals((await instance.service.getAdminInfo(admin, {})).lastBackup, null);
+  expect((await instance.service.getAdminInfo(admin, {})).lastBackup).toBe(null);
   await instance.service.recordBackup(SYSTEM, { at: 2000, file: "b" });
   await instance.service.recordBackup(SYSTEM, { at: 1000, file: "a" });
-  assertEquals((await instance.service.getAdminInfo(admin, {})).lastBackup, {
+  expect((await instance.service.getAdminInfo(admin, {})).lastBackup).toStrictEqual({
     at: 2000,
     file: "b",
   });
@@ -546,25 +558,21 @@ test("the setup token stays out of backups, and lasts through a restore until it
   const { token } = await b.service.ensureSetupToken(SYSTEM, {});
   assert(token !== null);
   const own = await backupOf(b.service);
-  assertEquals(
-    own.tables.meta.some((row) => row.key === "setup_token"),
-    false,
-  );
+  expect(own.tables.meta.some((row) => row.key === "setup_token")).toBe(false);
 
   // A restore that fails can start again with the same token.
-  await assertRejects(
-    () => restoreBackup(b.service, { ...source, counts: { ...source.counts, strings: 1 } }),
-    ServiceError,
-  );
-  assertEquals((await b.service.checkRestoreToken(SYSTEM, { token })).ok, true);
-  assertEquals((await b.service.checkRestoreToken(SYSTEM, { token: "wrong" })).ok, false);
+  await expect(
+    restoreBackup(b.service, { ...source, counts: { ...source.counts, strings: 1 } }),
+  ).rejects.toThrow(ServiceError);
+  expect((await b.service.checkRestoreToken(SYSTEM, { token })).ok).toBe(true);
+  expect((await b.service.checkRestoreToken(SYSTEM, { token: "wrong" })).ok).toBe(false);
   await restoreBackup(b.service, source);
-  assertEquals((await b.service.validateSetupToken(ANONYMOUS, { token })).ok, false);
-  assertEquals((await b.service.checkRestoreToken(SYSTEM, { token })).ok, false);
-  const denied = await assertRejects(
-    () => b.service.checkRestoreToken(ANONYMOUS, { token }),
-    ServiceError,
-  );
-  assertEquals(denied.code, "forbidden");
-  assertEquals(count(b.sql, "meta", "key = 'setup_token'"), 0);
+  expect((await b.service.validateSetupToken(ANONYMOUS, { token })).ok).toBe(false);
+  expect((await b.service.checkRestoreToken(SYSTEM, { token })).ok).toBe(false);
+  const denied = await b.service
+    .checkRestoreToken(ANONYMOUS, { token })
+    .catch((error: unknown) => error);
+  assert(denied instanceof ServiceError);
+  expect(denied.code).toBe("forbidden");
+  expect(count(b.sql, "meta", "key = 'setup_token'")).toBe(0);
 });

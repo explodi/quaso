@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
-import { test } from "node:test";
+import { assert, expect, test } from "vitest";
 /** These probes ensure the CI gate rejects both state-update regressions. */
-import { assert, assertEquals } from "@std/assert";
 import { fileURLToPath as fromFileUrl } from "node:url";
 import { ESLint } from "eslint";
 
@@ -23,7 +22,7 @@ test("frontend lint gate rejects state updates in effects and render in both con
           ${body} return <p>{count}</p>; }`,
         { filePath: `${directory}/LintProbe.tsx` },
       );
-      assertEquals(result.fatalErrorCount, 0, "the probe must parse successfully");
+      expect(result.fatalErrorCount, "the probe must parse successfully").toBe(0);
       assert(result.messages.some((m) => m.ruleId === `react-hooks/${rule}` && m.severity === 2));
     }
     const [valid] = await eslint.lintText(
@@ -33,7 +32,7 @@ test("frontend lint gate rejects state updates in effects and render in both con
         return <Button onClick={() => setCount(count + 1)}>{count}</Button>; }`,
       { filePath: `${directory}/LintProbe.tsx` },
     );
-    assertEquals(valid.errorCount, 0);
+    expect(valid.errorCount).toBe(0);
   }
 });
 
@@ -69,16 +68,15 @@ test("native controls belong only in design-system primitive implementations", a
       { filePath: `${directory}/Probe.tsx` },
     );
     // The package itself imports its primitives relatively.
-    assertEquals(
+    expect(
       shared.messages.filter((message) => message.ruleId === "no-restricted-syntax"),
-      [],
-    );
+    ).toStrictEqual([]);
   }
   const [primitive] = await eslint.lintText(
     'export function Button() { return <button type="button" />; }',
     { filePath: "packages/design-system/src/components/Button.tsx" },
   );
-  assertEquals(primitive.errorCount, 0);
+  expect(primitive.errorCount).toBe(0);
   const [adapter] = await eslint.lintText(
     'export function ButtonLink() { return <a href="/" />; }',
     { filePath: "packages/web/src/components/Button.tsx" },
@@ -107,7 +105,7 @@ test("the design-system lint boundary rejects app and domain dependencies", asyn
   const [valid] = await eslint.lintText('export { Button } from "./Button.tsx";', {
     filePath: "packages/design-system/src/components/Probe.tsx",
   });
-  assertEquals(valid.errorCount, 0);
+  expect(valid.errorCount).toBe(0);
 });
 
 test("consumers use public package exports and the website cannot import app sources", async () => {
@@ -131,6 +129,6 @@ test("consumers use public package exports and the website cannot import app sou
     const [valid] = await eslint.lintText('export { Button } from "@quaso/design-system";', {
       filePath: `${directory}/Probe.tsx`,
     });
-    assertEquals(valid.errorCount, 0);
+    expect(valid.errorCount).toBe(0);
   }
 });
