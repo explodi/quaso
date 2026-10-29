@@ -2,7 +2,7 @@
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import * as fs from "node:fs/promises";
-import { assert, expect, test } from "vitest";
+import { expect, test } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { join } from "node:path";
 import {
@@ -68,40 +68,17 @@ test("snapshots: a complete copy, through a temporary file", async () => {
   });
 });
 
-/** Writes a row every millisecond until `copying` settles; returns the longest write. */
-async function longestWriteDuring(db: DatabaseSync, copying: Promise<void>): Promise<number> {
-  const insert = db.prepare("INSERT INTO strings (value) VALUES (?)");
-  let longest = 0;
-  const timer = setInterval(() => {
-    const started = performance.now();
-    insert.run("Written meanwhile");
-    longest = Math.max(longest, performance.now() - started);
-  }, 1);
-  try {
-    await copying;
-  } finally {
-    clearInterval(timer);
-  }
-  return longest;
-}
-
 test("snapshots: a worker copies on its own connection, while this one goes on", async () => {
   await withDatabase(async (db, dir) => {
-    db.exec(`WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 400000)
-      INSERT INTO strings (value) SELECT printf('A longer string, number %d, to copy', i) FROM n`);
-    // node:sqlite's backup runs off this thread, but holds this connection: writes wait for it.
-    const here = await longestWriteDuring(db, copyInto(db, join(dir, "backups", "here.sqlite")));
-
+    // A write transaction left open here would block a copy on this connection; the worker
+    // reads the last commit on its own and finishes.
+    db.exec("BEGIN IMMEDIATE");
+    db.prepare("INSERT INTO strings (value) VALUES (?)").run("Not committed");
     const path = join(dir, "backups", "copy.sqlite");
-    const longest = await longestWriteDuring(db, snapshotInWorker(join(dir, "quaso.sqlite"), path));
-    const copied = rows(path);
-    expect(copied.slice(0, 3)).toStrictEqual(["Play", "Quit", "Options"]);
-    assert(copied.length >= 400_003, String(copied.length));
+    await snapshotInWorker(join(dir, "quaso.sqlite"), path);
+    db.exec("COMMIT");
+    expect(rows(path)).toStrictEqual(["Play", "Quit", "Options"]);
     expect(await exists(`${path}.partial`)).toBe(false);
-    assert(
-      longest < here * 0.6,
-      `a write waited ${Math.round(longest)} ms; ${Math.round(here)} ms with a copy on this connection`,
-    );
     await expect(snapshotInWorker(join(dir, "missing.sqlite"), path)).rejects.toThrow();
   });
 });
