@@ -6,6 +6,7 @@ import {
   apiUrl,
   browserAuthUrl,
   configureApi,
+  downloadFile,
   errorFromResponse,
   errorMessage,
   getProject,
@@ -211,4 +212,43 @@ test("a 401 outside sign-in tells the session module, which fetches the session 
   } finally {
     configureApi({ onUnauthorized: null });
   }
+});
+
+test("a downloaded file keeps the name the server gave it", async () => {
+  const calls = fakeServer(
+    () =>
+      new Response("SQLite format 3", {
+        headers: {
+          "Content-Type": "application/vnd.sqlite3",
+          "Content-Disposition": 'attachment; filename="quaso-backup-20261103T124131Z.sqlite"',
+        },
+      }),
+  );
+  const file = await downloadFile("/backup", {
+    query: { format: "sqlite" },
+    fallbackName: "quaso-backup.sqlite",
+  });
+  expect(calls[0].url).toBe("/api/v1/backup?format=sqlite");
+  expect(calls[0].init.credentials).toBe("same-origin");
+  expect(file.name).toBe("quaso-backup-20261103T124131Z.sqlite");
+  expect(await file.blob.text()).toBe("SQLite format 3");
+});
+
+test("a downloaded file without a name takes the fallback", async () => {
+  fakeServer(() => new Response("{}"));
+  const file = await downloadFile("/backup", { fallbackName: "quaso-backup.json" });
+  expect(file.name).toBe("quaso-backup.json");
+});
+
+test("a failed download is an ApiError with the server's message", async () => {
+  fakeServer(() =>
+    Response.json(
+      { error: { code: "unavailable", message: "The backup kept changing; try again." } },
+      { status: 503 },
+    ),
+  );
+  const failure = downloadFile("/backup", { fallbackName: "quaso-backup.sqlite" });
+  await expect(failure).rejects.toThrow(
+    new ApiError(503, "unavailable", "The backup kept changing; try again."),
+  );
 });
