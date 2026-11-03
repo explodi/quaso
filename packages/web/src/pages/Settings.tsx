@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 import {
-  A,
   Button,
   Details,
   Fieldset,
@@ -52,8 +51,8 @@ import {
 } from "@quaso/core";
 import { Access, ConfirmButton, LanguagePicker, OneTimeSecret } from "../components/Management.tsx";
 import { ModelSelect } from "../components/ModelSelect.tsx";
-import { apiUrl, errorMessage, request } from "../lib/api.ts";
-import { queryCache, useQuery } from "../lib/data.ts";
+import { downloadFile, errorMessage, request } from "../lib/api.ts";
+import { queryCache, useMutation, useQuery } from "../lib/data.ts";
 import { fieldError, validated } from "../lib/forms.ts";
 import { SETTINGS_SECTIONS, SettingsNavigation } from "../components/SettingsNavigation.tsx";
 import { useRoute } from "../lib/router.tsx";
@@ -1586,16 +1585,8 @@ function SettingsContent() {
                     <p>
                       Backups include user records and API key hashes. Keep them in private storage.
                     </p>
-                    <p>
-                      <A href={apiUrl("/backup", { format: "sqlite" })} download>
-                        Download SQLite backup
-                      </A>
-                    </p>
-                    <p>
-                      <A href={apiUrl("/backup", { format: "json" })} download>
-                        Download JSON backup
-                      </A>
-                    </p>
+                    <BackupDownload format="sqlite" label="Download SQLite backup" />
+                    <BackupDownload format="json" label="Download JSON backup" />
                   </section>
                   <AdminDetails backupsOnly />
                 </>
@@ -1607,6 +1598,39 @@ function SettingsContent() {
     </div>
   );
 }
+/**
+ * A backup download. The server builds the whole file before sending its first byte, which
+ * takes a while on Cloudflare storage, so the button says so instead of seeming to do nothing.
+ */
+function BackupDownload({ format, label }: { format: "sqlite" | "json"; label: string }) {
+  const download = useMutation(async () => {
+    const file = await downloadFile("/backup", {
+      query: { format },
+      fallbackName: `quaso-backup.${format}`,
+    });
+    const url = URL.createObjectURL(file.blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = file.name;
+    link.click();
+    // Revoking at once can cancel the save in Safari, which reads the URL after the click.
+    setTimeout(() => URL.revokeObjectURL(url), 40_000);
+  });
+  return (
+    <div>
+      <p>
+        <Button busy={download.pending} onClick={() => download.run().catch(() => {})}>
+          {label}
+        </Button>
+      </p>
+      {download.pending && (
+        <p role="status">Preparing the backup. Large projects can take a few minutes.</p>
+      )}
+      {download.error !== undefined && <p role="alert">{errorMessage(download.error)}</p>}
+    </div>
+  );
+}
+
 export function SettingsPage() {
   return (
     <Access action="settings">

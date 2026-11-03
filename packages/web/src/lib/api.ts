@@ -184,8 +184,39 @@ function sameOrigin(): boolean {
 
 /** Sends a request to the API and returns its JSON, or throws an `ApiError`. */
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const method = options.method ?? "GET";
-  const headers: Record<string, string> = { Accept: "application/json" };
+  const response = await send(path, options, "application/json");
+  const text = await response.text();
+  if (text === "") return undefined as T;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new ApiError(response.status, "internal", "The server's answer isn't valid JSON.");
+  }
+}
+
+/** A file the API sent, with the name its `Content-Disposition` gave. */
+export interface DownloadedFile {
+  blob: Blob;
+  name: string;
+}
+
+/**
+ * Fetches a file from the API, such as a backup, or throws an `ApiError`. Unlike a link, the
+ * page knows while the server prepares the file and can show why it failed.
+ */
+export async function downloadFile(
+  path: string,
+  options: { query?: Record<string, QueryValue>; fallbackName: string },
+): Promise<DownloadedFile> {
+  const response = await send(path, { query: options.query }, "*/*");
+  const disposition = response.headers.get("Content-Disposition") ?? "";
+  const name = /filename="([^"]+)"/.exec(disposition)?.[1] ?? options.fallbackName;
+  return { blob: await response.blob(), name };
+}
+
+/** Sends a request and returns a successful response, or throws an `ApiError`. */
+async function send(path: string, options: RequestOptions, accept: string): Promise<Response> {
+  const headers: Record<string, string> = { Accept: accept };
   let body: string | undefined;
   if (options.body !== undefined) {
     headers["Content-Type"] = "application/json";
@@ -194,7 +225,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   let response: Response;
   try {
     response = await settings.fetch(apiUrl(path, options.query), {
-      method,
+      method: options.method ?? "GET",
       headers,
       body,
       signal: options.signal,
@@ -211,22 +242,14 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
       "The server can't be reached. Check your connection and try again.",
     );
   }
-  const text = await response.text();
-  if (!response.ok) {
-    const error = errorFromResponse(response.status, text);
-    // Signed out meanwhile (an expired session). Not for the sign-in endpoints, where 401
-    // means a wrong password, or the session itself, which would ask again and again.
-    if (error.code === "unauthorized" && !path.startsWith("/auth/")) {
-      settings.onUnauthorized?.(path);
-    }
-    throw error;
+  if (response.ok) return response;
+  const error = errorFromResponse(response.status, await response.text());
+  // Signed out meanwhile (an expired session). Not for the sign-in endpoints, where 401
+  // means a wrong password, or the session itself, which would ask again and again.
+  if (error.code === "unauthorized" && !path.startsWith("/auth/")) {
+    settings.onUnauthorized?.(path);
   }
-  if (text === "") return undefined as T;
-  try {
-    return JSON.parse(text) as T;
-  } catch {
-    throw new ApiError(response.status, "internal", "The server's answer isn't valid JSON.");
-  }
+  throw error;
 }
 
 /** The `ApiError` for a failed response's status and body. */
