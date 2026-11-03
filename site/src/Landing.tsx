@@ -55,7 +55,7 @@ const FEATURES = [
   {
     art: "scroll",
     title: "Made for game strings.",
-    text: "i18next and ICU MessageFormat, with placeholders and plural forms in JSON strings or whole Markdown documents. Choose your project’s message format in Settings → Placeholders. Check structure and length before accepting a translation.",
+    text: "Translate JSON strings or whole Markdown documents with i18next or ICU MessageFormat. Check placeholders, plural forms, and length before accepting a translation.",
     note: "JSON and Markdown · i18next or ICU MessageFormat",
   },
   {
@@ -195,9 +195,10 @@ export function Landing({ page, hasDoc, repositoryUrl }: LandingProps) {
                 tomorrow.
               </H1>
               <p className="lead">
-                Quaso is an open-source tool for translating games. With a Gemini key, uploads can
-                queue machine translations for review. Download accepted translations into your next
-                build, then include your team's fixes in later builds.
+                Quaso is an open-source tool for translating games using i18next or ICU
+                MessageFormat. With a Gemini key, uploads can queue machine translations for review.
+                Download accepted translations into your next build, then include your team's fixes
+                in later builds.
               </p>
               <div className="actions">
                 <AnchorButton variant="primary" href={relativeHref(page, DOCS_HOME)}>
@@ -598,6 +599,56 @@ export function Landing({ page, hasDoc, repositoryUrl }: LandingProps) {
                 <span className="feature-note">{note}</span>
               </li>
             ))}
+          </ul>
+        </div>
+      </section>
+
+      <section className="section" id="message-formats" aria-labelledby="formats-title">
+        <div className="container">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">
+                <span className="section-index">V</span> YOUR GAME’S MESSAGE FORMAT
+              </p>
+              <H2 display id="formats-title">
+                i18next or ICU.
+                <br />
+                Ready to translate.
+              </H2>
+            </div>
+            <p>
+              Keep the message format your game uses. Both work with the same upload, review, and
+              download workflow, and translations keep their format for your game’s runtime.
+            </p>
+          </div>
+          <ul className="safeguards" aria-label="Supported message formats">
+            <li>
+              <H3>i18next JSON v4</H3>
+              <p>
+                Keep placeholders like <code>{"{{name}}"}</code>, nesting references, and plural
+                keys such as <code>coins_one</code> and <code>coins_other</code>. The editor shows
+                the plural forms each target language needs.
+              </p>
+              {guide("file-formats.md", "Explore supported formats")}
+            </li>
+            <li>
+              <H3>ICU MessageFormat</H3>
+              <p>
+                Translate messages with <code>{"{name}"}</code> arguments, plurals, and select
+                cases, including nested blocks. Edit cases in separate fields, with checks for ICU
+                syntax and missing arguments. Works with i18next-icu and FormatJS.
+              </p>
+              {guide("variants.md", "See how to edit message variants")}
+            </li>
+            <li>
+              <H3>Choose your format.</H3>
+              <p>
+                Before your first upload, open Settings → Placeholders. Leave ICU MessageFormat off
+                for i18next JSON v4, or turn it on for ICU. Moving an existing project? Use the
+                conversion command to carry its translations over to ICU.
+              </p>
+              {guide("move-to-icu.md", "Move an i18next project to ICU")}
+            </li>
           </ul>
         </div>
       </section>
