@@ -103,12 +103,84 @@ test("prompt: references are masked, with what they stand for, within the limit"
   const rendered = renderPrompt(DEFAULT_PROMPT_TEMPLATE, [AGAIN], context({ references }));
   const [line] = stringLines(rendered.prompt);
   expect(line.english).toBe("⟦1⟧ again");
-  expect(line.references).toStrictEqual({ "⟦1⟧": '"Graj" (English: "Play")' });
+  expect(line.references).toStrictEqual({ "⟦1⟧": '"Graj" (English (en): "Play")' });
   expect(line.description).toBe("The button after a game over");
   // The limit counts the reference as stored: 20 − (15 − 3) = 8 for what the model writes.
   expect(line.maxLength).toBe(8);
   expect(rendered.masked.get("s13")?.references).toStrictEqual(["$t(common:play)"]);
   expect(rendered.batch.strings[0].english).toBe("⟦1⟧ again");
+});
+
+test("prompt: an untranslated reference names the actual source language", () => {
+  const rendered = renderPrompt(
+    DEFAULT_PROMPT_TEMPLATE,
+    [{ ...AGAIN, english: "$t(common:play) à nouveau" }],
+    context({
+      sourceLanguage: "fr",
+      targetLanguage: "uk",
+      references: new Map([["$t(common:play)", { english: "Jouer", translation: null }]]),
+    }),
+  );
+  const [line] = stringLines(rendered.prompt);
+  expect(line.english).toBe("⟦1⟧ à nouveau");
+  expect(line.references).toStrictEqual({
+    "⟦1⟧": '"Jouer" (in French (fr); its translation is inserted)',
+  });
+  expect(rendered.batch.sourceLanguage).toBe("fr");
+  expect(rendered.batch.targetLanguage).toBe("uk");
+});
+
+test("prompt: French source, Ukrainian target and German/Spanish references keep their own languages", () => {
+  const rendered = renderPrompt(
+    DEFAULT_PROMPT_TEMPLATE,
+    [{ ...AGAIN, english: "$t(common:play) à nouveau" }],
+    context({
+      sourceLanguage: "fr",
+      targetLanguage: "uk",
+      references: new Map([["$t(common:play)", { english: "Jouer", translation: "Грати" }]]),
+      otherLanguages: [
+        { id: 13, language: "de", value: "Noch einmal spielen", proofread: true },
+        { id: 13, language: "es", value: "Jugar de nuevo", proofread: true },
+      ],
+    }),
+  );
+  const line = stringLines(rendered.prompt).find((item) => item.key === AGAIN.key);
+  expect(line?.english).toBe("⟦1⟧ à nouveau");
+  expect(line?.references).toStrictEqual({
+    "⟦1⟧": '"Грати" (French (fr): "Jouer")',
+  });
+  expect(rendered.masked.get("s13")?.references).toStrictEqual(["$t(common:play)"]);
+  expect(rendered.system).toContain("from French (fr) into Ukrainian (uk)");
+  expect(rendered.system).toContain(
+    "follow the source when they disagree, even if a reference is proofread",
+  );
+  expect(rendered.system).toContain(
+    "Do not copy their mistakes or switch the output language from Ukrainian (uk)",
+  );
+  expect(rendered.prompt).toContain(
+    '{"id":"s13","language":"de","translation":"Noch einmal spielen","proofread":true}',
+  );
+  expect(rendered.prompt).toContain(
+    '{"id":"s13","language":"es","translation":"Jugar de nuevo","proofread":true}',
+  );
+});
+
+test("prompt: a German project uses German labels without changing the Ukrainian target", () => {
+  const rendered = renderPrompt(
+    DEFAULT_PROMPT_TEMPLATE,
+    [{ ...AGAIN, english: "Noch einmal $t(common:play)" }],
+    context({
+      sourceLanguage: "de",
+      targetLanguage: "uk",
+      references: new Map([["$t(common:play)", { english: "Spielen", translation: null }]]),
+    }),
+  );
+  expect(rendered.system).toContain("from German (de) into Ukrainian (uk)");
+  expect(stringLines(rendered.prompt)[0].references).toStrictEqual({
+    "⟦1⟧": '"Spielen" (in German (de); its translation is inserted)',
+  });
+  expect(rendered.batch.sourceLanguage).toBe("de");
+  expect(rendered.batch.targetLanguage).toBe("uk");
 });
 
 test("prompt: plural forms share one numbering of references", () => {
@@ -355,6 +427,31 @@ test("prompt: a batch with arguments gets the rules for them", () => {
     context({ targetLanguage: "es", syntax: ICU_SYNTAX }),
   );
   expect(rendered.system).toContain(argumentRules("es"));
+});
+
+test("prompt: ICU argument rules preserve declared cases for a non-English source", () => {
+  const rendered = renderPrompt(
+    DEFAULT_PROMPT_TEMPLATE,
+    [{ ...JOINED, english: "Heureux de rejoindre {company} !" }],
+    context({ sourceLanguage: "fr", targetLanguage: "uk", syntax: ICU_SYNTAX }),
+  );
+  expect(rendered.system).not.toMatch(/\bEnglish\b/);
+  expect(rendered.system).toContain("Where Ukrainian makes words agree");
+  expect(rendered.system).toContain("with only the listed cases and always other");
+  expect(rendered.system).toContain("do not rephrase a sentence to avoid the agreement");
+  expect(stringLines(rendered.prompt)[0]).toStrictEqual({
+    id: "s14",
+    key: "posts.joined",
+    english: "Heureux de rejoindre {company} !",
+    placeholders: ["{company}"],
+    arguments: [
+      {
+        name: "authorGender",
+        cases: ["female", "male", "other"],
+        description: "The gender of the person who wrote the post. other: nonbinary, or not known.",
+      },
+    ],
+  });
 });
 
 test("prompt: a batch without arguments doesn't get their rules", () => {

@@ -281,7 +281,7 @@ export function formExamples(
 
 /** How to translate ICU MessageFormat, for projects that use it; part of `%pluralForms%`. */
 export const ICU_RULES =
-  "The strings use ICU MessageFormat. In a block such as {style, select, masculine {…} other {…}} or {count, plural, one {# item} other {# items}}, keep the argument, the block type and the case keys as written, and translate only the text inside each case. A select block keeps exactly the English's cases, unless it is on one of the string's \"arguments\". A plural or selectordinal block has one case for each of the plural or ordinal forms above, plus the English's exact cases such as =0; # stands for the number. Write a literal brace as '{' or '}'.";
+  "The strings use ICU MessageFormat. In a block such as {style, select, masculine {…} other {…}} or {count, plural, one {# item} other {# items}}, keep the argument, the block type and the case keys as written, and translate only the text inside each case. A select block keeps exactly the source text's cases, unless it is on one of the string's \"arguments\". A plural or selectordinal block has one case for each of the plural or ordinal forms above, plus the source text's exact cases such as =0; # stands for the number. Write a literal brace as '{' or '}'.";
 
 /**
  * How to use a string's `arguments`, for batches that have some; part of `%pluralForms%`,
@@ -290,12 +290,12 @@ export const ICU_RULES =
 export function argumentRules(language: string): string {
   const name = languageName(language);
   return (
-    `Some strings list "arguments": values the app passes with the string that its English may not show, such as the gender of the person who wrote it, with the cases the app uses and what each means. ` +
+    `Some strings list "arguments": values the app passes with the string that its source text may not show, such as the gender of the person who wrote it, with the cases the app uses and what each means. ` +
     `Where ${name} makes words agree with one of them, write a select block on it, such as {authorGender, select, female {…} male {…} other {…}}, with only the listed cases and always other. ` +
-    `Put the whole phrase or sentence that changes inside each case, never part of a word, so that each case reads naturally on its own, with every placeholder of the English. ` +
-    `In each case, translate the English as it is, agreeing with that case: do not rephrase a sentence to avoid the agreement. ` +
+    `Put the whole phrase or sentence that changes inside each case, never part of a word, so that each case reads naturally on its own, with every placeholder of the source text. ` +
+    `In each case, translate the source text as it is, agreeing with that case: do not rephrase a sentence to avoid the agreement. ` +
     `The other case is for what the argument's description says, such as a nonbinary person or one whose gender isn't known: word it so that it assumes no gender, rephrasing around the words that would agree if needed, rather than repeating another case. ` +
-    `Where ${name} needs no agreement, don't use the argument: write one text, and a select on it in the English may become one text too.`
+    `Where ${name} needs no agreement, don't use the argument: write one text, and a select on it in the source text may become one text too.`
   );
 }
 
@@ -311,6 +311,10 @@ export function pluralFormsText(language: string, override?: PluralOverride): st
   const ordinals = pluralCategories(language, { ordinal: true, override });
   const cardinal = `Plural forms: ${line(false)}.`;
   return ordinals.length > 1 ? `${cardinal}\nOrdinal forms: ${line(true)}.` : cardinal;
+}
+
+function language(tag: string): string {
+  return `${languageName(tag)} (${tag})`;
 }
 
 /** Renders the prompt for a batch. */
@@ -332,7 +336,6 @@ export function renderPrompt(
     if (mask.maxLength !== undefined) provider.maxLength = mask.maxLength;
     providerStrings.push(provider);
   }
-  const language = (tag: string) => `${languageName(tag)} (${tag})`;
   const hasArguments =
     context.syntax.icu === true && strings.some((string) => (string.arguments?.length ?? 0) > 0);
   const values: Record<string, string> = {
@@ -477,9 +480,10 @@ function optionalIn(english: TextValue, syntax: InterpolationSyntax, language: s
 function referenceText(raw: string, context: PromptContext): string {
   const hint = context.references.get(raw);
   if (!hint || hint.english === null) return `the text of ${raw}`;
+  const sourceLanguage = language(context.sourceLanguage);
   return hint.translation === null
-    ? `"${hint.english}" (in English; its translation is inserted)`
-    : `"${hint.translation}" (English: "${hint.english}")`;
+    ? `"${hint.english}" (in ${sourceLanguage}; its translation is inserted)`
+    : `"${hint.translation}" (${sourceLanguage}: "${hint.english}")`;
 }
 
 /** A translation, with the string's references masked the same way as its English. */
