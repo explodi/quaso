@@ -1726,6 +1726,80 @@ test("checks, ICU: a case that covers one number may leave out #", () => {
   ).toStrictEqual(["Placeholder # is missing in the other case of {n, plural}."]);
 });
 
+test("checks, ICU: a plural case may show the count omitted by the English case", () => {
+  const source = "{count, plural, one {A tower} other {{count} towers}}";
+  const russian =
+    "{count, plural, one {{count} башня} few {{count} башни} many {{count} башен} other {{count} башни}}";
+  expect(text(source, russian, { language: "ru", syntax: ICU })).toStrictEqual([]);
+
+  const pounds = "{n, plural, one {A tower} other {# towers}}";
+  const ukrainian = "{n, plural, one {# вежа} few {# вежі} many {# веж} other {# вежі}}";
+  expect(text(pounds, ukrainian, { language: "uk", syntax: ICU })).toStrictEqual([]);
+});
+
+test("checks, ICU: ordinal and exact cases may show their count", () => {
+  expect(
+    text("{n, selectordinal, other {A place}}", "{n, selectordinal, other {Platz #}}", {
+      syntax: ICU,
+    }),
+  ).toStrictEqual([]);
+  expect(
+    text(
+      "{n, plural, =0 {No coins} one {A coin} other {# coins}}",
+      "{n, plural, =0 {# Münzen} one {eine Münze} other {# Münzen}}",
+      { syntax: ICU },
+    ),
+  ).toStrictEqual([]);
+});
+
+test("checks, ICU: an enclosing plural count is available inside a nested select", () => {
+  const source =
+    "{n, plural, one {{style, select, short {A coin} other {One coin}}} other {# coins}}";
+  const translation =
+    "{n, plural, one {{style, select, short {{n} Münze} other {{n} Münze}}} other {# Münzen}}";
+  expect(text(source, translation, { syntax: ICU })).toStrictEqual([]);
+});
+
+test("checks, ICU: count allowances do not hide unknown or repeated placeholders", () => {
+  const source = "{n, plural, one {A coin} other {# coins}}";
+  expect(
+    messages(text(source, "{n, plural, one {{unknown} Münze} other {# Münzen}}", { syntax: ICU })),
+  ).toStrictEqual(["Placeholder {unknown} isn't in the English in the one case of {n, plural}."]);
+  expect(
+    messages(text(source, "{n, plural, one {# # Münze} other {# Münzen}}", { syntax: ICU })),
+  ).toStrictEqual([
+    "Placeholder # appears more often than in the English in the one case of {n, plural}.",
+  ]);
+  expect(
+    messages(text(source, "{n, plural, one {eine Münze} other {# # Münzen}}", { syntax: ICU })),
+  ).toStrictEqual([
+    "Placeholder # appears more often than in the English in the other case of {n, plural}.",
+  ]);
+});
+
+test("checks, ICU: plural count allowances stay inside the plural", () => {
+  expect(
+    messages(
+      text(
+        "{n, plural, one {A coin} other {# coins}}",
+        "{n, plural, one {eine Münze} other {# Münzen}} {n}",
+        { syntax: ICU },
+      ),
+    ),
+  ).toStrictEqual(["Placeholder {n} isn't in the English."]);
+  expect(
+    messages(
+      text(
+        "{style, select, short {A coin} other {One coin}}",
+        "{style, select, short {{style} Münze} other {eine Münze}}",
+        { syntax: ICU },
+      ),
+    ),
+  ).toStrictEqual([
+    "Placeholder {style} isn't in the English in the short case of {style, select}.",
+  ]);
+});
+
 test("checks, ICU: keywords and exact cases are neither text nor numbers", () => {
   const source = "{n, plural, =0 {No coins} other {# coins}}";
   expect(

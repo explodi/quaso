@@ -594,18 +594,20 @@ function compareTokens(
  * Placeholders are compared as multisets in each case with the English case of the same key,
  * or `other`, so a language with more plural cases repeats them freely. A case that covers
  * exactly one number (`one` in Polish, `=1`) may leave out `#` and the block's argument.
+ * A plural's count may appear once even when the English case spells out the number.
  */
 function compareIcu(results: CheckResult[], value: string, comparison: Comparison): void {
   const english = comparison.required.text;
-  const level: IcuLevel = { where: "", omittable: new Set() };
+  const level: IcuLevel = { where: "", omittable: new Set(), availableCounts: new Set() };
   compareIcuLevel(results, parseIcu(english), parseIcu(value), comparison, level);
 }
 
-/** Where in a message a level is, for messages, and the placeholders it may leave out. */
+/** Where a level is, and which count placeholders its enclosing blocks permit. */
 interface IcuLevel {
   /** ` in the feminine case of {style, select}`, or "" at the top. */
   where: string;
   omittable: ReadonlySet<string>;
+  availableCounts: ReadonlySet<string>;
 }
 
 function compareIcuLevel(
@@ -629,7 +631,7 @@ function compareIcuLevel(
     results.push(result("placeholder_missing", message, { form, value: key }));
   }
   for (const [key, occurrences] of found) {
-    const allowed = required.get(key)?.count ?? 0;
+    const allowed = required.get(key)?.count ?? (level.availableCounts.has(key) ? 1 : 0);
     if (occurrences.count <= allowed) continue;
     const problem =
       allowed === 0 ? "isn't in the English" : "appears more often than in the English";
@@ -706,6 +708,11 @@ function compareIcuCases(
   }
 
   const coverage = { ordinal, zero: !ordinal && englishKeys.includes("zero") };
+  const availableCounts = new Set(level.availableCounts);
+  if (block.blockType !== "select") {
+    availableCounts.add("#");
+    availableCounts.add(`{${block.name}}`);
+  }
   for (const icuCase of block.cases) {
     const englishCase =
       englishBlock.cases.find((other) => other.key === icuCase.key) ??
@@ -718,6 +725,7 @@ function compareIcuCases(
     compareIcuLevel(results, englishCase.message, icuCase.message, comparison, {
       where: ` in the ${icuCase.key} case of ${label}`,
       omittable: omittable ? new Set(["#", `{${block.name}}`]) : new Set(),
+      availableCounts,
     });
   }
 }
