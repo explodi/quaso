@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import { requestProvider } from "../llm/configuration.ts";
 /**
  * The job runner (design §5.6, S5.1): `service.alarm()` calls `runJobs`, which
  *
@@ -370,7 +371,7 @@ function record(env: JobsEnv, plan: Plan, entry: Omit<RequestRecord, "jobId" | "
     const id = recordRequest(ctx, {
       ...entry,
       jobId: plan.job.id,
-      provider: env.provider?.name ?? "none",
+      provider: env.provider ? requestProvider(env.provider, entry.model) : "none",
     });
     addTokens(ctx, plan.job.id, entry.usage);
     return id;

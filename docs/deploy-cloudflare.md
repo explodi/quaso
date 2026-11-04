@@ -108,7 +108,7 @@ over plain `http`.
 Open `https://translate.yourgame.com`, enter the setup key, and create the first administrator
 account. Then, in **Settings**:
 
-- **AI translation:** for translation with a large language model (LLM), enter the Gemini API key,
+- **AI translation:** for translation with a large language model (LLM), enter a Gemini or Anthropic API key,
   and choose the model, parallel requests and monthly budget. Without a key, LLM translation is off.
 - **API keys:** create one for each integration, such as an `upload` key for continuous integration
   (CI). Create upload keys with an administrator account: a key created in the website has its
@@ -309,7 +309,7 @@ an empty instance. Keep a copy outside the hosting account. The options are:
 
 Cloudflare backup exports read the database in chunks. If another write changes the data, the export
 restarts to produce one consistent copy. After three failed attempts, a backup download returns 503.
-Retry during a quiet period. Export files leave out provider keys and sessions; enter the Gemini and
+Retry during a quiet period. Export files leave out provider keys and sessions; enter the Gemini, Anthropic, and
 email keys again in **Settings** after restoring.
 
 A downloaded backup file restores into an **empty** instance of either kind (with no strings and no

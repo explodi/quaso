@@ -57,7 +57,7 @@ An upload compares the new files with the current source. Existing translations 
 translations for changed source text become outdated. Removed strings are hidden from current
 downloads rather than treated as new text to translate.
 
-With a Gemini key and automatic translation enabled, new and changed strings can create a
+With a Gemini or Anthropic key and automatic translation enabled, new and changed strings can create a
 translation job. By default, the job updates outdated translations, blue ones included: proofreading
 holds for the source text it was made for. The outdated blue value is set aside, and comes back,
 blue, if an upload brings that source text back. The LLM never replaces a blue value of the current

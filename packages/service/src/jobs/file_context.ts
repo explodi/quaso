@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import { requestProvider } from "../llm/configuration.ts";
 /** File context generation runs outside SQL; usage and a still-current cache commit together. */
 import { languageName, type ProjectSettings } from "@quaso/core";
 import { SYSTEM, type Actor } from "../api.ts";
@@ -112,7 +113,7 @@ export async function generateFileContextAsync(
       jobId,
       fileId,
       language: null,
-      provider: options.provider.name,
+      provider: requestProvider(options.provider, model),
       model: result.model ?? model,
       strings: 0,
       usage: result.usage,
@@ -127,7 +128,7 @@ export async function generateFileContextAsync(
       jobId,
       fileId,
       language: null,
-      provider: options.provider.name,
+      provider: requestProvider(options.provider, model),
       model,
       strings: 0,
       usage: error.usage ?? NO_USAGE,

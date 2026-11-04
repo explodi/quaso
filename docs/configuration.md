@@ -36,16 +36,19 @@ to the server in the container. Do not put secrets in git. See [Docker](deploy-d
 
 ## LLM
 
-Quaso uses a large language model (LLM) for machine translation. Configure Gemini in **Settings → AI
-translation**. Quaso stores the API key in the instance database and never returns its value through
+Quaso uses a large language model (LLM) for machine translation. Configure Google Gemini, Anthropic Claude, or both in **Settings → AI
+translation**. Save and test each key on its own card. Quaso stores the API key in the instance database and never returns its value through
 the settings API or website. Write-only access does not mean encryption at rest: protect the
 database and any full storage copies.
 
-The default model is `gemini-flash-latest`. Settings lists the provider's models that support text
-generation, excluding names for speech, image, audio, live, robotics and computer-use models. If no
+The default model is `gemini-flash-latest`. Adding an Anthropic key first changes that default
+to `claude-haiku-5-5`. Settings groups the available models by provider. Each model uses its
+provider's key; a request never switches to another provider when it fails. Gemini model lists
+exclude speech, image, audio, live, robotics, and computer-use models. If no
 models are available, enter a model name. A saved model remains selectable even if it is no longer
 listed. **Model for editor suggestions** and **Meaning-check model** each follow the project model
-by default; set either to use another model for that task.
+by default; set either to use another model for that task, including one from the other provider.
+Safety filter settings apply only to Gemini; Anthropic uses its own safety rules.
 
 Requests in parallel default to 4 (range 1–64), and the monthly token budget defaults to unlimited.
 A positive integer sets that budget; clearing it removes the limit. Jobs resume when the budget is
@@ -58,7 +61,7 @@ the defaults, they check proofread translations on save and approval, and count 
 token budget. These checks report warnings; review them before deciding whether to change a
 translation. See [the translation workflow](workflow.md) and [the website guide](website.md).
 
-The server no longer reads `GEMINI_API_KEY`, `GEMINI_MODEL`, `LLM_CONCURRENCY` or
+The server does not read `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `GEMINI_MODEL`, `LLM_CONCURRENCY`, or
 `LLM_MONTHLY_TOKEN_BUDGET` from the environment.
 
 ## Storage and backups

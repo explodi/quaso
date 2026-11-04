@@ -111,6 +111,101 @@ browserTest(
 );
 
 browserTest(
+  "provider credentials: Claude alone and both services share model choices",
+  {
+    prepare,
+    serviceOptions: {
+      providerFactory: (_key, provider) => ({
+        ...createFakeTranslator(),
+        name: provider,
+        listModels: async () =>
+          provider === "anthropic" ? ["claude-haiku-5-5"] : ["gemini-flash-latest"],
+      }),
+    },
+  },
+  async ({ server, browser }) => {
+    const tab = await openTab(browser, server, "/signin");
+    const { page } = tab;
+    await signIn(page, server, OWNER);
+    await page.goto(`${server.url}/settings?section=llm`, { waitUntil: "networkidle0" });
+    expect(await text(page, "main")).toContain("Google Gemini or Anthropic Claude API key");
+    await fill(page, "Requests in parallel", "3");
+    await fill(page, "Anthropic Claude API key", "claude-browser-test-key-8910");
+    await click(page, "Set key", "#credential-anthropic_api_key");
+    await waitFor(page, () =>
+      document
+        .querySelector("#credential-anthropic_api_key")
+        ?.textContent?.includes("Set, ending in …8910."),
+    );
+    await waitFor(
+      page,
+      () =>
+        document.querySelector<HTMLSelectElement>('[data-settings-path="llm.model"] select')
+          ?.value === "claude-haiku-5-5",
+    );
+    expect(
+      await page.$eval(
+        '[data-settings-path="llm.concurrency"] input',
+        (input) => (input as HTMLInputElement).value,
+      ),
+    ).toBe("3");
+    expect((await text(page, "main")).includes("Translation is off")).toBe(false);
+    await click(page, "Test Anthropic Claude key");
+    await waitFor(page, () =>
+      document
+        .querySelector("#credential-anthropic_api_key")
+        ?.textContent?.includes("Anthropic Claude key works."),
+    );
+    expect(
+      await page.$$eval('[data-settings-path="llm.model"] optgroup', (groups) =>
+        groups.map((group) => group.label),
+      ),
+    ).toStrictEqual(["Anthropic Claude"]);
+
+    await fill(page, "Gemini API key", "gemini-browser-test-key-1234");
+    await click(page, "Set key", "#credential-gemini_api_key");
+    await waitFor(
+      page,
+      () => document.querySelectorAll('[data-settings-path="llm.model"] optgroup').length === 2,
+    );
+    expect(
+      await page.$$eval('[data-settings-path="llm.model"] optgroup', (groups) =>
+        groups.map((group) => group.label),
+      ),
+    ).toStrictEqual(["Google Gemini", "Anthropic Claude"]);
+    await page.select('[data-settings-path="llm.suggestionModel"] select', "gemini-flash-latest");
+    await click(page, "Save AI settings");
+    await waitFor(page, () => {
+      const section = [...document.querySelectorAll(".management-section")].find(
+        (item) => item.querySelector("h2")?.textContent === "AI translation",
+      );
+      return section?.querySelector('[role="status"]')?.textContent === "Saved.";
+    });
+    const settings = await server.service.getSettings(SYSTEM, {});
+    expect(settings.settings.llm.model).toBe("claude-haiku-5-5");
+    expect(settings.settings.llm.suggestionModel).toBe("gemini-flash-latest");
+    expect(settings.settings.llm.concurrency).toBe(3);
+
+    await page.setViewport({ width: 320, height: 800 });
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    await click(page, "Remove key", "#credential-gemini_api_key");
+    await waitFor(page, () => document.querySelector("dialog[open]") !== null);
+    await click(page, "Remove key", "dialog[open]");
+    await waitFor(page, () =>
+      document
+        .querySelector("main")
+        ?.textContent?.includes("Some selected models need a key: gemini-flash-latest."),
+    );
+    expect(
+      await page.$$eval('[data-settings-path="llm.model"] optgroup', (groups) =>
+        groups.map((group) => group.label),
+      ),
+    ).toStrictEqual(["Anthropic Claude"]);
+    expect(tab.problems).toStrictEqual([]);
+  },
+);
+
+browserTest(
   "the editor retranslates a green string and refreshes its inline job progress",
   {
     prepare,

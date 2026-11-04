@@ -6,6 +6,7 @@
  * permission and the input like every other method.
  */
 import {
+  TestLlmRequest,
   AddLanguageRequest,
   ManagedSecretName,
   SetSecretRequest,
@@ -100,7 +101,7 @@ export interface AdminOptions {
   provider?: TranslationProvider | null;
   llmConfiguration?: () => LlmConfiguration;
   afterLlmChange?: () => Promise<void>;
-  testLlm?: () => Promise<LlmTestResult>;
+  testLlm?: (provider?: import("@quaso/core").LlmProviderName) => Promise<LlmTestResult>;
   /** The provider's models, from the service's one cached list (`Llm.models`). */
   models?: () => Promise<string[]>;
   /** After a restore: what a start does for the restored data (the LLM jobs go on). */
@@ -174,13 +175,13 @@ export function adminMethods(ctx: Context, options: AdminOptions, call: Call): A
 
   return {
     async testLlm(actor, input) {
-      await call(actor, "settings", Empty, input, () => null);
+      const request = await call(actor, "settings", TestLlmRequest, input, (request) => request);
       try {
-        if (!options.testLlm) throw badRequest("Gemini testing is not configured.");
-        const result = await options.testLlm();
-        return await call(actor, "settings", Empty, input, () => result);
+        if (!options.testLlm) throw badRequest("AI provider testing is not configured.");
+        const result = await options.testLlm(request.provider);
+        return await call(actor, "settings", TestLlmRequest, input, () => result);
       } catch (error) {
-        await call(actor, "settings", Empty, input, () => null);
+        await call(actor, "settings", TestLlmRequest, input, () => null);
         throw error;
       }
     },
@@ -193,7 +194,7 @@ export function adminMethods(ctx: Context, options: AdminOptions, call: Call): A
         input,
         ({ name, value }, caller) => changeSecret(ctx, caller, name, value),
       );
-      if (status.name === "gemini_api_key") await options.afterLlmChange?.();
+      if (status.name !== "email_api_key") await options.afterLlmChange?.();
       return status;
     },
     removeSecret: async (actor, input) => {
@@ -204,7 +205,7 @@ export function adminMethods(ctx: Context, options: AdminOptions, call: Call): A
         input,
         ({ name }, caller) => changeSecret(ctx, caller, name, null),
       );
-      if (status.name === "gemini_api_key") await options.afterLlmChange?.();
+      if (status.name !== "email_api_key") await options.afterLlmChange?.();
       return status;
     },
     async getSettings(actor, input) {

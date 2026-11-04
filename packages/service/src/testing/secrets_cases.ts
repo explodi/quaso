@@ -36,6 +36,10 @@ export const SECRET_CASES: { name: string; run(sql: Sql): Promise<void> }[] = [
       const writes = asyncWriteMethods({ sql, clock: () => 200 });
       await writes.setSecret(SYSTEM, { name: NAME, value: VALUE });
       await writes.setSecret(SYSTEM, {
+        name: "anthropic_api_key",
+        value: "anthropic-provider-secret-1234",
+      });
+      await writes.setSecret(SYSTEM, {
         name: "email_api_key",
         value: "email-provider-secret-5678",
       });
@@ -44,13 +48,18 @@ export const SECRET_CASES: { name: string; run(sql: Sql): Promise<void> }[] = [
       ).json()) as BackupDocument;
       checkEqual(Object.hasOwn(document.tables, "secrets"), false);
       checkEqual(JSON.stringify(document).includes(VALUE), false);
+      checkEqual(JSON.stringify(document).includes("anthropic-provider-secret-1234"), false);
       await resetUploadSql(sql);
       const result = await restoreBackup(writes, documentSource(document));
-      checkEqual(result.missingSecrets, [NAME, "email_api_key"]);
+      checkEqual(result.missingSecrets, [NAME, "anthropic_api_key", "email_api_key"]);
       const reads = asyncReadMethods({ sql });
       checkEqual((await reads.listSecrets(SYSTEM, {})).missingSecrets, result.missingSecrets);
       await writes.setSecret(SYSTEM, { name: NAME, value: "replacement-secret-9876" });
-      checkEqual((await reads.listSecrets(SYSTEM, {})).missingSecrets, ["email_api_key"]);
+      checkEqual((await reads.listSecrets(SYSTEM, {})).missingSecrets, [
+        "anthropic_api_key",
+        "email_api_key",
+      ]);
+      await writes.removeSecret(SYSTEM, { name: "anthropic_api_key" });
       await writes.removeSecret(SYSTEM, { name: "email_api_key" });
       checkEqual((await reads.listSecrets(SYSTEM, {})).missingSecrets, []);
       checkEqual(
@@ -77,6 +86,7 @@ export const SECRET_CASES: { name: string; run(sql: Sql): Promise<void> }[] = [
         missingSecrets: [],
         secrets: [
           { name: NAME, set: true, ending: null, updatedAt: 300 },
+          { name: "anthropic_api_key", set: false, ending: null, updatedAt: null },
           { name: "email_api_key", set: false, ending: null, updatedAt: null },
         ],
       });

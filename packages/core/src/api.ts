@@ -1308,7 +1308,7 @@ export const UpdateSettingsRequest = s.object({
 export type UpdateSettingsRequest = Infer<typeof UpdateSettingsRequest>;
 
 /** Provider credentials are writable; only their status is readable. */
-export const ManagedSecretName = s.enum(["gemini_api_key", "email_api_key"]);
+export const ManagedSecretName = s.enum(["gemini_api_key", "anthropic_api_key", "email_api_key"]);
 export type ManagedSecretName = Infer<typeof ManagedSecretName>;
 export const SetSecretRequest = s.object({
   value: s.refine(s.string({ minLength: 1, maxLength: 8192 }), (value) =>
@@ -1327,6 +1327,11 @@ export interface SecretsResult {
   /** Credentials omitted from a backup that still need to be entered after restoring it. */
   missingSecrets: ManagedSecretName[];
 }
+
+export const LlmProviderName = s.enum(["gemini", "anthropic"]);
+export type LlmProviderName = Infer<typeof LlmProviderName>;
+export const TestLlmRequest = s.object({ provider: LlmProviderName.optional() });
+export type TestLlmRequest = Infer<typeof TestLlmRequest>;
 
 export interface LlmTestResult {
   ok: true;
@@ -1516,7 +1521,7 @@ export interface AdminInfo {
   recentErrors: { at: number; message: string; requestId?: string }[];
   jobs: { queued: number; running: number; paused: number };
   llm: {
-    provider: "gemini" | "fake" | null;
+    provider: "gemini" | "anthropic" | "fake" | null;
     model: string;
     lastSuccessAt: number | null;
     lastError: { at: number; message: string } | null;

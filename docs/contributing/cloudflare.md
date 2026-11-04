@@ -25,7 +25,7 @@ project data. It starts the server once for everyone who waits (`/wake` and requ
 remembers how long the last start took for the progress bar. Before letting the container sleep it
 asks the server's `/healthz` whether it is `busy` and when its `nextWakeUp` is, and schedules a
 wake-up for it: LLM jobs and the nightly export depend on that, so preserve both when changing
-scheduling. Enter the Gemini key in **Settings**; D1 stores it with the other project settings. The
+scheduling. Enter a Gemini or Anthropic key in **Settings**; D1 stores it with the other project settings. The
 container keeps no lasting project data on its disk.
 
 The controller also stores the Worker deployment ID when it starts the server. After a deployment,
@@ -44,7 +44,7 @@ cp packages/cloudflare/.dev.vars.example packages/cloudflare/.dev.vars
 ```
 
 Set `SECRET_KEY` to the output of `openssl rand -hex 32`. Also uncomment `SETUP_KEY` and set it to
-the output of `openssl rand -hex 16`; the server needs it to allow first setup. Enter a Gemini key
+the output of `openssl rand -hex 16`; the server needs it to allow first setup. Enter a Gemini or Anthropic key
 in **Settings** after setup if you want real translation. Then run:
 
 ```sh

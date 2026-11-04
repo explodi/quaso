@@ -22,6 +22,118 @@ async function rejected(run: () => Promise<unknown>, code: string) {
 
 export const LLM_CONFIGURATION_CASES: { name: string; run(sql: Sql): Promise<void> }[] = [
   {
+    name: "jobs and suggestions route each model to its key and record the correct provider",
+    async run(sql) {
+      const used: string[] = [];
+      const service = createAsyncService({
+        sql,
+        secretKey: "test",
+        scheduler: { schedule() {}, cancel() {} },
+        providerFactory: (key, name) => {
+          const fake = scriptedProvider();
+          return {
+            ...fake,
+            name,
+            async translate(request) {
+              used.push(`${name}:${key}:${request.model}`);
+              return { ...(await fake.translate(request)), model: request.model };
+            },
+          };
+        },
+      });
+      await service.start();
+      await service.updateSettings(SYSTEM, {
+        llm: {
+          autoTranslate: false,
+          context: { fileContext: false },
+          suggestionModel: "claude-haiku-5-5",
+        },
+      });
+      await service.setSecret(SYSTEM, { name: "gemini_api_key", value: "gemini-key" });
+      await service.setSecret(SYSTEM, { name: "anthropic_api_key", value: "anthropic-key" });
+      await service.upload(SYSTEM, {
+        files: [{ path: "common.json", repoPath: "common.json", content: '{"a":"Hello"}' }],
+        languages: ["de"],
+      });
+      await service.createJob(SYSTEM, { languages: ["de"] });
+      await service.alarm();
+      const [strings] = await sql.read([{ sql: "SELECT id FROM strings WHERE display_key = 'a'" }]);
+      await service.suggestWithLlm(SYSTEM, { language: "de", ids: [Number(strings[0].id)] });
+      checkEqual(used, [
+        "gemini:gemini-key:gemini-flash-latest",
+        "anthropic:anthropic-key:claude-haiku-5-5",
+      ]);
+      const [records] = await sql.read([
+        { sql: "SELECT provider, model FROM llm_requests ORDER BY id" },
+      ]);
+      checkEqual(records, [
+        { provider: "gemini", model: "gemini-flash-latest" },
+        { provider: "anthropic", model: "claude-haiku-5-5" },
+      ]);
+      await service.removeSecret(SYSTEM, { name: "anthropic_api_key" });
+      await rejected(
+        () => service.suggestWithLlm(SYSTEM, { language: "de", ids: [Number(strings[0].id)] }),
+        "llm_unavailable",
+      );
+      checkEqual(used.length, 2);
+    },
+  },
+  {
+    name: "Anthropic-only setup chooses Claude and keeps both provider keys independent",
+    async run(sql) {
+      const service = createAsyncService({
+        sql,
+        secretKey: "test",
+        scheduler: { schedule() {}, cancel() {} },
+        providerFactory: (_key, name) => ({
+          ...scriptedProvider(),
+          name,
+          listModels: async () =>
+            name === "anthropic" ? ["claude-haiku-5-5"] : ["gemini-flash-latest"],
+        }),
+      });
+      await service.start();
+      await service.setSecret(SYSTEM, { name: "anthropic_api_key", value: "anthropic-test-1234" });
+      checkEqual((await service.getSettings(SYSTEM, {})).settings.llm.model, "claude-haiku-5-5");
+      checkEqual((await service.testLlm(SYSTEM, { provider: "anthropic" })).models, [
+        "claude-haiku-5-5",
+      ]);
+      await rejected(() => service.testLlm(SYSTEM, {}), "bad_request");
+      await service.setSecret(SYSTEM, { name: "gemini_api_key", value: "gemini-test-5678" });
+      checkEqual((await service.listModels(SYSTEM, {})).models, [
+        "claude-haiku-5-5",
+        "gemini-flash-latest",
+      ]);
+      await service.removeSecret(SYSTEM, { name: "gemini_api_key" });
+      checkEqual((await service.listModels(SYSTEM, {})).models, ["claude-haiku-5-5"]);
+      checkEqual((await service.getSettings(SYSTEM, {})).llmAvailable, true);
+    },
+  },
+  {
+    name: "adding Anthropic keeps a chosen model and a working model list survives the other provider's failure",
+    async run(sql) {
+      const service = createAsyncService({
+        sql,
+        secretKey: "test",
+        scheduler: { schedule() {}, cancel() {} },
+        providerFactory: (_key, name) => ({
+          ...scriptedProvider(),
+          name,
+          listModels: async () => {
+            if (name === "gemini") throw new ProviderError("network", "Offline");
+            return ["claude-haiku-5-5"];
+          },
+        }),
+      });
+      await service.start();
+      await service.updateSettings(SYSTEM, { llm: { model: "gemini-2.5-pro" } });
+      await service.setSecret(SYSTEM, { name: "gemini_api_key", value: "gemini-test-5678" });
+      await service.setSecret(SYSTEM, { name: "anthropic_api_key", value: "anthropic-test-1234" });
+      checkEqual((await service.getSettings(SYSTEM, {})).settings.llm.model, "gemini-2.5-pro");
+      checkEqual((await service.listModels(SYSTEM, {})).models, ["claude-haiku-5-5"]);
+    },
+  },
+  {
     name: "Gemini tests reject a key with no translation models",
     async run(sql) {
       const service = createAsyncService({

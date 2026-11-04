@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import { requestProvider } from "../llm/configuration.ts";
 /**
  * LLM suggestions for the editor: a few strings translated with a job's prompt, context and
  * quality checks, returned to the person translating them by hand and never saved. The
@@ -142,7 +143,12 @@ export async function suggestWithLlm(
         model: settings.llm.suggestionModel || settings.llm.model,
         clock: options.clock,
         canRequest: () => true,
-        record: (entry) => recordUsage(options, { ...entry, jobId: null, provider: provider.name }),
+        record: (entry) =>
+          recordUsage(options, {
+            ...entry,
+            jobId: null,
+            provider: requestProvider(provider, entry.model),
+          }),
         pauseForAuth(error) {
           refusedKey = true;
           options.logger.error("The provider refused the API key for an LLM suggestion", {

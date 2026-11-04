@@ -8,7 +8,7 @@ Start with the [quick start](README.md) if you need an overview. Follow this gui
 You need an instance with an administrator account, Node 22 or later with npm, and
 [JSON source files using i18next or ICU MessageFormat](file-formats.md) in your repository. The examples use English sources in
 `src/locales/en/`, Spanish and French targets, and `translate.example.com`. Replace the
-hostname and language tags with yours. An administrator must save a Gemini API key in **Settings → AI translation** before the
+hostname and language tags with yours. An administrator must save a Gemini or Anthropic API key in **Settings → AI translation** before the
 automatic translation step. A large language model (LLM) then produces translations for review.
 
 This guide follows current `main` and installs its CLI package. If your instance runs a tagged
@@ -165,7 +165,7 @@ translations with your normal git workflow. Keep `.env` out of the commit.
   need a key created by an administrator; translation jobs also allow a manager's upload key.
 - **No files or wrong folders:** check the source glob, source tag and `languageMapping`
   in `quaso.config.json`; use an upload preview before applying corrections.
-- **Auto-translation unavailable:** ask an administrator to set the Gemini key.
+- **Auto-translation unavailable:** ask an administrator to set a Gemini or Anthropic key.
   Check the job details for budget, provider or QA failures before retrying work.
 - **Progress differs from another tool:** Quaso counts source words, treats a plural group
   as one string, and excludes literal/reference-only entries. Compare a sample of keys. See [Translation concepts](concepts.md) for counting rules.

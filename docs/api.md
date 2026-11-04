@@ -358,7 +358,7 @@ The response is `{job, estimate: null}`. Use the returned job ID to follow its p
 
 Job states are `queued`, `running`, `done`, `failed`, `cancelled`, and `paused`. A `done` job can
 still have failed strings. Inspect `progress.failed`, `failures`, and `error`. A job paused for a
-rejected Gemini key or a spent monthly budget can resume after the key or budget issue is resolved.
+rejected provider key or a spent monthly budget can resume after the key or budget issue is resolved.
 Optional `progress.reused` counts exact matches copied through translation memory; `notes` holds
 model warnings about source meaning or reference translations. These notes do not replace a
 person's review.
@@ -380,7 +380,7 @@ administrator session and returns drafts; review them before saving `instruction
 
 ## Provider secrets
 
-Signed-in administrators can manage `gemini_api_key` and `email_api_key` through:
+Signed-in administrators can manage `gemini_api_key`, `anthropic_api_key`, and `email_api_key` through:
 
 - `GET /api/v1/settings/secrets`: `{secrets: [{name, set, ending, updatedAt}], missingSecrets}`.
 - `PUT /api/v1/settings/secrets/{name}` with `{value: "credential"}`: the updated status.
@@ -397,13 +397,14 @@ Backup metadata retains only the names of configured provider credentials. Resto
 `missingSecrets`, the names to enter again. Settings shows the same list until those keys are
 re-entered or removed. The AI translation and Email delivery sections offer controls to set, replace, or remove keys
 without showing their full value.
-Gemini reads the stored key. `PATCH /api/v1/settings` accepts `llm.model`, `llm.suggestionModel`
+Each provider reads its own stored key. `PATCH /api/v1/settings` accepts `llm.model`, `llm.suggestionModel`
 (the model for the editor's suggestions, `""` to use `llm.model`), `llm.concurrency`
 (an integer from 1 to 64) and `llm.monthlyTokenBudget` (a positive safe integer, or `null` for
 unlimited). The default concurrency is 4. Key and limit changes apply to the next unit of background work without restarting the server. Key or budget
 changes resume paused jobs. Replacing or removing the key also clears the saved model list.
 `POST /api/v1/settings/llm/test` with `{}` requires an administrator and checks the saved
-Gemini key with a new model request. It returns `{ok: true, models, keyUpdatedAt}`; models
+Gemini key with a new model request. Pass `{provider: "anthropic"}` to test the Anthropic key,
+or `{provider: "gemini"}` to name Gemini explicitly. It returns `{ok: true, models, keyUpdatedAt}`; models
 are unique and sorted, and `keyUpdatedAt` identifies the tested version of the key. The panel
 shows these models and hides a previous result after replacing or removing the key. Save a
 draft key before testing it. A missing/rejected key or no compatible models returns `400`;

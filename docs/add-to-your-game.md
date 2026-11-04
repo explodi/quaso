@@ -70,9 +70,9 @@ The CLI commands and file mappings below work for both. See the
    npx quaso translate
    ```
 
-   This command requires a Gemini key in **Settings → AI translation**. An upload can already
+   This command requires a Gemini or Anthropic key in **Settings → AI translation**. An upload can already
    start a job when automatic translation is enabled; use `upload --wait` to wait for that job.
-   You can also translate by hand without a Gemini key. Follow [the translation workflow](workflow.md)
+   You can also translate by hand without a Gemini or Anthropic key. Follow [the translation workflow](workflow.md)
    to review a language and use it as a reference for later jobs.
 
 5. Download, check the result, and test your game:

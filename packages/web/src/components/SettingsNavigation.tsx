@@ -37,7 +37,8 @@ export const SETTINGS_SECTIONS = [
     id: "llm",
     label: "AI translation",
     group: "Connections",
-    description: "Connect a translation provider and control how automatic translations run.",
+    description:
+      "Connect Google Gemini, Anthropic Claude, or both, and choose how translations run.",
   },
   {
     id: "email",

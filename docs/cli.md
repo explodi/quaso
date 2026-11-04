@@ -245,7 +245,7 @@ Uploading unchanged source files preserves their revision. A JSON file that has 
 key, stops the upload with exit code 5 and its place:
 `src/locales/en/menus.json:3:19: trailing comma is not allowed`.
 
-When automatic translation is enabled and a Gemini key is configured, upload queues a job for
+When automatic translation is enabled and a Gemini or Anthropic key is configured, upload queues a job for
 new and changed strings. Automatic translation is enabled by default. A setting controls updates
 to outdated translations, proofread ones included; it is on by default. Use `--wait` to wait for the job.
 
@@ -360,7 +360,7 @@ Strings that stayed untranslated (1):
 By default, the command checks job progress every two seconds and prints it to stderr. It exits
 with code 6 if strings failed or the job failed, was cancelled, or paused. Failures use
 `file › key (lang): reason`, with the local translation path. A job paused for a spent monthly
-token budget or a rejected Gemini key can resume after the issue is resolved.
+token budget or a rejected provider key can resume after the issue is resolved.
 
 `--dry-run` prints what a run would do:
 
@@ -374,7 +374,7 @@ Of these: 78 untranslated, 6 outdated to update.
 ```
 
 The estimate counts characters / 4 of each request's prompt and the expected answer; thinking models
-use more, and retries add some. An instance without an LLM (no Gemini key in its Settings) answers with exit
+use more, and retries add some. An instance without an LLM (no Gemini or Anthropic key in its Settings) answers with exit
 code 4 and says so. An API key needs the `upload` scope and a creator who can translate the selected languages.
 
 ### `quaso status`

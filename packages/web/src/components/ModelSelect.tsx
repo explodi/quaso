@@ -39,15 +39,29 @@ export function ModelSelect({
     );
   }
   const unlisted = value !== "" && !models.includes(value);
+  const groups = [
+    { label: "Google Gemini", models: models.filter((model) => model.startsWith("gemini-")) },
+    { label: "Anthropic Claude", models: models.filter((model) => model.startsWith("claude-")) },
+    {
+      label: "Other models",
+      models: models.filter((model) => !/^(gemini|claude)-/.test(model)),
+    },
+  ];
   return (
     <Select {...attributes} value={value} onChange={(event) => onChange(event.target.value)}>
       {blankLabel !== undefined && <option value="">{blankLabel}</option>}
       {unlisted && <option value={value}>{value}</option>}
-      {models.map((model) => (
-        <option key={model} value={model}>
-          {model}
-        </option>
-      ))}
+      {groups
+        .filter((group) => group.models.length > 0)
+        .map((group) => (
+          <optgroup key={group.label} label={group.label}>
+            {group.models.map((model) => (
+              <option key={model} value={model}>
+                {model}
+              </option>
+            ))}
+          </optgroup>
+        ))}
     </Select>
   );
 }

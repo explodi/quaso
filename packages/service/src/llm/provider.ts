@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 /**
- * The `TranslationProvider` interface (design §5.6, LLM-8): what jobs talk to. Two
- * implementations ship: Gemini over `fetch` (`gemini.ts`) and the fake translator
- * (`fake.ts`) for development, tests and demos.
+ * The `TranslationProvider` interface (design §5.6, LLM-8): what jobs talk to. Gemini and
+ * Anthropic use `fetch`; the fake translator serves development, tests and demos.
  */
 import type { InterpolationSyntax, LlmSettings, PluralCategory, TextValue } from "@quaso/core";
 
@@ -23,7 +22,7 @@ export type JsonSchemaObject = Record<string, unknown>;
 
 /**
  * A machine-readable copy of a batch, for providers that don't read prompts (the fake
- * translator). The Gemini provider ignores it.
+ * translator). The API providers ignore it.
  */
 export interface ProviderBatch {
   sourceLanguage: string;
@@ -85,7 +84,7 @@ export interface TextResult {
 }
 
 export interface TranslationProvider {
-  readonly name: "gemini" | "fake";
+  readonly name: "gemini" | "anthropic" | "fake";
   /** Translates a batch: the answer follows `request.responseSchema`. */
   translate(request: ProviderRequest): Promise<ProviderResult>;
   /** Free text, such as a file's context. */
