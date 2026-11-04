@@ -390,7 +390,7 @@ export const ICU_CONVERSION_CASES: { name: string; run(sql: Sql): Promise<void> 
           "coins",
           "pl",
           {
-            one: "{{count}} moneta",
+            one: "{{unknown}} moneta",
             few: "{{count}} monety",
             many: "x {{count}}",
             other: "y {{count}}",
@@ -405,7 +405,7 @@ export const ICU_CONVERSION_CASES: { name: string; run(sql: Sql): Promise<void> 
           key: "coins",
           language: "pl",
           check: "placeholder_extra",
-          message: "Placeholder {count} isn't in the English in the one case of {count, plural}.",
+          message: "Placeholder {unknown} isn't in the English in the one case of {count, plural}.",
         },
       ];
       const preview = await convertToIcuAsync(sql, { type: "system" }, { dryRun: true }, AT);
@@ -414,6 +414,32 @@ export const ICU_CONVERSION_CASES: { name: string; run(sql: Sql): Promise<void> 
       checkEqual(result.failing, failing);
       const [rows] = await sql.read([{ sql: "SELECT colour, qa_errors FROM translations" }]);
       checkEqual(rows, [{ colour: "blue", qa_errors: 1 }]);
+    },
+  },
+  {
+    name: "a plural count omitted by the English one case remains valid after ICU conversion",
+    async run(sql) {
+      await upload(sql, JSON.stringify({ coins_one: "One coin", coins_other: "{{count}} coins" }));
+      await change(sql, [
+        translation(
+          "coins",
+          "ru",
+          {
+            one: "{{count}} монета",
+            few: "{{count}} монеты",
+            many: "{{count}} монет",
+            other: "{{count}} монеты",
+          },
+          "blue",
+          "llm",
+        ),
+      ]);
+      const preview = await convertToIcuAsync(sql, { type: "system" }, { dryRun: true }, AT);
+      checkEqual(preview.failing, []);
+      const result = await convertToIcuAsync(sql, { type: "system" }, {}, AT);
+      checkEqual(result.failing, []);
+      const [rows] = await sql.read([{ sql: "SELECT colour, qa_errors FROM translations" }]);
+      checkEqual(rows, [{ colour: "blue", qa_errors: 0 }]);
     },
   },
   {

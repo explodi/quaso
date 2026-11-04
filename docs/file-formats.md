@@ -274,6 +274,11 @@ the English has no such key. Polish `few` and `many` therefore need the same pla
 English `other`. A case that covers exactly one number, such as `one` in German or `=1`, may leave
 out `#` and the block's argument.
 
+A case may also show its plural count once when the English case leaves it out: `#` or the
+block's argument, such as `{n}`. Russian `one` covers 1, 21, 31 and more, so an English `one {A tower}`
+can become `one {{n} башня}`. This applies to ordinal blocks too; unrelated or repeated placeholders
+are still errors.
+
 ### Checks
 
 - `icu_structure` (error): a block is missing, broken or not in the English, a select block's

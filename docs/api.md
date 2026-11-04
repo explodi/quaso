@@ -280,7 +280,7 @@ The response reports what changes, or would change:
       "key": "coins",
       "language": "pl",
       "check": "placeholder_extra",
-      "message": "Placeholder {count} isn't in the English in the one case of {count, plural}."
+      "message": "Placeholder {unknown} isn't in the English in the one case of {count, plural}."
     }
   ],
   "revision": 41
