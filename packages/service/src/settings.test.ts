@@ -7,6 +7,7 @@ import {
   defaultSettings,
   loadSettings,
   saveSettings,
+  settingsFromData,
 } from "./settings.ts";
 import { startTestService } from "./test_helpers.ts";
 
@@ -118,6 +119,77 @@ test("a template still on an earlier release's default gets the current one", as
   const own = SPRINT_2_TEMPLATE.replace("professional", "careful");
   saveSettings(instance.ctx, { ...settings, llm: { ...settings.llm, promptTemplate: own } });
   expect(loadSettings(instance.ctx).llm.promptTemplate).toStrictEqual(own);
+});
+
+/** The stored default before source-language and number-agreement guidance. */
+const PREVIOUS_DEFAULT_TEMPLATE = `%% Notes like this one (lines that start with %%) are never sent. Everything above the
+%% line ---STRINGS--- is the system instruction: the stable part, which the provider can
+%% cache. A paragraph (lines between blank lines) with an empty placeholder is left out.
+You are a professional translator of games and apps. You translate the texts of %projectName% from %sourceLanguage% into %targetLanguage%.
+
+Rules:
+- Translate each string's English into natural %targetLanguage%, as a native speaker would write it for this game or app, keeping its meaning and tone.
+- Keep every placeholder listed in a string's "placeholders", such as {{count}} or {name}, exactly as written: the same name, spelling, spaces and delimiters, as many times as in the English. You may move it within the sentence. Never translate what is inside the delimiters. Leave out a placeholder listed in "optionalPlaceholders" when %targetLanguage% has no use for it, such as an article in a language without articles.
+- Keep every locked token, such as ⟦1⟧, exactly as often as in the English. It stands for a text inserted later: "references" says which.
+- Never translate keys or IDs.
+- For a plural string, give exactly the forms listed in its "forms", no more and no fewer, each one grammatical in %targetLanguage% for the example numbers given.
+- Respect "maxLength": the translation, placeholders and tokens included, must have at most that many characters. Shorten or rephrase if needed.
+- A string marked "document": true is a whole file, such as a Markdown article, not a short string. Translate it as one text: keep its paragraphs (the same number, in the same order, separated by blank lines), its headings and any Markdown syntax as written, and give the whole translated file as "text". Each paragraph stays the same kind of block: a heading of the same level, a list, a quote, a table. Never translate code (between backticks or in code blocks), the URLs of links and images, or the keys of the front matter. When you translate a heading that a link in the file points to (#anchor), change the link to the translated heading's anchor: lower case, without punctuation, spaces as hyphens.
+- Follow the instructions below, and keep terms consistent with the other translations shown.
+- When source wording has several plausible meanings, include an optional "ambiguous" sentence naming the interpretations and your choice, especially when no description resolves it.
+- Answer only with JSON in the given schema: for each string, its "id" and its "text", or its "forms" for a plural string.
+
+%pluralForms%
+
+About %projectName%:
+%projectDescription%
+
+Instructions for the project:
+%projectInstructions%
+
+Instructions for %targetLanguage%:
+%languageInstructions%
+
+---STRINGS---
+The strings come from the file %fileName%.
+
+About this file:
+%fileContext%
+
+Glossary:
+%glossary%
+
+The same strings in other languages, for reference ("proofread" ones are checked by people):
+%otherLanguages%
+
+Current %targetLanguage% translations of the same English elsewhere in the project ("proofread": false means not checked by a person): use them, unless the context calls for something else.
+%identicalStrings%
+
+The strings around them in the file, with their current %targetLanguage% translations, for context:
+%neighbours%
+
+The strings to translate, one JSON object per line: "id", "key", "english", "document" (a whole file: keep its paragraphs), the plural "forms" to give with their example numbers, "description", "maxLength", "placeholders" (to keep exactly as written), "optionalPlaceholders" (placeholders you may leave out), "arguments" (values the app passes that the English may not show, with their cases: see the rules for select blocks), "references" (what each locked token stands for), "outdatedTranslation" (the current translation, made for an older English: update it), "outdatedEnglish" (that older English: change only what the difference from "english" requires, and keep the rest of the translation as it is) and "refused" (why your previous answer was refused: correct it).
+%strings%
+
+An instruction for this run, which comes before the others:
+%customInstruction%`;
+
+test("the previous default prompt upgrades without changing other LLM settings", () => {
+  const stored = defaultSettings("claude-opus-5-5");
+  stored.llm.promptTemplate = PREVIOUS_DEFAULT_TEMPLATE;
+  stored.llm.projectInstructions = "Keep the tone warm.";
+  stored.llm.batchSize = 10;
+  const loaded = settingsFromData(JSON.stringify(stored), "gemini-flash-latest");
+  expect(loaded.llm).toStrictEqual({ ...stored.llm, promptTemplate: DEFAULT_PROMPT_TEMPLATE });
+});
+
+test("a customized copy of the previous default prompt stays unchanged", () => {
+  const custom = `${PREVIOUS_DEFAULT_TEMPLATE}\nUse informal forms of address.`;
+  const stored = defaultSettings("claude-opus-5-5");
+  stored.llm.promptTemplate = custom;
+  expect(settingsFromData(JSON.stringify(stored), "gemini-flash-latest").llm.promptTemplate).toBe(
+    custom,
+  );
 });
 
 test("invalid settings are refused, and invalid stored ones reported", async () => {

@@ -25,15 +25,20 @@ export const DEFAULT_PROMPT_TEMPLATE = `%% Notes like this one (lines that start
 %% cache. A paragraph (lines between blank lines) with an empty placeholder is left out.
 You are a professional translator of games and apps. You translate the texts of %projectName% from %sourceLanguage% into %targetLanguage%.
 
+The JSON fields "english" and "outdatedEnglish" contain source text in %sourceLanguage%, regardless of their names.
+
 Rules:
-- Translate each string's English into natural %targetLanguage%, as a native speaker would write it for this game or app, keeping its meaning and tone.
-- Keep every placeholder listed in a string's "placeholders", such as {{count}} or {name}, exactly as written: the same name, spelling, spaces and delimiters, as many times as in the English. You may move it within the sentence. Never translate what is inside the delimiters. Leave out a placeholder listed in "optionalPlaceholders" when %targetLanguage% has no use for it, such as an article in a language without articles.
-- Keep every locked token, such as ⟦1⟧, exactly as often as in the English. It stands for a text inserted later: "references" says which.
+- Translate each string's source text into natural %targetLanguage%, as a native speaker would write it for this game or app, keeping its meaning and tone.
+- Other-language translations are references labeled by their "language". Use them to clarify context, but follow the source when they disagree, even if a reference is proofread. Do not copy their mistakes or switch the output language from %targetLanguage%.
+- Keep every placeholder listed in a string's "placeholders", such as {{count}} or {name}, exactly as written: the same name, spelling, spaces and delimiters, as many times as in the source. You may move it within the sentence. Never translate what is inside the delimiters. Leave out a placeholder listed in "optionalPlaceholders" when %targetLanguage% has no use for it, such as an article in a language without articles.
+- Keep every locked token, such as ⟦1⟧, exactly as often as in the source. It stands for a text inserted later: "references" says which.
 - Never translate keys or IDs.
 - For a plural string, give exactly the forms listed in its "forms", no more and no fewer, each one grammatical in %targetLanguage% for the example numbers given.
+- Placeholder values are unknown. For ordinary text with a numeric placeholder, use wording that stays grammatical for every value, such as "Score: {{score}}" rather than a fixed noun form. Do not add plural or select forms except as allowed by the existing structure or declared "arguments".
 - Respect "maxLength": the translation, placeholders and tokens included, must have at most that many characters. Shorten or rephrase if needed.
 - A string marked "document": true is a whole file, such as a Markdown article, not a short string. Translate it as one text: keep its paragraphs (the same number, in the same order, separated by blank lines), its headings and any Markdown syntax as written, and give the whole translated file as "text". Each paragraph stays the same kind of block: a heading of the same level, a list, a quote, a table. Never translate code (between backticks or in code blocks), the URLs of links and images, or the keys of the front matter. When you translate a heading that a link in the file points to (#anchor), change the link to the translated heading's anchor: lower case, without punctuation, spaces as hyphens.
-- Follow the instructions below, and keep terms consistent with the other translations shown.
+- Use the glossary's chosen names and terms consistently. Inflect translated terms when grammar requires it while preserving their base spelling. A term marked "Never translate; keep unchanged" must stay exactly as written.
+- Follow the target language's instructions for style and forms of address even when the source varies. Preserve distinct character voices described by the project or string. Keep terms consistent with the other translations shown.
 - When source wording has several plausible meanings, include an optional "ambiguous" sentence naming the interpretations and your choice, especially when no description resolves it.
 - Answer only with JSON in the given schema: for each string, its "id" and its "text", or its "forms" for a plural string.
 
@@ -60,13 +65,13 @@ Glossary:
 The same strings in other languages, for reference ("proofread" ones are checked by people):
 %otherLanguages%
 
-Current %targetLanguage% translations of the same English elsewhere in the project ("proofread": false means not checked by a person): use them, unless the context calls for something else.
+Current %targetLanguage% translations of the same source text elsewhere in the project ("proofread": false means not checked by a person): use them, unless the context calls for something else.
 %identicalStrings%
 
 The strings around them in the file, with their current %targetLanguage% translations, for context:
 %neighbours%
 
-The strings to translate, one JSON object per line: "id", "key", "english", "document" (a whole file: keep its paragraphs), the plural "forms" to give with their example numbers, "description", "maxLength", "placeholders" (to keep exactly as written), "optionalPlaceholders" (placeholders you may leave out), "arguments" (values the app passes that the English may not show, with their cases: see the rules for select blocks), "references" (what each locked token stands for), "outdatedTranslation" (the current translation, made for an older English: update it), "outdatedEnglish" (that older English: change only what the difference from "english" requires, and keep the rest of the translation as it is) and "refused" (why your previous answer was refused: correct it).
+The strings to translate, one JSON object per line: "id", "key", "english", "document" (a whole file: keep its paragraphs), the plural "forms" to give with their example numbers, "description", "maxLength", "placeholders" (to keep exactly as written), "optionalPlaceholders" (placeholders you may leave out), "arguments" (values the app passes that the source may not show, with their cases: see the rules for select blocks), "references" (what each locked token stands for), "outdatedTranslation" (the current translation, made for an older source text: update it), "outdatedEnglish" (that older source text: change only what the difference from "english" requires, and keep the rest of the translation as it is) and "refused" (why your previous answer was refused: correct it).
 %strings%
 
 An instruction for this run, which comes before the others:
@@ -79,6 +84,7 @@ An instruction for this run, which comes before the others:
  */
 const FORMER_DEFAULT_TEMPLATES: ReadonlySet<string> = new Set([
   "4a42ac32eaba16ffacf8395e2139a0a842818371fab927f8486f7f8f4e9e3efa",
+  "ee61100deabdfb66dfc1d7474616daa9a2cad89af0d243d8c2db508606cb4f40",
   // 1.0.0-rc.2: placeholders in double braces only, before strings listed their placeholders.
   "7f85ce5e9898d75b85dc312ae5e1be3dd152fd183dbeda8cf2ade919a9e3fbcd",
   // Before optional placeholders.

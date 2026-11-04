@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { requestProvider } from "../llm/configuration.ts";
 /** File context generation runs outside SQL; usage and a still-current cache commit together. */
-import type { ProjectSettings } from "@quaso/core";
+import { languageName, type ProjectSettings } from "@quaso/core";
 import { SYSTEM, type Actor } from "../api.ts";
 import { forbidden } from "../errors.ts";
 import {
@@ -29,6 +29,7 @@ export function fileContextRequest(
     system: "You describe the text files of games and apps for their translators.",
     prompt:
       `The project: ${settings.name}.${about}\n` +
+      `The source language is ${languageName(settings.sourceLanguage)} (${settings.sourceLanguage}). The "english" fields contain source text in that language.\n` +
       `The first strings of the file ${path}, one JSON object per line:\n${english}\n\n` +
       "In two to four sentences, describe what this file holds and where its texts appear, " +
       "so that a translator knows their context. Answer with the description only.",
