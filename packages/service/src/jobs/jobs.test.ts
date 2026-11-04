@@ -449,7 +449,7 @@ test("without a provider, LLM translation is off with a clear message", async ()
   assert(error instanceof ServiceError);
   expect(error.code).toBe("llm_unavailable");
   expect(error.message).toStrictEqual(
-    "LLM translation is off: enter a Gemini API key in Settings.",
+    "LLM translation is off: enter a Gemini or Anthropic API key in Settings.",
   );
   expect(error.status).toBe(503);
   expect(await instance.service.listModels(SYSTEM, {})).toStrictEqual({ models: [] });

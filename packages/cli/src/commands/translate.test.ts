@@ -247,7 +247,7 @@ test("translate: usage errors, and the instance's refusals with hints", async ()
         {
           error: {
             code: "llm_unavailable",
-            message: "LLM translation is off: enter a Gemini API key in Settings.",
+            message: "LLM translation is off: enter a Gemini or Anthropic API key in Settings.",
           },
         },
         503,
@@ -256,10 +256,10 @@ test("translate: usage errors, and the instance's refusals with hints", async ()
     const unavailable = await runCli(["translate"], { cwd: dir, env: ENV, fetch: off });
     expect(unavailable.code).toBe(4);
     expect(unavailable.stderr).toContain(
-      "LLM translation is off: enter a Gemini API key in Settings.",
+      "LLM translation is off: enter a Gemini or Anthropic API key in Settings.",
     );
     expect(unavailable.stderr).toContain(
-      "An administrator enters the Gemini API key in the instance's Settings → LLM translation.",
+      "An administrator enters a Gemini or Anthropic API key in the instance's Settings → AI translation.",
     );
     expect(off.requests.length, "not retried").toBe(1);
 
