@@ -128,7 +128,7 @@ Check these signals to detect problems:
   running. `nextWakeUp` is the next alarm time in milliseconds since the Unix epoch, or `null` when
   none is scheduled. Published file history defaults to 90 days. Daily maintenance keeps current
   versions and removes expired history and unreferenced version objects older than a day.
-- Admin shows version, database, recent errors, LLM jobs, Gemini configuration and last backup. A
+- Admin shows version, database, recent errors, LLM jobs, AI configuration and last backup. A
   configured key is not proof that the provider currently accepts it; check failed jobs too.
 - Quaso writes structured JSON logs. `docker compose logs --tail 100 quaso` is the first check on a
   VM. Keep logs in your existing log system with limited retention and access.

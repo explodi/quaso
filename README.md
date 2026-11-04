@@ -6,7 +6,7 @@
 
 Quaso is a self-hosted tool for translating games that use **i18next or ICU MessageFormat**, with
 source text in JSON files or Markdown documents. Upload source text,
-translate it with Gemini or your team, and download the translations into your game. Your game
+translate it with Google Gemini, Anthropic Claude, or your team, and download the translations into your game. Your game
 loads those files without a connection to Quaso.
 
 ## Supported message formats
@@ -30,7 +30,7 @@ Follow the [quick start](docs/README.md) to complete your first upload and downl
    [Cloudflare](docs/deploy-cloudflare.md), and create an administrator account.
 2. **Connect your game** with the command-line tool: install `@quaso-i18n/cli`, create an API key,
    and run `npx quaso init` with your target languages.
-3. **Upload and translate** your source files. Use your Gemini API key for machine translation,
+3. **Upload and translate** your source files. Use your Gemini or Anthropic API key for machine translation,
    or translate on the website.
 4. **Download and check** the files with `npx quaso download`, then include them in your build.
 
@@ -44,7 +44,7 @@ Each instance holds one project, its source language, and the languages you want
 The website is public: visitors can read source text and translations. Contributors suggest
 changes; managers and administrators review them or edit accepted translations directly.
 
-With a Gemini key and automatic translation enabled, uploads queue work for new and changed
+With a Gemini or Anthropic key and automatic translation enabled, uploads queue work for new and changed
 strings. Machine translations can be downloaded before proofreading. The language model does not
 replace a proofread translation of the current source text. Proofreading holds for the text it was
 made for: when that text changes, the translation is updated like any other, and comes back if the

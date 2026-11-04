@@ -4,10 +4,10 @@ import * as fs from "node:fs/promises";
  * The opt-in LLM evaluation (S0.6, S5.8; design open question 4), `npm run test:llm`:
  * translates the development fixture's strings (or another project's, with `--project`, in
  * ICU MessageFormat with `--icu`) into German, Polish and Japanese with each model, through the service's own batching, prompts, checks and
- * retries (an in-memory service with the Gemini provider), so the numbers are production's.
+ * retries (an in-memory service with the selected provider), so the numbers are production's.
  * It prints, per model and language, the share of strings that passed the quality checks on
  * the first try and after the retries, the tokens and the time, and writes the translations
- * to a JSON file for a native speaker's review. It needs GEMINI_API_KEY, and spends tokens.
+ * to a JSON file for a native speaker's review. It needs the selected providers’ API keys, and spends tokens.
  *
  *   npm run test:llm -- [--models gemini-flash-latest,gemini-2.5-pro] [--languages de,pl,ja]
  *                         [--out .quaso/llm-eval.json] [--concurrency 4]
@@ -16,6 +16,7 @@ import * as fs from "node:fs/promises";
 import { dirname } from "node:path";
 import {
   createGeminiProvider,
+  createAnthropicProvider,
   createService,
   SYSTEM,
   type TranslationProvider,
@@ -117,7 +118,7 @@ function counting(provider: TranslationProvider) {
 
 /**
  * Evaluates each model in each language. `providerFor` makes the provider for a model
- * (Gemini with the key; tests pass the fake translator).
+ * (the matching service with its key; tests pass the fake translator).
  */
 export async function evaluate(
   options: EvalOptions,
@@ -244,18 +245,22 @@ export function report(results: EvalResult[]): string {
     .join("\n");
 }
 
+export function evaluationProvider(
+  model: string,
+  env: Record<string, string | undefined>,
+): TranslationProvider {
+  const anthropic = model.startsWith("claude-");
+  const variable = anthropic ? "ANTHROPIC_API_KEY" : "GEMINI_API_KEY";
+  const apiKey = env[variable]?.trim();
+  if (!apiKey) throw new Error(`The evaluation of ${model} needs ${variable}, and spends tokens.`);
+  return anthropic ? createAnthropicProvider({ apiKey }) : createGeminiProvider({ apiKey });
+}
+
 if (import.meta.main) {
-  const key = process.env["GEMINI_API_KEY"]?.trim();
-  if (!key) {
-    console.error(
-      "The LLM evaluation needs a Gemini API key, and spends tokens: " +
-        "GEMINI_API_KEY=… npm run test:llm -- [--models a,b] [--languages de,pl,ja] [--out file]",
-    );
-    process.exit(1);
-  }
   let options: EvalOptions;
   try {
     options = parseOptions(process.argv.slice(2), { GEMINI_MODEL: process.env["GEMINI_MODEL"] });
+    for (const model of options.models) evaluationProvider(model, process.env);
   } catch (error) {
     console.error((error as Error).message);
     process.exit(2);
@@ -268,7 +273,7 @@ if (import.meta.main) {
   const results = await evaluate(
     options,
     // The model is chosen per request, from the instance's settings.
-    () => createGeminiProvider({ apiKey: key }),
+    (model) => evaluationProvider(model, process.env),
     (line) => console.error(line),
   );
   console.log(report(results));

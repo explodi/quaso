@@ -35,7 +35,10 @@ import { StoredLlm, type LlmConfiguration } from "../llm/configuration.ts";
 
 export interface LlmOptions {
   provider?: TranslationProvider | null;
-  providerFactory?: (apiKey: string) => TranslationProvider;
+  providerFactory?: (
+    apiKey: string,
+    provider: import("@quaso/core").LlmProviderName,
+  ) => TranslationProvider;
   dev?: boolean;
   scheduler: Scheduler;
   /** Batches in parallel. Default: `DEFAULT_CONCURRENCY` (4). */
@@ -94,7 +97,7 @@ const Empty = s.object({});
 const IdInput = s.object({ id: Id });
 
 export interface Llm {
-  test(): Promise<LlmTestResult>;
+  test(provider?: import("@quaso/core").LlmProviderName): Promise<LlmTestResult>;
   configuration(): LlmConfiguration;
   readonly busy: boolean;
   /** Whether LLM translation is available: a provider is configured. */
@@ -121,7 +124,7 @@ export function createLlm(ctx: Context, options: LlmOptions): Llm {
   let running = false;
 
   return {
-    test: () => runtime.test(ctx),
+    test: (provider) => runtime.test(ctx, provider),
     configuration: () => runtime.read(ctx),
     get available() {
       return runtime.read(ctx).provider !== null;

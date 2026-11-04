@@ -47,6 +47,7 @@ export type {
   BeginRestoreResult,
   RestoreTarget,
 } from "./src/backup.ts";
+export { createAnthropicProvider, type AnthropicOptions } from "./src/llm/anthropic.ts";
 export { createGeminiProvider, type GeminiOptions } from "./src/llm/gemini.ts";
 export { createFakeTranslator, FAKE_MODEL } from "./src/llm/fake.ts";
 export {

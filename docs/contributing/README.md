@@ -28,7 +28,7 @@ npm run dev
 `npm run dev` creates `.quaso/` (ignored by Git), fills a SQLite database with sample data, and
 starts the app on port 5173 and API server on port 8000. Open the printed address ending in
 `/auth/dev-login` to sign in as the development administrator. The app uses a fake translator until
-you save a Gemini key in **Settings → AI translation**.
+you save a Gemini or Anthropic key in **Settings → AI translation**.
 
 Keep that terminal open. In a second terminal at the repository root, check the running project
 and run the normal tests:

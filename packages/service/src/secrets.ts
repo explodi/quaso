@@ -2,16 +2,17 @@
 /** Credential values stay inside storage; administration returns only a safe suffix. */
 import { type ManagedSecretName, type SecretStatus, type SecretsResult } from "@quaso/core";
 import type { Actor } from "./api.ts";
-import type { Context } from "./context.ts";
+import { FALLBACK_MODEL, type Context } from "./context.ts";
 import { bumpRevision } from "./db.ts";
 import { permissionReadStatements, permissionsFromRows } from "./permissions.ts";
 import type { Sql, SqlRow, Statement } from "./ports.ts";
 import { withRetries } from "./write.ts";
+import { settingsFromData } from "./settings.ts";
 
-const NAMES: ManagedSecretName[] = ["gemini_api_key", "email_api_key"];
+const NAMES: ManagedSecretName[] = ["gemini_api_key", "anthropic_api_key", "email_api_key"];
 const REQUIREMENT_PREFIX = "configured_secret:";
 export const SECRET_REQUIREMENTS: Statement = {
-  sql: "SELECT key FROM meta WHERE key IN ('configured_secret:gemini_api_key', 'configured_secret:email_api_key')",
+  sql: "SELECT key FROM meta WHERE key IN ('configured_secret:gemini_api_key', 'configured_secret:anthropic_api_key', 'configured_secret:email_api_key')",
 };
 
 /** Backup metadata retains names so the restored panel can ask for omitted credentials. */
@@ -113,6 +114,21 @@ function change(
   return { statements: [statement, requirement, activity], result };
 }
 
+const FIRST_ANTHROPIC_SETTINGS: Statement = {
+  sql: `SELECT data FROM settings WHERE id = 1
+    AND NOT EXISTS (SELECT 1 FROM secrets WHERE name IN ('gemini_api_key', 'anthropic_api_key'))
+    AND NOT EXISTS (SELECT 1 FROM meta WHERE key IN ('configured_secret:gemini_api_key', 'configured_secret:anthropic_api_key'))`,
+};
+
+/** A first Claude key makes a new project's default usable without another setup step. */
+function firstAnthropicModel(rows: SqlRow[]): Statement[] {
+  if (!rows[0]) return [];
+  const settings = settingsFromData(rows[0].data as string, FALLBACK_MODEL);
+  if (settings.llm.model !== FALLBACK_MODEL) return [];
+  settings.llm.model = "claude-haiku-5-5";
+  return [{ sql: "UPDATE settings SET data = ? WHERE id = 1", params: [JSON.stringify(settings)] }];
+}
+
 export function changeSecret(
   ctx: Context,
   actor: Actor,
@@ -125,6 +141,8 @@ export function changeSecret(
   )[0];
   const required = configuredSecrets(ctx.sql.query(SECRET_REQUIREMENTS.sql)).includes(name);
   const plan = change(name, value, current, actor, ctx.clock(), required);
+  if (name === "anthropic_api_key" && value !== null)
+    plan.statements.push(...firstAnthropicModel(ctx.sql.query(FIRST_ANTHROPIC_SETTINGS.sql)));
   for (const statement of plan.statements) ctx.sql.run(statement.sql, ...(statement.params ?? []));
   if (plan.statements.length > 0) bumpRevision(ctx.sql);
   return plan.result;
@@ -140,10 +158,12 @@ export async function changeSecretAsync(
   return withRetries(
     sql,
     async () => {
-      const [revision, rows, requirements, ...permissionRows] = await sql.read([
+      const firstAnthropic = name === "anthropic_api_key" && value !== null;
+      const [revision, rows, requirements, ...remaining] = await sql.read([
         REVISION,
         { sql: "SELECT name, value, updated_at FROM secrets WHERE name = ?", params: [name] },
         SECRET_REQUIREMENTS,
+        ...(firstAnthropic ? [FIRST_ANTHROPIC_SETTINGS] : []),
         ...permissionReadStatements(actor),
       ]);
       return {
@@ -151,13 +171,16 @@ export async function changeSecretAsync(
         state: {
           row: rows[0] as Row | undefined,
           required: configuredSecrets(requirements).includes(name),
-          permissions: permissionsFromRows(actor, permissionRows),
+          settings: firstAnthropic ? remaining[0] : [],
+          permissions: permissionsFromRows(actor, firstAnthropic ? remaining.slice(1) : remaining),
         },
       };
     },
-    ({ row, required, permissions }) => {
+    ({ row, required, permissions, settings }) => {
       permissions.require("settings");
-      return change(name, value, row, actor, now, required);
+      const plan = change(name, value, row, actor, now, required);
+      plan.statements.push(...firstAnthropicModel(settings));
+      return plan;
     },
   );
 }

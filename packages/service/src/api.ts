@@ -48,6 +48,7 @@ import type {
   SecretStatus,
   SecretsResult,
   LlmTestResult,
+  TestLlmRequest,
   UpdateFolderRequest,
   UpdateLanguageRequest,
   UpdateSettingsRequest,
@@ -150,7 +151,7 @@ export interface ServiceApi extends AccountsApi, LlmMethods, LaterApi, LaterApi 
   /** Administrators. */
   getSettings(actor: Actor, input: Record<string, never>): Promise<SettingsResult>;
   listSecrets(actor: Actor, input: Record<string, never>): Promise<SecretsResult>;
-  testLlm(actor: Actor, input: Record<string, never>): Promise<LlmTestResult>;
+  testLlm(actor: Actor, input: TestLlmRequest): Promise<LlmTestResult>;
   testEmail(
     actor: Actor,
     input: import("@quaso/core").TestEmailRequest,

@@ -2,7 +2,7 @@
 import { assert, expect, test } from "vitest";
 import { demoDir } from "../packages/server/src/dev_seed.ts";
 import { createFakeTranslator } from "../packages/service/mod.ts";
-import { DEFAULT_MODELS, evaluate, parseOptions, report } from "./llm_eval.ts";
+import { DEFAULT_MODELS, evaluate, evaluationProvider, parseOptions, report } from "./llm_eval.ts";
 
 test("llm_eval: options, with the default models and languages", () => {
   expect(parseOptions([])).toStrictEqual({
@@ -56,4 +56,16 @@ test("llm_eval: the demo through the service, per model and language (fake trans
   expect(table).toContain("first try");
   expect(table).toContain("model-a  de");
   expect(table).toContain("100%");
+});
+
+test("llm_eval: each model uses its own provider key", () => {
+  const env = { GEMINI_API_KEY: "google-key", ANTHROPIC_API_KEY: "anthropic-key" };
+  expect(evaluationProvider("claude-haiku-5-5", env).name).toBe("anthropic");
+  expect(evaluationProvider("gemini-flash-latest", env).name).toBe("gemini");
+  expect(() => evaluationProvider("claude-haiku-5-5", { GEMINI_API_KEY: "google-key" })).toThrow(
+    "ANTHROPIC_API_KEY",
+  );
+  expect(() =>
+    evaluationProvider("gemini-flash-latest", { ANTHROPIC_API_KEY: "anthropic-key" }),
+  ).toThrow("GEMINI_API_KEY");
 });

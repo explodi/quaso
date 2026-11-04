@@ -11,7 +11,7 @@ You need a game with [supported JSON or Markdown files](file-formats.md), Node.j
 development computer, and a Quaso instance. The command examples use a POSIX shell, such as Bash
 or Zsh. Replace the example hostname and key with your own values.
 
-To try the workflow without a public server or a Gemini key, start
+To try the workflow without a public server or a Gemini or Anthropic key, start
 [Quaso Quest](../examples/demo-game/README.md). Its test translator demonstrates the workflow
 without producing real translations.
 
@@ -101,13 +101,13 @@ Keep the API key out of Git. Upload reads your source files without changing the
 ## 3. Translate
 
 Choose machine translation, human translation, or both. A large language model (LLM) can prepare
-translations for review. You can also work entirely on the website without a Gemini key.
+translations for review. You can also work entirely on the website without a Gemini or Anthropic key.
 
 <!-- tabs -->
 
 ### With the LLM
 
-In **Settings → AI translation**, enter and save a Gemini API key. Use **Test Gemini key** to
+In **Settings → AI translation**, enter and save a Gemini or Anthropic API key. Use **Test Gemini key** or **Test Anthropic Claude key** to
 check it, choose a model available to that key, and save any changed model or budget settings.
 Then translate the uploaded strings:
 
@@ -119,7 +119,7 @@ The command waits for the job and reports failures. Successful translations beco
 accepted for download but not yet proofread. The quality checks catch structural problems such as
 missing placeholders; a person still needs to check meaning and tone.
 
-**Automatically translate on upload** is enabled by default. With a working Gemini key, later
+**Automatically translate on upload** is enabled by default. With a working Gemini or Anthropic key, later
 uploads queue translations for new and changed strings. Upload does not wait for that work unless
 you pass `--wait`. The LLM does not replace a proofread translation of the current source text;
 when that text changes, it updates the translation like any other.

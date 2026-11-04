@@ -30,7 +30,7 @@ export const INSTANCE_SECRETS_CASES: { name: string; run(sql: Sql): Promise<void
       checkEqual((await backupInfoAsync(sql, SYSTEM, 0)).revision, before.revision);
       checkEqual(
         (await listSecretsAsync(sql, SYSTEM)).secrets.map((secret) => secret.name),
-        ["gemini_api_key", "email_api_key"],
+        ["gemini_api_key", "anthropic_api_key", "email_api_key"],
       );
       checkEqual(
         before.tables.some((table) => table.name === "secrets"),

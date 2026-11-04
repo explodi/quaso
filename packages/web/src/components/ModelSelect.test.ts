@@ -30,8 +30,27 @@ test("a saved model the provider doesn't list stays in the drop-down", () => {
 test("a model that may follow another has a blank choice, first", () => {
   const html = render({ value: "", blankLabel: "The project model" });
   expect(html).toMatch(
-    /<option value="" selected="">The project model<\/option><option value="gemini-3\.8-flash">/,
+    /<option value="" selected="">The project model<\/option><optgroup label="Google Gemini">/,
   );
+});
+
+test("models from both services are grouped by provider", () => {
+  const html = render({
+    models: ["claude-sonnet-5-5", "gemini-flash-latest", "custom-model"],
+    value: "claude-sonnet-5-5",
+  });
+  expect(html).toMatch(/<optgroup label="Google Gemini"><option value="gemini-flash-latest">/);
+  expect(html).toMatch(
+    /<optgroup label="Anthropic Claude"><option value="claude-sonnet-5-5" selected="">/,
+  );
+  expect(html).toMatch(/<optgroup label="Other models"><option value="custom-model">/);
+});
+
+test("a single service has no empty groups for other providers", () => {
+  const html = render({ models: ["claude-sonnet-5-5"], value: "claude-sonnet-5-5" });
+  expect(html).toMatch(/<optgroup label="Anthropic Claude">/);
+  expect(html.includes("Google Gemini")).toBe(false);
+  expect(html.includes("Other models")).toBe(false);
 });
 
 test("without a blank choice, no option stands for no model", () => {

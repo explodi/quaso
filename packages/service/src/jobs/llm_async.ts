@@ -49,7 +49,8 @@ export function createAsyncLlm(
   }
 
   return {
-    test: (checkedSql: Sql) => runtime.testAsync(checkedSql),
+    test: (checkedSql: Sql, provider?: import("@quaso/core").LlmProviderName) =>
+      runtime.testAsync(checkedSql, provider),
     configuration,
     schedule: wakeUps.schedule,
     get busy() {
