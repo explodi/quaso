@@ -171,7 +171,7 @@ test("jobs routes: without a provider, 503 with the reason", async () => {
     );
     expect(off.error).toStrictEqual({
       code: "llm_unavailable",
-      message: "LLM translation is off: enter a Gemini API key in Settings.",
+      message: "LLM translation is off: enter a Gemini or Anthropic API key in Settings.",
     });
     expect(await json(call(app, "/api/v1/models", { key: upload }))).toStrictEqual({ models: [] });
   }, false);

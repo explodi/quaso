@@ -216,10 +216,18 @@ npm run test:llm
 ```
 
 The first enables the 50,000-string / 30-language local stress case. The second needs
-`GEMINI_API_KEY`, makes real provider requests and may use paid tokens; it evaluates the sample
+`GEMINI_API_KEY` for Gemini models or `ANTHROPIC_API_KEY` for Claude models, makes real provider requests, and uses tokens; it evaluates the sample
 texts and writes results for review. Never make either a requirement for a small unrelated patch. A
 test-provider timing result is not evidence of translation quality. Real staging deployments,
 regional latency, cold starts, D1 Time Travel and native-speaker evaluation remain separate release checks.
+
+To test Claude with a key from your local `.env` file, run:
+
+```sh
+node --env-file=.env scripts/llm_eval.ts --models claude-haiku-5-5 --languages de,pl,ja
+```
+
+The model list can include both providers. Each model uses its own provider key.
 
 ## Beta 2 workflow on the production image
 

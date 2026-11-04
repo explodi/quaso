@@ -180,6 +180,14 @@
   color: var(--success);
 }
 
+.settings-page .settings-credential-result {
+  padding: 0 var(--space-5) var(--space-4);
+}
+
+.settings-page .settings-credential-result ul {
+  padding-inline-start: var(--space-5);
+}
+
 .settings-page .settings-form-error {
   padding: var(--space-3) var(--space-5);
   border-top: 1px solid var(--border);

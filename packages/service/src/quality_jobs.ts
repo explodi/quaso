@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import { requestProvider } from "./llm/configuration.ts";
 /** Durable meaning-check jobs use the translation scheduler and preserve accepted text. */
 import {
   canonicalLanguageTag,
@@ -375,7 +376,7 @@ export function createQualityJobs(
             jobId: null,
             language: targets[0].language,
             fileId: null,
-            provider: provider.name,
+            provider: requestProvider(provider, job.model),
             model: answer.model ?? job.model,
             strings: targets.length,
             usage: answer.usage,
@@ -529,7 +530,7 @@ export function createQualityJobs(
           jobId: null,
           language,
           fileId: null,
-          provider: provider.name,
+          provider: requestProvider(provider, job.model),
           model: answer.model ?? job.model,
           strings: selected.length,
           usage: answer.usage,

@@ -83,10 +83,13 @@ export interface ServiceOptions {
   /** Internal default model override for tests and development tools. */
   defaultModel?: string;
   /**
-   * Internal provider override for tests. Otherwise, use the stored Gemini key.
+   * Internal provider override for tests. Otherwise, use the stored provider keys.
    */
   provider?: TranslationProvider | null;
-  providerFactory?: (apiKey: string) => TranslationProvider;
+  providerFactory?: (
+    apiKey: string,
+    provider: import("@quaso/core").LlmProviderName,
+  ) => TranslationProvider;
   emailFetch?: import("@quaso/core").Fetch;
   /** Internal concurrency override; normally read from stored settings. */
   llmConcurrency?: number;

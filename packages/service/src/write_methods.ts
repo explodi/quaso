@@ -239,7 +239,7 @@ export function asyncWriteMethods(options: {
         input,
         async ({ name, value }, actor) => {
           const status = await changeSecretAsync(options.sql, actor, name, value, clock());
-          if (name === "gemini_api_key") await options.afterLlmChange?.();
+          if (name !== "email_api_key") await options.afterLlmChange?.();
           return status;
         },
       ),
@@ -251,7 +251,7 @@ export function asyncWriteMethods(options: {
         input,
         async ({ name }, actor) => {
           const status = await changeSecretAsync(options.sql, actor, name, null, clock());
-          if (name === "gemini_api_key") await options.afterLlmChange?.();
+          if (name !== "email_api_key") await options.afterLlmChange?.();
           return status;
         },
       ),

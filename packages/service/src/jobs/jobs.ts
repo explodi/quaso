@@ -75,7 +75,8 @@ import {
 /** Jobs `GET /jobs` lists. */
 export const JOBS_LISTED = 50;
 
-export const LLM_UNAVAILABLE = "LLM translation is off: enter a Gemini API key in Settings.";
+export const LLM_UNAVAILABLE =
+  "LLM translation is off: enter a Gemini or Anthropic API key in Settings.";
 
 /** The error when there is no provider. */
 export function llmUnavailable(): ServiceError {

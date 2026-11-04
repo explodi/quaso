@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 /** Validated async read methods, composed into the service alongside its write methods. */
 import {
+  TestLlmRequest,
   CommentsQuery,
   ExportQuery,
   FileVersionQuery,
@@ -117,7 +118,7 @@ export type AsyncReadMethods = Pick<ServiceApi, (typeof ASYNC_READ_METHODS)[numb
 
 interface ReadOptions {
   emailFetch?: import("@quaso/core").Fetch;
-  testLlm?: (sql: Sql) => Promise<LlmTestResult>;
+  testLlm?: (sql: Sql, provider?: import("@quaso/core").LlmProviderName) => Promise<LlmTestResult>;
   sql: Sql;
   /** Holds what's expensive to read and often asked for, keyed by the project revision. */
   cache?: MemoryCache;
@@ -222,11 +223,11 @@ export function asyncReadMethods(options: ReadOptions): AsyncReadMethods {
       fetch: options.emailFetch,
     }).emailStatus,
     testLlm: (actor, input) =>
-      call(actor, "settings", Empty, input, async (sql) => {
+      call(actor, "settings", TestLlmRequest, input, async (sql, request) => {
         await sql.read([]);
         try {
-          if (!options.testLlm) throw badRequest("Gemini testing is not configured.");
-          const result = await options.testLlm(sql);
+          if (!options.testLlm) throw badRequest("AI provider testing is not configured.");
+          const result = await options.testLlm(sql, request.provider);
           await sql.read([]);
           return result;
         } catch (error) {

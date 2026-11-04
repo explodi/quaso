@@ -69,23 +69,27 @@ function revealSetting(element: Element) {
   }
 }
 function SaveForm({
+  id,
   title,
   children,
   save,
   label = "Save changes",
   description,
+  afterForm,
 }: {
+  id?: string;
   title: string;
   children: ReactNode;
   save(): Promise<unknown>;
   label?: string;
   description?: ReactNode;
+  afterForm?: ReactNode;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>();
   const [saved, setSaved] = useState(false);
   return (
-    <section className="management-section settings-card">
+    <section id={id} className="management-section settings-card">
       <header className="settings-card-header">
         <H2 ui>{title}</H2>
         {description && <p>{description}</p>}
@@ -145,6 +149,7 @@ function SaveForm({
           )}
         </footer>
       </form>
+      {afterForm}
     </section>
   );
 }
@@ -601,8 +606,9 @@ const PLACEHOLDER_HELP: Record<(typeof PROMPT_PLACEHOLDERS)[number], string> = {
   "%strings%": "The strings and constraints to translate",
   "%customInstruction%": "Instructions for this job",
 };
-function Llm({ data }: { data: SettingsResult }) {
-  const [llm, setLlm] = useState(data.settings.llm);
+function Llm({ data, secrets }: { data: SettingsResult; secrets?: SecretStatus[] }) {
+  const [draft, setDraft] = useState<Partial<LlmSettings>>({});
+  const llm = { ...data.settings.llm, ...draft };
   const meaning = llm.meaningCheck ?? {
     enabled: false,
     colours: "blue" as const,
@@ -612,18 +618,34 @@ function Llm({ data }: { data: SettingsResult }) {
     countsAgainstBudget: true,
   };
   const updateMeaning = (patch: Partial<typeof meaning>) =>
-    setLlm({ ...llm, meaningCheck: { ...meaning, ...patch } });
+    setDraft({ ...draft, meaningCheck: { ...meaning, ...patch } });
   const update = <K extends keyof LlmSettings>(key: K, value: LlmSettings[K]) =>
-    setLlm({ ...llm, [key]: value });
+    setDraft({ ...draft, [key]: value });
+  const connectedKeys = secrets?.filter((secret) => secret.set && secret.name !== "email_api_key");
+  const missingModels = connectedKeys?.length
+    ? [...new Set([llm.model, llm.suggestionModel, meaning.model].filter(Boolean))].filter(
+        (model) =>
+          !connectedKeys.some(
+            (secret) =>
+              secret.name ===
+              (model.startsWith("claude-") ? "anthropic_api_key" : "gemini_api_key"),
+          ),
+      )
+    : [];
   return (
     <SaveForm
       title="AI translation"
       label="Save AI settings"
       description="Choose when translations run and give the model guidance for your project."
-      save={() => patchSettings({ llm })}
+      save={async () => {
+        await patchSettings({ llm });
+        setDraft({});
+      }}
     >
       {!data.llmAvailable && (
-        <p role="status">Translation is off. Enter a Gemini API key above to turn it on.</p>
+        <p role="status">
+          Translation is off. Add a Google Gemini or Anthropic Claude API key above to turn it on.
+        </p>
       )}
       <SettingsGroup
         title="Automatic translation"
@@ -694,7 +716,16 @@ function Llm({ data }: { data: SettingsResult }) {
           />
         </Field>
       </SettingsGroup>
-      <SettingsGroup title="Model & budget">
+      <SettingsGroup
+        title="Model & budget"
+        description="Each model uses its provider’s saved API key. With both services connected, you can use different providers for translations, editor suggestions, and meaning checks."
+      >
+        {data.llmAvailable && missingModels.length > 0 && (
+          <p role="alert">
+            Some selected models need a key: {missingModels.join(", ")}. Add the matching provider’s
+            key above or choose a model from a connected service.
+          </p>
+        )}
         <Field label="Model" path="llm.model">
           <ModelSelect
             models={data.models}
@@ -732,7 +763,7 @@ function Llm({ data }: { data: SettingsResult }) {
         <Field
           label="Monthly token budget"
           path="llm.monthlyTokenBudget"
-          hint="Stop new translation jobs when the budget is reached. Leave blank for no limit."
+          hint="Stop new translation jobs when the shared budget across both providers is reached. Leave blank for no limit."
         >
           <Input
             type="number"
@@ -834,7 +865,11 @@ function Llm({ data }: { data: SettingsResult }) {
             />
           </Field>
         ))}
-        <Field label="Safety level" path="llm.safety">
+        <Field
+          label="Gemini safety level"
+          path="llm.safety"
+          hint="Applies only to Google Gemini. Anthropic Claude uses its own safety rules."
+        >
           <Select
             value={llm.safety}
             onChange={(e) => update("safety", e.target.value as LlmSettings["safety"])}
@@ -1190,6 +1225,7 @@ function ApiKeys() {
 
 const SECRET_LABELS: Record<ManagedSecretName, string> = {
   gemini_api_key: "Gemini API key",
+  anthropic_api_key: "Anthropic Claude API key",
   email_api_key: "Email API key",
 };
 
@@ -1209,99 +1245,127 @@ function SecretCredential({
     models: string[];
   } | null>(null);
   const label = SECRET_LABELS[status.name];
+  const provider =
+    status.name === "gemini_api_key"
+      ? "gemini"
+      : status.name === "anthropic_api_key"
+        ? "anthropic"
+        : null;
+  const providerLabel = provider === "gemini" ? "Gemini" : "Anthropic Claude";
   const path = `/settings/secrets/${status.name}`;
   return (
-    <>
-      <SaveForm
-        title={label}
-        label={status.set ? "Replace" : "Set key"}
-        save={async () => {
-          await request(path, {
-            method: "PUT",
-            body: validated(SetSecretRequest, { value }),
-          });
-          setValue("");
-          await refresh();
-        }}
-      >
-        <p>
-          {status.set ? (status.ending ? `Set, ending in …${status.ending}.` : "Set.") : "Not set."}
-        </p>
-        <Field label={status.set ? `New ${label}` : label} path="value">
-          <Input
-            type="password"
-            value={value}
-            onChange={(event) => setValue(event.target.value)}
-            autoComplete="new-password"
-            required
-            maxLength={8192}
-          />
-        </Field>
-      </SaveForm>
-      {status.name === "gemini_api_key" && (
-        <>
-          <Button
-            disabled={!status.set || value !== ""}
-            busy={testing}
-            onClick={async () => {
-              setTesting(true);
-              setTestError(undefined);
-              setTestResult(null);
-              try {
-                const result = await request<LlmTestResult>("/settings/llm/test", {
-                  method: "POST",
-                  body: {},
-                });
-                setTestResult({
-                  updatedAt: result.keyUpdatedAt,
-                  models: result.models,
-                });
-              } catch (error) {
-                setTestError({ updatedAt: status.updatedAt, error });
-              } finally {
-                setTesting(false);
-              }
-            }}
-          >
-            Test Gemini key
-          </Button>
-          {value !== "" && <p>Save the key before testing it.</p>}
-          {testError?.updatedAt === status.updatedAt && status.set && (
-            <p role="alert">{errorMessage(testError.error)}</p>
-          )}
-          {testResult && testResult.updatedAt === status.updatedAt && status.set && (
-            <div role="status">
-              <p>Gemini key works. Available models:</p>
-              <ul>
-                {testResult.models.map((model) => (
-                  <li key={model}>{model}</li>
-                ))}
-              </ul>
+    <SaveForm
+      id={`credential-${status.name}`}
+      title={label}
+      description={
+        provider
+          ? `Connect ${provider === "gemini" ? "Google Gemini" : providerLabel} for translation. You can use this service on its own or connect both.`
+          : undefined
+      }
+      label={status.set ? "Replace" : "Set key"}
+      save={async () => {
+        await request(path, {
+          method: "PUT",
+          body: validated(SetSecretRequest, { value }),
+        });
+        setValue("");
+        await refresh();
+      }}
+      afterForm={
+        (provider || status.set) && (
+          <div className="settings-credential-actions">
+            <div className="settings-actions">
+              {provider && (
+                <Button
+                  disabled={!status.set || value !== ""}
+                  busy={testing}
+                  onClick={async () => {
+                    setTesting(true);
+                    setTestError(undefined);
+                    setTestResult(null);
+                    try {
+                      const result = await request<LlmTestResult>("/settings/llm/test", {
+                        method: "POST",
+                        body: { provider },
+                      });
+                      setTestResult({ updatedAt: result.keyUpdatedAt, models: result.models });
+                      await refresh();
+                    } catch (error) {
+                      setTestError({ updatedAt: status.updatedAt, error });
+                    } finally {
+                      setTesting(false);
+                    }
+                  }}
+                >
+                  Test {providerLabel} key
+                </Button>
+              )}
+              {status.set && (
+                <ConfirmButton
+                  title={`Remove ${label}?`}
+                  description={
+                    provider
+                      ? "Models from this provider will stop working until you add a key again. Choose a model from the other connected service to keep translating."
+                      : "Enter a new key to use this provider again."
+                  }
+                  onConfirm={async () => {
+                    setRemoveError(undefined);
+                    try {
+                      await request(path, { method: "DELETE" });
+                      setValue("");
+                      await refresh();
+                    } catch (error) {
+                      setRemoveError(error);
+                      throw error;
+                    }
+                  }}
+                >
+                  Remove key
+                </ConfirmButton>
+              )}
+              {provider && value !== "" && <p>Save the key before testing it.</p>}
             </div>
-          )}
-        </>
-      )}
-      {status.set && (
-        <ConfirmButton
-          title={`Remove ${label}?`}
-          description="Enter a new key to use this provider again."
-          onConfirm={async () => {
-            setRemoveError(undefined);
-            try {
-              await request(path, { method: "DELETE" });
-              setValue("");
-              await refresh();
-            } catch (error) {
-              setRemoveError(error);
-              throw error;
-            }
-          }}
-        >
-          Remove key
-        </ConfirmButton>
-      )}
-      {removeError !== undefined && <p role="alert">{errorMessage(removeError)}</p>}
-    </>
+            {testError?.updatedAt === status.updatedAt && status.set && (
+              <p className="settings-credential-result" role="alert">
+                {errorMessage(testError.error)}
+              </p>
+            )}
+            {testResult && testResult.updatedAt === status.updatedAt && status.set && (
+              <div className="settings-credential-result" role="status">
+                <p>{providerLabel} key works. Available models:</p>
+                <Details>
+                  <Summary>{testResult.models.length} models</Summary>
+                  <ul>
+                    {testResult.models.map((model) => (
+                      <li key={model}>{model}</li>
+                    ))}
+                  </ul>
+                </Details>
+              </div>
+            )}
+            {removeError !== undefined && (
+              <p className="settings-credential-result" role="alert">
+                {errorMessage(removeError)}
+              </p>
+            )}
+          </div>
+        )
+      }
+    >
+      <p>
+        {status.set ? (status.ending ? `Set, ending in …${status.ending}.` : "Set.") : "Not set."}
+      </p>
+      <Field label={status.set ? `New ${label}` : label} path="value">
+        <Input
+          type="password"
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+          autoComplete="new-password"
+          required
+          maxLength={8192}
+        />
+      </Field>
+    </SaveForm>
   );
 }
 
@@ -1533,15 +1597,15 @@ function SettingsContent() {
               {section === "llm" && (
                 <>
                   {secrets.data?.secrets
-                    .filter((secret) => secret.name === "gemini_api_key")
+                    .filter((secret) => secret.name !== "email_api_key")
                     .map((secret) => (
                       <SecretCredential
                         key={secret.name}
                         status={secret}
-                        refresh={secrets.refresh}
+                        refresh={() => Promise.all([secrets.refresh(), query.refresh()])}
                       />
                     ))}
-                  <Llm data={query.data} />
+                  <Llm data={query.data} secrets={secrets.data?.secrets} />
                 </>
               )}
               {section === "email" && (

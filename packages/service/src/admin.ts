@@ -32,7 +32,7 @@ export interface AdminHost {
   /** The database's size in bytes, when the host knows it (a Durable Object does). */
   databaseSize?: () => number | null;
   /** The LLM provider's name, or null without one. */
-  provider: "gemini" | "fake" | null;
+  provider: "gemini" | "anthropic" | "fake" | null;
 }
 
 /** `GET /admin`, without the server's recent errors. */

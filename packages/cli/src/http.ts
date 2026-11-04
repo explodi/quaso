@@ -320,13 +320,13 @@ function hintFor(code: string, status: number): string | undefined {
       return "Send fewer files at a time with --file.";
     case "llm_unavailable":
       return (
-        "An administrator enters the Gemini API key in the instance's " +
-        "Settings → LLM translation."
+        "An administrator enters a Gemini or Anthropic API key in the instance's " +
+        "Settings → AI translation."
       );
     case "budget_exceeded":
       return (
         "LLM translation resumes next month, or when an administrator raises the monthly " +
-        "token budget in Settings → LLM translation."
+        "token budget in Settings → AI translation."
       );
   }
   return status >= 500

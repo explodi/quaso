@@ -6,6 +6,7 @@ import * as fs from "node:fs/promises";
  * which lets an operator move an instance to another setup without a shell on it.
  */
 import {
+  TestLlmRequest,
   AddLanguageRequest,
   ManagedSecretName,
   SetSecretRequest,
@@ -92,11 +93,11 @@ export const ADMIN_ROUTES: ApiRoute[] = [
     method: "POST",
     path: "/settings/llm/test",
     operationId: "testLlm",
-    summary: "Test the stored Gemini key with a fresh model request",
+    summary: "Test a stored AI provider key with a fresh model request",
     tag: "Settings",
     access: "administrator",
-    body: s.object({}),
-    handle: ({ service, actor }) => service.testLlm(actor, {}),
+    body: TestLlmRequest,
+    handle: ({ service, actor, body }) => service.testLlm(actor, body),
   }),
   route({
     method: "GET",

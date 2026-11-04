@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import { requestProvider } from "../llm/configuration.ts";
 /** Async alarm slices use consistent reads and guarded writes around every provider request. */
 import type { ProjectSettings } from "@quaso/core";
 import { ActorDirectory } from "../actors.ts";
@@ -434,7 +435,7 @@ async function runBatch(env: RunEnv, plan: JobPlan, batch: Batch): Promise<void>
         recordRequestAsync(
           env.sql,
           SYSTEM,
-          { ...entry, jobId: plan.job.id, provider: provider.name },
+          { ...entry, jobId: plan.job.id, provider: requestProvider(provider, entry.model) },
           env.clock(),
           plan.job.created_at,
         ),

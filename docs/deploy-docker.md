@@ -36,7 +36,7 @@ The [quick start](README.md) continues from deployment to your first translation
 
 3. Edit `.env`. Set `QUASO_DOMAIN=translate.example.com` and `SETUP_KEY` to the output of
    `openssl rand -hex 16`. Keep `TRUST_PROXY=true`, because Caddy forwards requests to Quaso. After
-   creating the administrator, enter a Gemini API key in **Settings → AI translation** if you want
+   creating the administrator, enter a Gemini or Anthropic API key in **Settings → AI translation** if you want
    machine translation. Without a key, you can translate and review by hand. The
    [configuration reference](configuration.md) describes the remaining settings.
 4. Start the containers:
@@ -172,7 +172,7 @@ scheduled or pre-migration copy.
 Administrators can download SQLite or JSON backups from **Settings → Backups** while Quaso runs. You
 can also copy the whole `/data` directory while Quaso is stopped. A backup download contains
 accounts, password hashes and hashed API keys, so protect it like the live database. It leaves out
-the Gemini and email API keys: after a restore, Settings lists them to enter again.
+the Gemini, Anthropic, and email API keys: after a restore, Settings lists them to enter again.
 
 Practice this on a separate, empty instance:
 

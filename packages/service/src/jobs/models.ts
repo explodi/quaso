@@ -22,8 +22,10 @@ export class SettingsModels {
   #abandoned: Promise<string[]> | null = null;
 
   private readonly models: () => Promise<string[]>;
-  constructor(models: () => Promise<string[]>) {
+  private readonly waitMs: number;
+  constructor(models: () => Promise<string[]>, waitMs = SETTINGS_MODELS_WAIT_MS) {
     this.models = models;
+    this.waitMs = waitMs;
   }
 
   async list(): Promise<string[]> {
@@ -31,7 +33,7 @@ export class SettingsModels {
     if (pending === this.#abandoned) return this.#known;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const late = new Promise<null>((resolve) => {
-      timer = setTimeout(() => resolve(null), SETTINGS_MODELS_WAIT_MS);
+      timer = setTimeout(() => resolve(null), this.waitMs);
     });
     const list = await Promise.race([pending, late]).finally(() => {
       if (timer !== undefined) clearTimeout(timer);
@@ -58,6 +60,11 @@ export class ModelList {
     this.#provider = provider;
     this.#clock = clock;
     this.#logger = logger;
+  }
+
+  /** A successful key test also refreshes the picker. */
+  remember(models: string[]): void {
+    this.#cached = { until: this.#clock() + MODELS_TTL_MS, models: Promise.resolve(models) };
   }
 
   /** The models, sorted; empty without a provider. */

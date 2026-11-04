@@ -28,9 +28,10 @@ export const MAX_FAILURES = 200;
 /** The error of a job paused by the monthly token budget. */
 export const BUDGET_ERROR = "Monthly token budget reached";
 /** The error of a job paused because the provider refused the key. */
-export const AUTH_ERROR = "The Gemini API key was refused";
+export const AUTH_ERROR = "The AI provider API key was refused";
 /** The error of a job paused because there is no provider. */
-export const NO_PROVIDER_ERROR = "LLM translation is off: enter a Gemini API key in Settings.";
+export const NO_PROVIDER_ERROR =
+  "LLM translation is off: enter a Gemini or Anthropic API key in Settings.";
 
 export type JobRow = {
   id: number;
