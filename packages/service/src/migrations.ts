@@ -10,6 +10,7 @@ import {
   MIGRATION_8,
   PROOFREAD_TRANSLATION_STATEMENTS,
 } from "./migrations/008_proofread_translations.ts";
+import { MIGRATION_9, CONTEXT_FILE_STATEMENTS } from "./migrations/009_context_files.ts";
 import type { Statement } from "./ports.ts";
 
 /** Schema history begins at Beta 2; future releases append migrations. */
@@ -29,6 +30,7 @@ export const MIGRATIONS: readonly Migration[] = [
   MIGRATION_6,
   MIGRATION_7,
   MIGRATION_8,
+  MIGRATION_9,
 ];
 
 /** The database schema version after every migration. */
@@ -61,4 +63,5 @@ export const BATCH_MIGRATIONS: readonly BatchMigration[] = [
     name: MIGRATION_8.name,
     statements: PROOFREAD_TRANSLATION_STATEMENTS,
   },
+  { version: MIGRATION_9.version, name: MIGRATION_9.name, statements: CONTEXT_FILE_STATEMENTS },
 ];

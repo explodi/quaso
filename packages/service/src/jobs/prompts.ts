@@ -186,7 +186,7 @@ function promptContextPlan(
             ? String(fileRow?.generated_context ?? "")
             : "";
       const fileContext = [
-        ...folderContextsOf(batch.path, rows[folders] as FolderRow[]),
+        ...folderContextsOf(batch.path, rows[folders] as Pick<FolderRow, "path" | "context">[]),
         ownContext,
       ]
         .filter((context) => context.trim() !== "")

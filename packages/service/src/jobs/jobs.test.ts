@@ -13,6 +13,7 @@ import {
   addUser,
   count,
   createToken,
+  jsonFile,
   startTestService,
   stringId,
   type TestInstance,
@@ -480,6 +481,54 @@ test("a file's context is generated once, and a person's context wins", async ()
   const last = provider.requests[provider.requests.length - 1];
   assert(last.prompt.includes("Words shown on the title screen."));
   assert(!last.prompt.includes(file.generated_context!));
+});
+
+test("a file with a context file isn't sent for generated context, and uses the file's text", async () => {
+  const provider = heldProvider();
+  provider.release();
+  using instance = await startTestService({ provider });
+  await instance.service.upload(SYSTEM, {
+    files: [
+      {
+        ...jsonFile("common.json", { title: "Quest" }),
+        repoPath: "common.json",
+        context: "Title.",
+      },
+    ],
+    folderContexts: [],
+    languages: ["de"],
+  });
+  await instance.service.createJob(SYSTEM, { languages: ["de"] });
+  await drain(instance);
+  expect(provider.texts.length).toBe(0);
+  const [file] = instance.sql.query<{ generated_context: string | null }>(
+    "SELECT generated_context FROM files",
+  );
+  expect(file.generated_context).toBe(null);
+  expect(provider.requests[0].prompt).toContain("About this file:\nTitle.\n");
+});
+
+test("a file's prompt reads the top folder's context first", async () => {
+  const provider = heldProvider();
+  provider.release();
+  using instance = await startTestService({ provider });
+  const settings = loadSettings(instance.ctx);
+  saveSettings(instance.ctx, {
+    ...settings,
+    llm: {
+      ...settings.llm,
+      autoTranslate: false,
+      context: { ...settings.llm.context, fileContext: false },
+    },
+  });
+  await uploadJson(instance.service, { "text/main.json": { play: "Play" } }, { languages: ["de"] });
+  await instance.service.updateFolder(SYSTEM, { path: "", context: "A sailing game." });
+  await instance.service.updateFolder(SYSTEM, { path: "text", context: "Game text." });
+  await instance.service.createJob(SYSTEM, { languages: ["de"] });
+  await drain(instance);
+  expect(provider.requests[0].prompt).toContain(
+    "About this file:\nA sailing game.\n\nGame text.\n",
+  );
 });
 
 test("a file's prompt has its folders' contexts, outermost first, then its own", async () => {

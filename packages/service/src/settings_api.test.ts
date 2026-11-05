@@ -55,7 +55,7 @@ test("getSettings: the settings, the default template, languages, files and mode
   expect(pl.categories.cardinal).toStrictEqual(["one", "few", "many", "other"]);
   expect(pl.categories.ordinal).toStrictEqual(["other"]);
   expect(result.files).toStrictEqual([
-    { id: 1, path: "common.json", context: "", generatedContext: null },
+    { id: 1, path: "common.json", context: "", generatedContext: null, uploadedContext: null },
   ]);
   expect(result.models).toStrictEqual([]);
   expect(result.llmAvailable).toBe(false);
@@ -434,6 +434,7 @@ test("updateFile writes the context and clears nothing else", async () => {
     path: "common.json",
     context: "Menus.",
     generatedContext: "Generated.",
+    uploadedContext: null,
   });
   await rejects(instance.service.updateFile(instance.admin, { id: 99, context: "x" }), "not_found");
 });

@@ -33,6 +33,35 @@ export interface Sources {
   warnings: string[];
 }
 
+/** Added to a source file's name, it names that file's context file: `common.json.quaso`. */
+export const CONTEXT_FILE_SUFFIX = ".quaso";
+
+/** The context file of the folder it sits in, which describes every source file beneath it. */
+const FOLDER_CONTEXT_FILE = `context${CONTEXT_FILE_SUFFIX}`;
+
+/**
+ * Where the context files of the folders holding `files` would be, each with the folder's path on
+ * the server. A folder above where a file's glob starts isn't on the server, so it has none.
+ */
+export function folderContextFiles(
+  project: Project,
+  files: SourceFile[],
+): { local: string; server: string }[] {
+  const found = new Map<string, { local: string; server: string }>();
+  for (const file of files) {
+    const mapping = project.config.files[file.mapping];
+    const base = globBase(mapping.source);
+    const folders = file.path.split("/").slice(0, -1);
+    for (let depth = 0; depth <= folders.length; depth++) {
+      const below = folders.slice(0, depth);
+      const local = [base, ...below, FOLDER_CONTEXT_FILE].filter(Boolean).join("/");
+      const server = [mapping.folder, ...below].filter(Boolean).join("/");
+      found.set(`${local}\n${server}`, { local, server });
+    }
+  }
+  return [...found.values()];
+}
+
 /**
  * Finds the source files of every `files` entry. Fails (exit code 2) when a match isn't a
  * `.json` file or a `.md` or `.markdown` document, when two files would have the same server
@@ -55,7 +84,7 @@ export async function collectSources(project: Project): Promise<Sources> {
       warnings.push(`files[${index}].source (${mapping.source}) matches no files.`);
     }
     for (const local of matches) {
-      if (local.endsWith(".descriptions.json")) continue;
+      if (local.endsWith(".descriptions.json") || local.endsWith(CONTEXT_FILE_SUFFIX)) continue;
       const path = base === "" ? local : local.slice(base.length + 1);
       const server = serverPath(mapping, path);
       const key = `files[${index}].source`;

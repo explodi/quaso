@@ -22,6 +22,7 @@ function result(overrides: Partial<UploadResult> = {}): UploadResult {
     renameSuggestions: [],
     hiddenFiles: [],
     languagesAdded: [],
+    contexts: [],
     warnings: [],
     job: null,
     revision: 3,
@@ -320,7 +321,234 @@ test("upload sends every source file unchanged, with the config's settings", asy
       languages: ["de", "pl"],
       limits: [{ file: "common.json", key: "title", maxLength: 30 }],
       pluralExclusions: [{ file: "common.json", key: "power" }],
+      folderContexts: [],
     });
+  });
+});
+
+test("upload sends the context files beside the sources, without surrounding whitespace", async () => {
+  await withProject(
+    {
+      ...PROJECT,
+      "src/locales/en/common.json.quaso": "  The title screen.\n\n",
+      "src/locales/en/context.quaso": "A sailing game.\n",
+      "src/locales/en/menus/context.quaso": "Menu buttons.\n",
+    },
+    async (dir) => {
+      const fetch = fakeFetch(() => jsonResponse(result()));
+      const run = await runCli(["upload"], { cwd: dir, env: ENV, fetch });
+      expect(run.code, run.stderr).toBe(0);
+      const sent = (await fetch.requests[0].json()) as UploadRequest;
+      expect(sent.files[0].context).toBe("The title screen.");
+      expect(sent.files[1].context).toBe(undefined);
+      expect(sent.folderContexts).toStrictEqual([
+        { path: "", context: "A sailing game." },
+        { path: "menus", context: "Menu buttons." },
+      ]);
+    },
+  );
+});
+
+test("upload ignores context files above the glob and in translation folders", async () => {
+  await withProject(
+    {
+      ...PROJECT,
+      "src/context.quaso": "Above the glob.",
+      "src/locales/de/context.quaso": "A translation folder.",
+    },
+    async (dir) => {
+      const fetch = fakeFetch(() => jsonResponse(result()));
+      const run = await runCli(["upload"], { cwd: dir, env: ENV, fetch });
+      expect(run.code, run.stderr).toBe(0);
+      const sent = (await fetch.requests[0].json()) as UploadRequest;
+      expect(sent.folderContexts).toStrictEqual([]);
+    },
+  );
+});
+
+test("upload treats a blank context file as no file", async () => {
+  await withProject(
+    {
+      ...PROJECT,
+      "src/locales/en/common.json.quaso": " \n",
+      "src/locales/en/context.quaso": "\n",
+    },
+    async (dir) => {
+      const fetch = fakeFetch(() => jsonResponse(result()));
+      const run = await runCli(["upload"], { cwd: dir, env: ENV, fetch });
+      expect(run.code, run.stderr).toBe(0);
+      const sent = (await fetch.requests[0].json()) as UploadRequest;
+      expect(sent.files[0].context).toBe(undefined);
+      expect(sent.folderContexts).toStrictEqual([]);
+    },
+  );
+});
+
+test("upload names a folder's context by the entry's folder on the instance", async () => {
+  const config = {
+    ...CONFIG,
+    files: [{ ...CONFIG.files[0], folder: "game" }],
+  };
+  await withProject(
+    {
+      "quaso.config.json": config,
+      "src/locales/en/menus/main.json": '{ "play": "Play" }\n',
+      "src/locales/en/context.quaso": "A sailing game.",
+      "src/locales/en/menus/context.quaso": "Menu buttons.",
+    },
+    async (dir) => {
+      const fetch = fakeFetch(() => jsonResponse(result()));
+      const run = await runCli(["upload"], { cwd: dir, env: ENV, fetch });
+      expect(run.code, run.stderr).toBe(0);
+      const sent = (await fetch.requests[0].json()) as UploadRequest;
+      expect(sent.folderContexts).toStrictEqual([
+        { path: "game", context: "A sailing game." },
+        { path: "game/menus", context: "Menu buttons." },
+      ]);
+    },
+  );
+});
+
+test("upload finds a single file's folder context where its pattern's folder is", async () => {
+  await withProject(
+    {
+      "quaso.config.json": {
+        ...CONFIG,
+        files: [{ source: "locales/en.json", translation: "locales/{lang}.json" }],
+      },
+      "locales/en.json": '{ "play": "Play" }\n',
+      "locales/context.quaso": "A sailing game.",
+    },
+    async (dir) => {
+      const fetch = fakeFetch(() => jsonResponse(result()));
+      const run = await runCli(["upload"], { cwd: dir, env: ENV, fetch });
+      expect(run.code, run.stderr).toBe(0);
+      const sent = (await fetch.requests[0].json()) as UploadRequest;
+      expect(sent.folderContexts).toStrictEqual([{ path: "", context: "A sailing game." }]);
+    },
+  );
+});
+
+test("upload refuses two context files for one folder on the instance", async () => {
+  await withProject(
+    {
+      "quaso.config.json": {
+        ...CONFIG,
+        files: [
+          { source: "a/en/*.json", translation: "a/{lang}/{path}" },
+          { source: "b/en/*.json", translation: "b/{lang}/{path}" },
+        ],
+      },
+      "a/en/one.json": '{ "a": "A" }\n',
+      "b/en/two.json": '{ "b": "B" }\n',
+      "a/en/context.quaso": "One.",
+      "b/en/context.quaso": "Two.",
+    },
+    async (dir) => {
+      const fetch = fakeFetch(() => jsonResponse(result()));
+      const run = await runCli(["upload"], { cwd: dir, env: ENV, fetch });
+      expect(run.code).toBe(2);
+      expect(run.stderr).toContain(
+        "a/en/context.quaso and b/en/context.quaso both describe the top folder on the instance.",
+      );
+      expect(fetch.requests.length).toBe(0);
+    },
+  );
+});
+
+test("upload refuses a context file that is too long, naming it", async () => {
+  await withProject(
+    { ...PROJECT, "src/locales/en/common.json.quaso": "x".repeat(20_001) },
+    async (dir) => {
+      const fetch = fakeFetch(() => jsonResponse(result()));
+      const run = await runCli(["upload"], { cwd: dir, env: ENV, fetch });
+      expect(run.code).toBe(2);
+      expect(run.stderr).toContain(
+        "src/locales/en/common.json.quaso has 20,001 characters; a context can have at most 20,000.",
+      );
+      expect(fetch.requests.length).toBe(0);
+    },
+  );
+});
+
+test("upload --file sends the named file's context and leaves folders out", async () => {
+  await withProject(
+    {
+      ...PROJECT,
+      "src/locales/en/common.json.quaso": "The title screen.",
+      "src/locales/en/context.quaso": "A sailing game.",
+    },
+    async (dir) => {
+      const fetch = fakeFetch(() => jsonResponse(result()));
+      const run = await runCli(["upload", "--file", "common.json"], { cwd: dir, env: ENV, fetch });
+      expect(run.code, run.stderr).toBe(0);
+      const sent = (await fetch.requests[0].json()) as UploadRequest;
+      expect(sent.partial).toBe(true);
+      expect(sent.files[0].context).toBe("The title screen.");
+      expect(sent.folderContexts).toStrictEqual([]);
+    },
+  );
+});
+
+test("a glob that matches everything doesn't take a context file for a source file", async () => {
+  await withProject(
+    {
+      "quaso.config.json": {
+        ...CONFIG,
+        files: [{ source: "src/locales/en/**/*", translation: "src/locales/{lang}/{path}" }],
+      },
+      "src/locales/en/common.json": '{ "title": "Quest" }\n',
+      "src/locales/en/common.json.quaso": "The title screen.",
+      "src/locales/en/context.quaso": "A sailing game.",
+    },
+    async (dir) => {
+      const fetch = fakeFetch(() => jsonResponse(result()));
+      const run = await runCli(["upload"], { cwd: dir, env: ENV, fetch });
+      expect(run.code, run.stderr).toBe(0);
+      const sent = (await fetch.requests[0].json()) as UploadRequest;
+      expect(sent.files.map((file) => file.path)).toStrictEqual(["common.json"]);
+    },
+  );
+});
+
+test("upload lists the contexts it changed, and warnings about website edits", async () => {
+  await withProject(PROJECT, async (dir) => {
+    const fetch = fakeFetch(() =>
+      jsonResponse(
+        result({
+          contexts: [
+            { target: "file", path: "common.json", change: "set" },
+            { target: "folder", path: "", change: "cleared" },
+            { target: "folder", path: "menus", change: "set" },
+          ],
+          warnings: ["context.quaso in folder menus replaced a different context."],
+        }),
+      ),
+    );
+    const run = await runCli(["upload"], { cwd: dir, env: ENV, fetch });
+    expect(run.code, run.stderr).toBe(0);
+    expect(run.stdout).toContain("Context from context files (3):");
+    expect(run.stdout).toContain("src/locales/en/common.json: set");
+    expect(run.stdout).toContain("all files: cleared");
+    expect(run.stdout).toContain("folder menus: set");
+    expect(run.stdout).toContain("context.quaso in folder menus replaced a different context.");
+  });
+});
+
+test("upload --dry-run says a context would change", async () => {
+  await withProject(PROJECT, async (dir) => {
+    const fetch = fakeFetch(() =>
+      jsonResponse(
+        result({
+          dryRun: true,
+          uploadId: null,
+          contexts: [{ target: "folder", path: "menus", change: "set" }],
+        }),
+      ),
+    );
+    const run = await runCli(["upload", "--dry-run"], { cwd: dir, env: ENV, fetch });
+    expect(run.code, run.stderr).toBe(0);
+    expect(run.stdout).toContain("compared; run without --dry-run to save.");
   });
 });
 

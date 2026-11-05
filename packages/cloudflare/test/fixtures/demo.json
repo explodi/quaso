@@ -95,7 +95,7 @@
     "start": {
       "schemaVersion": {
         "from": 0,
-        "to": 8
+        "to": 9
       },
       "created": true
     },
@@ -318,6 +318,7 @@
         "ar",
         "pt-BR"
       ],
+      "contexts": [],
       "warnings": [],
       "job": null,
       "revision": 1
@@ -365,6 +366,7 @@
       "renameSuggestions": [],
       "hiddenFiles": [],
       "languagesAdded": [],
+      "contexts": [],
       "warnings": [],
       "job": null,
       "revision": 1
@@ -3110,7 +3112,8 @@
               "ja",
               "ar",
               "pt-BR"
-            ]
+            ],
+            "contexts": []
           }
         }
       ],
@@ -3118,7 +3121,7 @@
     },
     "health": {
       "ok": true,
-      "schemaVersion": 8,
+      "schemaVersion": 9,
       "revision": 8,
       "busy": false,
       "nextWakeUp": null
@@ -3241,7 +3244,7 @@
     "backup": {
       "format": "quaso-backup",
       "version": 1,
-      "schemaVersion": 8,
+      "schemaVersion": 9,
       "createdAt": 1790251200000,
       "revision": 8,
       "tables": {
@@ -3332,7 +3335,7 @@
             "actor_id": null,
             "actor_label": "System",
             "summary": "Upload: 42 added, languages added: de, fr, pl, ja, ar, pt-BR",
-            "detail": "{\"uploadId\":1,\"added\":42,\"changed\":0,\"removed\":0,\"restored\":0,\"moved\":0,\"files\":[{\"path\":\"common.json\",\"status\":\"new\"},{\"path\":\"menus.json\",\"status\":\"new\"},{\"path\":\"store.json\",\"status\":\"new\"}],\"renamed\":[],\"renameSuggestions\":[],\"hiddenFiles\":[],\"languagesAdded\":[\"de\",\"fr\",\"pl\",\"ja\",\"ar\",\"pt-BR\"]}",
+            "detail": "{\"uploadId\":1,\"added\":42,\"changed\":0,\"removed\":0,\"restored\":0,\"moved\":0,\"files\":[{\"path\":\"common.json\",\"status\":\"new\"},{\"path\":\"menus.json\",\"status\":\"new\"},{\"path\":\"store.json\",\"status\":\"new\"}],\"renamed\":[],\"renameSuggestions\":[],\"hiddenFiles\":[],\"languagesAdded\":[\"de\",\"fr\",\"pl\",\"ja\",\"ar\",\"pt-BR\"],\"contexts\":[]}",
             "created_at": 1790251200000
           },
           {
@@ -7971,7 +7974,8 @@
             "generated_context": null,
             "active": 1,
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "uploaded_context": null
           },
           {
             "id": 2,
@@ -7984,7 +7988,8 @@
             "generated_context": null,
             "active": 1,
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "uploaded_context": null
           },
           {
             "id": 3,
@@ -7997,7 +8002,8 @@
             "generated_context": null,
             "active": 1,
             "created_at": 1790251200000,
-            "updated_at": 1790251200000
+            "updated_at": 1790251200000,
+            "uploaded_context": null
           }
         ],
         "languages": [
@@ -8051,7 +8057,7 @@
           },
           {
             "key": "schema_version",
-            "value": "8"
+            "value": "9"
           },
           {
             "key": "revision",
@@ -8069,7 +8075,7 @@
           "actor_id": null,
           "actor_label": "System",
           "summary": "Upload: 42 added, languages added: de, fr, pl, ja, ar, pt-BR",
-          "detail": "{\"uploadId\":1,\"added\":42,\"changed\":0,\"removed\":0,\"restored\":0,\"moved\":0,\"files\":[{\"path\":\"common.json\",\"status\":\"new\"},{\"path\":\"menus.json\",\"status\":\"new\"},{\"path\":\"store.json\",\"status\":\"new\"}],\"renamed\":[],\"renameSuggestions\":[],\"hiddenFiles\":[],\"languagesAdded\":[\"de\",\"fr\",\"pl\",\"ja\",\"ar\",\"pt-BR\"]}",
+          "detail": "{\"uploadId\":1,\"added\":42,\"changed\":0,\"removed\":0,\"restored\":0,\"moved\":0,\"files\":[{\"path\":\"common.json\",\"status\":\"new\"},{\"path\":\"menus.json\",\"status\":\"new\"},{\"path\":\"store.json\",\"status\":\"new\"}],\"renamed\":[],\"renameSuggestions\":[],\"hiddenFiles\":[],\"languagesAdded\":[\"de\",\"fr\",\"pl\",\"ja\",\"ar\",\"pt-BR\"],\"contexts\":[]}",
           "created_at": 1790251200000
         },
         {
@@ -8132,7 +8138,8 @@
           "generated_context": null,
           "active": 1,
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "uploaded_context": null
         },
         {
           "id": 2,
@@ -8145,7 +8152,8 @@
           "generated_context": null,
           "active": 1,
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "uploaded_context": null
         },
         {
           "id": 3,
@@ -8158,7 +8166,8 @@
           "generated_context": null,
           "active": 1,
           "created_at": 1790251200000,
-          "updated_at": 1790251200000
+          "updated_at": 1790251200000,
+          "uploaded_context": null
         }
       ],
       "folders": [],
@@ -10289,7 +10298,7 @@
         },
         {
           "key": "schema_version",
-          "value": "8"
+          "value": "9"
         },
         {
           "key": "revision",
