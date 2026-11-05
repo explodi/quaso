@@ -169,7 +169,8 @@ main {
 .hero-scene {
   position: relative;
   isolation: isolate;
-  padding: 8.5rem 0 2rem;
+  /* The cat is 180px tall: its feet stand on the window and its suitcase overlaps the title bar by 8px. */
+  padding: 10.75rem 0 2rem;
 }
 .hero-weave {
   position: absolute;
@@ -956,16 +957,14 @@ main {
   }
   .mascot-greeting {
     right: 0;
+    gap: 0;
   }
-  .mascot-greeting img {
-    width: 120px;
-    height: 96px;
-  }
-  .hero-scene {
-    padding-top: 6.5rem;
-  }
+  /* Tucks under the beret's rim, into the empty left of the cat's picture, to fit a 320px screen. */
   .speech-bubble {
+    width: min-content;
+    margin-right: -1rem;
     font-size: 1.25rem;
+    transform: translateY(0.5rem);
   }
   .scene-caption {
     margin-left: 0;

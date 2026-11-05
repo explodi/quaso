@@ -1,0 +1,121 @@
+# traveller-cat: 106×90 pixel art on the Quaso palette
+# Homepage hero: a traveller cat with a flag-stickered suitcase, generated and hand-finished on this grid.
+# Deliberate: the top row of the eye, stepped joins where the beret's stalk, chin, paw, leg and suitcase corner meet:
+# keep 19,5 68,46 17,47 104,50 105,51 31,79 50,28
+# Rows: the row number (y), then a cell per column (x = 0…105) in groups of four.
+# Legend: a character, then a palette colour. paint adds colours by name.
+. transparent
+K #261230 plum
+W #ffffff white
+r #d95763 rose
+R #ac3232 red
+s #807a89 smoke
+w #45283c wine
+S #aaa6ac silver
+a #eec39a sand
+A #595652 ash
+c #f8eed1 cream
+p #ec7895 pink
+b #8f563b brown
+l #c4b6ce lavender
+C #663931 cocoa
+t #d9a066 tan
+B #ffe59a butter
+d #e8b14a amber
+o #a87608 ochre
+e #c48755 caramel
+f #5b6ee1 royal
+j #37946e jade
+y #fbf236 yellow
+i #3f3f74 indigo
+#   0    4    8    12   16   20   24   28   32   36   40   44   48   52   56   60   64   68   72   76   80   84   88   92   96   100  104
+00  .... .... .... ..KK KK.. .... .... ..KK KKKK KKKK KK.. .... .... .... .... .... .... .... .... .... .... .... .... .... .... .... ..
+01  .... .... .... .Krr RRK. .... .... KKRR RRRR RRRR RRKK .... .... .... .... .... .... .... .... .... .... .... .... .... .... .... ..
+02  .... .... .... .KrR RRRK .... KKKK RRRR Rrrr rrrR RRRR KK.. .... .... .... .... .... .... .... .... .... .... .... .... .... .... ..
+03  .... .... .... ..KK KRRK ..KK RRRR RRrr rrrr rrrr RRRR RRK. .... .... .... .... .... .... .... .... .... .... .... .... .... .... ..
+04  .... .... .... .... .KRK KKRR RRRR Rrrr rrrR RRRR RRRR RRK. .... .... .... .... .... .... .... .... .... .... .... .... .... .... ..
+05  .... .... .... .... ..KK RRRR RRRR RRRR RRRR RRRR RRRR RRRK .... .... .... .... .... .... .... .... .... .... .... .... .... .... ..
+06  .... .... .... .... KKRR RRRR RRRR RRRR RRRR RRRR RRRR RRRK ...K KK.. .... .... .... .... .... .... .... .... .... .... .... .... ..
+07  .... .... .... ...K RRRR RRRR RRRR RRRR RRRR RRRR RRRR RRRK .KKs ssK. .... .... .... .... .... .... .... .... .... .... .... .... ..
+08  .... .... .... ..KR RRRR RRRR RRRR RRRR RRRR RRRR RRRR RRwK KSSS SSK. .... .... .... .... .... .... .... .... .... .... .... .... ..
+09  .... .... .... KKRR RRRR RRRR RRRR RRRR RRRR RRRR RRRR RwwK SSSS aSK. .... .... .... .... .... .... .... .... .... .... .... .... ..
+10  .... .... ...K RRrr RRRR RRRR RRRR RRRR RRRR RRRR RRRR RwKs SSSS aaSK .... .... .... .... .... .... .... .... .... .... .... .... ..
+11  .... .... ..KR rrRR RRRR RRRR RRRR RRRR RRRw RRRR RRRR RKsS SSSa aaSK .... .... .... .... .... .... .... .... .... .... .... .... ..
+12  .... .... .KRr rRRR RRRR RRRR RRRR RRRR RwwR RRRw wwwR RKsS SSSa aaSK .... .... .... .... .... .... .... .... .... .... .... .... ..
+13  .... .... KRrr RRRR RRRR RRRR RRRw wRRR wwww wwww wwww wKsS SSaa aaSK .... .... .... .... .... .... .... .... .... .... .... .... ..
+14  .... ...K RrrR RRRR RRRR RRRR Rwww wwww wwww wwww wwww wKsS SSaa aaSK .... .... .... .... .... .... .... .... .... .... .... .... ..
+15  .... ..KR rrRR RRRR RRRR RRRw wwww wwww wwww wwwK KKKK KsSS SSaa aaSK .... .... .... .... .... .... .... .... .... .... .... .... ..
+16  .... .KRR rrRR RRRR RRRR RRww wwww wwww wwww KKKs sAAA SSSS SSSa aaSK .... .... .... .... .... .... .... .... .... .... .... .... ..
+17  .... .KRR RRRR RRRR RRRw wwww wwww wwww KKKK AAAA SSAA ASSS SSSs aaSK .... .... .... .... .... .... .... .... .... .... .... .... ..
+18  .... KRRR RRRR RRRR RRww wwww wwww KKKK SSSA AAAA SSAA ASSS SSSS sSSK .... .... .... .... .... .... .... .... .... .... .... .... ..
+19  ...K RRRR RRRR RRRR Rwww wwww wwKK ssAA ASSS AAAA SSAA ASSS SSSS SsK. .... .... .... .... .... .... .... .... .... .... .... .... ..
+20  ...K wRRR RRRR RRRR wwww wwww KKss SSAA ASSS AAAA ASSA ASSS SSSS SSK. .... .... .... .... .... .... .... .... .... .... .... .... ..
+21  ...K wwwR RRRR wwww wwww wwKK ssSS SSSA AASS SAAA ASSA ASSS SSSS SSsK .... .... .... .... .... .... .... .... .... .... .... .... ..
+22  ..Kw wwww wwww wwww wwww KKss SSSS SSSA AASS SSAA ASSA ASSS SSSS SSSs K... .... .... .... .... .... .... .... .... .... .... .... ..
+23  ..Kw wwww wwww wwww wwwK ssSS SSSS SSSS AASS SSAA ASSS SSSS SSSS SSSS K... .... .... .... .... .... .... .... .... .... .... .... ..
+24  ..Kw wwww wwww wwww wwKs sSSS SSSS SSSS SASS SSAA ASSS SSSS SSSS SSSS K... .... .... .... .... .... .... .... .... .... .... .... ..
+25  ..Kw wwww wwww wwww wKss SSSS SSSS SSSS SSSS SSSS SSSS SSSS SSSS SSSS sK.. .... .... .... .... .... .... .... .... .... .... .... ..
+26  ..Kw wwww wwww wwww KssS SSSS SSSS SSSS SSSS SSSS SSSS SSSS SSSS SSSS sK.. .... .... .... .... .... .... .... .... .... .... .... ..
+27  ...K wwww wwww wwKK ssSS SSSS SSSS SSSS SSSS SSSS SSSS SSSS SSSS SSSS SsK. .... .... .... .... .... .... .... .... .... .... .... ..
+28  .... Kwww wwww KKss SSSS SSSS SSSS SSSS SSSS SSSS SSSS SSSS KKKK SSSS SSK. .... .... .... .... .... .... .... .... .... .... .... ..
+29  .... .KKK KKKK sssS SSSS SSSS SSKK KKKS SSSS SSSS SSSS SSSK WWKK KSSS AAK. .... .... .... .... .... .... .... .... .... .... .... ..
+30  .... .... ..Ks ssSS SSSS SSSS SKWW KKKK SSSS SSSS SSSS SSSK WWKK KSSS AAK. .... .... .... .... .... .... .... .... .... .... .... ..
+31  .... .... .KAA AASS SSSS SSSS SKWW KKKK SSSS Sccc cccc SSSK KKKK KSAA AAK. .... .... .... .... .... .... .... .... .... .... .... ..
+32  .... .... .KAA AAAA AAAS SSSS SKKK KKKK SSSS Sccc cccc SSSK KKKK KSAA AAK. .... .... .... .... .... .... .... .... .... .... .... ..
+33  .... .... .KAA AAAA AAAA SSSS SKKK KKKK SScc cccc cccc ccSK KKKK KSSS SSK. .... .... .... .... .... .... .... .... .... .... .... ..
+34  .... .... .KAA AAAA AASS SSSS SKKK KKKK SScc cccp pppp ccSS KKKK SSSS SSK. .... .... .... .... .... .... .... .... .... .... .... ..
+35  .... .... .KAA AASS SSSS SSSS SSKK KKKS cccc cccp pppp cccc SSSS SSSS AAK. .... .... .... .... .... .... .... .... .... .... .... ..
+36  .... .... .KSS SSSS SSSS SSSS SSSS SScc cccc cccc pppc cccc ccSS SSAA AAK. .... .... .... .... .... .... .... .... .... .... .... ..
+37  .... .... .KSS SSSS SSSS SSSS SSSc cccc cccc cccc cKcc cccc cccS SSAA AAK. .... .... .... .... .... .... .... .... .... .... .... ..
+38  .... .... .KSS SSSS SAAA ASSS SScc cccc cccc cccc cKcc cccc cccc SSSS AAK. .... .... .... .... .... .... .... .... .... .... .... ..
+39  .... .... ..KA AAAA AAAA SSSS SScc cccc cccc Kccc cKcc ccKc cccc SSSS SK.. .... .... .... .... .... .... .... .... .... .... .... ..
+40  .... .... ..KA AAAA AAAS SSSS Sccc cccc cccc cKKK KcKK KKcc cccc SSSS sK.. .... .... .... .... .... .... .... .... .... .... .... ..
+41  .... .... ...K AAAA ASSS SSSS cccc cccc cccc cccc cccc cccc cccc SSSs K... .... .... .... .... .... .... .... .... .... .... .... ..
+42  .... .... ...K AAAs SSSS SSSS cccc cccc cccc cccc cccc cccc cccc SSsK .... .... .... .... .... .... .... .... .... .... .... .... ..
+43  .... .... .... Ksss sSSS SSSS cccc cccc cccc cccc cccc cccc cccS SsK. .... .... ...K KKKK KKKK KKKK KKKK KKKK .... .... .... .... ..
+44  .... .... .... .Kss ssSS SSSS Sccc cccc cccc cccc cccc cccc ccSS sK.. ..KK KKKK KKKb bbbb bbbb bbbb bbbb bbbb K... .... .... .... ..
+45  .... .... .... ..KK ssss SSSS SScc cccc cccc cccc cccc cccc cSss KKKK KKAA SSSS llsK CCCC CCCC CCCC CCCC CCCC CK.. .... .... .... ..
+46  .... .... .... .... Ksss sSSS SScc cccc cccc cccc cccc cccc ssKK SSAA SSAA SSSl llls KKKK KKKK KKKK KKKK KKKb CK.. .... .... .... ..
+47  .... .... .... .... .KKK sssS SSSS cccc cccc cccc cccc ccss KKsS SAAA SSAS SSSl llll K... .... .... .... ..Kb CK.. .... .... .... ..
+48  .... .... .... .... .Kss KKss SSSS SScc cccc cccc cccc ssKK sSSS SAAS SSAS Ssll llll lK.. .... .... .... ..Kb CK.. .... .... .... ..
+49  .... .... .... .... Ksss ssKK KKSS SSSS SSSS SSSS ssss sssS SSSS SSAS SSSS SsKl llll lK.. .... .... .... ..Kb CK.. .... .... .... ..
+50  .... .... .... ...K ASSS SSss ssSS SSSS SSSS SSSS SSss SSSS SSSS SSSS SSSK KKKK llll KKKK KKKK KKKK KKKK KKKK KKKK KKKK KKKK KKKK K.
+51  .... .... .... ..KA AASS SSSS SSSS SSSS SSSS SSSS SSSS SSSS SSSS SKKK KKKa aaaa KKKK aaaa aaaa aaaa aaaa aaaa aaaa aaaa aaaa aaat KK
+52  .... .... .... .KAA AASS SSSS SSSS SSSS SSll llll lllS SSSS SSSK Kttt tttt tttt tttt tttt tttt tttt tttt tttt tttt tttt tttt tttK bK
+53  .... .... .... KSSS AAAS SSSS SSSS SSSS llll llll llls ssss ssKt tttt tttt tttt tttt tttt tttt tttt tttt tttt tttt tttt tttt ttKb bK
+54  .... .... .... KSSS SAAS SSSS SSSS SSSl llll llll lllK KKKK KKKK KKKK KKKK KKKK KKKK KKKK KKKK KKKK KKKK KKKK KKKK KKKK KKKK KKbb bK
+55  .... .... ...K SSSS SSSS SSSS SSSS SSll llll llll lllK BBBd dott tttt tttt tttt tttt tttt tttt tttt tttt tttt tttt ttto dBBB dKbb bK
+56  .... .... ...K AASS SSSS SSSS SSSS SSll llll llll lllK Bddd oeee eeee eeee eeee eecc cccc cccc cccc eeee eeee eeee eeee oddd dKbb bK
+57  .... .... ..KA AAAA SSSS SSSS SSSS Slll llll llll lllK dddo eccc cccc cccc ccce eecW WWWW WWWW WWWc eeee eeee eeee eeee eodd dKbb bK
+58  .... .... ..Ks SAAA SSSS sKSS SSSS llll llll llll lllK ddoe ecKK KKKK KKKK KKce eecW WWWW RRWW WWWc eeee cccc cccc cccc ccod dKbb bK
+59  .... .... .KsS SSSA SSSs KsSS SSSS llll llll llll lllK doee ecKK KKKK KKKK KKce eecW WWWR RRRW WWWc eeee cfff ddff ffff fceo dKbb bK
+60  .... .... .KSS SSSS SSss KsSS SSSl llll llll llll lllK oeee ecKK KKKK KKKK KKce eecW WWRR RRRR WWWc eeee cfff ddff ffff fcee oKbb bK
+61  .... .... .Kll lSSS SSsK sSSS SSSl llll llll llll lllK teee ecRR RRRR RRRR RRce eecW WWRR RRRR WWWc eeee cfff ddff ffff fcee eKbb bK
+62  .... .... .Kll llSS SsKs sSSS SSSl llll llll llll lllK teee ecRR RRRR RRRR RRce eecW WWWR RRRW WWWc eeee cddd dddd dddd dcee eKbb bK
+63  .... .... .Kll lllS ssKs sSSS SSll llll llll llll lllK teee ecdd dddd dddd ddce eecW WWWW RRWW WWWc eeee cddd dddd dddd dcee eKbb bK
+64  .KKK .... .Kll lllS sKss SSSS SSll llll llll llll lllK teee ecdd dddd dddd ddce eecW WWWW WWWW WWWc eeee cfff ddff ffff fcee eKbb bK
+65  KAAA K... .Kll llls KAAA AASS SSll llll llll llll lllK teee ecdd dddd dddd ddce eecc cccc cccc cccc eeee cfff ddff ffff fcee eKbb bK
+66  KAAA K... .Kll lllK AAAA AASS SSll llll llll llll lllK teee eccc cccc cccc ccce eeee eeee eeee eeee eeee cfff ddff ffff fcee eKbb bK
+67  KAAA AK.. ..KK KKKK AAAA ASSS SSll llll llll llll lllK teee eeee eeee eeee eecc cccc cccc cccc eeee eeee cccc cccc cccc ccee eKbb bK
+68  KAAA SK.. .... ...K AAAA SSSS SSll llll llll llll lllK tccc cccc cccc ccce eecj jjjj jjjj jjjc eeee eeee eeee eeee eeee eeee eKbb bK
+69  KAAS SSK. .... ...K SSSS SSSS SSll llll llll llll lllK tcff ffWW WWRR RRce eecj jjjj yyjj jjjc eeec cccc cccc cccc ceee eeee eKbb bK
+70  .KSS SSAK .... ...K SSSS SSSS SSll llll llll llll lllK tcff ffWW WWRR RRce eecj jjyy yyyy jjjc eeec jjjj WWWW RRRR ceee eeee eKbb bK
+71  .KSS AAAS KK.. ...K AAAA AASS SSSl llll llll llll lllK tcff ffWW WWRR RRce eecj yyyy iiyy yyjc eeec jjjj WWWW RRRR ceee eeee eKbb bK
+72  ..KS AAAS SSKK KK.K AAAA AASS SSSl llll llll llll lllK tcff ffWW WWRR RRce eecj yyyy iiyy yyjc eeec jjjj WWWW RRRR ceee eeee eKbb bK
+73  ..KA AASS SAAA ssKA AAAA ASSS SSSS llll llll llll lllK tcff ffWW WWRR RRce eecj jjyy yyyy jjjc eeec jjjj WWWW RRRR ceee eeee eKbb bK
+74  ...K AASS AAAs ssKA AAAA SSSS SSSS Slll llll llll lllK tcff ffWW WWRR RRce eecj jjjj yyjj jjjc eeec jjjj WWWW RRRR ceee eeee eKbb bK
+75  .... KKSS AAAs sssK ssSS SSSS SSSS SSSl llll llll lSSK tcff ffWW WWRR RRce eecj jjjj jjjj jjjc eeec jjjj WWWW RRRR ceee eeee eKbb bK
+76  .... ..KK AAAA ssss KsSS SSSS SSSS SSSS Slll lllS SssK tcff ffWW WWRR RRce eecc cccc cccc cccc eeec jjjj WWWW RRRR ceee eeee eKbb bK
+77  .... .... KKKK KKKK .KSS SSSS SSSS SSSS SSSS SSSS sssK tccc cccc cccc cccc cccc ccee eecc cccc cccc cccc WWWW RRRR ceee eeee eKbb bK
+78  .... .... .... .... .KAA AAAA AAAS SSss ssss sKKK sssK teee eeee cRRR RRRR RRRR Rcee eecf fWff ffff fffc cccc cccc ceee eeee eKbb bK
+79  .... .... .... .... ..KA AAAA AAAA ASsK KKKK KKss sssK teee eeee cRRR RRRR RRRR Rcee eecf fWff WWWW WWWc eeee eeee eeee eeee eKbb bK
+80  .... .... .... .... ...K AAAA AAAA AssK .... .Kss sssK teee eeee cyyy yyyy yyyy ycee eecW WWWW ffff fffc eeee eeee eeee eeee eKbb bK
+81  .... .... .... .... ...K sAAA AAAA AsK. .... ..Ks sssK teee eeee cyyy yyyy yyyy ycee eecf fWff WWWW WWWc eeee eeee eeee eeee eKbb bK
+82  .... .... .... .... ...K sAAS SSSS SsK. .... ..Ks sssK toee eeee cyyy yyyy yyyy ycee eecf fWff ffff fffc eeee eeee eeee eeee eKbb bK
+83  .... .... .... .... .... KSSS SSSS SK.. .... ...K sssK tdoe eeee cyyy yyyy yyyy ycee eecW WWWW WWWW WWWc eeee eeee eeee eeee oKbb bK
+84  .... .... .... .... .... .KSS SSSS K... .... ...K sssK tddo eeee cRRR RRRR RRRR Rcee eecf ffff ffff fffc eeee eeee eeee eeeo dKbb bK
+85  .... .... .... .... .... ..KK KKKK .... .... .... KKKK tddd oeee cRRR RRRR RRRR Rcee eecW WWWW WWWW WWWc eeee eeee eeee eeod dKbb bK
+86  .... .... .... .... .... .... .... .... .... .... ...K tddd doee cccc cccc cccc ccee eecf ffff ffff fffc eeee eeee eeee eodd dKbb K.
+87  .... .... .... .... .... .... .... .... .... .... ...K tddd ddob bbbb bbbb bbbb bbbb bbcc cccc cccc cccc bbbb bbbb bbbb oddd dKbK ..
+88  .... .... .... .... .... .... .... .... .... .... ...K bbbb bbbb bbbb bbbb bbbb bbbb bbbb bbbb bbbb bbbb bbbb bbbb bbbo dddd dKK. ..
+89  .... .... .... .... .... .... .... .... .... .... .... KKKK KKKK KKKK KKKK KKKK KKKK KKKK KKKK KKKK KKKK KKKK KKKK KKKK KKKK KK.. ..

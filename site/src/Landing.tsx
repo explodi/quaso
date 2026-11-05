@@ -215,10 +215,10 @@ export function Landing({ page, hasDoc, repositoryUrl }: LandingProps) {
               <div className="mascot-greeting">
                 <span className="speech-bubble">Bonjour, world!</span>
                 <img
-                  src={relativeHref(page, "art/quaso-wave.svg")}
-                  width="160"
-                  height="128"
-                  alt="Quaso, the croissant cat, waving hello"
+                  src={relativeHref(page, "art/traveller-cat.png")}
+                  width="212"
+                  height="180"
+                  alt="A cat in a red beret, holding a suitcase covered in flag stickers"
                 />
               </div>
               <div className="translation-window">
