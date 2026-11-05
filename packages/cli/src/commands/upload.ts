@@ -10,6 +10,7 @@ import {
   entryKey,
   formatKeyPath,
   isTranslatable,
+  MAX_CONTEXT_LENGTH,
   type ImportResult,
   type JobInfo,
   type Rename,
@@ -20,7 +21,14 @@ import { flag, values } from "../args.ts";
 import { canonical, type Project } from "../config.ts";
 import { type Command, type Context, localizeError } from "../context.ts";
 import { CliError, EXIT, usageError } from "../errors.ts";
-import { resolveFileArgs, translationPath, type SourceFile, type Sources } from "../files.ts";
+import {
+  CONTEXT_FILE_SUFFIX,
+  folderContextFiles,
+  resolveFileArgs,
+  translationPath,
+  type SourceFile,
+  type Sources,
+} from "../files.ts";
 import { readProjectText } from "../fs.ts";
 import { LONG_TIMEOUT_MS } from "../http.ts";
 import { jobJson, localFailures, renderJob, type WaitedJob, waitForJob } from "../jobs.ts";
@@ -122,6 +130,9 @@ export const upload: Command = {
     }
     const request = uploadRequest(project, files);
     if (named.length > 0) request.partial = true;
+    // Sent even when empty: it tells the instance that a context file missing here was deleted.
+    request.folderContexts =
+      named.length > 0 ? [] : await readFolderContexts(project, sources.files);
     if (dryRun) request.dryRun = true;
     if (renames.length > 0) request.renames = renames;
 
@@ -245,11 +256,13 @@ export async function readUploadFiles(
       const descriptions = source.local.endsWith(".json")
         ? await readProjectText(project, source.local.replace(/\.json$/, ".descriptions.json"))
         : null;
+      const context = await readContextFile(project, `${source.local}${CONTEXT_FILE_SUFFIX}`);
       files.push({
         path: source.server,
         repoPath: source.local,
         content,
         ...(descriptions === null ? {} : { descriptions }),
+        ...(context === null ? {} : { context }),
       });
     } catch (error) {
       if (error instanceof CliError && error.exitCode === EXIT.invalidSource) invalid.push(error);
@@ -267,6 +280,41 @@ export async function readUploadFiles(
     );
   }
   return files;
+}
+
+/** A context file's text without the whitespace editors leave around it; null if it has none. */
+async function readContextFile(project: Project, path: string): Promise<string | null> {
+  const text = await readProjectText(project, path);
+  const context = text?.trim() ?? "";
+  if (context === "") return null;
+  if (context.length > MAX_CONTEXT_LENGTH) {
+    throw usageError(
+      `${path} has ${context.length.toLocaleString("en")} characters; a context can have at most ` +
+        `${MAX_CONTEXT_LENGTH.toLocaleString("en")}.`,
+    );
+  }
+  return context;
+}
+
+/** The context files of the folders that hold these source files. */
+async function readFolderContexts(
+  project: Project,
+  files: SourceFile[],
+): Promise<NonNullable<UploadRequest["folderContexts"]>> {
+  const byFolder = new Map<string, { local: string; context: string }>();
+  for (const { local, server } of folderContextFiles(project, files)) {
+    const context = await readContextFile(project, local);
+    if (context === null) continue;
+    const other = byFolder.get(server);
+    if (other !== undefined) {
+      const folder = server === "" ? "the top folder" : `folder ${server}`;
+      throw usageError(`${other.local} and ${local} both describe ${folder} on the instance.`, {
+        hint: `Keep one of them, or set "folder" on their entries of ${project.configName}.`,
+      });
+    }
+    byFolder.set(server, { local, context });
+  }
+  return [...byFolder].map(([path, { context }]) => ({ path, context }));
 }
 
 /** A full upload of these files, with the config's languages, limits and exclusions. */
@@ -524,6 +572,15 @@ function renderUpload(out: Output, result: UploadResult, sources: Sources, wait:
     out.print();
     out.print(`Languages added on the instance: ${result.languagesAdded.join(", ")}`);
   }
+  if (result.contexts.length > 0) {
+    out.print();
+    out.print(bold(`Context from context files (${result.contexts.length}):`));
+    for (const { target, path, change } of result.contexts) {
+      const name =
+        target === "file" ? localOf(sources, path) : path === "" ? "all files" : `folder ${path}`;
+      out.print(`  ${name}: ${change}`);
+    }
+  }
   if (result.renameSuggestions.length > 0) {
     out.print();
     out.print(bold("Possible renames (a removed key and an added key with the same English):"));
@@ -547,6 +604,7 @@ function renderUpload(out: Output, result: UploadResult, sources: Sources, wait:
       result.files.some((file) => file.status !== "unchanged") ||
       result.hiddenFiles.length > 0 ||
       result.languagesAdded.length > 0 ||
+      result.contexts.length > 0 ||
       result.renamed.length > 0;
     out.print(
       changes

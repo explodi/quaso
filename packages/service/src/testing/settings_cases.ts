@@ -156,8 +156,9 @@ export const SETTINGS_CASES: { name: string; run(sql: Sql): Promise<void> }[] = 
       await seedFolders(sql);
       const result = await getSettingsAsync(sql, ADMIN, "test", EXTRAS);
       checkEqual(result.folders, [
-        { path: "text", context: "Game text" },
-        { path: "text/menus", context: "" },
+        { path: "", context: "", uploadedContext: null },
+        { path: "text", context: "Game text", uploadedContext: null },
+        { path: "text/menus", context: "", uploadedContext: null },
       ]);
     },
   },
@@ -171,14 +172,38 @@ export const SETTINGS_CASES: { name: string; run(sql: Sql): Promise<void> }[] = 
         { path: "text/menus", context: "Menus" },
         200,
       );
-      checkEqual(written, { path: "text/menus", context: "Menus" });
+      checkEqual(written, { path: "text/menus", context: "Menus", uploadedContext: null });
       const removed = await updateFolderAsync(sql, MANAGER, { path: "text", context: " " }, 300);
-      checkEqual(removed, { path: "text", context: "" });
+      checkEqual(removed, { path: "text", context: "", uploadedContext: null });
       const result = await getSettingsAsync(sql, ADMIN, "test", EXTRAS);
       checkEqual(result.folders, [
-        { path: "text", context: "" },
-        { path: "text/menus", context: "Menus" },
+        { path: "", context: "", uploadedContext: null },
+        { path: "text", context: "", uploadedContext: null },
+        { path: "text/menus", context: "Menus", uploadedContext: null },
       ]);
+    },
+  },
+  {
+    name: "a manager writes the top folder's context",
+    async run(sql) {
+      await seedFolders(sql);
+      const written = await updateFolderAsync(sql, MANAGER, { path: "", context: "A game" }, 200);
+      checkEqual(written, { path: "", context: "A game", uploadedContext: null });
+      const result = await getSettingsAsync(sql, ADMIN, "test", EXTRAS);
+      checkEqual(result.folders[0], { path: "", context: "A game", uploadedContext: null });
+    },
+  },
+  {
+    name: "clearing a context from a context file keeps what the file said",
+    async run(sql) {
+      await seedFolders(sql);
+      await sql.commit(4, [
+        { sql: "UPDATE folders SET uploaded_context = 'Game text' WHERE path = 'text'" },
+      ]);
+      const cleared = await updateFolderAsync(sql, MANAGER, { path: "text", context: "" }, 200);
+      checkEqual(cleared, { path: "text", context: "", uploadedContext: "Game text" });
+      const result = await getSettingsAsync(sql, ADMIN, "test", EXTRAS);
+      checkEqual(result.folders[1], { path: "text", context: "", uploadedContext: "Game text" });
     },
   },
   {

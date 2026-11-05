@@ -33,6 +33,7 @@ import {
   upsertTranslation,
 } from "./translations.ts";
 import { planUploadArguments } from "./upload_arguments.ts";
+import { planUploadContexts } from "./upload_contexts.ts";
 import { planUploadLimits } from "./upload_limits.ts";
 import { readUploadFiles } from "./upload_parse.ts";
 import { type RenameCandidate, suggestUploadRenames } from "./upload_renames.ts";
@@ -85,6 +86,7 @@ export function planUpload(
     renameSuggestions: [],
     hiddenFiles: [],
     languagesAdded: [],
+    contexts: [],
     warnings: [],
     job: null,
     revision,
@@ -170,6 +172,8 @@ export function planUpload(
         repo_path: file.repoPath,
         format: file.format,
         active: 1,
+        context: "",
+        uploaded_context: null,
       };
       files.set(file.path, row);
       statements.push({
@@ -357,6 +361,10 @@ export function planUpload(
       });
     }
   }
+  const contextPlan = planUploadContexts(request, files, snapshot.folders, at);
+  statements.push(...contextPlan.statements);
+  result.contexts = contextPlan.changes;
+  result.warnings.push(...contextPlan.warnings);
   const locked = sourceRows
     .filter((row) => uploadedIds.has(row.file_id) && row.max_length_locked === 1)
     .map((row) => row.id);
@@ -568,6 +576,11 @@ export function planUpload(
   if (result.hiddenFiles.length > 0) parts.push(`${result.hiddenFiles.length} files hidden`);
   if (result.languagesAdded.length > 0)
     parts.push(`languages added: ${result.languagesAdded.join(", ")}`);
+  if (result.contexts.length > 0) {
+    parts.push(
+      `${result.contexts.length} context${result.contexts.length === 1 ? "" : "s"} updated`,
+    );
+  }
   const summary =
     parts.length === 0 ? "Upload: no changes to strings" : `Upload: ${parts.join(", ")}`;
   const detail = {
@@ -582,6 +595,7 @@ export function planUpload(
     renameSuggestions: result.renameSuggestions,
     hiddenFiles: result.hiddenFiles,
     languagesAdded: result.languagesAdded,
+    contexts: result.contexts,
   };
   statements.push({
     sql: `INSERT INTO activity (type, actor_type, actor_id, actor_label, summary, detail, created_at)

@@ -1011,6 +1011,33 @@ function Languages({ data, refresh }: { data: SettingsResult; refresh(): Promise
     </>
   );
 }
+/** Says when a context file gave this text, and offers its text back after an edit here. */
+function ContextFileNote({
+  fileName,
+  context,
+  uploaded,
+  restoreText,
+}: {
+  fileName: string;
+  context: string;
+  uploaded: string | null;
+  restoreText(text: string): void;
+}) {
+  if (uploaded === null) return null;
+  if (context === uploaded) {
+    return (
+      <p className="muted">From {fileName}. Uploads replace this text when the file changes.</p>
+    );
+  }
+  return (
+    <p className="muted">
+      Edited here, so it differs from {fileName}. Uploads keep this text until the file changes.{" "}
+      <Button type="button" onClick={() => restoreText(uploaded)}>
+        Use the file's text
+      </Button>
+    </p>
+  );
+}
 function FileContext({ file }: { file: SettingsResult["files"][number] }) {
   const [context, setContext] = useState(file.context);
   return (
@@ -1035,15 +1062,22 @@ function FileContext({ file }: { file: SettingsResult["files"][number] }) {
           onChange={(e) => setContext(e.target.value)}
         />
       </Field>
+      <ContextFileNote
+        fileName={`${file.path.split("/").at(-1)}.quaso`}
+        context={context}
+        uploaded={file.uploadedContext}
+        restoreText={setContext}
+      />
       <p>Generated context: {file.generatedContext || "None yet."}</p>
     </SaveForm>
   );
 }
 function FolderContext({ folder }: { folder: SettingsResult["folders"][number] }) {
   const [context, setContext] = useState(folder.context);
+  const isTopFolder = folder.path === "";
   return (
     <SaveForm
-      title={`${folder.path}/`}
+      title={isTopFolder ? "All files" : `${folder.path}/`}
       save={() =>
         request("/folders", {
           method: "PATCH",
@@ -1054,7 +1088,11 @@ function FolderContext({ folder }: { folder: SettingsResult["folders"][number] }
       <Field
         label="Folder context"
         path="context"
-        hint="The model reads this with every file in this folder and its subfolders, before the file's own context."
+        hint={
+          isTopFolder
+            ? "The model reads this with every file, before folder and file contexts."
+            : "The model reads this with every file in this folder and its subfolders, before the file's own context."
+        }
       >
         <TextArea
           autoGrow={false}
@@ -1063,6 +1101,12 @@ function FolderContext({ folder }: { folder: SettingsResult["folders"][number] }
           onChange={(e) => setContext(e.target.value)}
         />
       </Field>
+      <ContextFileNote
+        fileName="context.quaso"
+        context={context}
+        uploaded={folder.uploadedContext}
+        restoreText={setContext}
+      />
     </SaveForm>
   );
 }

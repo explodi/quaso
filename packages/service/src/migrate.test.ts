@@ -149,6 +149,26 @@ test(
 );
 
 test(
+  "migration 9 keeps a version 8 project's contexts, which came from no context file",
+  withDatabase(async (sql) => {
+    await migrate(sql, { migrations: MIGRATIONS.slice(0, 8) });
+    sql.run(
+      `INSERT INTO files (path, repo_path, format, context, created_at, updated_at)
+       VALUES ('text/menus.json', 'text/menus.json', '{}', 'Menus', 100, 100)`,
+    );
+    sql.run("INSERT INTO folders (path, context, updated_at) VALUES ('text', 'Game text', 100)");
+    const result = await migrate(sql, { migrations: MIGRATIONS.slice(0, 9) });
+    expect(result).toStrictEqual({ from: 8, to: 9, created: false });
+    expect(sql.query("SELECT context, uploaded_context FROM files")).toStrictEqual([
+      { context: "Menus", uploaded_context: null },
+    ]);
+    expect(sql.query("SELECT context, uploaded_context FROM folders")).toStrictEqual([
+      { context: "Game text", uploaded_context: null },
+    ]);
+  }),
+);
+
+test(
   "migration 7 keeps a version 6 project's strings, which receive no arguments yet",
   withDatabase(async (sql) => {
     await migrate(sql, { migrations: MIGRATIONS.slice(0, 6) });

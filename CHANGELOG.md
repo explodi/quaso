@@ -7,6 +7,11 @@ Release candidates are for deployment and migration testing. The team decides wh
 
 ### Added
 
+- Context files: `quaso upload` reads `context.quaso` and `<file>.quaso` next to the source files
+  and stores them as folder and file context. A changed file always wins, and an unchanged file
+  never overwrites an edit made in **Settings**; the CLI warns about both. **Settings → Files &
+  length limits** gains an **All files** context. Migration 9 adds a column to `files` and
+  `folders`. A CLI with this feature can't upload to an earlier instance: update the instance first.
 - ICU case editor: a string whose English has blocks is translated case by case, one field per
   case (`female › one`, with the case's English above it) and per text around blocks, the syntax
   locked and plural cases for the target language. Fields hold plain text; braces and apostrophes
