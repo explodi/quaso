@@ -222,3 +222,32 @@ An i18next project (`{{name}}`, `coins_one` and `coins_other`) can move to ICU M
 translating or proofreading again: Quaso converts the sources, translations and suggestions in
 place and keeps who translated what. See
 [Move an i18next project to ICU MessageFormat](move-to-icu.md).
+
+## Try a mayor's newspaper
+
+[Quaso Quest](../examples/demo-game/README.md) is a playable ICU example: choose a character and
+pronouns, then compare the French and Spanish newspaper. Spanish uses _la alcaldesa_, _el alcalde_,
+or _la persona en la alcaldía_. Appearance and pronouns are independent, and each story keeps the
+whole sentence in one message. The message inspector shows the actual catalog text and values.
+
+The small `packages/service/src/testing/fixtures/mayor-project` fixture exercises a different
+case: English headlines that do not use gender, while translations may introduce a `mayorGender`
+select. It includes a title, adjective agreement, nested plurals, and explicit subject pronouns.
+With a provider key configured, run an opt-in evaluation from the repository root:
+
+```sh
+npm run test:llm -- --icu \
+  --project packages/service/src/testing/fixtures/mayor-project \
+  --models gemini-flash-latest --languages es,fr,de \
+  --out .quaso/mayor-evaluation.json
+```
+
+This makes paid provider calls through the real batching, prompt, QA, and retry pipeline. Review
+the saved translations in every gender case: structural QA can catch broken ICU and lost values,
+but it cannot certify that a translation uses the right pronoun or sounds natural. A declared
+case may use `other` when its wording is shared; `other` must always be safe for the meaning in
+the argument's description.
+
+For the deterministic upload/conversion/import/download checks, install dependencies at the root
+and in `examples/demo-game`, then run `npm run test:demo` (Node 26, macOS or Linux). It uses an
+isolated temporary server and never modifies your translation instance. CI also runs this check.

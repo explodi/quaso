@@ -154,9 +154,13 @@ export interface IcuSyntaxError {
  * i18next-icu) read it, or null. Unlike `parseIcu`, which reads a broken block as text, a
  * `{` that starts no argument is an error here, and so are a `}` that closes nothing, a case
  * without its text in braces and a block without an `other` case.
+ * Documents may allow literal braces outside ICU arguments; their blocks are still strict.
  */
-export function icuSyntaxError(text: string): IcuSyntaxError | null {
-  const result = strictMessage(text, 0, false);
+export function icuSyntaxError(
+  text: string,
+  options: { allowTextBraces?: boolean } = {},
+): IcuSyntaxError | null {
+  const result = strictMessage(text, 0, false, options.allowTextBraces);
   if ("message" in result) return result;
   if (result.end < text.length) return { message: "This } closes nothing.", at: result.end };
   return null;
@@ -165,7 +169,12 @@ export function icuSyntaxError(text: string): IcuSyntaxError | null {
 type Strict = { end: number } | IcuSyntaxError;
 
 /** A message from `start` up to the `}` that ends it, or the end of the text. */
-function strictMessage(text: string, start: number, inPlural: boolean): Strict {
+function strictMessage(
+  text: string,
+  start: number,
+  inPlural: boolean,
+  allowTextBraces = false,
+): Strict {
   let at = start;
   while (at < text.length) {
     const quoteEnd = quotedEnd(text, at, inPlural);
@@ -173,8 +182,13 @@ function strictMessage(text: string, start: number, inPlural: boolean): Strict {
       at = quoteEnd;
       continue;
     }
-    if (text[at] === "}") return { end: at };
+    if (text[at] === "}" && !allowTextBraces) return { end: at };
     if (text[at] === "{") {
+      const startsArgument = /^\{\s*[\p{L}\p{N}_$]+\s*[,}]/u.test(text.slice(at));
+      if (allowTextBraces && !startsArgument) {
+        at++;
+        continue;
+      }
       const argument = strictArgument(text, at);
       if ("message" in argument) return argument;
       at = argument.end;
@@ -239,6 +253,9 @@ function strictCases(
       return { message: `The ${label} block has no } after its last case.`, at };
     }
     if (!CASE_KEY.test(key)) return { message: `“${key}” isn't a case of ${label}.`, at };
+    if (keys.includes(key)) {
+      return { message: `The ${key} case of ${label} is repeated.`, at };
+    }
     if (open === -1 || text[open] === "}") {
       return { message: `The case “${key}” of ${label} has no text in braces.`, at };
     }

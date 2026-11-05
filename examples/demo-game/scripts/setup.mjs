@@ -60,10 +60,22 @@ try {
     await api("/settings", "PATCH", {
       llm: { autoTranslate: false },
       description:
-        "Un petit chat-croissant ramasse du beurre pour le pique-nique de Biscotte. Ton drôle, chaleureux et gourmand. Quaso et Biscotte sont des noms propres.",
+        "Quaso, un chat-croissant à la tête du pique-nique, ramasse du beurre pour Biscotte. Ton drôle, chaleureux et gourmand. Quaso et Biscotte sont des noms propres. Les pronoms du personnage se choisissent indépendamment du look. Pour gender=other, reformuler naturellement sans accord genré.",
     });
   } else {
     await api("/auth/signin", "POST", { email, password });
+  }
+
+  // Convert stored translations too; changing only the syntax setting would leave broken ICU.
+  const conversion = await api("/conversions/icu", "POST", {});
+  if (conversion.refusals.length) {
+    throw new Error(`ICU conversion needs attention: ${JSON.stringify(conversion.refusals)}`);
+  }
+  if (conversion.converted) {
+    console.log(`ICU enabled; preserved ${conversion.translations} existing translations.`);
+  }
+  if (conversion.failing.length) {
+    console.log("Some preserved translations need ICU review in Quaso’s QA problems filter.");
   }
 
   if (session.setupRequired || !apiKey) {
@@ -72,16 +84,33 @@ try {
     saveCredentials();
   }
 
-  run(process.execPath, ["node_modules/@quaso-i18n/cli/quaso.mjs", "upload"], {
+  const cliEnvironment = {
     ...process.env,
     QUASO_HOSTNAME: hostname,
     QUASO_API_KEY: apiKey,
-  });
+  };
+  run(process.execPath, ["node_modules/@quaso-i18n/cli/quaso.mjs", "upload"], cliEnvironment);
+  // Shared counters and symbols are intentional Spanish translations too.
+  run(
+    process.execPath,
+    [
+      "node_modules/@quaso-i18n/cli/quaso.mjs",
+      "import",
+      "--as",
+      "blue",
+      "--language",
+      "es",
+      "--keep-identical",
+    ],
+    cliEnvironment,
+  );
   console.log(`\nQuaso Quest is ready to translate: ${hostname}\n`);
   console.log(`Sign in: ${email}\nPassword: ${password}\n`);
   console.log("Credentials are saved in .env.quaso (ignored by git).\n");
   console.log("Next: translate a string in Quaso, then run npm run quaso -- download.");
-  console.log("Start the game with npm run dev and choose English or Deutsch.");
+  console.log(
+    "Start the game with npm run dev. Try Français or Español, then translate English or Deutsch.",
+  );
 } catch (error) {
   console.error(`\nSetup did not finish: ${error.message}`);
   console.error(

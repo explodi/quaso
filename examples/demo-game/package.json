@@ -11,14 +11,14 @@
     "quaso:setup": "node scripts/setup.mjs",
     "quaso": "node --env-file=.env.quaso node_modules/@quaso-i18n/cli/quaso.mjs"
   },
-  "dependencies": {
-    "i18next": "25.5.2"
-  },
   "devDependencies": {
-    "@quaso-i18n/cli": "1.0.0-rc.2",
+    "@quaso-i18n/cli": "1.0.0-rc.2.main.g295b2b5",
     "vite": "8.3.4"
   },
   "engines": {
     "node": ">=22.12"
+  },
+  "dependencies": {
+    "intl-messageformat": "12.1.4"
   }
 }

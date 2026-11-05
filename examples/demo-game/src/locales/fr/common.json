@@ -19,7 +19,7 @@
   "footer": "Un petit jeu fait avec amour et beaucoup de beurre.",
   "translation": {
     "title": "Ce petit jeu parle ta langue ?",
-    "body": "Quaso Quest est aussi un terrain de jeu pour la traduction. Le français est prêt ; l'anglais et l'allemand attendent tes mots.",
+    "body": "Quaso Quest est aussi un terrain de jeu pour la traduction. Le français et l'espagnol sont prêts ; l'anglais et l'allemand attendent tes mots.",
     "workflow": "Envoie les textes à ton instance Quaso, traduis-les, puis télécharge-les et recharge le jeu.",
     "fallback": "Les textes non traduits s'affichent en français. À toi de leur donner de nouveaux mots !",
     "readme": "Ouvrir le guide de traduction ↗"

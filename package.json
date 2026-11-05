@@ -12,6 +12,7 @@
     "dev:reset": "node scripts/dev.ts --reset",
     "design:tokens": "node scripts/generate_theme.ts",
     "test": "vitest run --project unit",
+    "test:demo": "node scripts/demo_game_workflow.ts",
     "test:llm": "node scripts/llm_eval.ts",
     "check": "npm run fmt:check && npm run lint && npm run typecheck && node scripts/check_headers.ts && node scripts/check_portability.ts && node scripts/check_licenses.ts && npm test",
     "typecheck": "tsc --noEmit",

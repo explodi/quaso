@@ -156,3 +156,19 @@ test("icuPreview: at most `limit` rows", () => {
   expect(preview.rows.length).toBe(4);
   expect(preview.truncated).toBe(true);
 });
+
+test("formatIcu: a select inside a plural treats # and its apostrophes as literal text", () => {
+  const message =
+    "{n, plural, other {# {gender, select, female {'#' for her} other {# for them}} #}}";
+  expect(formatIcu(message, { n: 2, gender: "female" }, "en")).toBe("2 '#' for her 2");
+  expect(formatIcu(message, { n: 3, gender: "other" }, "en")).toBe("3 # for them 3");
+});
+
+test("formatIcu: a declared nonbinary case remains distinct from the unknown fallback", () => {
+  const message =
+    "{mayorGender, select, female {La alcaldesa} male {El alcalde} nb {La persona en la alcaldía} other {La alcaldía}}";
+  expect(formatIcu(message, { mayorGender: "female" }, "es")).toBe("La alcaldesa");
+  expect(formatIcu(message, { mayorGender: "male" }, "es")).toBe("El alcalde");
+  expect(formatIcu(message, { mayorGender: "nb" }, "es")).toBe("La persona en la alcaldía");
+  expect(formatIcu(message, { mayorGender: "unknown" }, "es")).toBe("La alcaldía");
+});

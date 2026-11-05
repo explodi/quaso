@@ -22,6 +22,12 @@ contains the runtime copies; that ignored folder is not required to use them. Th
 animate the cat-croissant character. Display pixel art with `image-rendering: pixelated` to keep
 sharp edges when scaling it.
 
+The three playable looks share those four animation frames. `src/characters.css` adds a pixel
+flower, a mint scarf, or two antennae with a mint tint for the space visitor. The accessories
+use proportions of the original 40 × 32 grid, so they follow the sprite at every display size.
+They are editable CSS artwork and need no generated image files. Character appearance and
+pronoun preference are separate settings.
+
 The text grids store a palette and one character per pixel. The butter uses five colors; the bee
 uses six. The bee's body stays in place while its wings move. The landscape meadow uses 24 colors.
 The portrait version rearranges its bakery, pond, trees, and picnic for narrow screens.

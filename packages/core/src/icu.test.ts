@@ -81,3 +81,21 @@ test("icuSyntaxError: the innermost problem of nested blocks", () => {
     at: 19,
   });
 });
+
+test("icuSyntaxError: duplicate select and plural cases are invalid", () => {
+  expect(icuSyntaxError("{g, select, female {She} female {Her} other {They}}")?.message).toBe(
+    "The female case of {g, select} is repeated.",
+  );
+  expect(icuSyntaxError("{n, plural, one {one} one {one again} other {many}}")?.message).toBe(
+    "The one case of {n, plural} is repeated.",
+  );
+});
+
+test("icuSyntaxError: document prose may have literal braces but ICU blocks remain strict", () => {
+  expect(icuSyntaxError('JSON: { "a": 1 }. A brace: {', { allowTextBraces: true })).toBe(null);
+  expect(
+    icuSyntaxError('JSON: { "a": 1 }. {gender, select, female {She} other {They}', {
+      allowTextBraces: true,
+    })?.message,
+  ).toBe("This { is never closed.");
+});

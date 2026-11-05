@@ -1874,7 +1874,7 @@ test("checks, arguments: a case the declaration doesn't list is an error", () =>
 test("checks, arguments: a select on a declared argument needs an other case", () => {
   const translation = UNIDA.replace("other {¡Qué ganas de empezar en {company}!}", "");
   expect(messages(feed(JOINED, translation, "es"))).toStrictEqual([
-    "The {authorGender, select} block needs an other case.",
+    "The {authorGender, select} block has no other case.",
   ]);
 });
 
@@ -1931,5 +1931,109 @@ test("checks, arguments: a plural form's select is checked in that form", () => 
   expect(messages(plural("es", source, translation, options))).toStrictEqual([
     "Placeholder {count} is missing in the male case of {authorGender, select} (other form).",
     "Placeholder {count} is missing in the other case of {authorGender, select} (other form).",
+  ]);
+});
+
+test("checks, arguments: malformed translator-added selects fail before case expansion", () => {
+  expect(
+    messages(
+      feed(
+        "The mayor is ready.",
+        "{authorGender, select, female {La alcaldesa está lista.} other {La alcaldía está lista.}",
+        "es",
+      ),
+    ),
+  ).toStrictEqual(["This { is never closed."]);
+  expect(
+    messages(
+      feed(
+        "The mayor is ready.",
+        "{authorGender, select, female {La alcaldesa está lista.} other {La alcaldía está lista.}}}",
+        "es",
+      ),
+    ),
+  ).toStrictEqual(["This } closes nothing."]);
+  expect(
+    messages(
+      feed(
+        "The mayor is ready.",
+        "{authorGender, select, female {La alcaldesa está lista.} female {El alcalde está listo.} other {La alcaldía está lista.}}",
+        "es",
+      ),
+    ),
+  ).toStrictEqual(["The female case of {authorGender, select} is repeated."]);
+});
+
+test("checks, arguments: a malformed select in a newspaper document is refused", () => {
+  expect(
+    messages(
+      text(
+        "# Town hall\n\nThe mayor is ready.",
+        "# Ayuntamiento\n\n{authorGender, select, female {La alcaldesa está lista.} other {La alcaldía está lista.}",
+        {
+          language: "es",
+          syntax: ICU,
+          arguments: AUTHOR,
+          document: true,
+        },
+      ),
+    ),
+  ).toStrictEqual(["This { is never closed."]);
+});
+
+test("checks, arguments: named cases may use a neutral other fallback", () => {
+  expect(
+    feed(
+      "The mayor is ready.",
+      "{authorGender, select, female {La alcaldesa está lista.} other {La alcaldía está lista.}}",
+      "es",
+    ),
+  ).toStrictEqual([]);
+  expect(feed("The mayor is ready.", "La alcaldía está lista.", "es")).toStrictEqual([]);
+});
+
+test("checks, arguments: a nonbinary case is allowed only when the application supplies it", () => {
+  const translation =
+    "{mayorGender, select, female {La alcaldesa {name}.} male {El alcalde {name}.} nb {La persona en la alcaldía, {name}.} other {La alcaldía, {name}.}}";
+  const options = {
+    language: "es",
+    syntax: ICU,
+    arguments: [{ name: "mayorGender", cases: ["female", "male", "nb"] }],
+  };
+  expect(text("Mayor {name}.", translation, options)).toStrictEqual([]);
+  expect(
+    messages(
+      text("Mayor {name}.", translation, {
+        ...options,
+        arguments: [{ name: "mayorGender", cases: ["female", "male"] }],
+      }),
+    ),
+  ).toStrictEqual([
+    "The nb case of {mayorGender, select} isn't one of its cases: female, male, other.",
+  ]);
+});
+
+test("checks, arguments: a select inside a plural cannot turn a literal # into a count", () => {
+  const source = "{count, plural, one {# tower} other {# towers}}";
+  const translation =
+    "{count, plural, one {# torre} many {# torres} other {{authorGender, select, female {# torres para la alcaldesa} male {# torres para el alcalde} other {# torres para la alcaldía}}}}";
+  expect(messages(feed(source, translation, "es"))).toStrictEqual([
+    "Placeholder # is missing in the other case of {count, plural}.",
+  ]);
+});
+
+test("checks, arguments: a select inside a plural can use its explicit count argument", () => {
+  const source = "{count, plural, one {One tower} other {{count} towers}}";
+  const translation =
+    "{count, plural, one {Una torre} many {{count} torres} other {{authorGender, select, female {{count} torres para la alcaldesa} male {{count} torres para el alcalde} other {{count} torres para la alcaldía}}}}";
+  expect(feed(source, translation, "es")).toStrictEqual([]);
+});
+
+test("checks, arguments: a lost count inside one gender branch identifies that branch", () => {
+  const source = "{count, plural, one {One tower} other {# towers}}";
+  const translation =
+    "{authorGender, select, female {{count, plural, one {Una torre} many {# torres} other {Torres para la alcaldesa}}} male {{count, plural, one {Una torre} many {# torres} other {# torres para el alcalde}}} other {{count, plural, one {Una torre} many {# torres} other {# torres para la alcaldía}}}}";
+  expect(messages(feed(source, translation, "es"))).toStrictEqual([
+    "Placeholder # is missing in the other case of {count, plural} in the female case of {authorGender, select}.",
   ]);
 });

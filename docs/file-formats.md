@@ -284,8 +284,9 @@ are still errors.
 - `icu_structure` (error): a block is missing, broken or not in the English, a select block's
   cases differ from the English's (except on a
   [declared argument](#arguments-the-english-doesnt-show)), a plural block has a case that isn't a plural category, or an
-  exact case such as `=0` is missing. A block with a broken case, such as an unclosed `{`, counts
-  as missing.
+  exact case such as `=0` is missing. Invalid syntax, including an unclosed brace, a repeated
+  case key, or a block without `other`, is rejected before the cases are checked. This also
+  catches broken blocks added by a translation when the source has no block.
 - `plural_form_missing` and `plural_form_unexpected` (errors): a plural block lacks a case for one
   of the target language's categories, or has a case for a category the language doesn't use.
 - `placeholder_missing` and `placeholder_extra` (errors) name the case they are about, such as "in
@@ -345,15 +346,17 @@ arguments in one string vary together. Besides:
 
 - A select block on an argument may only have its declared cases and `other` (`icu_structure`):
   "The neutral case of {authorGender, select} isn't one of its cases: female, male, other."
-- It must have an `other` case (`icu_structure`): "The {authorGender, select} block needs an other
+- It must have an `other` case (`icu_structure`): "The {authorGender, select} block has no other
   case."
 - A select block on any other argument, and every string without declared arguments, follows the
   rules above unchanged.
 
 ### Braces and apostrophes
 
-A `{` that starts no argument, such as one in a code block of a Markdown document, is plain text.
-To write a brace that does start one as text, quote it with apostrophes, as ICU does:
+ICU JSON strings use strict brace syntax: quote literal braces, and close every argument and
+block. Markdown documents may contain braces that start no ICU argument, such as JSON examples
+in code blocks. Recognizable ICU arguments and blocks inside a document still need valid syntax.
+To write a brace that starts an argument as text, quote it with apostrophes, as ICU does:
 
 - `'{'` and `'}'` are literal braces, and `'#'` is a literal `#` in a plural case.
 - `''` is one apostrophe.
@@ -361,6 +364,11 @@ To write a brace that does start one as text, quote it with apostrophes, as ICU 
 - An apostrophe right before `{` starts quoted text, so `l'{name}` shows `{name}` literally and the
   check reports the placeholder missing. Write `l''{name}`.
 - Quoted text that isn't closed with another apostrophe runs to the end of the message.
+
+`#` inserts the number only directly inside a `plural` or `selectordinal` case. A nested
+`select` makes it literal text again, and `'#'` there keeps its apostrophes. Put a gender
+`select` around the plural when each gender needs the count; this keeps `#` inside the plural
+cases. The preview and placeholder checks use the same rule as FormatJS and i18next-icu.
 
 ## Errors and warnings
 
