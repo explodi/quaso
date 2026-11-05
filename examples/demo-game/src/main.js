@@ -27,6 +27,7 @@ const keys = new Set();
 let game = newGame();
 let character = "female";
 let gender = "female";
+let characterReturnPanel = "welcome";
 const characterValues = ["female", "male", "other"];
 
 // Grammar follows the chosen pronouns, independently of the costume.
@@ -290,6 +291,25 @@ function handleEvent(event) {
   updateHud();
 }
 
+function chooseCharacter(panelId) {
+  characterReturnPanel = panelId;
+  $(panelId).hidden = true;
+  $("character-screen").hidden = false;
+  keys.clear();
+  game.target = null;
+  document.querySelector('input[name="character"]:checked').focus({ preventScroll: true });
+}
+
+$("confirm-character").addEventListener("click", () => {
+  $("character-screen").hidden = true;
+  const panel = $(characterReturnPanel);
+  panel.hidden = false;
+  panel.querySelector(".primary-button").focus({ preventScroll: true });
+});
+document.querySelectorAll("[data-change-character]").forEach((button) => {
+  button.addEventListener("click", () => chooseCharacter(button.closest(".dialog").id));
+});
+
 document.querySelectorAll('input[name="character"]').forEach((input) => {
   input.addEventListener("change", () => {
     character = input.value;
@@ -371,6 +391,7 @@ const movementKeys = [
   "q",
 ];
 world.addEventListener("keydown", (event) => {
+  if (!$("character-screen").hidden) return;
   const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
   if (key === "Escape") {
     event.preventDefault();

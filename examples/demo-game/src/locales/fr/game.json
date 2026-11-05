@@ -83,7 +83,9 @@
     "pronouns": "Comment parler de Quaso ?",
     "pronounsFemale": "Elle · féminin",
     "pronounsMale": "Il · masculin",
-    "pronounsOther": "Neutre · sans accord genré"
+    "pronounsOther": "Neutre · sans accord genré",
+    "confirm": "Continuer →",
+    "change": "Changer de Quaso"
   },
   "newspaper": {
     "title": "La Gazette du goûter",
