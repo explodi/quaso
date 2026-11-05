@@ -151,7 +151,7 @@ source wording so that a developer can add context. See [CLI upload](cli.md#quas
 
 **File context** explains what a whole file is, and **folder context** what every file in a folder
 and its subfolders is, such as "Store page texts" for `store/`. Managers write both in **Settings →
-Files & length limits**. The LLM reads the contexts of a file's folders, outermost first, then the
+Context**. The LLM reads the contexts of a file's folders, outermost first, then the
 file's own, in the prompt's `%fileContext%`. A folder's context stays when its last file is
 removed, and applies again if files return to it. To give files a folder of their own on the
 instance, set `folder` on their entry of `quaso.config.json`; see [The config file](cli.md#the-config-file).

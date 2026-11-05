@@ -41,13 +41,8 @@ import {
   type SecretStatus,
   SetSecretRequest,
   type SettingsResult,
-  type StringsPage,
-  type StringSummary,
-  UpdateFileRequest,
-  UpdateFolderRequest,
   UpdateLanguageRequest,
   UpdateSettingsRequest,
-  UpdateStringRequest,
 } from "@quaso/core";
 import { Access, ConfirmButton, LanguagePicker, OneTimeSecret } from "../components/Management.tsx";
 import { ModelSelect } from "../components/ModelSelect.tsx";
@@ -57,6 +52,8 @@ import { fieldError, validated } from "../lib/forms.ts";
 import { SETTINGS_SECTIONS, SettingsNavigation } from "../components/SettingsNavigation.tsx";
 import { useRoute } from "../lib/router.tsx";
 import { useDocumentTitle } from "../lib/hooks.ts";
+import { ContextSettings } from "./ContextSettings.tsx";
+import { LengthLimits } from "./LengthLimits.tsx";
 import { AdminDetails } from "./Admin.tsx";
 import { LanguageRequestsAdmin } from "../components/LanguageRequests.tsx";
 
@@ -1011,181 +1008,6 @@ function Languages({ data, refresh }: { data: SettingsResult; refresh(): Promise
     </>
   );
 }
-/** Says when a context file gave this text, and offers its text back after an edit here. */
-function ContextFileNote({
-  fileName,
-  context,
-  uploaded,
-  restoreText,
-}: {
-  fileName: string;
-  context: string;
-  uploaded: string | null;
-  restoreText(text: string): void;
-}) {
-  if (uploaded === null) return null;
-  if (context === uploaded) {
-    return (
-      <p className="muted">From {fileName}. Uploads replace this text when the file changes.</p>
-    );
-  }
-  return (
-    <p className="muted">
-      Edited here, so it differs from {fileName}. Uploads keep this text until the file changes.{" "}
-      <Button type="button" onClick={() => restoreText(uploaded)}>
-        Use the file's text
-      </Button>
-    </p>
-  );
-}
-function FileContext({ file }: { file: SettingsResult["files"][number] }) {
-  const [context, setContext] = useState(file.context);
-  return (
-    <SaveForm
-      title={file.path}
-      save={() =>
-        request(`/files/${file.id}`, {
-          method: "PATCH",
-          body: validated(UpdateFileRequest, { context }),
-        })
-      }
-    >
-      <Field
-        label="File context"
-        path="context"
-        hint="Explain where these strings appear so the model can translate them in context."
-      >
-        <TextArea
-          autoGrow={false}
-          rows={3}
-          value={context}
-          onChange={(e) => setContext(e.target.value)}
-        />
-      </Field>
-      <ContextFileNote
-        fileName={`${file.path.split("/").at(-1)}.quaso`}
-        context={context}
-        uploaded={file.uploadedContext}
-        restoreText={setContext}
-      />
-      <p>Generated context: {file.generatedContext || "None yet."}</p>
-    </SaveForm>
-  );
-}
-function FolderContext({ folder }: { folder: SettingsResult["folders"][number] }) {
-  const [context, setContext] = useState(folder.context);
-  const isTopFolder = folder.path === "";
-  return (
-    <SaveForm
-      title={isTopFolder ? "All files" : `${folder.path}/`}
-      save={() =>
-        request("/folders", {
-          method: "PATCH",
-          body: validated(UpdateFolderRequest, { path: folder.path, context }),
-        })
-      }
-    >
-      <Field
-        label="Folder context"
-        path="context"
-        hint={
-          isTopFolder
-            ? "The model reads this with every file, before folder and file contexts."
-            : "The model reads this with every file in this folder and its subfolders, before the file's own context."
-        }
-      >
-        <TextArea
-          autoGrow={false}
-          rows={3}
-          value={context}
-          onChange={(e) => setContext(e.target.value)}
-        />
-      </Field>
-      <ContextFileNote
-        fileName="context.quaso"
-        context={context}
-        uploaded={folder.uploadedContext}
-        restoreText={setContext}
-      />
-    </SaveForm>
-  );
-}
-function LimitRow({ string }: { string: StringSummary }) {
-  const [limit, setLimit] = useState(string.maxLength?.toString() ?? "");
-  return (
-    <SaveForm
-      title={`${string.file}: ${string.key}`}
-      save={() =>
-        request(`/strings/${string.id}`, {
-          method: "PATCH",
-          body: validated(UpdateStringRequest, {
-            maxLength: limit === "" ? null : Number(limit),
-          }),
-        })
-      }
-    >
-      <Field label="Maximum characters" path="maxLength" hint="Leave blank for no limit.">
-        <Input
-          type="number"
-          min="0"
-          value={limit}
-          disabled={string.maxLengthLocked}
-          onChange={(e) => setLimit(e.target.value)}
-        />
-      </Field>
-      {string.maxLengthLocked && (
-        <p>Locked by the CLI configuration. Update the limit there and upload it.</p>
-      )}
-    </SaveForm>
-  );
-}
-function Limits({ language }: { language?: string }) {
-  const [search, setSearch] = useState("");
-  const [cursor, setCursor] = useState<string | undefined>();
-  const strings = useQuery(
-    language ? ["settings-strings", language, search, cursor] : null,
-    ({ fresh }) =>
-      request<StringsPage>("/strings", {
-        query: { language, q: search, cursor, limit: 30 },
-        fresh,
-      }),
-  );
-  return (
-    <section>
-      <H2>Length limits</H2>
-      <Label className="field">
-        Search strings
-        <Input
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setCursor(undefined);
-          }}
-        />
-      </Label>
-      {!language && <p>Add a language to browse the strings.</p>}
-      {strings.loading && <Loading />}
-      {strings.error !== undefined && <p role="alert">{errorMessage(strings.error)}</p>}
-      {strings.data?.strings.length === 0 && <p>No matching strings.</p>}
-      {strings.data?.strings.map((s) =>
-        s.maxLengthLocked ? (
-          <section key={s.id} className="record-card">
-            <H3>
-              {s.file}: {s.key}
-            </H3>
-            <p>Maximum {s.maxLength} characters. Locked by the CLI configuration.</p>
-          </section>
-        ) : (
-          <LimitRow key={s.id} string={s} />
-        ),
-      )}
-      {cursor && <Button onClick={() => setCursor(undefined)}>First page</Button>}
-      {strings.data?.nextCursor && (
-        <Button onClick={() => setCursor(strings.data?.nextCursor ?? undefined)}>Next page</Button>
-      )}
-    </section>
-  );
-}
 function ApiKeys() {
   const tokens = useQuery(["api-tokens"], ({ fresh }) =>
     request<ApiTokensResult>("/api-tokens", { fresh }),
@@ -1671,20 +1493,8 @@ function SettingsContent() {
                   />
                 </>
               )}
-              {section === "files" && (
-                <>
-                  {query.data.files.length === 0 && (
-                    <p>Upload your source files to add file context and length limits.</p>
-                  )}
-                  {query.data.folders.map((folder) => (
-                    <FolderContext key={folder.path} folder={folder} />
-                  ))}
-                  {query.data.files.map((f) => (
-                    <FileContext key={f.id} file={f} />
-                  ))}
-                  <Limits language={query.data.languages[0]?.tag} />
-                </>
-              )}
+              {section === "files" && <ContextSettings data={query.data} />}
+              {section === "limits" && <LengthLimits language={query.data.languages[0]?.tag} />}
               {section === "keys" && <ApiKeys />}
               {section === "backups" && (
                 <>

@@ -154,7 +154,7 @@ When the app joins texts into one (a news story from an opening, a detail chosen
 and a closing), make each text a whole paragraph, in its own Markdown document or string. Write a
 folder context or file context that says what the fragment is and what comes before
 and after it, such as "One paragraph of a news story, after the opening paragraph; no headline".
-Managers write both in **Settings → Files & length limits**; see
+Managers write both in **Settings → Context**; see
 [Context, reuse, and meaning checks](concepts.md#context-reuse-and-meaning-checks).
 
 If a fragment differs from another only by a phrase inside a sentence, it isn't a fragment: write
@@ -184,7 +184,7 @@ What you add makes it fit your app:
   Spanish, write `other` in wording that shows no gender; don't use -e or @ endings."
 - **String descriptions** (beside the source files): who speaks or is spoken about, when the key
   doesn't say.
-- **File and folder context** (**Settings → Files & length limits**): which strings are
+- **File and folder context** (**Settings → Context**): which strings are
   alternatives, and what a fragment comes between.
 
 The checks then read every answer. One that fails is sent back with the reason, and the LLM

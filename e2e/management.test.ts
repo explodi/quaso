@@ -722,15 +722,32 @@ browserTest(
     await section("llm");
     expect(await value("Project instructions")).toBe("Use a friendly voice.");
     await section("files");
-    await fill(page, "File context", "Buttons in the main menu.");
-    await save("common.json");
+    const file = (await server.service.getSettings(SYSTEM, {})).files[0];
+    await page.click(`[data-scope="file:${file.id}"]`);
+    await page.locator("::-p-aria(Context for this file)").fill("Buttons in the main menu.");
+    await click(page, "Save context");
+    await waitFor(page, () =>
+      document.querySelector(".context-save")?.textContent?.includes("Saved."),
+    );
+    await section("limits");
     await waitFor(page, () => document.querySelector('input[type="number"]') !== null);
-    await fill(page, "Maximum characters", "12");
-    await save("common.json: play");
+    await fill(page, "Maximum characters for common.json › play", "12");
+    await click(page, "Save", ".length-limit-form");
+    await waitFor(
+      page,
+      () => document.querySelector(".length-limit-saved")?.textContent === "Saved",
+    );
     await section("general");
     await section("files");
-    expect(await value("File context")).toBe("Buttons in the main menu.");
-    expect(await value("Maximum characters")).toBe("12");
+    await page.click(`[data-scope="file:${file.id}"]`);
+    expect(await page.$eval("#context-text", (field) => (field as HTMLTextAreaElement).value)).toBe(
+      "Buttons in the main menu.",
+    );
+    await section("limits");
+    await waitFor(page, () => document.querySelector('input[type="number"]') !== null);
+    expect(
+      await page.$eval('input[type="number"]', (field) => (field as HTMLInputElement).value),
+    ).toBe("12");
     expect(tab.problems).toStrictEqual([]);
   },
 );
