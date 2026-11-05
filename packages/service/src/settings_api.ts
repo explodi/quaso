@@ -78,9 +78,7 @@ export async function getSettingsAsync(
   const [stored, languages, files, folders, ...permissionRows] = await sql.read([
     { sql: "SELECT data FROM settings WHERE id = 1" },
     { sql: "SELECT tag, instructions, plural_override, created_at FROM languages ORDER BY tag" },
-    {
-      sql: "SELECT id, path, context, generated_context FROM files WHERE active = 1 ORDER BY path",
-    },
+    { sql: ACTIVE_FILE_ROWS },
     FOLDER_ROWS,
     ...permissionReadStatements(actor),
   ]);
@@ -133,15 +131,15 @@ export type FileRow = {
   path: string;
   context: string;
   generated_context: string | null;
+  uploaded_context: string | null;
 };
+
+export const FILE_COLUMNS = "id, path, context, generated_context, uploaded_context";
+export const ACTIVE_FILE_ROWS = `SELECT ${FILE_COLUMNS} FROM files WHERE active = 1 ORDER BY path`;
 
 /** The active files, with the context a person wrote and the one the LLM generated. */
 function loadFileSettings(ctx: Context): FileSettings[] {
-  return ctx.sql
-    .query<FileRow>(
-      "SELECT id, path, context, generated_context FROM files WHERE active = 1 ORDER BY path",
-    )
-    .map(fileSettings);
+  return ctx.sql.query<FileRow>(ACTIVE_FILE_ROWS).map(fileSettings);
 }
 
 export function fileSettings(row: FileRow): FileSettings {
@@ -150,6 +148,7 @@ export function fileSettings(row: FileRow): FileSettings {
     path: row.path,
     context: row.context,
     generatedContext: row.generated_context,
+    uploadedContext: row.uploaded_context,
   };
 }
 
@@ -427,10 +426,7 @@ function recomputeLanguage(ctx: Context, tag: string, pluralOnly: boolean): void
 
 /** `PATCH /files/{id}`: the context a person writes for the LLM (managers too). */
 export function updateFile(ctx: Context, id: number, request: { context?: string }): FileSettings {
-  const rows = ctx.sql.query<FileRow>(
-    "SELECT id, path, context, generated_context FROM files WHERE id = ?",
-    id,
-  );
+  const rows = ctx.sql.query<FileRow>(`SELECT ${FILE_COLUMNS} FROM files WHERE id = ?`, id);
   if (rows.length === 0) throw notFound(`File ${id}`);
   const row = rows[0];
   if (request.context !== undefined && request.context !== row.context) {

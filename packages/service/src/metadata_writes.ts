@@ -12,7 +12,7 @@ import { toLanguage, type LanguageRow } from "./languages.ts";
 import { permissionReadStatements, permissionsFromRows } from "./permissions.ts";
 import type { Sql, Statement } from "./ports.ts";
 import { settingsFromData } from "./settings.ts";
-import { fileSettings, type FileRow } from "./settings_api.ts";
+import { FILE_COLUMNS, fileSettings, type FileRow } from "./settings_api.ts";
 import { planQa, type QaRow } from "./translations.ts";
 import { withRetries } from "./write.ts";
 
@@ -32,10 +32,7 @@ export async function updateFileAsync(
     async () => {
       const [revision, files, ...permissionRows] = await sql.read([
         REVISION,
-        {
-          sql: "SELECT id, path, context, generated_context FROM files WHERE id = ?",
-          params: [id],
-        },
+        { sql: `SELECT ${FILE_COLUMNS} FROM files WHERE id = ?`, params: [id] },
         ...permissionReadStatements(actor),
       ]);
       return {

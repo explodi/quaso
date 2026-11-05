@@ -180,6 +180,7 @@ export class FakeService implements ServiceApi {
       removed: [],
       restored: [],
       renamed: [],
+      contexts: [],
       renameSuggestions: [],
       hiddenFiles: [],
       languagesAdded: [],

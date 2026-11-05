@@ -22,6 +22,7 @@ import {
   checkOverride,
   planSettingsChange,
   settingsResult,
+  ACTIVE_FILE_ROWS,
   fileSettings,
   type FileRow,
   type SettingsExtras,
@@ -64,9 +65,7 @@ export async function updateSettingsAsync(
         {
           sql: "SELECT tag, instructions, plural_override, created_at FROM languages ORDER BY tag",
         },
-        {
-          sql: "SELECT id, path, context, generated_context FROM files WHERE active = 1 ORDER BY path",
-        },
+        { sql: ACTIVE_FILE_ROWS },
         FOLDER_ROWS,
         { sql: "SELECT 1 AS found FROM strings LIMIT 1" },
         { sql: "SELECT term, language, kind, translation, case_sensitive FROM glossary_terms" },

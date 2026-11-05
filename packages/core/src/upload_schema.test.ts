@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { expect, test } from "vitest";
-import { FileContent, RepoPath, UploadRequest } from "./api.ts";
+import { FileContent, MAX_CONTEXT_LENGTH, RepoPath, UploadRequest } from "./api.ts";
 import { toJsonSchema, validate } from "./schema.ts";
 
 test("uploads require the repository path separately from the server identity", () => {
@@ -36,4 +36,23 @@ for (const path of INVALID) {
 
 test("repository paths allow a 512-character relative path", () => {
   expect(validate(RepoPath, "x".repeat(507) + ".json").ok).toBe(true);
+});
+
+test("a folder's context can name the top folder, but no path outside the project", () => {
+  const upload = (path: string) =>
+    validate(UploadRequest, { files: [], folderContexts: [{ path, context: "Text" }] });
+  expect(upload("").ok).toBe(true);
+  expect(upload("text/menus").ok).toBe(true);
+  expect(upload("../text").ok).toBe(false);
+  expect(upload("/text").ok).toBe(false);
+});
+
+test("a context file can't be longer than a context written on the website", () => {
+  const upload = (length: number) =>
+    validate(UploadRequest, {
+      files: [],
+      folderContexts: [{ path: "", context: "x".repeat(length) }],
+    });
+  expect(upload(MAX_CONTEXT_LENGTH).ok).toBe(true);
+  expect(upload(MAX_CONTEXT_LENGTH + 1).ok).toBe(false);
 });

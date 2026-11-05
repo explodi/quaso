@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 import type { PluralOverride, ProjectSettings, UploadRequest } from "@quaso/core";
 import { fromJsonOrNull, toJson } from "./db.ts";
+import { FOLDER_ROWS, type FolderRow } from "./folders.ts";
 import type { Language } from "./languages.ts";
 import type { Sql, SqlRow, Statement } from "./ports.ts";
 import { PERSON_HISTORY } from "./rename.ts";
@@ -14,6 +15,8 @@ export type UploadFileRow = {
   repo_path: string;
   format: string;
   active: number;
+  context: string;
+  uploaded_context: string | null;
 };
 export type UploadSourceRow = ExistingSourceString & {
   file_id: number;
@@ -55,6 +58,7 @@ export type UploadSnapshot = {
   nextIds: { file: number; string: number; upload: number; job: number };
   /** Blue translations set aside when their English changed, should it return. */
   proofreadTranslations: ProofreadTranslationRow[];
+  folders: FolderRow[];
 };
 
 /** One consistent read supplies every row the upload decision can depend on. */
@@ -87,7 +91,9 @@ export function uploadReadStatements(request: UploadRequest): Statement[] {
     },
     { sql: "SELECT data FROM settings WHERE id = 1" },
     { sql: "SELECT EXISTS(SELECT 1 FROM strings) AS has_strings" },
-    { sql: "SELECT id, path, repo_path, format, active FROM files ORDER BY id" },
+    {
+      sql: "SELECT id, path, repo_path, format, active, context, uploaded_context FROM files ORDER BY id",
+    },
     scoped(`SELECT s.id, s.file_id, f.path, f.active AS file_active, s.key, s.key_path,
       s.display_key, s.kind, s.source, s.source_hash, s.words, s.position, s.active,
       s.max_length, s.max_length_locked, s.arguments, s.description FROM strings s JOIN files f ON f.id = s.file_id
@@ -114,6 +120,7 @@ export function uploadReadStatements(request: UploadRequest): Statement[] {
     },
     scoped(`SELECT * FROM proofread_translations WHERE string_id IN (${selected})
       ORDER BY string_id, language, source_hash`),
+    FOLDER_ROWS,
   ];
 }
 
@@ -151,6 +158,7 @@ export function uploadSnapshotFromRows(
       glossary: rows[10] as UploadSnapshot["glossary"],
       nextIds: rows[11][0] as UploadSnapshot["nextIds"],
       proofreadTranslations: rows[12] as UploadSnapshot["proofreadTranslations"],
+      folders: rows[13] as FolderRow[],
     },
   };
 }

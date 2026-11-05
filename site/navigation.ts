@@ -19,6 +19,7 @@ export const NAVIGATION: NavigationGroup[] = [
       "add-to-your-game.md",
       "website.md",
       "variants.md",
+      "context-files.md",
       "migrate-from-crowdin.md",
       "move-from-crowdin.md",
       "move-to-icu.md",

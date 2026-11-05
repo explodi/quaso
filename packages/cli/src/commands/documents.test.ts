@@ -73,6 +73,7 @@ test("upload sends a document's text as it is, without looking for a description
         renameSuggestions: [],
         hiddenFiles: [],
         languagesAdded: [],
+        contexts: [],
         warnings: [],
         job: null,
         revision: 3,

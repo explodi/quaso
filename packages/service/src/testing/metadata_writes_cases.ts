@@ -48,6 +48,7 @@ export const METADATA_WRITE_CASES: { name: string; run(sql: Sql): Promise<void> 
         path: "common.json",
         context: "Menus",
         generatedContext: "Generated",
+        uploadedContext: null,
       });
       const noWrites: Sql = {
         ...sql,

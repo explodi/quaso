@@ -20,14 +20,23 @@ export const LanguageTag = s
 
 /** A folder below the project's root on the server, such as `text` or `text/menus`. */
 export const FolderPath = s
-  .refine(s.string({ minLength: 1, maxLength: 512 }), (path) => {
-    if (path.startsWith("/") || path.includes("\\")) return "must be relative, with / separators";
-    if (path.split("/").some((part) => part === "" || part === "." || part === "..")) {
-      return "must not contain empty, . or .. segments, or end with /";
-    }
-    return undefined;
-  })
+  .refine(s.string({ minLength: 1, maxLength: 512 }), folderPathProblem)
   .describe("A folder on the server, such as text or text/menus");
+
+/** A folder that can have a context: a folder below the root, or "" for the top folder. */
+export const ContextFolderPath = s
+  .refine(s.string({ maxLength: 512 }), (path) =>
+    path === "" ? undefined : folderPathProblem(path),
+  )
+  .describe('A folder on the server, such as text or text/menus, or "" for the top folder');
+
+function folderPathProblem(path: string): string | undefined {
+  if (path.startsWith("/") || path.includes("\\")) return "must be relative, with / separators";
+  if (path.split("/").some((part) => part === "" || part === "." || part === "..")) {
+    return "must not contain empty, . or .. segments, or end with /";
+  }
+  return undefined;
+}
 
 export const FileMapping = s.object({
   source: s

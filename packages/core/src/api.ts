@@ -10,7 +10,7 @@
 import type { CheckResult } from "./checks.ts";
 import {
   ArgumentDeclarations,
-  FolderPath,
+  ContextFolderPath,
   LanguageTag,
   LengthLimit,
   MAX_LENGTH_LIMIT,
@@ -447,6 +447,9 @@ export const RepoPath = s
   .refine(FilePath, (path) => (/^[A-Za-z]:/.test(path) ? "must be relative" : undefined))
   .describe("The file's path relative to quaso.config.json, for display");
 
+/** The longest context a person or a context file can give a file or folder. */
+export const MAX_CONTEXT_LENGTH = 20_000;
+
 /** `POST /sources` */
 export const UploadRequest = s.object({
   files: s.array(
@@ -454,8 +457,24 @@ export const UploadRequest = s.object({
       ...FileContent.shape,
       repoPath: RepoPath,
       descriptions: s.string({ maxLength: 10_000_000 }).optional(),
+      context: s
+        .string({ maxLength: MAX_CONTEXT_LENGTH })
+        .optional()
+        .describe("The text of the file's context file, if it has one"),
     }),
   ),
+  folderContexts: s
+    .array(
+      s.object({
+        path: ContextFolderPath,
+        context: s.string({ maxLength: MAX_CONTEXT_LENGTH }),
+      }),
+    )
+    .optional()
+    .describe(
+      "The text of each folder's context file. Sending it, even empty, means this client reads " +
+        "context files; without it, the upload leaves every file's and folder's context alone",
+    ),
   descriptionSuffix: s.string({ minLength: 1, maxLength: 100 }).optional(),
   partial: s
     .boolean()
@@ -486,6 +505,13 @@ export interface UploadFileResult {
   unchanged: number;
 }
 
+/** A context an upload changed. A folder's `path` is "" for the top folder. */
+export interface UploadContextChange {
+  target: "file" | "folder";
+  path: string;
+  change: "set" | "cleared";
+}
+
 export interface UploadResult {
   dryRun: boolean;
   /** Null for a dry run or an upload that changed nothing. */
@@ -501,6 +527,8 @@ export interface UploadResult {
   /** Files hidden because a full upload didn't include them. */
   hiddenFiles: string[];
   languagesAdded: string[];
+  /** The file and folder contexts this upload set or cleared from context files. */
+  contexts: UploadContextChange[];
   /** Things to know that didn't stop the upload, such as a limit for a key that doesn't exist. */
   warnings: string[];
   /** The automatic translation job this upload queued (LLM-3), if any. */
@@ -1343,9 +1371,19 @@ export interface SettingsResult {
   settings: ProjectSettings;
   defaultPromptTemplate: string;
   languages: LanguageSettings[];
-  files: { id: number; path: string; context: string; generatedContext: string | null }[];
-  /** Every folder that holds an active file, outermost first, with the context a person wrote. */
-  folders: { path: string; context: string }[];
+  files: {
+    id: number;
+    path: string;
+    context: string;
+    generatedContext: string | null;
+    /** The text last uploaded from its context file, or null when it has none. */
+    uploadedContext: string | null;
+  }[];
+  /**
+   * Every folder that holds an active file, outermost first, starting with the top folder (""),
+   * with its context and the text last uploaded from its context file, if any.
+   */
+  folders: { path: string; context: string; uploadedContext: string | null }[];
   /** Models the provider offers, for the model picker; empty without a provider. */
   models: string[];
   llmAvailable: boolean;
@@ -1379,14 +1417,14 @@ export type UpdateLanguageRequest = Infer<typeof UpdateLanguageRequest>;
 
 /** `PATCH /files/{id}` */
 export const UpdateFileRequest = s.object({
-  context: s.string({ maxLength: 20_000 }).optional(),
+  context: s.string({ maxLength: MAX_CONTEXT_LENGTH }).optional(),
 });
 export type UpdateFileRequest = Infer<typeof UpdateFileRequest>;
 
 /** `PATCH /folders`: the context of every file beneath a folder, at any depth. */
 export const UpdateFolderRequest = s.object({
-  path: FolderPath,
-  context: s.string({ maxLength: 20_000 }),
+  path: ContextFolderPath,
+  context: s.string({ maxLength: MAX_CONTEXT_LENGTH }),
 });
 export type UpdateFolderRequest = Infer<typeof UpdateFolderRequest>;
 
