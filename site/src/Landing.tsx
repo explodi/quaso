@@ -184,9 +184,6 @@ export function Landing({ page, hasDoc, repositoryUrl }: LandingProps) {
         <div className="container">
           <div className="hero-grid">
             <div className="hero-copy">
-              <p className="eyebrow">
-                <span className="section-index">I</span> A LITTLE INTRODUCTION
-              </p>
               <H1 display id="hero-title">
                 <span className="hero-highlight">Ship today.</span>
                 <br />
@@ -287,9 +284,6 @@ export function Landing({ page, hasDoc, repositoryUrl }: LandingProps) {
         <div className="container">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">
-                <span className="section-index">II</span> WHY QUASO
-              </p>
               <H2 display id="why-title">
                 Choose when
                 <br />
@@ -351,9 +345,6 @@ export function Landing({ page, hasDoc, repositoryUrl }: LandingProps) {
         <div className="container">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">
-                <span className="section-index">III</span> FROM YOUR REPOSITORY TO THE WORLD
-              </p>
               <H2 display id="workflow-title">
                 Four steps.
                 <br />
@@ -567,9 +558,6 @@ export function Landing({ page, hasDoc, repositoryUrl }: LandingProps) {
         <div className="container">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">
-                <span className="section-index">IV</span> MADE FOR SMALL TEAMS
-              </p>
               <H2 display id="features-title">
                 Small team?
                 <br />
@@ -603,61 +591,10 @@ export function Landing({ page, hasDoc, repositoryUrl }: LandingProps) {
         </div>
       </section>
 
-      <section className="section" id="message-formats" aria-labelledby="formats-title">
-        <div className="container">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">
-                <span className="section-index">V</span> YOUR GAME’S MESSAGE FORMAT
-              </p>
-              <H2 display id="formats-title">
-                i18next or ICU.
-                <br />
-                Ready to translate.
-              </H2>
-            </div>
-            <p>
-              Keep the message format your game uses. Both work with the same upload, review, and
-              download workflow, and translations keep their format for your game’s runtime.
-            </p>
-          </div>
-          <ul className="safeguards" aria-label="Supported message formats">
-            <li>
-              <H3>i18next JSON v4</H3>
-              <p>
-                Keep placeholders like <code>{"{{name}}"}</code>, nesting references, and plural
-                keys such as <code>coins_one</code> and <code>coins_other</code>. The editor shows
-                the plural forms each target language needs.
-              </p>
-              {guide("file-formats.md", "Explore supported formats")}
-            </li>
-            <li>
-              <H3>ICU MessageFormat</H3>
-              <p>
-                Translate messages with <code>{"{name}"}</code> arguments, plurals, and select
-                cases, including nested blocks. Edit cases in separate fields, with checks for ICU
-                syntax and missing arguments. Works with i18next-icu and FormatJS.
-              </p>
-              {guide("variants.md", "See how to edit message variants")}
-            </li>
-            <li>
-              <H3>Choose your format.</H3>
-              <p>
-                Before your first upload, open Settings → Placeholders. Leave ICU MessageFormat off
-                for i18next JSON v4, or turn it on for ICU. Moving an existing project? Use the
-                conversion command to carry its translations over to ICU.
-              </p>
-              {guide("move-to-icu.md", "Move an i18next project to ICU")}
-            </li>
-          </ul>
-        </div>
-      </section>
-
       <section className="closing-section" aria-labelledby="start-title">
         <PixelPattern className="closing-pattern" />
         <div className="container closing-inner">
           <div>
-            <p className="eyebrow">MADE FOR GAMES. AND THE PEOPLE WHO MAKE THEM.</p>
             <H2 display id="start-title">
               Your next player
               <br />
@@ -680,7 +617,6 @@ export function Landing({ page, hasDoc, repositoryUrl }: LandingProps) {
       <section className="resource-section" aria-label="More ways to get started">
         <div className="container resource-links">
           <div>
-            <span className="eyebrow">YOUR NEXT QUEST</span>
             <A className="text-link" href={relativeHref(page, DOCS_HOME)}>
               Explore all documentation <span aria-hidden="true">↗</span>
             </A>

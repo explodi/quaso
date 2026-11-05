@@ -100,14 +100,6 @@ main {
   font: 0.6875rem / 1.6 var(--mono);
   letter-spacing: 0.06em;
 }
-.section-index {
-  display: inline-grid;
-  place-items: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  border: 1px solid currentColor;
-  font-size: var(--text-xs);
-}
 .hero {
   overflow: clip;
   padding-top: clamp(2rem, 5vw, 4.5rem);
@@ -765,10 +757,6 @@ main {
   gap: var(--space-7);
   padding-block: var(--section-gap);
 }
-.closing-inner .eyebrow {
-  color: var(--mint-300);
-  font-size: 0.625rem;
-}
 .closing-inner h2.heading {
   margin-block: var(--space-5);
   font-size: clamp(3.25rem, 6vw, 5rem);
@@ -805,7 +793,6 @@ main {
   gap: var(--space-6);
   align-items: center;
 }
-.resource-links .eyebrow,
 .resource-links p {
   font-size: var(--text-xs);
   color: var(--fg-muted);
