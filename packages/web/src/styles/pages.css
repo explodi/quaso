@@ -304,14 +304,6 @@
   }
 }
 
-.language-legend {
-  padding: var(--space-3) var(--space-4);
-  border-top: 1px solid var(--border);
-  flex-direction: row;
-  flex-wrap: wrap;
-  gap: var(--space-2) var(--space-4);
-}
-
 .project-details > summary {
   padding: var(--space-4);
 }
@@ -377,6 +369,15 @@
   height: 0.625rem;
   border-radius: 0;
   flex: none;
+}
+
+/* After .legend, which has the same specificity: this overrides its padding and column layout. */
+.language-legend {
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--border);
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
 }
 
 /* --- A language. */
