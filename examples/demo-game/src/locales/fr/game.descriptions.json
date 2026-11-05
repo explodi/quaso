@@ -1,0 +1,12 @@
+{
+  "character": {
+    "other": "A friendly fictional cosmic Quaso avatar with antennae. It suggests neutral wording by default; pronouns can be chosen independently for any avatar. This is an appearance, not a label for nonbinary people.",
+    "note": "Explain that appearance and pronouns are independent choices. All characters are equally welcome."
+  },
+  "newspaper": {
+    "ready": "The picnic has elected Quaso mayor. gender is the player-selected way of referring to Quaso. Translate complete sentences; for other use natural neutral paraphrases, for example Spanish la persona en la alcaldía.",
+    "playing": "Live picnic newspaper. count is butter pats collected, from 0 to 12. Each gender case contains its own complete pluralized sentences so agreement and word order can change.",
+    "won": "Successful delivery. count is the number of butter pats delivered. For other, avoid masculine-default titles and pronouns; rephrase the whole sentence naturally.",
+    "lost": "An unsuccessful attempt, with a friendly invitation to try again. count is butter pats collected. No mocking or exclusion based on the selected pronouns."
+  }
+}

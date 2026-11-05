@@ -183,3 +183,61 @@ test("results: an answer of the wrong shape fails every string", () => {
     ]);
   }
 });
+
+const MAYOR: PromptString = {
+  id: 10,
+  key: "newspaper.mayor",
+  kind: "text",
+  english: "The mayor welcomed {name}.",
+  description: "",
+  maxLength: null,
+  arguments: [{ name: "gender", cases: ["female", "male"], description: "other: they/them." }],
+};
+const MAYOR_SYNTAX = { ...DEFAULT_SYNTAX, icu: true };
+const MAYOR_MASK = new Map([["s10", maskString(MAYOR, "es", MAYOR_SYNTAX)]]);
+
+function checkMayor(string: PromptString, value: TextValue) {
+  return checkTranslation({
+    kind: string.kind,
+    source: string.english,
+    translation: value,
+    language: "es",
+    syntax: MAYOR_SYNTAX,
+    arguments: string.arguments,
+  });
+}
+
+test("results: a target-only mayor select passes answer handling with every declared pronoun", () => {
+  const translated =
+    "{gender, select, female {La alcaldesa dio la bienvenida a {name}.} male {El alcalde dio la bienvenida a {name}.} other {La persona en la alcaldía dio la bienvenida a {name}.}}";
+  const result = checkAnswer(
+    { translations: [{ id: "s10", text: translated }] },
+    [MAYOR],
+    MAYOR_MASK,
+    checkMayor,
+  );
+
+  expect(result.failed.size).toBe(0);
+  expect(result.passed.get(10)?.value).toBe(translated);
+});
+
+test("results: a dropped name in the neutral mayor case is refused with a retry reason", () => {
+  const result = checkAnswer(
+    {
+      translations: [
+        {
+          id: "s10",
+          text: "{gender, select, female {La alcaldesa dio la bienvenida a {name}.} male {El alcalde dio la bienvenida a {name}.} other {La persona en la alcaldía dio la bienvenida.}}",
+        },
+      ],
+    },
+    [MAYOR],
+    MAYOR_MASK,
+    checkMayor,
+  );
+
+  expect(result.passed.size).toBe(0);
+  expect(result.failed.get(10)?.reasons).toStrictEqual([
+    "Placeholder {name} is missing in the other case of {gender, select}.",
+  ]);
+});

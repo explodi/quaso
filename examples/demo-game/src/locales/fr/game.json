@@ -5,9 +5,9 @@
   "welcome": {
     "kicker": "PETIT CHAT, GRANDE FAIM",
     "title": "Le goûter n'attend pas !",
-    "body": "Ramasse {{total}} noisettes de beurre et rejoins Biscotte en {{seconds}} secondes. Attention aux abeilles : tu as trois vies !",
+    "body": "Ramasse {total} noisettes de beurre et rejoins Biscotte en {seconds} secondes. Attention aux abeilles : tu as trois vies !",
     "start": "C'est parti !",
-    "note": "Le défi ultime : {{gold}} points, zéro piqûre.",
+    "note": "Le défi ultime : {gold} points, zéro piqûre.",
     "rule": "Fonce pour esquiver. Enchaîne les noisettes en moins de 2 secondes pour grimper jusqu’à ×5."
   },
   "quest": {
@@ -15,14 +15,12 @@
     "collect": "Du beurre pour Biscotte !",
     "return": "Retourne voir Biscotte au pique-nique !",
     "done": "Le bonheur est dans le beurre.",
-    "progress": "{{current}} / {{total}}",
-    "butter_zero": "Aucune noisette de beurre. Pour l'instant !",
-    "butter_one": "{{count}} noisette de beurre dans la poche.",
-    "butter_other": "{{count}} noisettes de beurre dans la poche.",
-    "retry": "Le beurre mérite une deuxième chance."
+    "progress": "{current} / {total}",
+    "retry": "Le beurre mérite une deuxième chance.",
+    "butter": "{count, plural, =0 {Aucune noisette de beurre. Pour l'instant !} one {# noisette de beurre dans la poche.} many {# noisettes de beurre dans la poche.} other {# noisettes de beurre dans la poche.}}"
   },
-  "score": "{{score}} points",
-  "best": "Record : {{score}}",
+  "score": "{score} points",
+  "best": "Record : {score}",
   "dash": "Coup de beurre",
   "dashReady": "Esquive prête : les abeilles ne peuvent pas te piquer pendant le dash.",
   "dashWait": "Le beurre se recharge…",
@@ -36,12 +34,12 @@
   ],
   "biscotte": {
     "waiting": "J'ai le pain. Tu as le beurre ?",
-    "almost": "Encore {{count}} ! Je surveille les tartines.",
-    "ready": "Par ici, petit croissant !",
-    "thanks": "Un chat qui rapporte du beurre. Quel siècle !"
+    "almost": "Encore {count} ! Je surveille les tartines.",
+    "ready": "{gender, select, female {Par ici, madame la maire !} male {Par ici, monsieur le maire !} other {Par ici, Quaso ! Le goûter t'attend !}}",
+    "thanks": "{gender, select, female {Merci, madame la maire ! Tu as sauvé le goûter.} male {Merci, monsieur le maire ! Tu as sauvé le goûter.} other {Merci, Quaso ! Tu as sauvé le goûter.}}"
   },
-  "combo": "Pur beurre ×{{count}} !",
-  "pickup": "+{{points}}",
+  "combo": "Pur beurre ×{count} !",
+  "pickup": "+{points}",
   "return": "La poche est pleine ! Au pique-nique !",
   "pause": {
     "button": "Faire une pause",
@@ -51,21 +49,21 @@
   },
   "win": {
     "kicker": "MISSION CROUSTILLANTE ACCOMPLIE",
-    "result": "{{score}} points · {{seconds}} secondes · 100 % pur beurre",
+    "result": "{score} points · {seconds} secondes · 100 % pur beurre",
     "again": "Encore une tartine !",
-    "rank1": "Apprenti tartine !",
+    "rank1": "{gender, select, female {Apprentie tartine !} male {Apprenti tartine !} other {La relève des tartines !}}",
     "rank2": "As du croissant !",
     "rank3": "Légende du beurre !",
     "tip1": "Le goûter est sauvé ! Enchaîne les noisettes sans attendre pour faire grimper ton combo.",
-    "tip2": "Ça croustille ! Vise {{gold}} points sans piqûre pour décrocher l’or.",
-    "tip3": "Rapide, impeccable, irrésistiblement beurré. Biscotte te confie les clés de la boulangerie.",
-    "bonus": "Dont {{points}} points de bonus chrono."
+    "tip2": "Ça croustille ! Vise {gold} points sans piqûre pour décrocher l’or.",
+    "tip3": "{gender, select, female {Rapide, impeccable, irrésistiblement beurrée. Biscotte te confie les clés de la boulangerie.} male {Rapide, impeccable, irrésistiblement beurré. Biscotte te confie les clés de la boulangerie.} other {Du talent, du panache et du beurre. Biscotte te confie les clés de la boulangerie.}}",
+    "bonus": "Dont {points} points de bonus chrono."
   },
   "time": {
     "label": "CHRONO",
-    "remaining": "{{count}} s"
+    "remaining": "{count} s"
   },
-  "chain": "COMBO ×{{count}} / {{max}}",
+  "chain": "COMBO ×{count} / {max}",
   "hit": "Aïe ! Le croissant contre-attaque. Fonce pour esquiver !",
   "lose": {
     "kicker": "ÇA SENT LE PAIN GRILLÉ",
@@ -75,7 +73,25 @@
     "tip": "Observe leurs rondes, garde un dash en réserve et vise le prochain morceau.",
     "retry": "Je remets ça !"
   },
-  "lives_zero": "Plus de vies",
-  "lives_one": "{{count}} vie restante",
-  "lives_other": "{{count}} vies restantes"
+  "lives": "{count, plural, =0 {Plus de vies} one {# vie restante} many {# vies restantes} other {# vies restantes}}",
+  "character": {
+    "title": "Choisis ton Quaso",
+    "female": "Quaso · elle",
+    "male": "Quaso · il",
+    "other": "Quaso cosmique · neutre",
+    "note": "Le look et les pronoms se choisissent séparément. Tous les Quaso ont leur place au pique-nique.",
+    "pronouns": "Comment parler de Quaso ?",
+    "pronounsFemale": "Elle · féminin",
+    "pronounsMale": "Il · masculin",
+    "pronounsOther": "Neutre · sans accord genré"
+  },
+  "newspaper": {
+    "title": "La Gazette du goûter",
+    "ready": "{gender, select, female {La maire du pique-nique est prête pour sa première mission : du beurre pour tout le monde !} male {Le maire du pique-nique est prêt pour sa première mission : du beurre pour tout le monde !} other {À la tête du pique-nique, Quaso a une première mission : du beurre pour tout le monde !}}",
+    "playing": "{gender, select, female {{count, plural, =0 {La maire cherche encore sa première noisette de beurre. Elle garde le sourire.} one {La maire a ramassé # noisette de beurre. Elle poursuit sa tournée.} many {La maire a ramassé # noisettes de beurre. Elle poursuit sa tournée.} other {La maire a ramassé # noisettes de beurre. Elle poursuit sa tournée.}}} male {{count, plural, =0 {Le maire cherche encore sa première noisette de beurre. Il garde le sourire.} one {Le maire a ramassé # noisette de beurre. Il poursuit sa tournée.} many {Le maire a ramassé # noisettes de beurre. Il poursuit sa tournée.} other {Le maire a ramassé # noisettes de beurre. Il poursuit sa tournée.}}} other {{count, plural, =0 {À la tête du pique-nique, Quaso cherche encore sa première noisette de beurre, sans perdre le sourire.} one {À la tête du pique-nique, Quaso a ramassé # noisette de beurre. La tournée continue.} many {À la tête du pique-nique, Quaso a ramassé # noisettes de beurre. La tournée continue.} other {À la tête du pique-nique, Quaso a ramassé # noisettes de beurre. La tournée continue.}}}}",
+    "won": "{gender, select, female {{count, plural, one {La maire a livré # noisette de beurre. Biscotte la félicite : elle a sauvé le goûter !} many {La maire a livré # noisettes de beurre. Biscotte la félicite : elle a sauvé le goûter !} other {La maire a livré # noisettes de beurre. Biscotte la félicite : elle a sauvé le goûter !}}} male {{count, plural, one {Le maire a livré # noisette de beurre. Biscotte le félicite : il a sauvé le goûter !} many {Le maire a livré # noisettes de beurre. Biscotte le félicite : il a sauvé le goûter !} other {Le maire a livré # noisettes de beurre. Biscotte le félicite : il a sauvé le goûter !}}} other {{count, plural, one {À la tête du pique-nique, Quaso a livré # noisette de beurre. Bravo, Quaso : le goûter est sauvé !} many {À la tête du pique-nique, Quaso a livré # noisettes de beurre. Bravo, Quaso : le goûter est sauvé !} other {À la tête du pique-nique, Quaso a livré # noisettes de beurre. Bravo, Quaso : le goûter est sauvé !}}}}",
+    "lost": "{gender, select, female {{count, plural, =0 {La maire rentre sans beurre. Elle prépare déjà sa prochaine tournée.} one {La maire rentre avec # noisette de beurre. Elle prépare déjà sa prochaine tournée.} many {La maire rentre avec # noisettes de beurre. Elle prépare déjà sa prochaine tournée.} other {La maire rentre avec # noisettes de beurre. Elle prépare déjà sa prochaine tournée.}}} male {{count, plural, =0 {Le maire rentre sans beurre. Il prépare déjà sa prochaine tournée.} one {Le maire rentre avec # noisette de beurre. Il prépare déjà sa prochaine tournée.} many {Le maire rentre avec # noisettes de beurre. Il prépare déjà sa prochaine tournée.} other {Le maire rentre avec # noisettes de beurre. Il prépare déjà sa prochaine tournée.}}} other {{count, plural, =0 {À la tête du pique-nique, Quaso rentre sans beurre. La prochaine tournée se prépare déjà.} one {À la tête du pique-nique, Quaso rentre avec # noisette de beurre. La prochaine tournée se prépare déjà.} many {À la tête du pique-nique, Quaso rentre avec # noisettes de beurre. La prochaine tournée se prépare déjà.} other {À la tête du pique-nique, Quaso rentre avec # noisettes de beurre. La prochaine tournée se prépare déjà.}}}}",
+    "inspect": "Voir le message ICU",
+    "explanation": "gender choisit une phrase complète ; count choisit le pluriel. Dans Quaso, chaque langue peut reformuler les phrases et éviter les accords genrés."
+  }
 }

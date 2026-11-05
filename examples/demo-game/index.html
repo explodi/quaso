@@ -25,6 +25,7 @@
             ><span aria-hidden="true">◎</span><span class="sr-only" data-i18n="language"></span
             ><select id="language">
               <option value="fr">Français</option>
+              <option value="es">Español</option>
               <option value="en">English</option>
               <option value="de">Deutsch</option>
             </select></label
@@ -50,6 +51,57 @@
             ><strong data-i18n="seal.line2"></strong><span data-i18n="seal.line3"></span>
           </div>
         </section>
+        <section class="character-picker" aria-labelledby="character-title">
+          <fieldset>
+            <legend id="character-title" data-i18n="game:character.title"></legend>
+            <div class="character-options">
+              <label class="character-card">
+                <input type="radio" name="character" value="female" checked />
+                <span class="character-sprite" data-character="female" aria-hidden="true">
+                  <img src="/art/quaso-0.png" alt="" /><i class="character-accessory"></i>
+                </span>
+                <strong data-i18n="game:character.female"></strong>
+              </label>
+              <label class="character-card">
+                <input type="radio" name="character" value="male" />
+                <span class="character-sprite" data-character="male" aria-hidden="true">
+                  <img src="/art/quaso-0.png" alt="" /><i class="character-accessory"></i>
+                </span>
+                <strong data-i18n="game:character.male"></strong>
+              </label>
+              <label class="character-card">
+                <input type="radio" name="character" value="other" />
+                <span class="character-sprite" data-character="other" aria-hidden="true">
+                  <img src="/art/quaso-0.png" alt="" /><i class="character-accessory"></i>
+                </span>
+                <strong data-i18n="game:character.other"></strong>
+              </label>
+            </div>
+          </fieldset>
+          <div class="pronoun-settings">
+            <label for="pronouns" data-i18n="game:character.pronouns"></label>
+            <select id="pronouns" aria-describedby="character-note">
+              <option value="female" data-i18n="game:character.pronounsFemale"></option>
+              <option value="male" data-i18n="game:character.pronounsMale"></option>
+              <option value="other" data-i18n="game:character.pronounsOther"></option>
+            </select>
+            <p id="character-note" data-i18n="game:character.note"></p>
+          </div>
+        </section>
+        <article class="newspaper" aria-labelledby="newspaper-title">
+          <div class="newspaper-masthead">
+            <span aria-hidden="true">✦</span>
+            <h2 id="newspaper-title" data-i18n="game:newspaper.title"></h2>
+            <span aria-hidden="true">✦</span>
+          </div>
+          <p id="newspaper-story" aria-live="polite" aria-atomic="true"></p>
+          <details class="message-inspector">
+            <summary data-i18n="game:newspaper.inspect"></summary>
+            <p data-i18n="game:newspaper.explanation"></p>
+            <code id="message-values"></code>
+            <pre id="message-source"></pre>
+          </details>
+        </article>
         <section class="game-shell" aria-labelledby="place-title">
           <div id="world" class="world" tabindex="0" role="region">
             <div class="world-heading">
@@ -81,14 +133,23 @@
             <button id="dog" class="actor dog">
               <span class="quest-mark" aria-hidden="true">!</span><img src="/art/dog.png" alt="" />
             </button>
-            <button id="player" class="actor player">
-              <span class="actor-shadow"></span><img src="/art/quaso-0.png" alt="" />
+            <button id="player" class="actor player character-sprite" data-character="female">
+              <span class="actor-shadow"></span><img src="/art/quaso-0.png" alt="" /><i
+                class="character-accessory"
+                aria-hidden="true"
+              ></i>
             </button>
             <div id="destination" class="destination" hidden aria-hidden="true"></div>
             <div id="effects" aria-hidden="true"></div>
             <div id="welcome" class="dialog welcome">
               <div class="dialog-mascot">
-                <img src="/art/quaso-0.png" alt="" /><span aria-hidden="true">✦</span>
+                <span
+                  id="welcome-character"
+                  class="character-sprite"
+                  data-character="female"
+                  aria-hidden="true"
+                  ><img src="/art/quaso-0.png" alt="" /><i class="character-accessory"></i></span
+                ><span aria-hidden="true">✦</span>
               </div>
               <div>
                 <p class="eyebrow" data-i18n="game:welcome.kicker"></p>

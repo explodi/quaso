@@ -4,7 +4,8 @@ name: quaso-quest
 
 services:
   quaso:
-    image: explodi/quaso:latest
+    # Keep the playground server on the same ICU-capable revision as the demo CLI.
+    image: explodi/quaso:sha-295b2b5
     build:
       context: ../..
       dockerfile: deploy/Dockerfile

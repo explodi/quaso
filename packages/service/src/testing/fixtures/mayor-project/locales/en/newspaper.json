@@ -1,0 +1,6 @@
+{
+  "headline": "Mayor {name} opens a new park",
+  "reaction": "The mayor is delighted with the new library.",
+  "parks": "{count, plural, =0 {The mayor has opened no parks yet.} one {The mayor has opened # park.} other {The mayor has opened # parks.}}",
+  "speech": "{mayorGender, select, female {She says the city belongs to everyone.} male {He says the city belongs to everyone.} other {They say the city belongs to everyone.}}"
+}

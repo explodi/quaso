@@ -1,0 +1,12 @@
+{
+  "sourceLanguage": "en",
+  "languages": ["es", "fr", "de"],
+  "files": [{ "source": "locales/en/**/*.json", "translation": "locales/{lang}/{path}" }],
+  "arguments": [
+    {
+      "name": "mayorGender",
+      "cases": ["female", "male"],
+      "description": "The player's chosen pronouns: female is she/her, male is he/him, other is they/them for one person. Always respect this choice for the mayor. For other, use natural neutral wording, such as la persona en la alcaldía in Spanish; the grammatical gender of persona does not imply the player's gender. Rephrase whole sentences, do not use binary slash forms or invented endings. The game passes mayorGender to every message."
+    }
+  ]
+}

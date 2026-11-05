@@ -1,0 +1,27 @@
+{
+  "edition": "PEQUEÑAS AVENTURAS",
+  "eyebrow": "UNA AVENTURA PARA SABOREAR",
+  "tagline": "Un gato. Un cruasán. Una misión con mucha mantequilla.",
+  "language": "Idioma del juego",
+  "soundOn": "Activar los sonidos",
+  "soundOff": "Silenciar los sonidos",
+  "seal": {
+    "line1": "HECHO CON",
+    "line2": "100 %",
+    "line3": "MANTEQUILLA"
+  },
+  "controls": {
+    "move": "moverse",
+    "space": "espacio",
+    "dash": "acelerar / esquivar",
+    "click": "o haz clic donde quieras ir"
+  },
+  "footer": "Un pequeño juego hecho con cariño y mucha mantequilla.",
+  "translation": {
+    "title": "¿Este pequeño juego habla tu idioma?",
+    "body": "Quaso Quest también sirve para probar la traducción. El francés y el español están listos; el inglés y el alemán esperan tus palabras.",
+    "workflow": "Sube los textos a tu instancia de Quaso, tradúcelos, descárgalos y recarga el juego.",
+    "fallback": "Los textos sin traducir aparecen en francés. ¡Dales nuevas palabras!",
+    "readme": "Abrir la guía de traducción ↗"
+  }
+}

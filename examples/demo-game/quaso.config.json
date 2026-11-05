@@ -2,7 +2,27 @@
   "$schema": "http://127.0.0.1:8000/schema/config-v1.json",
   "hostname": "http://127.0.0.1:8000",
   "sourceLanguage": "fr",
-  "languages": ["en", "de"],
-  "files": [{ "source": "src/locales/fr/**/*.json", "translation": "src/locales/{lang}/{path}" }],
-  "limits": [{ "file": "game.json", "key": "welcome.start", "maxLength": 24 }]
+  "languages": ["en", "de", "es"],
+  "files": [
+    {
+      "source": "src/locales/fr/**/*.json",
+      "translation": "src/locales/{lang}/{path}"
+    }
+  ],
+  "limits": [
+    {
+      "file": "game.json",
+      "key": "welcome.start",
+      "maxLength": 24
+    }
+  ],
+  "arguments": [
+    {
+      "name": "gender",
+      "cases": ["female", "male"],
+      "description": "How the player wants Quaso to be referred to: female = she/her, male = he/him, other = they/them or ungendered wording. This is chosen separately from the avatar. For other, use natural respectful phrasing; grammatical gender of a noun such as persona does not define the player’s gender. The game passes this argument to every game string.",
+      "files": ["game.json"]
+    }
+  ],
+  "untranslated": "omit"
 }

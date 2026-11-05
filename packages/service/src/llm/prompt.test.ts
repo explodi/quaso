@@ -472,3 +472,79 @@ test("prompt: without ICU MessageFormat, arguments are neither listed nor explai
   expect(stringLines(rendered.prompt)[0].arguments).toBe(undefined);
   expect(rendered.system.includes(argumentRules("es"))).toBeFalsy();
 });
+
+test("prompt: a mayor's declared pronouns reach translation even when English has no select", () => {
+  const mayor: PromptString = {
+    id: 15,
+    key: "newspaper.mayor",
+    kind: "text",
+    english: "The mayor welcomed {name}.",
+    description: "A newspaper refers to the player, who chooses their pronouns.",
+    maxLength: null,
+    arguments: [
+      {
+        name: "gender",
+        cases: ["female", "male"],
+        description:
+          "female: she/her; male: he/him; other: they/them, with natural ungendered wording.",
+      },
+    ],
+  };
+  const rendered = renderPrompt(
+    DEFAULT_PROMPT_TEMPLATE,
+    [mayor],
+    context({ targetLanguage: "es", syntax: ICU_SYNTAX, projectName: "Microlandia" }),
+  );
+
+  expect(stringLines(rendered.prompt)[0]).toStrictEqual({
+    id: "s15",
+    key: "newspaper.mayor",
+    english: "The mayor welcomed {name}.",
+    description: "A newspaper refers to the player, who chooses their pronouns.",
+    placeholders: ["{name}"],
+    arguments: [
+      {
+        name: "gender",
+        cases: ["female", "male", "other"],
+        description:
+          "female: she/her; male: he/him; other: they/them, with natural ungendered wording.",
+      },
+    ],
+  });
+  expect(rendered.system).toContain(
+    "Where Spanish makes words agree with one of them, write a select block",
+  );
+  expect(rendered.system).toContain(
+    "Put the whole phrase or sentence that changes inside each case",
+  );
+  expect(rendered.system).toContain("In each named case except other");
+  expect(rendered.system).toContain(
+    "word it so that it assumes no gender, rephrasing around the words that would agree if needed",
+  );
+  expect(rendered.system).toContain(
+    "a neutral paraphrase does not assign that gender to the person",
+  );
+  expect(rendered.system).toContain("la persona en la alcaldía");
+});
+
+test("prompt: nested gender and count instructions keep runtime hashes numeric", () => {
+  const rendered = renderPrompt(
+    DEFAULT_PROMPT_TEMPLATE,
+    [
+      {
+        ...JOINED,
+        english:
+          "{count, plural, one {The mayor opened # park.} other {The mayor opened # parks.}}",
+      },
+    ],
+    context({ targetLanguage: "de", syntax: ICU_SYNTAX }),
+  );
+
+  expect(rendered.system).toContain("inside an intervening select block it becomes a literal hash");
+  expect(rendered.system).toContain(
+    "put the select outside the plural, with a complete plural block inside each select case",
+  );
+  expect(rendered.system).toContain("# renders a numeral in digits, not words");
+  expect(rendered.system).toContain("including many, must be grammatical with that numeral");
+  expect(rendered.system).toContain("# does not stand for the word million or millón");
+});

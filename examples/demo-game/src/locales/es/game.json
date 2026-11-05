@@ -1,0 +1,97 @@
+{
+  "chapter": "CAPÍTULO 01 · LA MERIENDA",
+  "place": "La pradera de la mantequilla",
+  "world": "La pradera. Mueve a Quaso con las flechas, WASD, ZQSD o haciendo clic en la hierba. Espacio para acelerar, Escape para pausar.",
+  "welcome": {
+    "kicker": "POCO TAMAÑO, MUCHA HAMBRE",
+    "title": "¡La merienda no espera!",
+    "body": "Recoge {total} porciones de mantequilla y vuelve con Biscotte en {seconds} segundos. Cuidado con las abejas: ¡tienes tres vidas!",
+    "start": "¡Vamos allá!",
+    "note": "El reto definitivo: {gold} puntos, ninguna picadura.",
+    "rule": "Acelera para esquivar. Recoge cada porción en menos de 2 segundos para alcanzar un combo de ×5."
+  },
+  "quest": {
+    "label": "LA MISIÓN DEL DÍA",
+    "collect": "¡Mantequilla para Biscotte!",
+    "return": "¡Vuelve con Biscotte al pícnic!",
+    "done": "La felicidad se unta.",
+    "progress": "{current} / {total}",
+    "butter": "{count, plural, =0 {Ninguna porción de mantequilla. ¡Por ahora!} one {# porción de mantequilla en el bolsillo.} many {# porciones de mantequilla en el bolsillo.} other {# porciones de mantequilla en el bolsillo.}}",
+    "retry": "La mantequilla merece otra oportunidad."
+  },
+  "score": "{score} puntos",
+  "best": "Récord: {score}",
+  "dash": "Impulso de mantequilla",
+  "dashReady": "Impulso listo: las abejas no pueden picarte mientras aceleras.",
+  "dashWait": "La mantequilla se recarga…",
+  "pet": "Acariciar a Quaso",
+  "dog": "Hablar con el señor Biscotte",
+  "meows": [
+    "¡Miau-so!",
+    "Ronroneo con mantequilla.",
+    "Soy bollería de compañía.",
+    "No mojar en el café."
+  ],
+  "biscotte": {
+    "waiting": "Yo tengo el pan. ¿Tú tienes la mantequilla?",
+    "almost": "¡Faltan {count}! Yo vigilo las tostadas.",
+    "ready": "{gender, select, female {¡Por aquí, señora alcaldesa!} male {¡Por aquí, señor alcalde!} other {¡Por aquí, Quaso! ¡Te espera la merienda!}}",
+    "thanks": "{gender, select, female {¡Gracias, señora alcaldesa! Has salvado la merienda.} male {¡Gracias, señor alcalde! Has salvado la merienda.} other {¡Gracias, Quaso! Has salvado la merienda.}}"
+  },
+  "combo": "¡Pura mantequilla ×{count}!",
+  "pickup": "+{points}",
+  "return": "¡El bolsillo está lleno! ¡Al pícnic!",
+  "pause": {
+    "button": "Pausar",
+    "title": "Pausa para la tostada.",
+    "body": "Hasta los cruasanes necesitan un respiro.",
+    "resume": "¡Seguimos!"
+  },
+  "win": {
+    "kicker": "MISIÓN CRUJIENTE CUMPLIDA",
+    "result": "{score} puntos · {seconds} segundos · 100 % mantequilla",
+    "again": "¡Otra tostada!",
+    "rank1": "{gender, select, female {¡Aprendiza de la tostada!} male {¡Aprendiz de la tostada!} other {¡El futuro de las tostadas!}}",
+    "rank2": "¡As del cruasán!",
+    "rank3": "¡Leyenda de la mantequilla!",
+    "tip1": "¡La merienda está a salvo! Recoge las porciones sin parar para subir el combo.",
+    "tip2": "¡Esto cruje! Consigue {gold} puntos sin picaduras para llevarte el oro.",
+    "tip3": "{gender, select, female {Rápida, impecable, irresistiblemente untada de mantequilla. Biscotte te confía las llaves de la panadería.} male {Rápido, impecable, irresistiblemente untado de mantequilla. Biscotte te confía las llaves de la panadería.} other {Talento, estilo y mantequilla. Biscotte te confía las llaves de la panadería.}}",
+    "bonus": "Incluye {points} puntos de bonificación por tiempo."
+  },
+  "time": {
+    "label": "TIEMPO",
+    "remaining": "{count} s"
+  },
+  "chain": "COMBO ×{count} / {max}",
+  "hit": "¡Ay! El cruasán contraataca. ¡Acelera para esquivar!",
+  "lose": {
+    "kicker": "HUELE A PAN QUEMADO",
+    "title": "Que no cunda el pánico.",
+    "time": "¡El té se ha enfriado! Biscotte te deja volver a intentarlo.",
+    "hearts": "Las abejas han ganado esta ronda. También les gusta la mantequilla.",
+    "tip": "Observa sus rondas, guarda un impulso y apunta a la siguiente porción.",
+    "retry": "¡Otra vez!"
+  },
+  "lives": "{count, plural, =0 {No quedan vidas} one {# vida restante} many {# vidas restantes} other {# vidas restantes}}",
+  "character": {
+    "title": "Elige tu Quaso",
+    "female": "Quaso · ella",
+    "male": "Quaso · él",
+    "other": "Quaso cósmico · neutral",
+    "note": "El aspecto y los pronombres se eligen por separado. Todos los Quaso tienen un lugar en el pícnic.",
+    "pronouns": "¿Cómo hablamos de Quaso?",
+    "pronounsFemale": "Ella · femenino",
+    "pronounsMale": "Él · masculino",
+    "pronounsOther": "Neutral · sin marcas de género"
+  },
+  "newspaper": {
+    "title": "La Gaceta de la Merienda",
+    "ready": "{gender, select, female {La alcaldesa del pícnic está lista para su primera misión: ¡mantequilla para todo el mundo!} male {El alcalde del pícnic está listo para su primera misión: ¡mantequilla para todo el mundo!} other {La persona en la alcaldía del pícnic tiene una primera misión: ¡mantequilla para todo el mundo!}}",
+    "playing": "{gender, select, female {{count, plural, =0 {La alcaldesa sigue buscando su primera porción de mantequilla. Ella no pierde la sonrisa.} one {La alcaldesa ha recogido # porción de mantequilla. Ella sigue su recorrido.} many {La alcaldesa ha recogido # porciones de mantequilla. Ella sigue su recorrido.} other {La alcaldesa ha recogido # porciones de mantequilla. Ella sigue su recorrido.}}} male {{count, plural, =0 {El alcalde sigue buscando su primera porción de mantequilla. Él no pierde la sonrisa.} one {El alcalde ha recogido # porción de mantequilla. Él sigue su recorrido.} many {El alcalde ha recogido # porciones de mantequilla. Él sigue su recorrido.} other {El alcalde ha recogido # porciones de mantequilla. Él sigue su recorrido.}}} other {{count, plural, =0 {La persona en la alcaldía sigue buscando su primera porción de mantequilla, sin perder la sonrisa.} one {La persona en la alcaldía ha recogido # porción de mantequilla. El recorrido continúa.} many {La persona en la alcaldía ha recogido # porciones de mantequilla. El recorrido continúa.} other {La persona en la alcaldía ha recogido # porciones de mantequilla. El recorrido continúa.}}}}",
+    "won": "{gender, select, female {{count, plural, one {La alcaldesa ha entregado # porción de mantequilla. Biscotte la felicita: ¡ella ha salvado la merienda!} many {La alcaldesa ha entregado # porciones de mantequilla. Biscotte la felicita: ¡ella ha salvado la merienda!} other {La alcaldesa ha entregado # porciones de mantequilla. Biscotte la felicita: ¡ella ha salvado la merienda!}}} male {{count, plural, one {El alcalde ha entregado # porción de mantequilla. Biscotte lo felicita: ¡él ha salvado la merienda!} many {El alcalde ha entregado # porciones de mantequilla. Biscotte lo felicita: ¡él ha salvado la merienda!} other {El alcalde ha entregado # porciones de mantequilla. Biscotte lo felicita: ¡él ha salvado la merienda!}}} other {{count, plural, one {La persona en la alcaldía ha entregado # porción de mantequilla. ¡Gracias, Quaso! ¡La merienda está a salvo!} many {La persona en la alcaldía ha entregado # porciones de mantequilla. ¡Gracias, Quaso! ¡La merienda está a salvo!} other {La persona en la alcaldía ha entregado # porciones de mantequilla. ¡Gracias, Quaso! ¡La merienda está a salvo!}}}}",
+    "lost": "{gender, select, female {{count, plural, =0 {La alcaldesa vuelve sin mantequilla. Ella ya prepara su próximo recorrido.} one {La alcaldesa vuelve con # porción de mantequilla. Ella ya prepara su próximo recorrido.} many {La alcaldesa vuelve con # porciones de mantequilla. Ella ya prepara su próximo recorrido.} other {La alcaldesa vuelve con # porciones de mantequilla. Ella ya prepara su próximo recorrido.}}} male {{count, plural, =0 {El alcalde vuelve sin mantequilla. Él ya prepara su próximo recorrido.} one {El alcalde vuelve con # porción de mantequilla. Él ya prepara su próximo recorrido.} many {El alcalde vuelve con # porciones de mantequilla. Él ya prepara su próximo recorrido.} other {El alcalde vuelve con # porciones de mantequilla. Él ya prepara su próximo recorrido.}}} other {{count, plural, =0 {La persona en la alcaldía vuelve sin mantequilla. El próximo recorrido ya está en marcha.} one {La persona en la alcaldía vuelve con # porción de mantequilla. El próximo recorrido ya está en marcha.} many {La persona en la alcaldía vuelve con # porciones de mantequilla. El próximo recorrido ya está en marcha.} other {La persona en la alcaldía vuelve con # porciones de mantequilla. El próximo recorrido ya está en marcha.}}}}",
+    "inspect": "Ver el mensaje ICU",
+    "explanation": "gender elige una frase completa; count elige el plural. En Quaso, cada idioma puede reformular las frases y evitar las marcas de género."
+  }
+}

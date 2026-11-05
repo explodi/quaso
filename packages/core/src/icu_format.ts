@@ -61,7 +61,7 @@ export function formatIcuParts(text: string, values: IcuValues, language: string
       } else {
         const chosen = chooseCase(text, node, values[node.name], language);
         if (chosen === undefined) continue;
-        format(chosen.icuCase.message, node.blockType === "select" ? plural : chosen);
+        format(chosen.icuCase.message, node.blockType === "select" ? null : chosen);
       }
     }
   };

@@ -1,0 +1,118 @@
+/* SPDX-License-Identifier: MIT */
+/* Accessories use the same 40 × 32 coordinate grid as the shared Quaso animation. */
+span.character-sprite {
+  position: relative;
+  display: inline-block;
+  width: 80px;
+  height: 64px;
+  flex: none;
+}
+span.character-sprite > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.character-accessory {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transform: scaleX(var(--facing, 1));
+}
+.character-accessory::before,
+.character-accessory::after {
+  content: "";
+  position: absolute;
+  background-repeat: no-repeat;
+}
+.character-sprite[data-character="female"] > .character-accessory::before {
+  left: 25%;
+  top: 18.75%;
+  width: 20%;
+  height: 25%;
+  background:
+    linear-gradient(#ffe59a, #ffe59a) 50% 50% / 25% 25% no-repeat,
+    linear-gradient(#ec7895, #ec7895) 50% 50% / 100% 50% no-repeat,
+    linear-gradient(#ec7895, #ec7895) 50% 50% / 50% 100% no-repeat;
+  filter: drop-shadow(0 1px 0 #261230);
+}
+.character-sprite[data-character="male"] > .character-accessory::before {
+  left: 35%;
+  top: 65.625%;
+  width: 32.5%;
+  height: 9.375%;
+  background: #80e5dc;
+  box-shadow: 0 1px 0 #261230;
+}
+.character-sprite[data-character="male"] > .character-accessory::after {
+  left: 60%;
+  top: 71.875%;
+  width: 10%;
+  height: 15.625%;
+  background: #4ea9a2;
+  box-shadow: 1px 1px 0 #261230;
+}
+.character-sprite[data-character="other"] > img {
+  filter: hue-rotate(110deg) saturate(0.65) brightness(1.1);
+}
+.character-sprite[data-character="other"] > .character-accessory::before,
+.character-sprite[data-character="other"] > .character-accessory::after {
+  top: 6.25%;
+  width: 10%;
+  height: 25%;
+  background:
+    linear-gradient(#d7ff64, #d7ff64) 50% 0 / 100% 50% no-repeat,
+    linear-gradient(#261230, #261230) 50% 100% / 25% 75% no-repeat;
+}
+.character-sprite[data-character="other"] > .character-accessory::before {
+  left: 32.5%;
+}
+.character-sprite[data-character="other"] > .character-accessory::after {
+  left: 60%;
+}
+.player > .character-accessory {
+  animation: idle 1.9s ease-in-out infinite;
+}
+.player.walking > .character-accessory {
+  animation: waddle 170ms steps(2) infinite alternate;
+}
+.player.hit > .character-accessory {
+  animation: hit 400ms steps(2) infinite;
+}
+.player.dashing[data-character="other"] > img {
+  filter: hue-rotate(110deg) saturate(0.65) brightness(1.1) drop-shadow(-5px 3px 0 #d7ff6499);
+}
+.dialog-mascot .character-sprite {
+  position: relative;
+  top: auto;
+  right: auto;
+  width: 120px;
+  height: 96px;
+  animation: big-idle 2s ease-in-out infinite;
+}
+.dialog-mascot .character-sprite > img {
+  animation: none;
+}
+@media (max-width: 800px) {
+  .dialog-mascot .character-sprite {
+    width: 100px;
+    height: 80px;
+  }
+}
+@media (max-width: 560px) {
+  .dialog-mascot .character-sprite {
+    width: 80px;
+    height: 64px;
+  }
+}
+@media (max-width: 360px) {
+  .dialog-mascot .character-sprite {
+    width: 70px;
+    height: 56px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .character-sprite,
+  .character-sprite > .character-accessory {
+    animation: none !important;
+  }
+}

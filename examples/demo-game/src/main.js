@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 import "./style.css";
-import { t, i18next, changeLanguage } from "./i18n.js";
+import "./characters.css";
+import { t as translate, i18n, changeLanguage } from "./i18n.js";
 import {
   WORLD,
   PICNIC,
@@ -24,6 +25,14 @@ const playerSprite = player.querySelector("img");
 const effects = $("effects");
 const keys = new Set();
 let game = newGame();
+let character = "female";
+let gender = "female";
+const characterValues = ["female", "male", "other"];
+
+// Grammar follows the chosen pronouns, independently of the costume.
+function t(key, values = {}) {
+  return translate(key, { gender, ...values });
+}
 let best = 0;
 let soundEnabled = true;
 let speechTimer;
@@ -38,6 +47,10 @@ const beeElements = BEES.map(() => {
   return bee;
 });
 try {
+  const savedCharacter = localStorage.getItem("quaso-character");
+  const savedGender = localStorage.getItem("quaso-pronouns");
+  if (characterValues.includes(savedCharacter)) character = savedCharacter;
+  if (characterValues.includes(savedGender)) gender = savedGender;
   best = Number(localStorage.getItem("quaso-quest-best")) || 0;
   soundEnabled = localStorage.getItem("quaso-sound") !== "false";
 } catch {
@@ -70,6 +83,33 @@ function say(key, options = {}) {
   }, 3400);
 }
 
+function updateCharacter() {
+  player.dataset.character = character;
+  $("welcome-character").dataset.character = character;
+  document.querySelectorAll('input[name="character"]').forEach((input) => {
+    input.checked = input.value === character;
+  });
+  $("pronouns").value = gender;
+  try {
+    localStorage.setItem("quaso-character", character);
+    localStorage.setItem("quaso-pronouns", gender);
+  } catch {
+    /* Character choices work without storage. */
+  }
+  updateText();
+}
+
+function updateNewspaper() {
+  const phase = game.phase === "paused" ? "playing" : game.phase;
+  const key = `game:newspaper.${phase}`;
+  const count = game.collected.size;
+  $("newspaper-story").textContent = t(key, { count });
+  const message = i18n.message(key);
+  $("message-values").textContent =
+    `${key} · ${message.language} · gender: ${gender} · count: ${count}`;
+  $("message-source").textContent = message.text;
+}
+
 function updateText() {
   // This is the entire static translation integration: data-i18n="namespace:key".
   document.querySelectorAll("[data-i18n]").forEach((element) => {
@@ -79,8 +119,8 @@ function updateText() {
       gold: GOLD_SCORE,
     });
   });
-  document.documentElement.lang = i18next.language;
-  $("language").value = i18next.language;
+  document.documentElement.lang = i18n.language;
+  $("language").value = i18n.language;
   world.setAttribute("aria-label", t("game:world"));
   player.setAttribute("aria-label", t("game:pet"));
   $("dog").setAttribute("aria-label", t("game:dog"));
@@ -88,7 +128,7 @@ function updateText() {
   $("sound").setAttribute("aria-label", t(soundEnabled ? "soundOff" : "soundOn"));
   $("sound").setAttribute("aria-pressed", String(soundEnabled));
   $("sound").classList.toggle("muted", !soundEnabled);
-  $("language-notice").hidden = i18next.language === "fr";
+  $("language-notice").hidden = !["en", "de"].includes(i18n.language);
   $("speech").hidden = true;
   updateHud();
   updateRunHud();
@@ -120,6 +160,7 @@ function updateHud() {
   $("time-bonus").textContent = t("game:win.bonus", { points: game.timeBonus });
   $("loss-reason").textContent = t(`game:lose.${game.lossReason || "time"}`);
   $("dog").classList.toggle("ready", count === BUTTER.length);
+  updateNewspaper();
 }
 
 function updateRunHud() {
@@ -248,6 +289,18 @@ function handleEvent(event) {
   }
   updateHud();
 }
+
+document.querySelectorAll('input[name="character"]').forEach((input) => {
+  input.addEventListener("change", () => {
+    character = input.value;
+    gender = character;
+    updateCharacter();
+  });
+});
+$("pronouns").addEventListener("change", (event) => {
+  gender = event.target.value;
+  updateCharacter();
+});
 
 $("start").addEventListener("click", start);
 $("again").addEventListener("click", start);
@@ -387,5 +440,5 @@ function frame(now) {
 }
 position($("dog"), PICNIC.x, PICNIC.y);
 position(player, game.x, game.y);
-updateText();
+updateCharacter();
 requestAnimationFrame(frame);

@@ -18,7 +18,14 @@ import {
 } from "./documents.ts";
 import { canonicalValue } from "./hash.ts";
 import { glossaryMatches } from "./glossary.ts";
-import { blockLabel, type IcuBlock, type IcuNode, parseIcu } from "./icu.ts";
+import {
+  blockLabel,
+  type IcuBlock,
+  type IcuNode,
+  icuSyntaxError,
+  parseIcu,
+  unquoteIcu,
+} from "./icu.ts";
 import type { StringArgument } from "./config.ts";
 import { categoriesFor, coversExactlyOne, type PluralOverride } from "./plurals.ts";
 import { graphemeLength, languageName } from "./text.ts";
@@ -356,6 +363,18 @@ interface Comparison {
 
 /** Runs the checks on one text or form: case by case when it varies by an argument. */
 function checkValue(results: CheckResult[], value: string, comparison: Comparison): void {
+  if (comparison.syntax.icu) {
+    const syntaxError = icuSyntaxError(value, { allowTextBraces: comparison.document });
+    if (syntaxError !== null) {
+      results.push(
+        result("icu_structure", sentence(syntaxError.message.replace(/\.$/, ""), comparison.form), {
+          form: comparison.form,
+          value: String(syntaxError.at),
+        }),
+      );
+      return;
+    }
+  }
   const texts = [value, comparison.required.text, comparison.counterpart.text];
   const varying = (comparison.arguments ?? []).filter((argument) =>
     texts.some((text) => argumentSelects(parseIcu(text), argument.name).length > 0),
@@ -389,9 +408,6 @@ function checkArgumentCases(
           result("icu_structure", sentence(problem, form), { form, value: icuCase.key }),
         );
       }
-      if (block.cases.some((icuCase) => icuCase.key === "other")) continue;
-      const message = sentence(`The ${label} block needs an other case`, form);
-      results.push(result("icu_structure", message, { form, value: label }));
     }
   }
 
@@ -480,11 +496,18 @@ function argumentSelects(nodes: IcuNode[], name: string): IcuBlock[] {
  * message: its key's case, else its `other` case, else its first.
  */
 function chooseCases(text: string, choices: ReadonlyMap<string, string>): string {
-  const render = (nodes: IcuNode[]): string => {
+  const render = (nodes: IcuNode[], inPlural = false, movedFromSelect = false): string => {
     let out = "";
     for (const node of nodes) {
       if (node.type !== "block") {
-        out += text.slice(node.start, node.end);
+        const raw = text.slice(node.start, node.end);
+        // Removing a select must not turn its literal # into the enclosing plural's count.
+        const requote = node.type === "text" && inPlural && movedFromSelect;
+        out += requote
+          ? unquoteIcu(raw)
+              .replaceAll("'", "''")
+              .replace(/[{}#]+/g, (char) => `'${char}'`)
+          : raw;
         continue;
       }
       const key = node.blockType === "select" ? choices.get(node.name) : undefined;
@@ -493,12 +516,14 @@ function chooseCases(text: string, choices: ReadonlyMap<string, string>): string
           node.cases.find((icuCase) => icuCase.key === key) ??
           node.cases.find((icuCase) => icuCase.key === "other") ??
           node.cases[0];
-        out += render(chosen.message);
+        out += render(chosen.message, inPlural, true);
         continue;
       }
       let at = node.start;
       for (const icuCase of node.cases) {
-        out += text.slice(at, icuCase.messageStart) + render(icuCase.message);
+        out +=
+          text.slice(at, icuCase.messageStart) +
+          render(icuCase.message, node.blockType !== "select");
         at = icuCase.messageEnd;
       }
       out += text.slice(at, node.end);

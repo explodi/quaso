@@ -281,7 +281,7 @@ export function formExamples(
 
 /** How to translate ICU MessageFormat, for projects that use it; part of `%pluralForms%`. */
 export const ICU_RULES =
-  "The strings use ICU MessageFormat. In a block such as {style, select, masculine {…} other {…}} or {count, plural, one {# item} other {# items}}, keep the argument, the block type and the case keys as written, and translate only the text inside each case. A select block keeps exactly the source text's cases, unless it is on one of the string's \"arguments\". A plural or selectordinal block has one case for each of the plural or ordinal forms above, plus the source text's exact cases such as =0; # stands for the number. Write a literal brace as '{' or '}'.";
+  "The strings use ICU MessageFormat. In a block such as {style, select, masculine {…} other {…}} or {count, plural, one {# item} other {# items}}, keep the argument, the block type and the case keys as written, and translate only the text inside each case. A select block keeps exactly the source text's cases, unless it is on one of the string's \"arguments\". A plural or selectordinal block has one case for each of the plural or ordinal forms above, plus the source text's exact cases such as =0. Keep # directly in a plural or selectordinal case: inside an intervening select block it becomes a literal hash, not the number. When both a declared argument and a count vary, put the select outside the plural, with a complete plural block inside each select case. # renders a numeral in digits, not words: every case, including many, must be grammatical with that numeral. In French and Spanish, # does not stand for the word million or millón, so it does not itself call for de before the noun. Write a literal brace as '{' or '}'.";
 
 /**
  * How to use a string's `arguments`, for batches that have some; part of `%pluralForms%`,
@@ -293,8 +293,9 @@ export function argumentRules(language: string): string {
     `Some strings list "arguments": values the app passes with the string that its source text may not show, such as the gender of the person who wrote it, with the cases the app uses and what each means. ` +
     `Where ${name} makes words agree with one of them, write a select block on it, such as {authorGender, select, female {…} male {…} other {…}}, with only the listed cases and always other. ` +
     `Put the whole phrase or sentence that changes inside each case, never part of a word, so that each case reads naturally on its own, with every placeholder of the source text. ` +
-    `In each case, translate the source text as it is, agreeing with that case: do not rephrase a sentence to avoid the agreement. ` +
+    `In each named case except other, translate the source text as it is, agreeing with that case: do not rephrase a sentence to avoid the agreement. ` +
     `The other case is for what the argument's description says, such as a nonbinary person or one whose gender isn't known: word it so that it assumes no gender, rephrasing around the words that would agree if needed, rather than repeating another case. ` +
+    `A grammatically gendered noun in a neutral paraphrase does not assign that gender to the person: for example, Spanish la persona en la alcaldía can refer to a mayor of any gender. ` +
     `Where ${name} needs no agreement, don't use the argument: write one text, and a select on it in the source text may become one text too.`
   );
 }
