@@ -4,8 +4,8 @@ Quaso Quest is a small game for trying the translation workflow. Play as Quaso, 
 a croissant: collect twelve pieces of butter, avoid the bees, and return to Biscotte before time
 runs out. As mayor of the picnic, your adventures make the local newspaper.
 
-Choose a female Quaso, a male Quaso, or a friendly cosmic Quaso. Each suggests pronouns, which you
-can change independently of appearance. The newspaper, Biscotte's dialogue, and your medal adapt
+The game opens with its own character-selection screen: choose a female Quaso, a male Quaso, or a
+friendly cosmic Quaso. Each suggests pronouns, which you can change independently of appearance. The newspaper, Biscotte's dialogue, and your medal adapt
 to that choice using **ICU MessageFormat**. Every Quaso plays by the same rules.
 
 The game starts in **French**. **Spanish is included as a worked translation**; **English and
@@ -23,8 +23,8 @@ npm ci
 npm run dev
 ```
 
-Open the address printed by Vite, normally <http://127.0.0.1:5173>. Choose a Quaso and how the paper
-should refer to them, then start. Move with the arrows, WASD, or ZQSD; press Space to dash and
+Open the address printed by Vite, normally <http://127.0.0.1:5173>. Inside the game, choose a Quaso
+and how the paper should refer to them, then confirm to see the mission and start. Move with the arrows, WASD, or ZQSD; press Space to dash and
 Escape to pause. You can also click or tap the meadow to move.
 
 - Bring all twelve butter pats to Biscotte in 35 seconds, with three lives.
@@ -33,8 +33,10 @@ Escape to pause. You can also click or tap the meadow to move.
 - Finish quickly for a time bonus. A delivery earns bronze; 4,500 points earns silver; 6,500 points
   with no bee hits earns gold. Learn a route and time your dashes to beat your record.
 
-The newspaper reports your progress and the result. Change pronouns or language to compare the
-same event without restarting. Expand **Voir le message ICU** below the article to inspect the
+The newspaper reports your progress and the result. Use **Change Quaso** from the pause or result
+screen to reopen the in-game character choices. Your current run stays paused while you edit, and
+you return to the same screen afterward. Change pronouns or language to compare the same event
+without restarting. Expand **Voir le message ICU** below the article to inspect the
 message, its arguments, and the catalog used to render it.
 
 Generated sound effects start with the game; the sound button toggles them and remembers your
@@ -44,7 +46,7 @@ preference. The interface uses Quaso's own pixel fonts, square controls, and plu
 
 ## See what ICU solves
 
-Choose **Español** (or open `?lang=es`) and switch the pronoun setting:
+Choose **Español** (or open `?lang=es`) and switch the pronoun setting in the game’s character screen:
 
 | Choice              | Newspaper wording                                                |
 | ------------------- | ---------------------------------------------------------------- |

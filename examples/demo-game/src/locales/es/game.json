@@ -83,7 +83,9 @@
     "pronouns": "¿Cómo hablamos de Quaso?",
     "pronounsFemale": "Ella · femenino",
     "pronounsMale": "Él · masculino",
-    "pronounsOther": "Neutral · sin marcas de género"
+    "pronounsOther": "Neutral · sin género",
+    "confirm": "Continuar →",
+    "change": "Cambiar de Quaso"
   },
   "newspaper": {
     "title": "La Gaceta de la Merienda",

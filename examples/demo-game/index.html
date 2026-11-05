@@ -51,57 +51,6 @@
             ><strong data-i18n="seal.line2"></strong><span data-i18n="seal.line3"></span>
           </div>
         </section>
-        <section class="character-picker" aria-labelledby="character-title">
-          <fieldset>
-            <legend id="character-title" data-i18n="game:character.title"></legend>
-            <div class="character-options">
-              <label class="character-card">
-                <input type="radio" name="character" value="female" checked />
-                <span class="character-sprite" data-character="female" aria-hidden="true">
-                  <img src="/art/quaso-0.png" alt="" /><i class="character-accessory"></i>
-                </span>
-                <strong data-i18n="game:character.female"></strong>
-              </label>
-              <label class="character-card">
-                <input type="radio" name="character" value="male" />
-                <span class="character-sprite" data-character="male" aria-hidden="true">
-                  <img src="/art/quaso-0.png" alt="" /><i class="character-accessory"></i>
-                </span>
-                <strong data-i18n="game:character.male"></strong>
-              </label>
-              <label class="character-card">
-                <input type="radio" name="character" value="other" />
-                <span class="character-sprite" data-character="other" aria-hidden="true">
-                  <img src="/art/quaso-0.png" alt="" /><i class="character-accessory"></i>
-                </span>
-                <strong data-i18n="game:character.other"></strong>
-              </label>
-            </div>
-          </fieldset>
-          <div class="pronoun-settings">
-            <label for="pronouns" data-i18n="game:character.pronouns"></label>
-            <select id="pronouns" aria-describedby="character-note">
-              <option value="female" data-i18n="game:character.pronounsFemale"></option>
-              <option value="male" data-i18n="game:character.pronounsMale"></option>
-              <option value="other" data-i18n="game:character.pronounsOther"></option>
-            </select>
-            <p id="character-note" data-i18n="game:character.note"></p>
-          </div>
-        </section>
-        <article class="newspaper" aria-labelledby="newspaper-title">
-          <div class="newspaper-masthead">
-            <span aria-hidden="true">✦</span>
-            <h2 id="newspaper-title" data-i18n="game:newspaper.title"></h2>
-            <span aria-hidden="true">✦</span>
-          </div>
-          <p id="newspaper-story" aria-live="polite" aria-atomic="true"></p>
-          <details class="message-inspector">
-            <summary data-i18n="game:newspaper.inspect"></summary>
-            <p data-i18n="game:newspaper.explanation"></p>
-            <code id="message-values"></code>
-            <pre id="message-source"></pre>
-          </details>
-        </article>
         <section class="game-shell" aria-labelledby="place-title">
           <div id="world" class="world" tabindex="0" role="region">
             <div class="world-heading">
@@ -141,7 +90,56 @@
             </button>
             <div id="destination" class="destination" hidden aria-hidden="true"></div>
             <div id="effects" aria-hidden="true"></div>
-            <div id="welcome" class="dialog welcome">
+            <section
+              id="character-screen"
+              class="dialog character-screen"
+              aria-labelledby="character-title"
+            >
+              <div class="character-picker">
+                <fieldset>
+                  <legend id="character-title" data-i18n="game:character.title"></legend>
+                  <div class="character-options">
+                    <label class="character-card">
+                      <input type="radio" name="character" value="female" checked />
+                      <span class="character-sprite" data-character="female" aria-hidden="true">
+                        <img src="/art/quaso-0.png" alt="" /><i class="character-accessory"></i>
+                      </span>
+                      <strong data-i18n="game:character.female"></strong>
+                    </label>
+                    <label class="character-card">
+                      <input type="radio" name="character" value="male" />
+                      <span class="character-sprite" data-character="male" aria-hidden="true">
+                        <img src="/art/quaso-0.png" alt="" /><i class="character-accessory"></i>
+                      </span>
+                      <strong data-i18n="game:character.male"></strong>
+                    </label>
+                    <label class="character-card">
+                      <input type="radio" name="character" value="other" />
+                      <span class="character-sprite" data-character="other" aria-hidden="true">
+                        <img src="/art/quaso-0.png" alt="" /><i class="character-accessory"></i>
+                      </span>
+                      <strong data-i18n="game:character.other"></strong>
+                    </label>
+                  </div>
+                </fieldset>
+                <div class="pronoun-settings">
+                  <label for="pronouns" data-i18n="game:character.pronouns"></label>
+                  <select id="pronouns" aria-describedby="character-note">
+                    <option value="female" data-i18n="game:character.pronounsFemale"></option>
+                    <option value="male" data-i18n="game:character.pronounsMale"></option>
+                    <option value="other" data-i18n="game:character.pronounsOther"></option>
+                  </select>
+                  <p id="character-note" data-i18n="game:character.note"></p>
+                </div>
+              </div>
+              <button
+                id="confirm-character"
+                class="primary-button"
+                data-i18n="game:character.confirm"
+              ></button>
+            </section>
+
+            <div id="welcome" class="dialog welcome" hidden>
               <div class="dialog-mascot">
                 <span
                   id="welcome-character"
@@ -166,6 +164,11 @@
               <span class="dialog-symbol" aria-hidden="true">☾</span>
               <h2 data-i18n="game:pause.title"></h2>
               <p data-i18n="game:pause.body"></p>
+              <button
+                class="secondary-button"
+                data-change-character
+                data-i18n="game:character.change"
+              ></button>
               <button id="resume" class="primary-button" data-i18n="game:pause.resume"></button>
             </div>
             <div id="win-panel" class="dialog win-panel" hidden>
@@ -175,6 +178,11 @@
               <p id="medal-tip"></p>
               <p id="result" class="result"></p>
               <p id="time-bonus" class="time-bonus"></p>
+              <button
+                class="secondary-button"
+                data-change-character
+                data-i18n="game:character.change"
+              ></button>
               <button id="again" class="primary-button">
                 <span data-i18n="game:win.again"></span><span aria-hidden="true">↻</span>
               </button>
@@ -185,6 +193,11 @@
               <h2 data-i18n="game:lose.title"></h2>
               <p id="loss-reason"></p>
               <p class="tiny-note" data-i18n="game:lose.tip"></p>
+              <button
+                class="secondary-button"
+                data-change-character
+                data-i18n="game:character.change"
+              ></button>
               <button id="retry" class="primary-button">
                 <span data-i18n="game:lose.retry"></span><span aria-hidden="true">↻</span>
               </button>
@@ -206,6 +219,20 @@
             </div>
           </div>
         </section>
+        <article class="newspaper" aria-labelledby="newspaper-title">
+          <div class="newspaper-masthead">
+            <span aria-hidden="true">✦</span>
+            <h2 id="newspaper-title" data-i18n="game:newspaper.title"></h2>
+            <span aria-hidden="true">✦</span>
+          </div>
+          <p id="newspaper-story" aria-live="polite" aria-atomic="true"></p>
+          <details class="message-inspector">
+            <summary data-i18n="game:newspaper.inspect"></summary>
+            <p data-i18n="game:newspaper.explanation"></p>
+            <code id="message-values"></code>
+            <pre id="message-source"></pre>
+          </details>
+        </article>
         <div class="below-game">
           <p class="controls">
             <span
