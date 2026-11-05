@@ -70,7 +70,7 @@ names both files.
 
 ## Edit a context on the website
 
-You can still edit any context in **Settings → Files & length limits**. **A changed file always
+You can still edit any context in **Settings → Context**. **A changed file always
 wins, and a file that has not changed never replaces an edit.** CI can upload on every push, so this rule
 keeps an edit in place until someone changes the file:
 
@@ -87,11 +87,20 @@ The upload prints a warning when a new or changed file replaces different text, 
 because the file is the same, and when a removed file leaves an edit in place. These warnings do
 not change the exit code.
 
-**Settings → Files & length limits** shows where the text comes from. After an edit, you have two
-ways to make the file and the website match:
+In **Settings → Context**, search for a folder or file and select it to edit. Filter by
+**Repository** to find uploaded context files, **Edited here** to review website changes to them,
+or **No own context** to find scopes without written context. Unsaved drafts stay available while
+you browse other files or settings sections. Choose **Save context** to apply an edit.
+
+Expand **Context read for this file** (or **Context shared with these files** for a folder) to
+inspect saved context in reading order. This preview shows parent guidance followed by the file's
+own context or its generated fallback; it does not include unsaved edits.
+
+The editor shows where the text comes from. After an edit, you have two ways to make the file and
+the website match:
 
 - To keep the edit, copy the text into the file and upload.
-- To drop the edit, choose **Use the file's text**, then **Save changes**.
+- To drop the edit, choose **Use the file's text**, then **Save context**.
 
 ## Use generated context as a default
 

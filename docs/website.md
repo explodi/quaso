@@ -347,18 +347,19 @@ Deleting an account disables its keys; role and language changes affect existing
 
 Administrators select a section in **Settings**:
 
-| Section               | What it controls                                                                                                                                                                                                 |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Project details       | Project name, description, logo, and links.                                                                                                                                                                      |
-| Placeholders          | Default syntax, additional formats, and language exceptions. Match the game's syntax; changes trigger new quality checks.                                                                                        |
-| Languages             | Target languages, language instructions, and plural-category overrides.                                                                                                                                          |
-| Files & length limits | Folder and file context and maximum string lengths. Limits owned by the CLI configuration must be changed there and uploaded.                                                                                    |
-| Language requests     | Community requests to add languages.                                                                                                                                                                             |
-| AI translation        | Gemini and Anthropic keys, automatic translation, models, reference languages, translation memory, meaning checks, and token budget. Save a new key before **Test Gemini key** or **Test Anthropic Claude key**. |
-| Email delivery        | Email provider, sender, credentials, and a test message.                                                                                                                                                         |
-| API keys              | All users' keys and their creators. Create keys and revoke unused ones; scopes and creator permissions both apply.                                                                                               |
-| Backups               | Download SQLite or JSON backups and check backup status. Keep copies private: they contain account data.                                                                                                         |
-| History & retention   | How long to keep past published file versions and backups.                                                                                                                                                       |
+| Section             | What it controls                                                                                                                                                                                                 |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Project details     | Project name, description, logo, and links.                                                                                                                                                                      |
+| Placeholders        | Default syntax, additional formats, and language exceptions. Match the game's syntax; changes trigger new quality checks.                                                                                        |
+| Languages           | Target languages, language instructions, and plural-category overrides.                                                                                                                                          |
+| Context             | Search folders and files, edit their context, and inspect inherited context and repository text.                                                                                                                 |
+| Length limits       | Maximum string lengths. Limits owned by the CLI configuration must be changed there and uploaded.                                                                                                                |
+| Language requests   | Community requests to add languages.                                                                                                                                                                             |
+| AI translation      | Gemini and Anthropic keys, automatic translation, models, reference languages, translation memory, meaning checks, and token budget. Save a new key before **Test Gemini key** or **Test Anthropic Claude key**. |
+| Email delivery      | Email provider, sender, credentials, and a test message.                                                                                                                                                         |
+| API keys            | All users' keys and their creators. Create keys and revoke unused ones; scopes and creator permissions both apply.                                                                                               |
+| Backups             | Download SQLite or JSON backups and check backup status. Keep copies private: they contain account data.                                                                                                         |
+| History & retention | How long to keep past published file versions and backups.                                                                                                                                                       |
 
 Use the Settings sidebar, or **Settings section** on a narrow screen. In **Placeholders**,
 **Additional formats** adds syntax such as `{name}` alongside `{{count}}`. **Language exceptions**

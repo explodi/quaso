@@ -23,9 +23,16 @@ export const SETTINGS_SECTIONS = [
   },
   {
     id: "files",
-    label: "Files & length limits",
+    label: "Context",
     group: "Project",
-    description: "Add context for folders and files, and set character limits for translations.",
+    description: "Guide translations with context from your repository and this website.",
+  },
+  {
+    id: "limits",
+    label: "Length limits",
+    group: "Project",
+    description:
+      "Set character limits for translations and see which limits come from your repository.",
   },
   {
     id: "requests",
