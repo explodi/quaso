@@ -64,7 +64,9 @@ browserTest(
     await press(page, "Enter");
     await waitFor(page, () => document.querySelector(".user-name") !== null);
     const headline = (await getStrings(server, "es")).strings[0];
-    await page.goto(`${server.url}/translate/es?id=${headline.id}`, { waitUntil: "networkidle0" });
+    await page.goto(`${server.url}/translate/es?id=${headline.id}`, {
+      waitUntil: "domcontentloaded",
+    });
     await page.waitForSelector("#translation-text");
     expect(await text(page, ".panel-arguments")).toContain(
       "Can vary by mayorGender (female, male, other)",
@@ -104,11 +106,24 @@ browserTest(
     );
     await page.locator(".panel-actions button ::-p-text(Save)").click();
     expect((await saved).ok()).toBe(true);
-    await waitFor(page, () => document.querySelector(".panel-draft-state") === null);
+    // The success toast follows the background refresh, when reloading is safe.
+    await waitFor(
+      page,
+      () =>
+        document.querySelector(".toast-message")?.textContent ===
+        "Saved newspaper.json › headline: proofread (blue) now.",
+    );
     expect((await getStrings(server, "es")).strings[0].translation?.value).toBe(SPANISH);
 
-    await page.goto(`${server.url}/translate/es?id=${headline.id}`, { waitUntil: "networkidle0" });
-    await page.waitForSelector("#translation-text");
+    await page.goto(`${server.url}/translate/es?id=${headline.id}`, {
+      waitUntil: "domcontentloaded",
+    });
+    await waitFor(
+      page,
+      (savedText) =>
+        document.querySelector<HTMLTextAreaElement>("#translation-text")?.value === savedText,
+      [SPANISH],
+    );
     const broken = SPANISH.slice(0, -1);
     await fillTranslation(page, broken);
     await waitFor(page, () =>
