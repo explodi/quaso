@@ -250,6 +250,15 @@ Release candidates are for deployment and migration testing. The team decides wh
 
 ### Fixed
 
+- Saving in a large project no longer queues behind the project's counts. Progress per language
+  and file is counted by the database, which answers with one row per language and file; the
+  server used to read every translation to count it, about 10 MB on each change of a project of
+  4,000 strings in 15 languages, and the editor asks for the counts after every save. On Cloudflare
+  that kept D1 busy, so saves waited a minute and some requests got "Quaso is starting up or
+  unavailable". The counts are the same.
+- The Cloudflare Worker logs `A database batch was slow or large` for a D1 batch that takes a
+  second or answers a mebibyte, with its time, size, rows read and heaviest statement (never its
+  parameters), and `A database batch failed` for one that fails, which used to leave no trace.
 - The model reads only proofread translations of the current source text: the reference
   languages, the identical strings and the neighbours no longer include green translations, which
   were another model's guesses, and the neighbours no longer include outdated ones. A string with

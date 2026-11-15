@@ -423,6 +423,11 @@ Use these checks when deployment or startup fails:
 - **Server errors:** read its JSON logs, including startup and migrations, in the Cloudflare
   dashboard under **Workers & Pages → your Worker → Logs**. An API token needs Workers Observability
   Read for these logs.
+- **Slow saves or pages, or 503 while people work:** the database runs one batch at a time, so a
+  slow one delays every request behind it. Tail the Worker as above and look for
+  `A database batch was slow or large`: it gives the batch's time, the size of its answer, the rows
+  the database read and the statement that read most, without its parameters. A batch that fails
+  is logged as `A database batch failed`.
 - **Repeated startup failures or HTTP 503:** check the container state in the dashboard's
   **Containers** page and read the server logs for the cause, such as a missing secret. A 503 can
   also mean the instance is paused for restoration; check whether a restore is still running.

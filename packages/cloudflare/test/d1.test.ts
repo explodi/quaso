@@ -60,4 +60,75 @@ describe("D1 private handler and SQL contract", () => {
     );
     expect(response.status).toBe(400);
   });
+
+  it("a batch that answers more than a mebibyte is logged with its statement, never its parameters", async () => {
+    const { records, log } = recorded();
+    const response = await handleD1(batch([{ sql: MEBIBYTE, params: ["label"] }]), database, log);
+    expect(response.status).toBe(200);
+    expect(records).toStrictEqual([
+      {
+        level: "warn",
+        msg: "A database batch was slow or large",
+        ms: expect.any(Number),
+        bytes: expect.any(Number),
+        statements: 1,
+        rowsRead: expect.any(Number),
+        sql: MEBIBYTE,
+      },
+    ]);
+  });
+
+  it("a small, quick batch is not logged", async () => {
+    const { records, log } = recorded();
+    await handleD1(batch([{ sql: "SELECT 1 AS n", params: [] }]), database, log);
+    expect(records).toStrictEqual([]);
+  });
+
+  it("a failed batch answers unavailable and is logged with its first statement", async () => {
+    const { records, log } = recorded();
+    const response = await handleD1(
+      batch([{ sql: "SELECT * FROM no_such_table", params: [] }]),
+      database,
+      log,
+    );
+    expect(response.status).toBe(503);
+    expect(records).toStrictEqual([
+      {
+        level: "error",
+        msg: "A database batch failed",
+        error: expect.any(Error),
+        ms: expect.any(Number),
+        statements: 1,
+        sql: "SELECT * FROM no_such_table",
+      },
+    ]);
+  });
 });
+
+/** 20,000 rows of about 90 bytes each. */
+const MEBIBYTE =
+  "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 20000) SELECT printf('%060d', i) AS filler, ? AS label FROM n";
+
+function batch(statements: { sql: string; params: unknown[] }[]): Request {
+  return new Request("http://d1.quaso.internal/batch", {
+    method: "POST",
+    body: JSON.stringify({ statements }),
+  });
+}
+
+/** A logger that keeps its records. */
+function recorded() {
+  const records: Record<string, unknown>[] = [];
+  const keep =
+    (level: string) =>
+    (msg: string, fields: Record<string, unknown> = {}) => {
+      records.push({ level, msg, ...fields });
+    };
+  const log = {
+    debug: keep("debug"),
+    info: keep("info"),
+    warn: keep("warn"),
+    error: keep("error"),
+  };
+  return { records, log };
+}
