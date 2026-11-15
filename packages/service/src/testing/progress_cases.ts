@@ -157,6 +157,26 @@ export const PROGRESS_CASES: { name: string; run(sql: Sql): Promise<void> }[] = 
     },
   },
   {
+    name: "counting reads one row per language and file from translations, not one per translation",
+    async run(sql) {
+      await seed(sql);
+      let rows = 0;
+      const counted: Sql = {
+        ...sql,
+        async read(statements) {
+          const results = await sql.read(statements);
+          statements.forEach((statement, index) => {
+            if (statement.sql.includes("FROM translations")) rows += results[index].length;
+          });
+          return results;
+        },
+      };
+      await getStatusAsync(counted, MODEL);
+      // The seed's two German translations are both in a.json.
+      checkEqual(rows, 1);
+    },
+  },
+  {
     name: "an empty project returns defaults and zero counts",
     async run(sql) {
       const project = await getProjectAsync(sql, MODEL);

@@ -73,8 +73,8 @@ function projectInfo(
     syntax: settings.syntax,
     languages,
     details: {
-      strings: counting.strings.length,
-      words: counting.strings.reduce((sum, string) => sum + string.words, 0),
+      strings: counting.files.reduce((sum, file) => sum + file.strings, 0),
+      words: counting.files.reduce((sum, file) => sum + file.words, 0),
       files: counting.files.length,
       members,
       lastActivity,
