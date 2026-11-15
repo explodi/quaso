@@ -118,6 +118,42 @@ test("an undeclared argument's select is refused on write", async () => {
   );
 });
 
+const PLAYER_PRONOUNS: ArgumentDeclaration = {
+  name: "player",
+  cases: ["she", "he"],
+  description: "The player's pronouns. other: they/them, or not chosen.",
+  exclude: ["store.json"],
+};
+
+test("an argument for the whole project reaches every string, marked project-wide", async () => {
+  using instance = await icuProject();
+  await uploadJson(
+    instance.service,
+    { "feed.json": FEED },
+    { languages: ["es"], arguments: [PLAYER_PRONOUNS] },
+  );
+  expect(argumentsOf(instance, "menu.title")).toStrictEqual(
+    JSON.stringify([
+      {
+        name: "player",
+        cases: ["she", "he"],
+        description: "The player's pronouns. other: they/them, or not chosen.",
+        projectWide: true,
+      },
+    ]),
+  );
+});
+
+test("an excluded file's strings don't receive the argument", async () => {
+  using instance = await icuProject();
+  await uploadJson(
+    instance.service,
+    { "feed.json": FEED, "store.json": { description: "Build a city." } },
+    { languages: ["es"], arguments: [PLAYER_PRONOUNS] },
+  );
+  expect(argumentsOf(instance, "description")).toBe(null);
+});
+
 test("the string's details list its arguments for the editor", async () => {
   using instance = await icuProject();
   await uploadJson(

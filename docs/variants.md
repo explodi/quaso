@@ -127,7 +127,19 @@ For the app:
 - Declare only values the app really has. A declared argument the app never passes makes every
   translation's specific cases dead text.
 - An argument for the whole app (the player's chosen pronouns, say) is declared without `files` and
-  `keys`.
+  `keys`. Every string then receives it, and few have a word that agrees with it, so the editor
+  explains it only beside a string that uses it; **Vary by** stays on every string.
+- Leave out, with `exclude`, the files the app never formats: a store listing, or achievement
+  names sent to a platform as plain text. A select block there would reach readers as written.
+
+  ```json
+  {
+    "name": "player",
+    "cases": ["she", "he"],
+    "description": "The player's pronouns. other: they/them, or not chosen.",
+    "exclude": ["store.json"]
+  }
+  ```
 
 ### 5. Alternatives are arrays or separate keys
 
@@ -171,8 +183,9 @@ sentences that must agree with them and hope for the best.
 ## What the LLM is told
 
 For every string in a batch, the LLM gets its English, its description, its placeholders, the
-target language's plural or ordinal cases with example numbers, and its declared arguments with
-their cases and descriptions. The instructions tell it to keep each block's argument and type,
+target language's plural or ordinal cases with example numbers, and the names of its declared
+arguments. Each argument's cases and description are given once for the batch, however many of its
+strings receive it. The instructions tell it to keep each block's argument and type,
 write the target language's plural cases, keep a select's cases unless it is on a declared
 argument, use a declared argument only where the language needs agreement and not to rephrase a
 sentence to avoid it, put whole phrases in each case, and write `other` as the argument's
@@ -209,8 +222,11 @@ Errors stop a save and an LLM answer. See [Checks](file-formats.md#checks) for e
   cases. The syntax is written for you; **Edit as text** shows the whole ICU.
 - Above the input: the target language's plural cases with example numbers, and, under the
   source, what the string can vary by, its declared arguments with their cases and descriptions.
+  An argument declared for the whole app is listed there only where the source or the translation
+  has a select on it.
 - **Vary by authorGender** writes a select on the argument around the selected text, in every
-  case. **Copy the English** copies the blocks with the target language's plural cases.
+  case; point at the button to read what the argument is. **Copy the English** copies the blocks
+  with the target language's plural cases.
 - **Preview in each case**, under the input, shows the translation for every case, with example
   numbers, or where it stops being valid ICU.
 

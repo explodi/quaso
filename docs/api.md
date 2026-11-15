@@ -158,7 +158,8 @@ without hiding other files:
 it has strings. Missing target languages are added from `languages`; existing languages are kept.
 Optional `renames`, `limits`, `pluralExclusions`, `arguments`, and `descriptionSuffix` follow the
 request schema. `arguments` replaces the declared arguments of every string in the uploaded files;
-`GET /api/v1/strings/{id}` lists a string's `arguments` when ICU MessageFormat is on (see
+`GET /api/v1/strings/{id}` lists a string's `arguments` when ICU MessageFormat is on, with
+`projectWide: true` on one declared without `files` and `keys` (see
 [Arguments the English doesn't show](file-formats.md#arguments-the-english-doesnt-show)).
 Each JSON source file can include `descriptions`, a string containing a JSON object of descriptions
 with matching key paths. Description entries are metadata, not translation strings. See

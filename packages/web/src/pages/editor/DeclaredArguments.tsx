@@ -5,7 +5,13 @@
  * it into the translation, so that the translation can agree with it.
  */
 import { Button } from "@quaso/design-system";
-import type { IcuField, StringArgument } from "@quaso/core";
+import {
+  type IcuField,
+  parseIcu,
+  selectBlocksOn,
+  type StringArgument,
+  type TextValue,
+} from "@quaso/core";
 
 /** The argument's select cases, `other` included: every select block needs it. */
 function casesOf(argument: StringArgument): string[] {
@@ -41,8 +47,27 @@ export function varyFieldSelection(
   return before + selectBlock(argument, selected) + after;
 }
 
+/**
+ * The arguments worth explaining beside a string: those declared for its file or key, and a
+ * project-wide one only where the string's source or translation has a select block on it.
+ * Every string receives a project-wide argument, and few have a word that agrees with it.
+ */
+export function explainedArguments(
+  declared: readonly StringArgument[],
+  sourceAndTranslation: readonly TextValue[],
+): StringArgument[] {
+  const texts = sourceAndTranslation.flatMap((value) =>
+    typeof value === "string" ? [value] : Object.values(value),
+  );
+  return declared.filter((argument) => {
+    if (!argument.projectWide) return true;
+    return texts.some((text) => selectBlocksOn(parseIcu(text ?? ""), argument.name).length > 0);
+  });
+}
+
 /** "Can vary by": each argument's name, its cases and its description, as text. */
 export function ArgumentsNote({ declared }: { declared: StringArgument[] }) {
+  if (declared.length === 0) return null;
   return (
     <dl className="panel-arguments">
       {declared.map((argument) => (
@@ -71,6 +96,8 @@ export function VaryByButtons(props: {
       // The input keeps its focus and selection, as with the placeholder chips.
       onMouseDown={(event) => event.preventDefault()}
       onClick={() => props.onVary(argument)}
+      // What the argument is, where no note beside the source says it.
+      title={argument.description}
     >
       Vary by {argument.name}
     </Button>

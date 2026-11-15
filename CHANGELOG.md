@@ -173,8 +173,22 @@ Release candidates are for deployment and migration testing. The team decides wh
 - A translation estimate (dry run) says how many strings get each treatment: `work.translate`,
   `work.retranslate`, `work.update` (outdated green, rewritten) and `work.propose` (outdated blue,
   a proposal). The Auto-translate dialog and `quaso translate --dry-run` show it.
+- Declared arguments take `exclude`: globs of files whose strings don't receive the argument,
+  for text the app never formats, such as a store listing, where a select block would be shown
+  as written. A CLI with `exclude` in its config can't upload to an earlier instance: update the
+  instance first.
 
 ### Changed
+
+- A declared argument for the whole project (without `files` and `keys`, such as the player's
+  pronouns) no longer shows its description under every source. The editor names it beside a
+  string only where the source or the translation has a select block on it; **Vary by …** stays
+  on every string, with the description as its tooltip. An upload marks such an argument
+  `projectWide` on each string: upload once more to quiet a project that declares one already.
+- The LLM prompt describes each declared argument once per batch, with the rules for arguments,
+  and a string's line lists only the names of its arguments. A batch of 27 strings that all
+  receive one argument sends about 40% fewer input tokens, with the same translations.
+  Instances on the default prompt get the new wording on the next request.
 
 - Quaso runs on Node 26 (the version in `.nvmrc`), which runs the TypeScript sources directly.
   Development uses npm workspaces (`npm ci`, `npm run <task>`), tests run with Vitest and types

@@ -94,6 +94,17 @@ export function blockLabel(block: IcuBlock): string {
   return `{${block.name}, ${block.blockType}}`;
 }
 
+/** The select blocks on an argument, at any depth. */
+export function selectBlocksOn(nodes: IcuNode[], name: string): IcuBlock[] {
+  const found: IcuBlock[] = [];
+  for (const node of nodes) {
+    if (node.type !== "block") continue;
+    if (node.blockType === "select" && node.name === name) found.push(node);
+    for (const icuCase of node.cases) found.push(...selectBlocksOn(icuCase.message, name));
+  }
+  return found;
+}
+
 /** A plural block's `offset:`, which `#` and the categories subtract; 0 without one. */
 export function blockOffset(text: string, block: IcuBlock): number {
   const head = text.slice(block.start, block.cases[0].start);

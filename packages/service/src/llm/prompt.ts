@@ -290,7 +290,7 @@ export const ICU_RULES =
 export function argumentRules(language: string): string {
   const name = languageName(language);
   return (
-    `Some strings list "arguments": values the app passes with the string that its source text may not show, such as the gender of the person who wrote it, with the cases the app uses and what each means. ` +
+    `Some strings list "arguments": the names of values the app passes with the string that its source text may not show, such as the gender of the person who wrote it. Each is described below, with the cases the app uses and what each means. ` +
     `Where ${name} makes words agree with one of them, write a select block on it, such as {authorGender, select, female {…} male {…} other {…}}, with only the listed cases and always other. ` +
     `Put the whole phrase or sentence that changes inside each case, never part of a word, so that each case reads naturally on its own, with every placeholder of the source text. ` +
     `In each named case except other, translate the source text as it is, agreeing with that case: do not rephrase a sentence to avoid the agreement. ` +
@@ -298,6 +298,26 @@ export function argumentRules(language: string): string {
     `A grammatically gendered noun in a neutral paraphrase does not assign that gender to the person: for example, Spanish la persona en la alcaldía can refer to a mayor of any gender. ` +
     `Where ${name} needs no agreement, don't use the argument: write one text, and a select on it in the source text may become one text too.`
   );
+}
+
+/**
+ * What each argument of a batch is, once however many strings receive it (a project-wide
+ * one is on every string); part of `%pluralForms%`, after `argumentRules`. Empty for none.
+ */
+export function argumentDefinitions(strings: readonly PromptString[]): string {
+  const byName = new Map<string, StringArgument>();
+  for (const argument of strings.flatMap((string) => string.arguments ?? [])) {
+    if (!byName.has(argument.name)) byName.set(argument.name, argument);
+  }
+  if (byName.size === 0) return "";
+  const definitions = [...byName.values()].map((argument) =>
+    JSON.stringify({
+      name: argument.name,
+      cases: [...argument.cases, "other"],
+      description: argument.description,
+    }),
+  );
+  return ["The arguments, one JSON object per line:", ...definitions].join("\n");
 }
 
 /** `%pluralForms%`: the language's categories, with example numbers. */
@@ -337,8 +357,7 @@ export function renderPrompt(
     if (mask.maxLength !== undefined) provider.maxLength = mask.maxLength;
     providerStrings.push(provider);
   }
-  const hasArguments =
-    context.syntax.icu === true && strings.some((string) => (string.arguments?.length ?? 0) > 0);
+  const definitions = context.syntax.icu === true ? argumentDefinitions(strings) : "";
   const values: Record<string, string> = {
     sourceLanguage: language(context.sourceLanguage),
     targetLanguage: language(context.targetLanguage),
@@ -351,7 +370,8 @@ export function renderPrompt(
     pluralForms: [
       pluralFormsText(context.targetLanguage, context.pluralOverride),
       context.syntax.icu ? ICU_RULES : "",
-      hasArguments ? argumentRules(context.targetLanguage) : "",
+      definitions === "" ? "" : argumentRules(context.targetLanguage),
+      definitions,
     ]
       .filter((paragraph) => paragraph !== "")
       .join("\n\n"),
@@ -421,11 +441,7 @@ function stringLine(
   const optional = optionalIn(string.english, context.syntax, context.targetLanguage);
   if (optional.length > 0) line.optionalPlaceholders = optional;
   if (context.syntax.icu && string.arguments && string.arguments.length > 0) {
-    line.arguments = string.arguments.map((argument) => ({
-      name: argument.name,
-      cases: [...argument.cases, "other"],
-      description: argument.description,
-    }));
+    line.arguments = string.arguments.map((argument) => argument.name);
   }
   if (mask.references.length > 0) {
     line.references = Object.fromEntries(

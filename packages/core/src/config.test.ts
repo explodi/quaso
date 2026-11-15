@@ -35,7 +35,28 @@ test("argumentResolver: a string with another key doesn't", () => {
   expect(argumentsFor("feed.json", "menu.title")).toStrictEqual([]);
 });
 
-test("argumentResolver: without files and keys, every string receives it", () => {
+test("argumentResolver: without files and keys, every string receives it, as project-wide", () => {
   const argumentsFor = argumentResolver([AUTHOR_GENDER]);
-  expect(argumentsFor("text/chat.json", "rooms.lobby.welcome")).toStrictEqual([IN_SCOPE]);
+  expect(argumentsFor("text/chat.json", "rooms.lobby.welcome")).toStrictEqual([
+    { ...IN_SCOPE, projectWide: true },
+  ]);
+});
+
+test("argumentResolver: a string in an excluded file doesn't receive a project-wide argument", () => {
+  const argumentsFor = argumentResolver([{ ...AUTHOR_GENDER, exclude: ["store/**"] }]);
+  expect(argumentsFor("store/listing.json", "description")).toStrictEqual([]);
+});
+
+test("argumentResolver: a string outside the excluded files still receives it, as project-wide", () => {
+  const argumentsFor = argumentResolver([{ ...AUTHOR_GENDER, exclude: ["store/**"] }]);
+  expect(argumentsFor("feed.json", "posts.welcome")).toStrictEqual([
+    { ...IN_SCOPE, projectWide: true },
+  ]);
+});
+
+test("argumentResolver: an excluded file wins over the files it is in", () => {
+  const argumentsFor = argumentResolver([
+    { ...AUTHOR_GENDER, files: ["text/**"], exclude: ["text/store.json"] },
+  ]);
+  expect(argumentsFor("text/store.json", "description")).toStrictEqual([]);
 });

@@ -146,7 +146,9 @@ A string can also vary by a value the English doesn't show, such as the gender o
 wrote a post: under the source, **Can vary by** names it, with its cases and what it means. Where
 your language makes words agree with it, select the text that changes and press **Vary by
 authorGender** (the argument's name): the selection goes into every case of a select block, and you
-adjust each case. Where your language needs no agreement, write one text. See
+adjust each case. Where your language needs no agreement, write one text. An argument the whole
+game receives, such as the player's pronouns, is named under the source only once the string uses
+it; its **Vary by** button is on every string, and says what it is when you point at it. See
 [arguments the English doesn't show](file-formats.md#arguments-the-english-doesnt-show).
 
 The editor checks for missing or extra placeholders and references, missing plural forms, empty

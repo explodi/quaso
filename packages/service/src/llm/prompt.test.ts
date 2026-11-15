@@ -405,19 +405,35 @@ const JOINED: PromptString = {
   ],
 };
 
-test("prompt: a string's line lists its arguments, with the other case", () => {
+const AUTHOR_GENDER_DEFINITION =
+  'The arguments, one JSON object per line:\n{"name":"authorGender","cases":["female","male","other"],"description":"The gender of the person who wrote the post. other: nonbinary, or not known."}';
+
+test("prompt: a string's line names its arguments", () => {
   const rendered = renderPrompt(
     DEFAULT_PROMPT_TEMPLATE,
     [JOINED],
     context({ targetLanguage: "es", syntax: ICU_SYNTAX }),
   );
-  expect(stringLines(rendered.prompt)[0].arguments).toStrictEqual([
-    {
-      name: "authorGender",
-      cases: ["female", "male", "other"],
-      description: "The gender of the person who wrote the post. other: nonbinary, or not known.",
-    },
-  ]);
+  expect(stringLines(rendered.prompt)[0].arguments).toStrictEqual(["authorGender"]);
+});
+
+test("prompt: an argument is described with its rules, with the other case", () => {
+  const rendered = renderPrompt(
+    DEFAULT_PROMPT_TEMPLATE,
+    [JOINED],
+    context({ targetLanguage: "es", syntax: ICU_SYNTAX }),
+  );
+  expect(rendered.system).toContain(`${argumentRules("es")}\n\n${AUTHOR_GENDER_DEFINITION}\n`);
+});
+
+test("prompt: an argument several strings receive is described once", () => {
+  const rendered = renderPrompt(
+    DEFAULT_PROMPT_TEMPLATE,
+    [JOINED, { ...JOINED, id: 15, key: "posts.left" }],
+    context({ targetLanguage: "es", syntax: ICU_SYNTAX }),
+  );
+  expect(rendered.system.split(AUTHOR_GENDER_DEFINITION).length).toBe(2);
+  expect(rendered.prompt.includes("The gender of the person who wrote the post")).toBe(false);
 });
 
 test("prompt: a batch with arguments gets the rules for them", () => {
@@ -444,13 +460,7 @@ test("prompt: ICU argument rules preserve declared cases for a non-English sourc
     key: "posts.joined",
     english: "Heureux de rejoindre {company} !",
     placeholders: ["{company}"],
-    arguments: [
-      {
-        name: "authorGender",
-        cases: ["female", "male", "other"],
-        description: "The gender of the person who wrote the post. other: nonbinary, or not known.",
-      },
-    ],
+    arguments: ["authorGender"],
   });
 });
 
@@ -471,6 +481,7 @@ test("prompt: without ICU MessageFormat, arguments are neither listed nor explai
   );
   expect(stringLines(rendered.prompt)[0].arguments).toBe(undefined);
   expect(rendered.system.includes(argumentRules("es"))).toBeFalsy();
+  expect(rendered.system.includes("The arguments, one JSON object per line:")).toBe(false);
 });
 
 test("prompt: a mayor's declared pronouns reach translation even when English has no select", () => {
@@ -493,7 +504,7 @@ test("prompt: a mayor's declared pronouns reach translation even when English ha
   const rendered = renderPrompt(
     DEFAULT_PROMPT_TEMPLATE,
     [mayor],
-    context({ targetLanguage: "es", syntax: ICU_SYNTAX, projectName: "Microlandia" }),
+    context({ targetLanguage: "es", syntax: ICU_SYNTAX, projectName: "Quaso Quest" }),
   );
 
   expect(stringLines(rendered.prompt)[0]).toStrictEqual({
@@ -502,15 +513,11 @@ test("prompt: a mayor's declared pronouns reach translation even when English ha
     english: "The mayor welcomed {name}.",
     description: "A newspaper refers to the player, who chooses their pronouns.",
     placeholders: ["{name}"],
-    arguments: [
-      {
-        name: "gender",
-        cases: ["female", "male", "other"],
-        description:
-          "female: she/her; male: he/him; other: they/them, with natural ungendered wording.",
-      },
-    ],
+    arguments: ["gender"],
   });
+  expect(rendered.system).toContain(
+    '{"name":"gender","cases":["female","male","other"],"description":"female: she/her; male: he/him; other: they/them, with natural ungendered wording."}',
+  );
   expect(rendered.system).toContain(
     "Where Spanish makes words agree with one of them, write a select block",
   );
