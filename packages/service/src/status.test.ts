@@ -197,7 +197,7 @@ test("counts are kept until the next write, even one that doesn't raise the revi
   let reads = 0;
   const query = instance.sql.query;
   instance.sql.query = <T extends SqlRow>(text: string, ...params: SqlValue[]): T[] => {
-    if (text.includes("FROM translations WHERE language")) reads++;
+    if (text.includes("FROM translations t JOIN strings s")) reads++;
     return query.call<SyncSql, [string, ...SqlValue[]], T[]>(instance.sql, text, ...params);
   };
   const first = await instance.service.getProject(ANONYMOUS, {});

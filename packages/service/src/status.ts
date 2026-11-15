@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 /**
- * Progress counts (design §5.9, CLI-6) per language and per file. The rows are loaded
- * once, with a few set-based queries, and counted in TypeScript: simpler than one query per
- * count. The counts are kept until the next write, since the public pages ask for them on
- * every view.
+ * Progress counts (design §5.9, CLI-6) per language and per file. The database counts: it
+ * answers with a row per language and file, where reading every translation to count it
+ * here was megabytes on each write of a large project. The counts are kept until the next
+ * write, since the public pages ask for them on every view.
  */
 import type {
   FileProgress,
@@ -32,114 +32,80 @@ import type { Sql, Statement, SyncSql } from "./ports.ts";
 import { loadSettings, settingsFromData } from "./settings.ts";
 import { ServiceError } from "./errors.ts";
 
-/** A translatable, active string in an active file. */
-interface StringStat {
+type FileRow = {
   id: number;
-  fileId: number;
-  words: number;
-  sourceHash: string;
-}
-
-/** A translation's state. */
-interface TranslationStat {
-  colour: string;
-  outdated: boolean;
-  qa: boolean;
-}
-
-type CountingRow = { id: number; file_id: number; words: number; source_hash: string };
-type TranslationStatRow = {
-  string_id: number;
-  colour: string;
-  source_hash: string;
-  qa_errors: number;
-  extra_checks?: string;
+  path: string;
+  repo_path: string;
+  source_updated_at: number;
+  source_revision: number;
 };
+type SourceCountRow = { file_id: number; strings: number; words: number };
+type TranslationCountRow = {
+  language: string;
+  file_id: number;
+  translated: number;
+  translated_words: number;
+  blue: number;
+  blue_words: number;
+  outdated: number;
+  qa: number;
+};
+type PendingCountRow = { language: string; file_id: number; pending: number };
 
-/** The strings and files progress is counted over, loaded once. */
+/** The files progress is counted over, each with its translatable, active strings and words. */
 export interface Counting {
-  files: {
-    id: number;
-    path: string;
-    repo_path: string;
-    source_updated_at: number;
-    source_revision: number;
-  }[];
-  strings: StringStat[];
-  /** The strings of each file, by file ID. */
-  byFile: Map<number, StringStat[]>;
-  /** Each string's English hash, by string ID. */
-  hashes: Map<number, string>;
+  files: (FileRow & { strings: number; words: number })[];
 }
+
+/** What progress counts: the translatable, active strings (`s`) of active files (`f`). */
+const COUNTED = `s.active = 1 AND f.active = 1 AND s.kind IN (${TRANSLATABLE_SQL})`;
 
 const ACTIVE_FILES =
   "SELECT id, path, repo_path, source_updated_at, source_revision FROM files WHERE active = 1 ORDER BY path";
-const ACTIVE_STRINGS = `SELECT s.id, s.file_id, s.words, s.source_hash FROM strings s
-  JOIN files f ON f.id = s.file_id
-  WHERE s.active = 1 AND f.active = 1 AND s.kind IN (${TRANSLATABLE_SQL})`;
+const SOURCE_COUNTS = `SELECT s.file_id, COUNT(*) AS strings, SUM(s.words) AS words FROM strings s
+  JOIN files f ON f.id = s.file_id WHERE ${COUNTED} GROUP BY s.file_id`;
 
-/** Loads the active files and their translatable, active strings. */
+/** The translations of the counted strings per language and file; `scope` narrows the languages. */
+function translationCounts(scope = ""): string {
+  return `SELECT t.language, s.file_id, COUNT(*) AS translated, SUM(s.words) AS translated_words,
+    SUM(t.colour = 'blue') AS blue,
+    SUM(CASE WHEN t.colour = 'blue' THEN s.words ELSE 0 END) AS blue_words,
+    SUM(t.source_hash <> s.source_hash) AS outdated,
+    SUM(t.qa_errors > 0 OR t.extra_checks <> '[]') AS qa
+    FROM translations t JOIN strings s ON s.id = t.string_id JOIN files f ON f.id = s.file_id
+    WHERE ${COUNTED}${scope} GROUP BY t.language, s.file_id`;
+}
+
+/** The counted strings with a pending suggestion, per language and file. */
+function pendingCounts(scope = ""): string {
+  return `SELECT t.language, s.file_id, COUNT(DISTINCT t.string_id) AS pending
+    FROM suggestions t JOIN strings s ON s.id = t.string_id JOIN files f ON f.id = s.file_id
+    WHERE t.status = 'pending' AND ${COUNTED}${scope} GROUP BY t.language, s.file_id`;
+}
+
+/** Narrows either count to one language: both name the rows they count `t`. */
+const ONE_LANGUAGE = " AND t.language = ?";
+
+/** Loads the active files with the counts of their translatable, active strings. */
 export function loadCounting(ctx: Context): Counting {
-  const files = ctx.sql.query<Counting["files"][number]>(ACTIVE_FILES);
-  const strings = ctx.sql.query<CountingRow>(ACTIVE_STRINGS);
-  return countingFromRows(files, strings);
-}
-
-function countingFromRows(files: Counting["files"], rows: CountingRow[]): Counting {
-  const strings = rows.map((row) => ({
-    id: row.id,
-    fileId: row.file_id,
-    words: row.words,
-    sourceHash: row.source_hash,
-  }));
-  const byFile = new Map<number, StringStat[]>(files.map((file) => [file.id, []]));
-  for (const string of strings) byFile.get(string.fileId)?.push(string);
-  const hashes = new Map(strings.map((string) => [string.id, string.sourceHash]));
-  return { files, strings, byFile, hashes };
-}
-
-/** One language's translations and pending suggestions, over the counted strings. */
-interface LanguageData {
-  translations: Map<number, TranslationStat>;
-  pending: Set<number>;
-}
-
-function loadLanguageData(ctx: Context, counting: Counting, language: string): LanguageData {
-  const rows = ctx.sql.query<TranslationStatRow>(
-    "SELECT string_id, colour, source_hash, qa_errors, extra_checks FROM translations WHERE language = ?",
-    language,
+  return countingFromRows(
+    ctx.sql.query<FileRow>(ACTIVE_FILES),
+    ctx.sql.query<SourceCountRow>(SOURCE_COUNTS),
   );
-  const suggestions = ctx.sql.query<{ string_id: number }>(
-    "SELECT DISTINCT string_id FROM suggestions WHERE language = ? AND status = 'pending'",
-    language,
-  );
-  return languageDataFromRows(counting, rows, suggestions);
 }
 
-function languageDataFromRows(
-  counting: Counting,
-  rows: TranslationStatRow[],
-  suggestions: { string_id: number }[],
-): LanguageData {
-  const { hashes } = counting;
-  const translations = new Map<number, TranslationStat>();
-  for (const row of rows) {
-    const hash = hashes.get(row.string_id);
-    if (hash === undefined) continue;
-    translations.set(row.string_id, {
-      colour: row.colour,
-      outdated: row.source_hash !== hash,
-      qa: row.qa_errors > 0 || (row.extra_checks !== undefined && row.extra_checks !== "[]"),
-    });
-  }
-  const pending = new Set<number>();
-  for (const row of suggestions) {
-    if (hashes.has(row.string_id)) pending.add(row.string_id);
-  }
-  return { translations, pending };
+function countingFromRows(files: FileRow[], sources: SourceCountRow[]): Counting {
+  const counts = new Map(sources.map((row) => [row.file_id, row]));
+  return {
+    files: files.map((file) => ({
+      ...file,
+      strings: counts.get(file.id)?.strings ?? 0,
+      words: counts.get(file.id)?.words ?? 0,
+    })),
+  };
 }
 
-/** Progress counted one string at a time. */
+/** Progress added up one file at a time. */
 class Tally {
   readonly progress: Progress = {
     strings: 0,
@@ -157,25 +123,26 @@ class Tally {
   #translatedWords = 0;
   #blueWords = 0;
 
-  add(string: StringStat, translation: TranslationStat | undefined, pending: boolean): void {
+  add(
+    file: Counting["files"][number],
+    translations: TranslationCountRow | undefined,
+    pending: number,
+  ): void {
+    const translated = translations?.translated ?? 0;
+    const translatedWords = translations?.translated_words ?? 0;
+    const blue = translations?.blue ?? 0;
     const progress = this.progress;
-    progress.strings++;
-    progress.words += string.words;
-    if (pending) progress.pending++;
-    if (translation === undefined) {
-      progress.untranslated++;
-      progress.wordsLeft += string.words;
-      return;
-    }
-    this.#translatedWords += string.words;
-    if (translation.colour === "blue") {
-      progress.blue++;
-      this.#blueWords += string.words;
-    } else {
-      progress.green++;
-    }
-    if (translation.outdated) progress.outdated++;
-    if (translation.qa) progress.qa++;
+    progress.strings += file.strings;
+    progress.words += file.words;
+    progress.untranslated += file.strings - translated;
+    progress.wordsLeft += file.words - translatedWords;
+    progress.green += translated - blue;
+    progress.blue += blue;
+    progress.outdated += translations?.outdated ?? 0;
+    progress.qa += translations?.qa ?? 0;
+    progress.pending += pending;
+    this.#translatedWords += translatedWords;
+    this.#blueWords += translations?.blue_words ?? 0;
   }
 
   /** The counts, with the percentages. */
@@ -243,17 +210,21 @@ export function currentCounting(ctx: Context): Counting {
   return countCache(ctx).counting;
 }
 
-/** Counts a language in all and per file, in one pass over the strings. */
-function countLanguage(counting: Counting, data: LanguageData): LanguageCounts {
+/** A language's counts in all and per file, from the database's counts of that language. */
+function countLanguage(
+  counting: Counting,
+  translations: TranslationCountRow[],
+  pending: PendingCountRow[],
+): LanguageCounts {
+  const translationsOf = new Map(translations.map((row) => [row.file_id, row]));
+  const pendingOf = new Map(pending.map((row) => [row.file_id, row.pending]));
   const total = new Tally();
   const files = counting.files.map((file) => {
     const tally = new Tally();
-    for (const string of counting.byFile.get(file.id) ?? []) {
-      const translation = data.translations.get(string.id);
-      const pending = data.pending.has(string.id);
-      tally.add(string, translation, pending);
-      total.add(string, translation, pending);
-    }
+    const fileTranslations = translationsOf.get(file.id);
+    const filePending = pendingOf.get(file.id) ?? 0;
+    tally.add(file, fileTranslations, filePending);
+    total.add(file, fileTranslations, filePending);
     return { id: file.id, path: file.path, repoPath: file.repo_path, ...tally.finish() };
   });
   return { progress: total.finish(), files };
@@ -267,7 +238,11 @@ export function languageProgress(
   const cache = countCache(ctx);
   let counts = cache.languages.get(language.tag);
   if (counts === undefined) {
-    counts = countLanguage(cache.counting, loadLanguageData(ctx, cache.counting, language.tag));
+    counts = countLanguage(
+      cache.counting,
+      ctx.sql.query<TranslationCountRow>(translationCounts(ONE_LANGUAGE), language.tag),
+      ctx.sql.query<PendingCountRow>(pendingCounts(ONE_LANGUAGE), language.tag),
+    );
     cache.languages.set(language.tag, counts);
   }
   return {
@@ -302,18 +277,15 @@ export function listFiles(ctx: Context, language?: string): FilesResult {
 function sourceFiles(counting: Counting, ambiguities: SourceAmbiguity[] = []): SourceFilesResult {
   return {
     ...(ambiguities.length > 0 ? { ambiguities } : {}),
-    files: counting.files.map((file) => {
-      const strings = counting.byFile.get(file.id) ?? [];
-      return {
-        id: file.id,
-        path: file.path,
-        repoPath: file.repo_path,
-        strings: strings.length,
-        words: strings.reduce((total, string) => total + string.words, 0),
-        updatedAt: file.source_updated_at,
-        revision: file.source_revision,
-      };
-    }),
+    files: counting.files.map((file) => ({
+      id: file.id,
+      path: file.path,
+      repoPath: file.repo_path,
+      strings: file.strings,
+      words: file.words,
+      updatedAt: file.source_updated_at,
+      revision: file.source_revision,
+    })),
   };
 }
 
@@ -351,10 +323,8 @@ export async function readProgressSnapshot(
 /** The revision and every count come from the same read batch. */
 async function readProgress(sql: Sql, model: string, language?: string): Promise<ProgressSnapshot> {
   const canonical = language === undefined ? undefined : canonicalLanguageTag(language);
-  const scope = canonical === undefined ? "" : " AND language = ?";
+  const scope = canonical === undefined ? "" : ONE_LANGUAGE;
   const params = canonical === undefined ? [] : [canonical];
-  const active = `SELECT s.id FROM strings s JOIN files f ON f.id = s.file_id
-    WHERE s.active = 1 AND f.active = 1 AND s.kind IN (${TRANSLATABLE_SQL})`;
   const rows = await sql.read([
     {
       sql: "SELECT COALESCE((SELECT CAST(value AS INTEGER) FROM meta WHERE key = 'revision'), 0) AS revision",
@@ -362,15 +332,9 @@ async function readProgress(sql: Sql, model: string, language?: string): Promise
     { sql: "SELECT data FROM settings WHERE id = 1" },
     { sql: "SELECT tag, instructions, plural_override, created_at FROM languages ORDER BY tag" },
     { sql: ACTIVE_FILES },
-    { sql: `SELECT id, file_id, words, source_hash FROM strings WHERE id IN (${active})` },
-    {
-      sql: `SELECT string_id, language, colour, source_hash, qa_errors, extra_checks FROM translations WHERE string_id IN (${active})${scope}`,
-      params,
-    },
-    {
-      sql: `SELECT DISTINCT string_id, language FROM suggestions WHERE status = 'pending' AND string_id IN (${active})${scope}`,
-      params,
-    },
+    { sql: SOURCE_COUNTS },
+    { sql: translationCounts(scope), params },
+    { sql: pendingCounts(scope), params },
     {
       sql: `SELECT (SELECT COUNT(*) FROM users WHERE role <> 'none' AND deleted_at IS NULL) AS members,
       (SELECT MAX(created_at) FROM activity) AS last_activity`,
@@ -381,20 +345,19 @@ async function readProgress(sql: Sql, model: string, language?: string): Promise
     canonical === undefined ? languages : languages.filter((entry) => entry.tag === canonical);
   if (language !== undefined && selected.length === 0)
     throw new ServiceError("not_found", `The project has no language ${language}.`);
-  const counting = countingFromRows(rows[3] as Counting["files"], rows[4] as CountingRow[]);
-  const translations = rows[5] as (TranslationStatRow & { language: string })[];
-  const suggestions = rows[6] as { string_id: number; language: string }[];
+  const counting = countingFromRows(rows[3] as FileRow[], rows[4] as SourceCountRow[]);
+  const translations = Map.groupBy(rows[5] as TranslationCountRow[], (row) => row.language);
+  const pending = Map.groupBy(rows[6] as PendingCountRow[], (row) => row.language);
   return {
     revision: Number(rows[0][0].revision),
     settings: settingsFromData((rows[1][0]?.data as string | undefined) ?? null, model),
     counting,
     languages: selected.map((entry) => {
-      const data = languageDataFromRows(
+      const counts = countLanguage(
         counting,
-        translations.filter((row) => row.language === entry.tag),
-        suggestions.filter((row) => row.language === entry.tag),
+        translations.get(entry.tag) ?? [],
+        pending.get(entry.tag) ?? [],
       );
-      const counts = countLanguage(counting, data);
       return { ...languageFacts(entry), ...counts.progress, files: counts.files };
     }),
     members: Number(rows[7][0].members),
@@ -435,11 +398,11 @@ export async function listFilesAsync(
 async function readSourceFiles(sql: Sql): Promise<FilesResult> {
   const rows = await sql.read([
     { sql: ACTIVE_FILES },
-    { sql: ACTIVE_STRINGS },
+    { sql: SOURCE_COUNTS },
     { sql: AMBIGUITIES },
   ]);
   return sourceFiles(
-    countingFromRows(rows[0] as Counting["files"], rows[1] as CountingRow[]),
+    countingFromRows(rows[0] as FileRow[], rows[1] as SourceCountRow[]),
     ambiguityRows(rows[2]),
   );
 }
