@@ -58,6 +58,7 @@ import { useToast } from "../../components/Toast.tsx";
 import { JobProgress } from "../../components/JobProgress.tsx";
 import {
   ArgumentsNote,
+  explainedArguments,
   selectBlock,
   VaryByButtons,
   varyFieldSelection,
@@ -304,6 +305,10 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
   const changedMeanwhile = dirty && serverRevision !== baseRevision && conflict === undefined;
 
   const value = useMemo(() => valueFrom(draft, forms, unmask), [draft, forms, unmask]);
+  const explained = useMemo(
+    () => explainedArguments(detail.arguments, [detail.source, value]),
+    [detail.arguments, detail.source, value],
+  );
   const checks = useMemo((): CheckResult[] => {
     if (!dirty && !current) return [];
     if (!dirty) return detail.checks;
@@ -759,7 +764,7 @@ function Editor(props: TranslationPanelProps & { detail: StringDetail; loaded: b
             ))}
           </dl>
         )}
-        {detail.arguments.length > 0 && <ArgumentsNote declared={detail.arguments} />}
+        <ArgumentsNote declared={explained} />
         {detail.identicalSources && detail.identicalSources.length > 0 && (
           <p className="panel-hint">
             Same source as{" "}

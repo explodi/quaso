@@ -71,7 +71,7 @@ Current %targetLanguage% translations of the same source text elsewhere in the p
 The strings around them in the file, with their current %targetLanguage% translations, for context:
 %neighbours%
 
-The strings to translate, one JSON object per line: "id", "key", "english", "document" (a whole file: keep its paragraphs), the plural "forms" to give with their example numbers, "description", "maxLength", "placeholders" (to keep exactly as written), "optionalPlaceholders" (placeholders you may leave out), "arguments" (values the app passes that the source may not show, with their cases: see the rules for select blocks), "references" (what each locked token stands for), "outdatedTranslation" (the current translation, made for an older source text: update it), "outdatedEnglish" (that older source text: change only what the difference from "english" requires, and keep the rest of the translation as it is) and "refused" (why your previous answer was refused: correct it).
+The strings to translate, one JSON object per line: "id", "key", "english", "document" (a whole file: keep its paragraphs), the plural "forms" to give with their example numbers, "description", "maxLength", "placeholders" (to keep exactly as written), "optionalPlaceholders" (placeholders you may leave out), "arguments" (the names of values the app passes that the source may not show: see the rules for select blocks), "references" (what each locked token stands for), "outdatedTranslation" (the current translation, made for an older source text: update it), "outdatedEnglish" (that older source text: change only what the difference from "english" requires, and keep the rest of the translation as it is) and "refused" (why your previous answer was refused: correct it).
 %strings%
 
 An instruction for this run, which comes before the others:
@@ -95,6 +95,8 @@ const FORMER_DEFAULT_TEMPLATES: ReadonlySet<string> = new Set([
   "eb9325fef7af28b44b2df798c5109bf7aaeb497861a32feef5a745c1a94be00c",
   // Before strings listed the arguments the English may not show.
   "2a6a91de4f6ca6e09850adde04f683cde2ee7c25ac2326f3d0cd06830c7360d5",
+  // Before a string's line named its arguments, described once for the batch.
+  "c1b5ba2d49be1bd3589d40816d8b4af31115e51002e183a201d6ca0baabe470e",
 ]);
 
 /** The settings of a new instance. */

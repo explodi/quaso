@@ -1,13 +1,51 @@
 // SPDX-License-Identifier: MIT
 import { expect, test } from "vitest";
 import { type IcuField, icuFieldForm, writeIcuFieldForm } from "@quaso/core";
-import { selectBlock, varyFieldSelection } from "./DeclaredArguments.tsx";
+import { explainedArguments, selectBlock, varyFieldSelection } from "./DeclaredArguments.tsx";
 
 const AUTHOR_GENDER = {
   name: "authorGender",
   cases: ["female", "male"],
   description: "The gender of the person who wrote the post. other: nonbinary, or not known.",
 };
+
+const PLAYER = {
+  name: "player",
+  cases: ["she", "he"],
+  description: "The player's pronouns. other: they/them, or not chosen.",
+  projectWide: true as const,
+};
+
+test("the note explains an argument declared for the string's file or key", () => {
+  expect(explainedArguments([AUTHOR_GENDER], ["Excited to join {company}!", ""])).toStrictEqual([
+    AUTHOR_GENDER,
+  ]);
+});
+
+test("the note leaves out a project-wide argument the string doesn't use", () => {
+  expect(explainedArguments([PLAYER], ["Carry 1,000 riders in one day", ""])).toStrictEqual([]);
+});
+
+test("the note explains a project-wide argument the source selects on", () => {
+  const source = "{player, select, she {She has} he {He has} other {They have}} won.";
+  expect(explainedArguments([PLAYER], [source, ""])).toStrictEqual([PLAYER]);
+});
+
+test("the note explains a project-wide argument the translation selects on", () => {
+  const translation =
+    "{player, select, she {Bienvenida} he {Bienvenido} other {Te damos la bienvenida}}";
+  expect(explainedArguments([PLAYER], ["Welcome", translation])).toStrictEqual([PLAYER]);
+});
+
+test("the note explains a project-wide argument one plural form selects on", () => {
+  const forms = {
+    one: "{player, select, she {Elegida} he {Elegido} other {Con el cargo}} una vez",
+    other: "{{count}} veces",
+  };
+  expect(explainedArguments([PLAYER], [{ one: "Elected once", other: "x" }, forms])).toStrictEqual([
+    PLAYER,
+  ]);
+});
 
 test("Vary by: the selected text goes into every case", () => {
   expect(selectBlock(AUTHOR_GENDER, "¡Emocionada de unirme a {company}!")).toStrictEqual(

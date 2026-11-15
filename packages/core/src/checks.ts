@@ -24,6 +24,7 @@ import {
   type IcuNode,
   icuSyntaxError,
   parseIcu,
+  selectBlocksOn,
   unquoteIcu,
 } from "./icu.ts";
 import type { StringArgument } from "./config.ts";
@@ -377,7 +378,7 @@ function checkValue(results: CheckResult[], value: string, comparison: Compariso
   }
   const texts = [value, comparison.required.text, comparison.counterpart.text];
   const varying = (comparison.arguments ?? []).filter((argument) =>
-    texts.some((text) => argumentSelects(parseIcu(text), argument.name).length > 0),
+    texts.some((text) => selectBlocksOn(parseIcu(text), argument.name).length > 0),
   );
   if (varying.length === 0) checkPlainValue(results, value, comparison);
   else checkArgumentCases(results, value, comparison, varying);
@@ -399,7 +400,7 @@ function checkArgumentCases(
   const { form } = comparison;
   for (const argument of varying) {
     const keys = [...argument.cases, "other"];
-    for (const block of argumentSelects(parseIcu(value), argument.name)) {
+    for (const block of selectBlocksOn(parseIcu(value), argument.name)) {
       const label = blockLabel(block);
       for (const icuCase of block.cases) {
         if (keys.includes(icuCase.key)) continue;
@@ -478,17 +479,6 @@ function withWhere(message: string, where: string, form: PluralCategory | undefi
   if (formEnding !== null && message.endsWith(formEnding)) ending = formEnding;
   else if (message.endsWith(".")) ending = ".";
   return message.slice(0, message.length - ending.length) + where + ending;
-}
-
-/** The select blocks on an argument, at any depth. */
-function argumentSelects(nodes: IcuNode[], name: string): IcuBlock[] {
-  const found: IcuBlock[] = [];
-  for (const node of nodes) {
-    if (node.type !== "block") continue;
-    if (node.blockType === "select" && node.name === name) found.push(node);
-    for (const icuCase of node.cases) found.push(...argumentSelects(icuCase.message, name));
-  }
-  return found;
 }
 
 /**

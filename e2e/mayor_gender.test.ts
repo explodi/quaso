@@ -68,9 +68,8 @@ browserTest(
       waitUntil: "domcontentloaded",
     });
     await page.waitForSelector("#translation-text");
-    expect(await text(page, ".panel-arguments")).toContain(
-      "Can vary by mayorGender (female, male, other)",
-    );
+    // The argument is for the whole project, and this headline doesn't use it yet.
+    expect(await text(page, ".panel-arguments")).toBe("");
 
     await fillTranslation(page, "Alcaldía {name}");
     await page.$eval("#translation-text", (field) => (field as HTMLTextAreaElement).select());
@@ -79,6 +78,10 @@ browserTest(
       await page.$eval("#translation-text", (field) => (field as HTMLTextAreaElement).value),
     ).toBe(
       "{mayorGender, select, female {Alcaldía {name}} male {Alcaldía {name}} other {Alcaldía {name}}}",
+    );
+    await waitFor(page, () => document.querySelector(".panel-arguments") !== null);
+    expect(await text(page, ".panel-arguments")).toContain(
+      "Can vary by mayorGender (female, male, other)",
     );
 
     await fillTranslation(page, SPANISH);

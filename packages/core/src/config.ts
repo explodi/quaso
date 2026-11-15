@@ -132,6 +132,12 @@ export const ArgumentDeclaration = s.object({
     .describe(
       "Globs of the keys that receive it, displayed with dots, such as posts.*: * stays within one key, ** spans several. Default: every key",
     ),
+  exclude: s
+    .array(FileGlob, { minItems: 1 })
+    .optional()
+    .describe(
+      "Globs of files whose strings don't receive it, by their path on the server, such as store.json: text the app never formats, where a select block would be shown as written",
+    ),
 });
 
 /** The declared arguments, each name once. */
@@ -201,30 +207,45 @@ export type PluralExclusion = Infer<typeof PluralExclusion>;
 export type ArgumentDeclaration = Infer<typeof ArgumentDeclaration>;
 
 /** A declared argument as a string receives it: what the checks, the LLM and translators see. */
-export type StringArgument = Pick<ArgumentDeclaration, "name" | "cases" | "description">;
+export type StringArgument = Pick<ArgumentDeclaration, "name" | "cases" | "description"> & {
+  /**
+   * Declared without `files` and `keys`, for the whole project: the string receives it like
+   * every other, so nothing says that this string has a use for it.
+   */
+  projectWide?: true;
+};
 
 /**
  * Which declared arguments each string receives: those whose `files` globs match its file's
- * path on the server and whose `keys` globs match its key, displayed with dots.
+ * path on the server and whose `keys` globs match its key, displayed with dots, unless an
+ * `exclude` glob matches the file.
  */
 export function argumentResolver(
   declarations: readonly ArgumentDeclaration[],
 ): (file: string, key: string) => StringArgument[] {
-  const scopes = declarations.map((declaration) => ({
-    argument: {
+  const scopes = declarations.map((declaration) => {
+    const argument: StringArgument = {
       name: declaration.name,
       cases: declaration.cases,
       description: declaration.description,
-    },
-    files: declaration.files?.map((pattern) => globToRegExp(pattern)),
-    keys: declaration.keys?.map((pattern) => globToRegExp(pattern, ".")),
-  }));
+    };
+    if (declaration.files === undefined && declaration.keys === undefined) {
+      argument.projectWide = true;
+    }
+    return {
+      argument,
+      files: declaration.files?.map((pattern) => globToRegExp(pattern)),
+      keys: declaration.keys?.map((pattern) => globToRegExp(pattern, ".")),
+      exclude: (declaration.exclude ?? []).map((pattern) => globToRegExp(pattern)),
+    };
+  });
   return (file, key) =>
     scopes
       .filter((scope) => {
         const inFile = scope.files === undefined || scope.files.some((glob) => glob.test(file));
         const inKeys = scope.keys === undefined || scope.keys.some((glob) => glob.test(key));
-        return inFile && inKeys;
+        const excluded = scope.exclude.some((glob) => glob.test(file));
+        return inFile && inKeys && !excluded;
       })
       .map((scope) => scope.argument);
 }

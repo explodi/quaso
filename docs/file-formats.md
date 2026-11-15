@@ -335,6 +335,13 @@ The English may use the argument too. "{name} says {authorGender, select, female
 other {they}}'s hiring." needs no pronoun in Japanese, which drops the block:
 `{name}さんが採用中とのことです。`
 
+An argument declared without `files` and `keys` is for the whole project: the player's pronouns,
+say. Every string receives it, so the editor names it beside the source only where the source or
+the translation has a select block on it; **Vary by** is on every string, and says what the
+argument is when you point at it. Give it `exclude`, globs of the files your game never formats,
+such as a store listing: a select block there would reach readers as written, and without the
+argument the checks refuse one.
+
 The checks treat a select block on a string's argument as transparent. For each of the argument's
 cases and `other`, they replace every select block on it, in the English and in the translation, by
 that case (by its `other` case when the block has no such case), and compare the two texts with the
