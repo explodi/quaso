@@ -319,6 +319,7 @@
         "pt-BR"
       ],
       "contexts": [],
+      "settings": [],
       "warnings": [],
       "job": null,
       "revision": 1
@@ -367,6 +368,7 @@
       "hiddenFiles": [],
       "languagesAdded": [],
       "contexts": [],
+      "settings": [],
       "warnings": [],
       "job": null,
       "revision": 1
@@ -3113,7 +3115,8 @@
               "ar",
               "pt-BR"
             ],
-            "contexts": []
+            "contexts": [],
+            "settings": []
           }
         }
       ],
@@ -3335,7 +3338,7 @@
             "actor_id": null,
             "actor_label": "System",
             "summary": "Upload: 42 added, languages added: de, fr, pl, ja, ar, pt-BR",
-            "detail": "{\"uploadId\":1,\"added\":42,\"changed\":0,\"removed\":0,\"restored\":0,\"moved\":0,\"files\":[{\"path\":\"common.json\",\"status\":\"new\"},{\"path\":\"menus.json\",\"status\":\"new\"},{\"path\":\"store.json\",\"status\":\"new\"}],\"renamed\":[],\"renameSuggestions\":[],\"hiddenFiles\":[],\"languagesAdded\":[\"de\",\"fr\",\"pl\",\"ja\",\"ar\",\"pt-BR\"],\"contexts\":[]}",
+            "detail": "{\"uploadId\":1,\"added\":42,\"changed\":0,\"removed\":0,\"restored\":0,\"moved\":0,\"files\":[{\"path\":\"common.json\",\"status\":\"new\"},{\"path\":\"menus.json\",\"status\":\"new\"},{\"path\":\"store.json\",\"status\":\"new\"}],\"renamed\":[],\"renameSuggestions\":[],\"hiddenFiles\":[],\"languagesAdded\":[\"de\",\"fr\",\"pl\",\"ja\",\"ar\",\"pt-BR\"],\"contexts\":[],\"settings\":[]}",
             "created_at": 1790251200000
           },
           {
@@ -8075,7 +8078,7 @@
           "actor_id": null,
           "actor_label": "System",
           "summary": "Upload: 42 added, languages added: de, fr, pl, ja, ar, pt-BR",
-          "detail": "{\"uploadId\":1,\"added\":42,\"changed\":0,\"removed\":0,\"restored\":0,\"moved\":0,\"files\":[{\"path\":\"common.json\",\"status\":\"new\"},{\"path\":\"menus.json\",\"status\":\"new\"},{\"path\":\"store.json\",\"status\":\"new\"}],\"renamed\":[],\"renameSuggestions\":[],\"hiddenFiles\":[],\"languagesAdded\":[\"de\",\"fr\",\"pl\",\"ja\",\"ar\",\"pt-BR\"],\"contexts\":[]}",
+          "detail": "{\"uploadId\":1,\"added\":42,\"changed\":0,\"removed\":0,\"restored\":0,\"moved\":0,\"files\":[{\"path\":\"common.json\",\"status\":\"new\"},{\"path\":\"menus.json\",\"status\":\"new\"},{\"path\":\"store.json\",\"status\":\"new\"}],\"renamed\":[],\"renameSuggestions\":[],\"hiddenFiles\":[],\"languagesAdded\":[\"de\",\"fr\",\"pl\",\"ja\",\"ar\",\"pt-BR\"],\"contexts\":[],\"settings\":[]}",
           "created_at": 1790251200000
         },
         {
