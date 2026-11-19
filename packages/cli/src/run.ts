@@ -2,14 +2,17 @@
 import type { Fetch } from "@quaso/core";
 /**
  * The CLI's entry point as a function: parses the arguments, runs the command, prints its
- * result (or one JSON document with `--json`) and returns the exit code. It never asks
- * anything, never exits the process, and prints a stack trace only for bugs.
+ * result (or one JSON document with `--json`) and returns the exit code. It asks a question
+ * only at a terminal (`terminalConfirm`), never exits the process, and prints a stack trace
+ * only for bugs.
  */
 import { stat } from "node:fs/promises";
+import { createInterface } from "node:readline/promises";
 import { resolve } from "node:path";
 import process from "node:process";
 import { editDistance, flag, option, parseArgs, type ParsedArgs } from "./args.ts";
-import { type Command, Context } from "./context.ts";
+import { type Command, type Confirm, Context } from "./context.ts";
+import type { ProviderFactory } from "./local.ts";
 import { CliError, EXIT, type ExitCode, usageError } from "./errors.ts";
 import { commandHelp, generalHelp, helpJson } from "./help.ts";
 import { type Env, errorDocument, Output, resultDocument, type Stream } from "./output.ts";
@@ -50,6 +53,10 @@ export interface RunOptions {
   sleep?: (ms: number) => Promise<void>;
   /** Default: true. Tests whose fake server has no `/wake` pass false. */
   waitWhileAsleep?: boolean;
+  /** Default: a question on the terminal, when the CLI runs in one; null never asks. */
+  confirm?: Confirm | null;
+  /** Default: Gemini and Anthropic. Tests pass a provider that needs no network. */
+  llmProvider?: ProviderFactory;
 }
 
 /** Runs the CLI with the arguments (without the program's name) and returns the exit code. */
@@ -111,6 +118,12 @@ export async function run(argv: readonly string[], options: RunOptions = {}): Pr
       fetch: options.fetch,
       sleep: options.sleep,
       waitWhileAsleep: options.waitWhileAsleep,
+      confirm: json
+        ? null
+        : options.confirm !== undefined
+          ? options.confirm
+          : terminalConfirm(options),
+      llmProvider: options.llmProvider,
     });
     const result = await command.run(ctx);
     if (json) out.document(resultDocument(name, result.exitCode, result.json));
@@ -140,6 +153,24 @@ function report(out: Output, command: string, error: unknown): ExitCode {
   if (error instanceof Error && error.stack) out.raw(error.stack);
   if (out.json) out.document(errorDocument(command, bug));
   return EXIT.unexpected;
+}
+
+/**
+ * A question on the terminal, answered with y or yes; null unless the process's own streams
+ * are a terminal on both ends, so a script or a pipe is never left waiting for an answer.
+ */
+function terminalConfirm(options: RunOptions): Confirm | null {
+  const ownStreams = options.stdout === undefined && options.stderr === undefined;
+  if (!ownStreams || !process.stdin.isTTY || !process.stderr.isTTY) return null;
+  return async (question) => {
+    const terminal = createInterface({ input: process.stdin, output: process.stderr });
+    try {
+      const answer = await terminal.question(`${question} [y/N] `);
+      return /^y(es)?$/i.test(answer.trim());
+    } finally {
+      terminal.close();
+    }
+  };
 }
 
 function help(out: Output, command: Command | null): ExitCode {

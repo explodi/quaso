@@ -87,6 +87,9 @@ The upload prints a warning when a new or changed file replaces different text, 
 because the file is the same, and when a removed file leaves an edit in place. These warnings do
 not change the exit code.
 
+In a terminal, `quaso upload` asks before a file replaces an edit made on the website. See
+[`quaso upload`](cli.md#quaso-upload) for when it asks and how to skip the question.
+
 In **Settings → Context**, search for a folder or file and select it to edit. Filter by
 **Repository** to find uploaded context files, **Edited here** to review website changes to them,
 or **No own context** to find scopes without written context. Unsaved drafts stay available while
@@ -114,6 +117,11 @@ selected in **Settings → AI translation**. It only fills a gap, in the followi
 - A file with no context of its own still gets generated context when its folder has a context,
   because the folder's context describes the group and not the file.
 - The LLM does not generate context for folders.
+
+## Use context files without an instance
+
+The `quaso translate` command reads the same context files when it translates with no instance.
+See [Translate without an instance](translate-without-an-instance.md).
 
 ## Upload part of a project
 

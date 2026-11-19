@@ -291,7 +291,7 @@ function changedKeys(before: ProjectSettings, after: ProjectSettings): string[] 
 }
 
 // Schema parsing orders keys; that must not turn a no-op into a settings write.
-function orderedSettingsValue(value: unknown): unknown {
+export function orderedSettingsValue(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(orderedSettingsValue);
   if (value === null || typeof value !== "object") return value;
   return Object.fromEntries(

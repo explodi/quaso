@@ -422,3 +422,25 @@ test("apiKey only comes from QUASO_API_KEY; missing is exit code 3", async () =>
     expect(invalid.message.includes("qso")).toBe(false);
   }
 });
+
+test("parseConfig: settings take the instance's names, and unknown ones are refused", () => {
+  const valid = parseConfig(
+    text({ ...CONFIG, settings: { name: "Quest", llm: { model: "gemini-flash-latest" } } }),
+  );
+  expect(valid.problems).toStrictEqual([]);
+  const invalid = parseConfig(text({ ...CONFIG, settings: { llm: { modle: "x" } } }));
+  expect(invalid.problems.map((problem) => problem.key)).toStrictEqual(["settings.llm.modle"]);
+});
+
+test("parseConfig: settings.languages may only name the config's languages", () => {
+  const { problems } = parseConfig(
+    text({ ...CONFIG, settings: { languages: { fr: { instructions: "Tutoie." } } } }),
+  );
+  expect(problems).toStrictEqual([
+    {
+      file: "quaso.config.json",
+      key: "settings.languages.fr",
+      message: "fr must be a language in languages",
+    },
+  ]);
+});

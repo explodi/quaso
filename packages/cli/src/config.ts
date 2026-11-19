@@ -187,6 +187,11 @@ export function parseConfig(
       problem(key, `"${folder}" can't be a folder or file name: no /, \\, { or }, and not . or ..`);
     }
   }
+  for (const tag of Object.keys(config.settings?.languages ?? {})) {
+    if (!seen.has(canonical(tag))) {
+      problem(formatPath(["settings", "languages", tag]), `${tag} must be a language in languages`);
+    }
+  }
   const byFolder = new Map<string, string>();
   for (const [tag, folder] of languageFolders(config)) {
     const other = byFolder.get(folder.toLowerCase());
@@ -319,8 +324,15 @@ export function serverUrl(env: Env, project?: Project | null): string {
   if (fromConfig) return parseServerUrl(fromConfig, `hostname in ${CONFIG_FILE}`);
   throw usageError("Which Quaso instance? QUASO_HOSTNAME isn't set.", {
     code: "missing_hostname",
-    hint: "Set QUASO_HOSTNAME to the instance's hostname, such as translate.yourgame.com.",
+    hint:
+      "Set QUASO_HOSTNAME to the instance's hostname, such as translate.yourgame.com. " +
+      "Only quaso translate works without an instance.",
   });
+}
+
+/** Whether the environment or the config names an instance; without one, the CLI works alone. */
+export function hasInstance(env: Env, project: Project): boolean {
+  return Boolean(env.QUASO_HOSTNAME?.trim() || project.config.hostname?.trim());
 }
 
 /** Parses a hostname or a URL into a base URL without a trailing slash. */

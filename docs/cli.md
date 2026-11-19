@@ -71,6 +71,9 @@ goes to a server you chose, not to one a repository you cloned chose. Without a 
 The CLI never follows redirects, so your key only goes to the configured host. If the
 instance redirects (for example from `http://` to `https://`), the error says which address to use.
 
+The `quaso translate` command also works with no instance: see
+[Translate without an instance](translate-without-an-instance.md). Every other command needs one.
+
 ## The config file
 
 For source file rules, see [File formats](file-formats.md). The CLI reads `quaso.config.json` from the current folder, or from the nearest parent folder that
@@ -114,6 +117,7 @@ never writes outside it. `quaso init` writes a starter file.
 | `arguments`                | Arguments your game passes to its ICU messages that the English may not show, such as the gender of a post's author, so that translations can agree with them. Each has a `name`, its `cases` besides `other`, a `description`, and optional `files`, `keys` and `exclude` globs. Only with ICU MessageFormat. Optional. |
 | `outdated`                 | What `download` writes for translations of an older source: `"write"` (default), or `"omit"` so the app falls back to its source language.                                                                                                                                                                               |
 | `untranslated`             | What `download` writes for a string that isn't translated: `"source"` (the default), its source text, so every file has every key; or `"omit"`, nothing, for apps that fall back to the source language themselves (for example, i18next with `fallbackLng`). Optional.                                                  |
+| `settings`                 | Project settings kept in the repository. `upload` stores each one on the instance, and `translate` reads them when it runs without an instance. See [The `settings` field](#the-settings-field). Optional.                                                                                                               |
 
 **Globs** use `/` on every system: `*` matches within a folder, `**` matches any number of folders,
 `?` one character, `{a,b}` either alternative, and `[abc]`, `[a-z]` or `[!abc]` one character of a
@@ -178,6 +182,46 @@ The CLI checks the whole file before it does anything and lists every problem at
 place: `quaso.config.json:3:17: …` for JSON syntax, and
 `quaso.config.json › files[0].translation: must contain {lang}` for the rest.
 
+### The `settings` field
+
+The `settings` field holds project settings, so you review a change to them in a pull request. Each
+setting has the name and the values it has in the [settings API](api.md). Add the following field
+to the `quaso.config.json` file:
+
+```json
+"settings": {
+  "name": "Quaso Quest",
+  "description": "A cozy game about a cat who runs a bakery.",
+  "syntax": { "prefix": "{{", "suffix": "}}", "icu": false },
+  "llm": {
+    "model": "gemini-flash-latest",
+    "projectInstructions": "Keep the tone warm and playful.",
+    "context": { "glossary": true }
+  },
+  "languages": {
+    "de": { "instructions": "Address the player with du." }
+  }
+}
+```
+
+| Setting                   | Meaning                                                                                                                                                                                               |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`                    | The project's name. The LLM reads it.                                                                                                                                                                 |
+| `description`             | What the game or app is. The LLM reads it.                                                                                                                                                            |
+| `syntax`                  | The placeholder delimiters, and `icu` for ICU MessageFormat. Give `prefix` and `suffix` with it. See [File formats](file-formats.md#choose-your-message-format).                                      |
+| `logoUrl`, `links`        | The logo and the links the website shows.                                                                                                                                                             |
+| `languageRequestsEnabled` | Whether the website shows the board where people request languages.                                                                                                                                   |
+| `llm`                     | The settings of **Settings → AI translation**, such as `model`, `projectInstructions`, `promptTemplate`, `autoTranslate`, `batchSize` and `context`. Give only the ones you want to keep in the file. |
+| `languages`               | By language tag: `instructions` for the LLM, and `pluralOverride`. Each tag must be in `languages`.                                                                                                   |
+
+**The config file wins.** Each `quaso upload` stores every setting the file gives, over a value
+someone set on the website. A setting the file leaves out stays as it is on the instance, and you
+can still change it there. Inside `llm` and `llm.context`, each setting counts on its own. An
+upload with `--file` leaves the settings alone.
+
+The email, backup and file history settings belong to the server, so they stay in **Settings**.
+Provider API keys never go in this file.
+
 ## Commands
 
 ### `quaso init`
@@ -233,6 +277,7 @@ path preserves translations and history. Download and import still use the ident
 | `--rename <old=new>`                   | Move a key's translations and history to its new name: `old=new`, or `file:old=new` when the key isn't unique. A key with `=` in it is written as a JSON string: `"x = y"=equation`. Repeatable.                                                                                         |
 | `--import-translations <lang[:state]>` | Import selected local translation files after upload. State: `blue` (default) or `green`. Repeatable, or a comma list. Existing blue values stay unless the language is in `translationsInRepository`.                                                                                   |
 | `--wait`                               | Wait for the automatic translation job the upload queues, if any, as [`quaso translate`](#quaso-translate) does: progress on stderr, then the strings that failed, with exit code 6.                                                                                                     |
+| `--yes`                                | Do not ask before the upload replaces settings and contexts that someone set on the website.                                                                                                                                                                                             |
 
 When a removed key and an added key have the same source text, the output suggests a rename and prints
 the exact command, quoted for the shell:
@@ -242,6 +287,13 @@ Possible renames (a removed key and an added key with the same English):
   src/locales/en/common.json › saved → gameSaved
     quaso upload --rename common.json:saved=gameSaved
 ```
+
+The upload also sends [the `settings` field](#the-settings-field) and the
+[context files](context-files.md), and its output lists each setting and context it changed. In a
+terminal, the command first lists the settings it would replace on the instance, and the contexts
+that someone edited on the website, and asks whether to go on. Answer `y` to upload; any other
+answer saves nothing and ends with exit code 2. The command does not ask in CI, through a pipe,
+with `--json`, with `--dry-run` or with `--yes`.
 
 Uploading unchanged source files preserves their revision. A JSON file that has invalid syntax or a duplicate
 key, stops the upload with exit code 5 and its place:
@@ -357,6 +409,7 @@ Strings that stayed untranslated (1):
 | `--instruction <text>` | An instruction for this run, such as `"Address the player informally"`. It is added to the prompt for this run.        |
 | `--model <name>`       | The model for this run, instead of the instance's, such as `gemini-2.5-pro`.                                           |
 | `--no-wait`            | Start the job and exit. The instance runs it; `quaso status` shows the result.                                         |
+| `--local`              | Translate without an instance, even when the config or the environment names one. See the end of this section.         |
 | `--dry-run`            | Count the strings and words, and estimate the requests and tokens, without translating anything (see below).           |
 
 By default, the command checks job progress every two seconds and prints it to stderr. It exits
@@ -378,6 +431,13 @@ Of these: 78 untranslated, 6 outdated to update.
 The estimate counts characters / 4 of each request's prompt and the expected answer; thinking models
 use more, and retries add some. An instance without an LLM (no Gemini or Anthropic key in its Settings) answers with exit
 code 4 and says so. An API key needs the `upload` scope and a creator who can translate the selected languages.
+
+**Without an instance.** When neither the `QUASO_HOSTNAME` variable nor the config's `hostname`
+names an instance, or with `--local`, the command translates by itself. It reads the config's
+`settings` and the context files, asks the LLM with the key in the `GEMINI_API_KEY` or
+`ANTHROPIC_API_KEY` variable, and writes the translation files and the `quaso.lock.json` file.
+It needs Node.js 22.13 or later, exits with code 3 when neither key is set, and refuses
+`--no-wait`. See [Translate without an instance](translate-without-an-instance.md).
 
 ### `quaso status`
 

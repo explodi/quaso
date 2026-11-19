@@ -7,6 +7,17 @@ Release candidates are for deployment and migration testing. The team decides wh
 
 ### Added
 
+- Translate without an instance: with no `QUASO_HOSTNAME` and no `hostname` in the config, or with
+  `--local`, `quaso translate` runs the instance's translation code in the CLI, with the key in
+  `GEMINI_API_KEY` or `ANTHROPIC_API_KEY`, and writes the translation files. `quaso.lock.json`
+  records the source text each translation was made for, so a later run translates only new and
+  changed strings. It needs Node 22.13 or later. The CLI bundle now includes `@quaso/service`.
+- Settings in the config file: `settings` in `quaso.config.json` holds the project's name,
+  description, syntax, LLM settings and each language's instructions and plural override. A full
+  `quaso upload` stores each one given over the instance's value and lists what changed; an
+  `upload`-scope key can therefore change them. In a terminal, the upload first asks before it
+  replaces settings, or contexts edited on the website; `--yes` skips the question. An earlier
+  instance refuses an upload with `settings`: update the instance first.
 - Context files: `quaso upload` reads `context.quaso` and `<file>.quaso` next to the source files
   and stores them as folder and file context. A changed file always wins, and an unchanged file
   never overwrites an edit made in **Settings**; the CLI warns about both. **Settings → Files &

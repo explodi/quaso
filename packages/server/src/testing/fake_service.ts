@@ -181,6 +181,7 @@ export class FakeService implements ServiceApi {
       restored: [],
       renamed: [],
       contexts: [],
+      settings: [],
       renameSuggestions: [],
       hiddenFiles: [],
       languagesAdded: [],

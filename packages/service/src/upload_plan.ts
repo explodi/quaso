@@ -36,6 +36,7 @@ import { planUploadArguments } from "./upload_arguments.ts";
 import { planUploadContexts } from "./upload_contexts.ts";
 import { planUploadLimits } from "./upload_limits.ts";
 import { readUploadFiles } from "./upload_parse.ts";
+import { planUploadLanguages, planUploadSettings } from "./upload_settings.ts";
 import { type RenameCandidate, suggestUploadRenames } from "./upload_renames.ts";
 import type { UploadSnapshot, UploadSourceRow } from "./upload_snapshot.ts";
 
@@ -50,7 +51,10 @@ export function planUpload(
   at: number,
   llmAvailable: boolean,
 ): { statements: Statement[]; result: UploadResult } {
-  const parsed = readUploadFiles(request, snapshot.settings);
+  const settingsPlan = planUploadSettings(snapshot.settings, request);
+  let settings = settingsPlan.settings;
+  // With the settings the upload brings: the syntax decides how the files are read.
+  const parsed = readUploadFiles(request, settings);
   const statements: Statement[] = [];
   const history: HistoryRecord[] = [];
   const files = new Map(snapshot.files.map((row) => [row.path, { ...row }]));
@@ -66,7 +70,6 @@ export function planUpload(
   const humanHistory = snapshot.humanHistory.map((row) => ({ ...row }));
   const previousRenames = snapshot.renames.map((row) => ({ ...row }));
   const nextIds = { ...snapshot.nextIds };
-  let settings = snapshot.settings;
   let languages = [...snapshot.languages];
   const added: Touched[] = [];
   const changed: Touched[] = [];
@@ -87,6 +90,7 @@ export function planUpload(
     hiddenFiles: [],
     languagesAdded: [],
     contexts: [],
+    settings: [],
     warnings: [],
     job: null,
     revision,
@@ -125,15 +129,15 @@ export function planUpload(
           `The source language is ${settings.sourceLanguage} on the server, but the upload says ${tag}.`,
         );
       settings = { ...settings, sourceLanguage: tag };
-      statements.push(
-        {
-          sql: "INSERT INTO settings (id, data) VALUES (1, ?) ON CONFLICT (id) DO UPDATE SET data = excluded.data",
-          params: [toJson(settings)],
-        },
-        { sql: "DELETE FROM languages WHERE tag = ?", params: [tag] },
-      );
+      statements.push({ sql: "DELETE FROM languages WHERE tag = ?", params: [tag] });
       languages = languages.filter((language) => language.tag !== tag);
     }
+  }
+  if (settings !== snapshot.settings) {
+    statements.push({
+      sql: "INSERT INTO settings (id, data) VALUES (1, ?) ON CONFLICT (id) DO UPDATE SET data = excluded.data",
+      params: [toJson(settings)],
+    });
   }
   const knownLanguages = new Set(languages.map((language) => language.tag));
   for (const requested of request.languages ?? []) {
@@ -151,6 +155,10 @@ export function planUpload(
         `The server's runtime has no plural rules for ${tag}; set a plural override for it in the settings`,
       );
   }
+  const languagePlan = planUploadLanguages(languages, request.settings?.languages);
+  languages = languagePlan.languages;
+  statements.push(...languagePlan.statements);
+  result.settings = [...settingsPlan.changed, ...languagePlan.changed];
   for (const file of parsed) {
     const longDocument = file.entries.find(
       (entry) => isDocumentKey(entry.key) && entry.words > MAX_DOCUMENT_WORDS,
@@ -499,6 +507,10 @@ export function planUpload(
       recheck.add(source.id);
     }
   }
+  // A new syntax or plural override changes what every translation is checked against.
+  const checksChanged =
+    settingsPlan.changed.some((path) => path.startsWith("syntax.")) || languagePlan.pluralsChanged;
+  if (checksChanged) for (const id of strings.keys()) recheck.add(id);
   const facts: CheckFacts = {
     sourceLanguage: settings.sourceLanguage,
     syntax: settings.syntax,
@@ -581,6 +593,11 @@ export function planUpload(
       `${result.contexts.length} context${result.contexts.length === 1 ? "" : "s"} updated`,
     );
   }
+  if (result.settings.length > 0) {
+    parts.push(
+      `${result.settings.length} setting${result.settings.length === 1 ? "" : "s"} updated`,
+    );
+  }
   const summary =
     parts.length === 0 ? "Upload: no changes to strings" : `Upload: ${parts.join(", ")}`;
   const detail = {
@@ -596,6 +613,7 @@ export function planUpload(
     hiddenFiles: result.hiddenFiles,
     languagesAdded: result.languagesAdded,
     contexts: result.contexts,
+    settings: result.settings,
   };
   statements.push({
     sql: `INSERT INTO activity (type, actor_type, actor_id, actor_label, summary, detail, created_at)

@@ -9,6 +9,7 @@ import { apiKey, loadProject, type Project, serverUrl } from "./config.ts";
 import { CliError, type ExitCode, type Problem } from "./errors.ts";
 import { collectSources, type Sources } from "./files.ts";
 import { ApiClient } from "./http.ts";
+import type { ProviderFactory } from "./local.ts";
 import type { Env, Output } from "./output.ts";
 
 /** What a command returns: its exit code, its `--json` result, and its text for stdout. */
@@ -40,7 +41,12 @@ export interface ContextOptions {
   sleep?: (ms: number) => Promise<void>;
   /** Default: true. See `ClientOptions.waitWhileAsleep`. */
   waitWhileAsleep?: boolean;
+  confirm?: Confirm | null;
+  llmProvider?: ProviderFactory;
 }
+
+/** Asks a yes-or-no question and resolves to whether the answer was yes. */
+export type Confirm = (question: string) => Promise<boolean>;
 
 export class Context {
   readonly args: ParsedArgs;
@@ -48,6 +54,10 @@ export class Context {
   readonly cwd: string;
   readonly env: Env;
   readonly out: Output;
+  /** Asks the person at the terminal; null when there is none to ask (CI, pipes, `--json`). */
+  readonly confirm: Confirm | null;
+  /** Replaces the LLM providers of a translation without an instance, for tests. */
+  readonly llmProvider?: ProviderFactory;
   readonly #fetch?: Fetch;
   readonly #sleep?: (ms: number) => Promise<void>;
   readonly #waitWhileAsleep: boolean;
@@ -59,6 +69,8 @@ export class Context {
     this.cwd = options.cwd;
     this.env = options.env;
     this.out = options.out;
+    this.confirm = options.confirm ?? null;
+    this.llmProvider = options.llmProvider;
     this.#fetch = options.fetch;
     this.#sleep = options.sleep;
     this.#waitWhileAsleep = options.waitWhileAsleep ?? true;

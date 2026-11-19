@@ -11,7 +11,6 @@ import type { CheckResult } from "./checks.ts";
 import {
   ArgumentDeclarations,
   ContextFolderPath,
-  LanguageTag,
   LengthLimit,
   MAX_LENGTH_LIMIT,
   PluralExclusion,
@@ -20,6 +19,7 @@ import {
 import { formatForPath } from "./documents.ts";
 import type { PluralOverride } from "./plurals.ts";
 import { type Infer, s } from "./schema.ts";
+import { LanguageTag, type ProjectSettings, RepositorySettings } from "./settings.ts";
 import {
   type AuthorType,
   type Colour,
@@ -491,6 +491,9 @@ export const UploadRequest = s.object({
   limits: s.array(LengthLimit).optional(),
   pluralExclusions: s.array(PluralExclusion).optional(),
   arguments: ArgumentDeclarations.optional(),
+  settings: RepositorySettings.optional().describe(
+    "The config's settings: the instance stores each one given, over its own. Not with partial",
+  ),
 });
 export type UploadRequest = Infer<typeof UploadRequest>;
 
@@ -510,6 +513,8 @@ export interface UploadContextChange {
   target: "file" | "folder";
   path: string;
   change: "set" | "cleared";
+  /** The context file replaced a different text that someone wrote on the website. */
+  overwritesEdit?: true;
 }
 
 export interface UploadResult {
@@ -529,6 +534,11 @@ export interface UploadResult {
   languagesAdded: string[];
   /** The file and folder contexts this upload set or cleared from context files. */
   contexts: UploadContextChange[];
+  /**
+   * The settings this upload changed from the config's `settings`, as paths such as
+   * `llm.model` or `languages.de.instructions`.
+   */
+  settings: string[];
   /** Things to know that didn't stop the upload, such as a limit for a key that doesn't exist. */
   warnings: string[];
   /** The automatic translation job this upload queued (LLM-3), if any. */
@@ -1126,15 +1136,6 @@ export const PROMPT_PLACEHOLDERS = [
   "%customInstruction%",
 ] as const;
 
-export const MeaningCheckSettings = s.object({
-  enabled: s.boolean(),
-  colours: s.enum(["blue", "all"]),
-  onSave: s.boolean(),
-  onApproval: s.boolean(),
-  model: s.string({ maxLength: 200 }),
-  countsAgainstBudget: s.boolean(),
-});
-export type MeaningCheckSettings = Infer<typeof MeaningCheckSettings>;
 export const QualityJobRequest = s.object({
   kind: s.enum(["meaning", "terminology", "style_guide"]),
   minimumFrequency: s.integer({ min: 2, max: 1000 }).optional(),
@@ -1204,136 +1205,12 @@ export const ReviewTerminologyRequest = s.object({
   translation: s.string({ maxLength: 1000 }).optional(),
 });
 export type ReviewTerminologyRequest = Infer<typeof ReviewTerminologyRequest>;
-export const LlmSettings = s.object({
-  meaningCheck: MeaningCheckSettings.optional(),
-  translationMemory: s
-    .boolean()
-    .optional()
-    .describe("Copy current translations of identical sources as green before asking the model"),
-  autoTranslate: s.boolean().describe("Translate new and changed strings on upload (LLM-3)"),
-  updateOutdated: s
-    .boolean()
-    .describe("On upload, update outdated translations too, proofread ones included"),
-  model: s.string({ minLength: 1, maxLength: 200 }),
-  suggestionModel: s
-    .string({ maxLength: 200 })
-    .describe("The model for the editor's LLM suggestions; blank uses the model above"),
-  concurrency: s.integer({ min: 1, max: 64 }),
-  monthlyTokenBudget: s.integer({ min: 1, max: Number.MAX_SAFE_INTEGER }).nullable(),
-  promptTemplate: s.string({ minLength: 1, maxLength: 50_000 }),
-  projectInstructions: s.string({ maxLength: 20_000 }),
-  context: s.object({
-    otherLanguages: s
-      .array(LanguageTag)
-      .describe("Languages whose translations of the same strings go into the prompt"),
-    identicalStrings: s
-      .boolean()
-      .describe(
-        "Current proofread and green translations of identical source strings elsewhere in the project",
-      ),
-    fileContext: s.boolean().describe("The file's context, written or generated"),
-    glossary: s.boolean(),
-  }),
-  batchSize: s.integer({ min: 1, max: 100 }),
-  neighbours: s.integer({ min: 0, max: 20 }),
-  retries: s.integer({ min: 0, max: 5 }),
-  safety: s.enum(["permissive", "default", "strict"]),
-});
-export type LlmSettings = Infer<typeof LlmSettings>;
-
-export const EmailSettings = s.object({
-  provider: s.enum(["none", "resend", "postmark", "cloudflare"]),
-  from: s.refine(s.string({ maxLength: 320 }), (value) =>
-    value === "" ||
-    /^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$|^[^<>\r\n]+ <[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+>$/.test(value)
-      ? undefined
-      : "must be a sender address, such as Quaso <quaso@example.com>",
-  ),
-  accountId: s.refine(s.string({ maxLength: 32 }), (value) =>
-    value === "" || /^[a-f0-9]{32}$/i.test(value)
-      ? undefined
-      : "must be a 32-character Cloudflare account ID",
-  ),
-});
-export type EmailSettings = Infer<typeof EmailSettings>;
 export const TestEmailRequest = s.object({ to: Email });
 export type TestEmailRequest = Infer<typeof TestEmailRequest>;
 export interface EmailTestResult {
   ok: true;
   keyUpdatedAt: number;
 }
-
-export const ProjectSettings = s.object({
-  name: s.string({ minLength: 1, maxLength: 120 }),
-  description: s.string({ maxLength: 20_000 }),
-  sourceLanguage: LanguageTag,
-  syntax: s.object({
-    prefix: s.string({ minLength: 1, maxLength: 10 }),
-    suffix: s.string({ minLength: 1, maxLength: 10 }),
-    extra: s
-      .array(
-        s.object({
-          prefix: s.string({ minLength: 1, maxLength: 10 }),
-          suffix: s.string({ minLength: 1, maxLength: 10 }),
-        }),
-        { maxItems: 10 },
-      )
-      .optional()
-      .describe("Delimiters of placeholders the app fills in itself, such as { and } for {name}"),
-    optional: s
-      .array(
-        s.object({
-          placeholder: s.string({ minLength: 1, maxLength: 100 }),
-          languages: s.array(LanguageTag, { minItems: 1, maxItems: 200 }),
-        }),
-        { maxItems: 50 },
-      )
-      .optional()
-      .describe("Placeholders some languages may leave out, such as {article}"),
-    icu: s
-      .boolean()
-      .optional()
-      .describe(
-        "ICU MessageFormat ({name}, {n, plural, …}) instead of i18next's {{name}} and $t()",
-      ),
-  }),
-  logoUrl: s.string({ maxLength: 2000 }).nullable(),
-  links: s.array(
-    s.object({
-      label: s.string({ minLength: 1, maxLength: 80 }),
-      url: s.string({ maxLength: 2000 }),
-    }),
-    { maxItems: 20 },
-  ),
-  llm: LlmSettings,
-  languageRequestsEnabled: s.boolean(),
-  fileHistoryDays: s.integer({ min: 0, max: 36500 }),
-  backupRetentionDays: s.integer({ min: 1, max: 36500 }),
-  email: EmailSettings,
-});
-export type ProjectSettings = Infer<typeof ProjectSettings>;
-
-/** `PATCH /settings`: any top-level field; `llm` and `llm.context` merge. */
-export const UpdateSettingsRequest = s.object({
-  name: ProjectSettings.shape.name.optional(),
-  description: ProjectSettings.shape.description.optional(),
-  sourceLanguage: LanguageTag.optional(),
-  syntax: ProjectSettings.shape.syntax.optional(),
-  logoUrl: ProjectSettings.shape.logoUrl.optional(),
-  links: ProjectSettings.shape.links.optional(),
-  languageRequestsEnabled: ProjectSettings.shape.languageRequestsEnabled.optional(),
-  fileHistoryDays: ProjectSettings.shape.fileHistoryDays.optional(),
-  backupRetentionDays: ProjectSettings.shape.backupRetentionDays.optional(),
-  email: EmailSettings.optional(),
-  llm: s
-    .object({
-      ...LlmSettings.shape,
-      context: LlmSettings.shape.context.partial(),
-    })
-    .partial()
-    .optional(),
-});
-export type UpdateSettingsRequest = Infer<typeof UpdateSettingsRequest>;
 
 /** Provider credentials are writable; only their status is readable. */
 export const ManagedSecretName = s.enum(["gemini_api_key", "anthropic_api_key", "email_api_key"]);
@@ -1399,21 +1276,9 @@ export interface LanguageSettings {
   categories: { cardinal: PluralCategory[]; ordinal: PluralCategory[] };
 }
 
-export const PluralOverrideSchema = s.object({
-  cardinal: s.array(s.enum(PLURAL_CATEGORIES), { unique: true }).optional(),
-  ordinal: s.array(s.enum(PLURAL_CATEGORIES), { unique: true }).optional(),
-});
-
 /** `POST /languages` */
 export const AddLanguageRequest = s.object({ tag: LanguageTag });
 export type AddLanguageRequest = Infer<typeof AddLanguageRequest>;
-
-/** `PATCH /languages/{tag}` */
-export const UpdateLanguageRequest = s.object({
-  instructions: s.string({ maxLength: 20_000 }).optional(),
-  pluralOverride: PluralOverrideSchema.nullable().optional(),
-});
-export type UpdateLanguageRequest = Infer<typeof UpdateLanguageRequest>;
 
 /** `PATCH /files/{id}` */
 export const UpdateFileRequest = s.object({

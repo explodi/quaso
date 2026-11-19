@@ -4,6 +4,7 @@
   "exports": {
     ".": "./mod.ts",
     "./node-sqlite": "./src/adapters/node_sqlite.ts",
+    "./node-sqlite-database": "./src/adapters/node_sqlite_database.ts",
     "./sql-cases": "./src/testing/sql_cases.ts",
     "./node-async-sqlite": "./src/adapters/node_async_sqlite.ts",
     "./batch-sql-cases": "./src/testing/batch_sql_cases.ts"

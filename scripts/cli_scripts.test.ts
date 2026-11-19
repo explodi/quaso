@@ -27,6 +27,10 @@ test("checkBundle refuses code that could start a process, and imports that aren
   expect(checkBundle('const m = require("os");')).toStrictEqual(['imports "os"']);
 });
 
+test("checkBundle doesn't take a method named require for an import", () => {
+  expect(checkBundle('permissions.require("upload");')).toStrictEqual([]);
+});
+
 test("packageJson: one bin, no dependencies, Node 22, the repository when known", () => {
   const pkg = packageJson("@acme/quaso-cli", "1.2.3");
   expect(pkg.name).toBe("@acme/quaso-cli");

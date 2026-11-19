@@ -14,6 +14,7 @@ import {
   type ImportResult,
   type JobInfo,
   type Rename,
+  type UploadContextChange,
   type UploadRequest,
   type UploadResult,
 } from "@quaso/core";
@@ -45,6 +46,9 @@ export const upload: Command = {
       "with the config's languages (the instance adds those it lacks), length limits and " +
       "plural exclusions. Files missing from a full upload are hidden on the instance, never " +
       "deleted; with --file, only the files named are compared.",
+    "The config's settings and the context files go with the files: the instance stores each " +
+      "setting the config gives, over the value set on the website. In a terminal, the CLI " +
+      "first lists what the upload would replace there and asks; --yes skips the question.",
     "When a removed key and an added key have the same English, the output suggests a " +
       "rename and prints the command that moves the translations and their history.",
     "When the instance translates new and changed strings automatically, the upload queues " +
@@ -88,6 +92,13 @@ export const upload: Command = {
         "Wait for the automatic translation job the upload queues, if any, and " +
         "list the strings that failed (exit code 6)",
     },
+    {
+      name: "yes",
+      type: "boolean",
+      description:
+        "Don't ask before replacing settings and contexts set on the website; " +
+        "the CLI only asks in a terminal",
+    },
   ],
   exitCodes: [0, 1, 2, 3, 4, 5, 6],
   examples: [
@@ -129,7 +140,11 @@ export const upload: Command = {
         importLanguages.set(language, { as: colour as "blue" | "green", overwrite: false });
     }
     const request = uploadRequest(project, files);
-    if (named.length > 0) request.partial = true;
+    if (named.length > 0) {
+      request.partial = true;
+      // The instance takes settings from a full upload only: see `planUploadSettings`.
+      delete request.settings;
+    }
     // Sent even when empty: it tells the instance that a context file missing here was deleted.
     request.folderContexts =
       named.length > 0 ? [] : await readFolderContexts(project, sources.files);
@@ -141,15 +156,27 @@ export const upload: Command = {
         dryRun ? "with" : "to"
       } ${client.baseUrl}…`,
     );
-    let result: UploadResult;
-    try {
-      result = await client.post<UploadResult>("/sources", request, {
-        timeoutMs: LONG_TIMEOUT_MS,
-        retry: dryRun ? "safe" : renames.length > 0 ? "once" : "idempotent",
-      });
-    } catch (error) {
-      throw uploadError(error, project, sources);
+    const send = async (body: UploadRequest, retry: "safe" | "once" | "idempotent") => {
+      try {
+        const answer = await client.post<UploadResult>("/sources", body, {
+          timeoutMs: LONG_TIMEOUT_MS,
+          retry,
+        });
+        // An instance from before settings came with uploads reports none.
+        return { ...answer, settings: answer.settings ?? [] };
+      } catch (error) {
+        throw uploadError(error, project, sources);
+      }
+    };
+    const asks = ctx.confirm !== null && !dryRun && !flag(ctx.args, "yes");
+    if (asks && mayOverwrite(request)) {
+      const preview = await send({ ...request, dryRun: true }, "safe");
+      await confirmOverwrites(ctx, preview, sources, client.baseUrl);
     }
+    const result = await send(
+      request,
+      dryRun ? "safe" : renames.length > 0 ? "once" : "idempotent",
+    );
     const localTranslations = localTranslationReport(repository, result);
     const imports: (
       | ImportResult
@@ -236,6 +263,41 @@ export const upload: Command = {
   },
 };
 
+/** Whether the upload carries anything that can replace what someone set on the website. */
+function mayOverwrite(request: UploadRequest): boolean {
+  const hasFileContext = request.files.some((file) => file.context !== undefined);
+  const hasFolderContext = (request.folderContexts ?? []).length > 0;
+  return request.settings !== undefined || hasFileContext || hasFolderContext;
+}
+
+/**
+ * Lists the settings and website-edited contexts the upload would replace, from its dry run,
+ * and asks whether to go on. Throws when the answer is no; returns at once when the upload
+ * replaces nothing.
+ */
+async function confirmOverwrites(
+  ctx: Context,
+  preview: UploadResult,
+  sources: Sources,
+  server: string,
+): Promise<void> {
+  const contexts = preview.contexts.filter((context) => context.overwritesEdit === true);
+  if (preview.settings.length === 0 && contexts.length === 0) return;
+  if (preview.settings.length > 0) {
+    ctx.out.info(`Settings this upload replaces on ${server}: ${preview.settings.join(", ")}`);
+  }
+  if (contexts.length > 0) {
+    const names = contexts.map((context) => contextName(context, sources));
+    ctx.out.info(`Contexts edited on the website that it replaces: ${names.join(", ")}`);
+  }
+  const confirmed = await ctx.confirm!("Replace them with the repository's?");
+  if (confirmed) return;
+  throw usageError("Upload cancelled: nothing was saved.", {
+    code: "cancelled",
+    hint: "To keep a value set on the website, copy it into the repository, or remove it there.",
+  });
+}
+
 /**
  * The source files as an upload sends them: each with its server path and, for JSON, its
  * `.descriptions.json` sidecar. Files that aren't valid UTF-8 are reported together.
@@ -297,7 +359,7 @@ async function readContextFile(project: Project, path: string): Promise<string |
 }
 
 /** The context files of the folders that hold these source files. */
-async function readFolderContexts(
+export async function readFolderContexts(
   project: Project,
   files: SourceFile[],
 ): Promise<NonNullable<UploadRequest["folderContexts"]>> {
@@ -317,7 +379,7 @@ async function readFolderContexts(
   return [...byFolder].map(([path, { context }]) => ({ path, context }));
 }
 
-/** A full upload of these files, with the config's languages, limits and exclusions. */
+/** A full upload of these files, with the config's languages, limits, exclusions and settings. */
 export function uploadRequest(project: Project, files: UploadRequest["files"]): UploadRequest {
   const { config } = project;
   const request: UploadRequest = {
@@ -329,6 +391,7 @@ export function uploadRequest(project: Project, files: UploadRequest["files"]): 
   if (config.pluralExclusions) request.pluralExclusions = config.pluralExclusions;
   if (config.arguments) request.arguments = config.arguments;
   if (config.descriptionSuffix) request.descriptionSuffix = config.descriptionSuffix;
+  if (config.settings) request.settings = config.settings;
   return request;
 }
 
@@ -490,6 +553,12 @@ function localOf(sources: Sources, file: string): string {
   return sources.byServer.get(file)?.local ?? file;
 }
 
+/** What a context describes, for people: a local file, a folder, or all files. */
+function contextName(context: UploadContextChange, sources: Sources): string {
+  if (context.target === "file") return localOf(sources, context.path);
+  return context.path === "" ? "all files" : `folder ${context.path}`;
+}
+
 function uploadJson(result: UploadResult, sources: Sources) {
   return {
     ...result,
@@ -575,11 +644,14 @@ function renderUpload(out: Output, result: UploadResult, sources: Sources, wait:
   if (result.contexts.length > 0) {
     out.print();
     out.print(bold(`Context from context files (${result.contexts.length}):`));
-    for (const { target, path, change } of result.contexts) {
-      const name =
-        target === "file" ? localOf(sources, path) : path === "" ? "all files" : `folder ${path}`;
-      out.print(`  ${name}: ${change}`);
+    for (const context of result.contexts) {
+      out.print(`  ${contextName(context, sources)}: ${context.change}`);
     }
+  }
+  if (result.settings.length > 0) {
+    out.print();
+    out.print(bold(`Settings from the config (${result.settings.length}):`));
+    for (const setting of result.settings) out.print(`  ${setting}`);
   }
   if (result.renameSuggestions.length > 0) {
     out.print();
@@ -605,6 +677,7 @@ function renderUpload(out: Output, result: UploadResult, sources: Sources, wait:
       result.hiddenFiles.length > 0 ||
       result.languagesAdded.length > 0 ||
       result.contexts.length > 0 ||
+      result.settings.length > 0 ||
       result.renamed.length > 0;
     out.print(
       changes
