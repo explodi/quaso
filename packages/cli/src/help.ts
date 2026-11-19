@@ -33,6 +33,13 @@ export function generalHelp(commands: readonly Command[]): string {
       "  ",
     ),
     "",
+    "Without an instance:",
+    ...wrap(
+      "quaso translate needs no instance: with GEMINI_API_KEY or ANTHROPIC_API_KEY set, and " +
+        "no QUASO_HOSTNAME, it asks the LLM itself and writes the translation files.",
+      "  ",
+    ),
+    "",
     "Exit codes:",
     ...exitCodeLines(EXIT_CODES.map((entry) => entry.code)),
     "",
@@ -117,6 +124,8 @@ export function helpJson(commands: readonly Command[], only?: Command) {
       QUASO_HOSTNAME:
         "The instance: a hostname (https is assumed) or a full URL; required with an API key",
       QUASO_API_KEY: "An API key of the instance (read or upload scope)",
+      GEMINI_API_KEY: "A Google Gemini API key, for quaso translate without an instance",
+      ANTHROPIC_API_KEY: "An Anthropic API key, for quaso translate without an instance",
       NO_COLOR: "Any value turns colours off",
     },
     exitCodes: EXIT_CODES,

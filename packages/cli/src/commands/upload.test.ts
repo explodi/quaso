@@ -23,6 +23,7 @@ function result(overrides: Partial<UploadResult> = {}): UploadResult {
     hiddenFiles: [],
     languagesAdded: [],
     contexts: [],
+    settings: [],
     warnings: [],
     job: null,
     revision: 3,
@@ -709,4 +710,117 @@ test("upload sends a guarded descriptions sidecar as metadata and leaves both re
       ).toStrictEqual(sidecar);
     },
   );
+});
+
+const SETTINGS = { name: "Quaso Quest", llm: { projectInstructions: "Keep it playful." } };
+const PROJECT_WITH_SETTINGS = {
+  ...PROJECT,
+  "quaso.config.json": { ...CONFIG, settings: SETTINGS },
+};
+
+test("upload sends the config's settings and lists those the instance changed", async () => {
+  await withProject(PROJECT_WITH_SETTINGS, async (dir) => {
+    const fetch = fakeFetch(() => jsonResponse(result({ settings: ["name"] })));
+    const run = await runCli(["upload"], { cwd: dir, env: ENV, fetch });
+    expect(run.code, run.stderr).toBe(0);
+    const body: UploadRequest = await fetch.requests[0].json();
+    expect(body.settings).toStrictEqual(SETTINGS);
+    expect(run.stdout).toContain("Settings from the config (1):\n  name");
+  });
+});
+
+test("upload --file leaves the settings out", async () => {
+  await withProject(PROJECT_WITH_SETTINGS, async (dir) => {
+    const fetch = fakeFetch(() => jsonResponse(result()));
+    const run = await runCli(["upload", "--file", "common.json"], { cwd: dir, env: ENV, fetch });
+    expect(run.code, run.stderr).toBe(0);
+    const body: UploadRequest = await fetch.requests[0].json();
+    expect(body.settings).toBe(undefined);
+  });
+});
+
+test("an instance from before settings came with uploads still answers an upload", async () => {
+  await withProject(PROJECT, async (dir) => {
+    const { settings: _settings, ...older } = result();
+    const fetch = fakeFetch(() => jsonResponse(older));
+    const run = await runCli(["upload"], { cwd: dir, env: ENV, fetch });
+    expect(run.code, run.stderr).toBe(0);
+  });
+});
+
+test("in a terminal, upload asks before it replaces settings, and uploads on yes", async () => {
+  await withProject(PROJECT_WITH_SETTINGS, async (dir) => {
+    const fetch = fakeFetch(() => jsonResponse(result({ settings: ["name"] })));
+    const questions: string[] = [];
+    const confirm = (question: string) => {
+      questions.push(question);
+      return Promise.resolve(true);
+    };
+    const run = await runCli(["upload"], { cwd: dir, env: ENV, fetch, confirm });
+    expect(run.code, run.stderr).toBe(0);
+    expect(run.stderr).toContain("Settings this upload replaces on https://quaso.test: name");
+    expect(questions).toStrictEqual(["Replace them with the repository's?"]);
+    const bodies: UploadRequest[] = await Promise.all(
+      fetch.requests.map((request) => request.json()),
+    );
+    expect(bodies.map((body) => body.dryRun)).toStrictEqual([true, undefined]);
+  });
+});
+
+test("answering no cancels the upload before anything is saved", async () => {
+  await withProject(PROJECT_WITH_SETTINGS, async (dir) => {
+    const fetch = fakeFetch(() => jsonResponse(result({ settings: ["name"] })));
+    const confirm = () => Promise.resolve(false);
+    const run = await runCli(["upload"], { cwd: dir, env: ENV, fetch, confirm });
+    expect(run.code).toBe(2);
+    expect(run.stderr).toContain("Upload cancelled: nothing was saved.");
+    expect(fetch.requests.length).toBe(1);
+  });
+});
+
+test("upload asks before a context file replaces an edit made on the website", async () => {
+  await withProject(
+    { ...PROJECT, "src/locales/en/common.json.quaso": "Main menu.\n" },
+    async (dir) => {
+      const contexts: UploadResult["contexts"] = [
+        { target: "file", path: "common.json", change: "set", overwritesEdit: true },
+      ];
+      const fetch = fakeFetch(() => jsonResponse(result({ contexts })));
+      const confirm = () => Promise.resolve(false);
+      const run = await runCli(["upload"], { cwd: dir, env: ENV, fetch, confirm });
+      expect(run.code).toBe(2);
+      expect(run.stderr).toContain(
+        "Contexts edited on the website that it replaces: src/locales/en/common.json",
+      );
+    },
+  );
+});
+
+test("upload doesn't ask when it would replace nothing", async () => {
+  await withProject(PROJECT_WITH_SETTINGS, async (dir) => {
+    const fetch = fakeFetch(() => jsonResponse(result()));
+    const confirm = () => Promise.reject(new Error("asked"));
+    const run = await runCli(["upload"], { cwd: dir, env: ENV, fetch, confirm });
+    expect(run.code, run.stderr).toBe(0);
+  });
+});
+
+test("upload --yes replaces without asking", async () => {
+  await withProject(PROJECT_WITH_SETTINGS, async (dir) => {
+    const fetch = fakeFetch(() => jsonResponse(result({ settings: ["name"] })));
+    const confirm = () => Promise.reject(new Error("asked"));
+    const run = await runCli(["upload", "--yes"], { cwd: dir, env: ENV, fetch, confirm });
+    expect(run.code, run.stderr).toBe(0);
+    expect(fetch.requests.length).toBe(1);
+  });
+});
+
+test("upload --json never asks", async () => {
+  await withProject(PROJECT_WITH_SETTINGS, async (dir) => {
+    const fetch = fakeFetch(() => jsonResponse(result({ settings: ["name"] })));
+    const confirm = () => Promise.reject(new Error("asked"));
+    const run = await runCli(["upload", "--json"], { cwd: dir, env: ENV, fetch, confirm });
+    expect(run.code, run.stderr).toBe(0);
+    expect(fetch.requests.length).toBe(1);
+  });
 });

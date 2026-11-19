@@ -12,6 +12,7 @@ import { formatForPath, isValidLanguageTag, globBase, globToRegExp } from "@quas
 import { canonical, languageFolder, type Project } from "./config.ts";
 import { usageError } from "./errors.ts";
 import { compareStrings, glob } from "./glob.ts";
+import { LOCK_FILE } from "./lock.ts";
 
 export interface SourceFile {
   /** The local path, relative to the project folder, with `/` separators. */
@@ -84,7 +85,8 @@ export async function collectSources(project: Project): Promise<Sources> {
       warnings.push(`files[${index}].source (${mapping.source}) matches no files.`);
     }
     for (const local of matches) {
-      if (local.endsWith(".descriptions.json") || local.endsWith(CONTEXT_FILE_SUFFIX)) continue;
+      const isSidecar = local.endsWith(".descriptions.json") || local.endsWith(CONTEXT_FILE_SUFFIX);
+      if (isSidecar || local === LOCK_FILE) continue;
       const path = base === "" ? local : local.slice(base.length + 1);
       const server = serverPath(mapping, path);
       const key = `files[${index}].source`;

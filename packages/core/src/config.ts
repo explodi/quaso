@@ -6,17 +6,10 @@
 import { globProblem, globToRegExp } from "./glob.ts";
 import { isArgumentName, isSelectKey } from "./icu.ts";
 import { type Infer, s, toJsonSchema } from "./schema.ts";
-import { isValidLanguageTag } from "./text.ts";
+import { LanguageTag, RepositorySettings } from "./settings.ts";
 
 /** The largest maximum length a string may have. */
 export const MAX_LENGTH_LIMIT = 100_000;
-
-/** A BCP 47 language tag, such as `de`, `pt-BR` or `zh-Hans`. */
-export const LanguageTag = s
-  .refine(s.string({ minLength: 1, maxLength: 64 }), (tag) =>
-    isValidLanguageTag(tag) ? undefined : `"${tag}" is not a valid BCP 47 language tag`,
-  )
-  .describe("A BCP 47 language tag, such as de, pt-BR or zh-Hans");
 
 /** A folder below the project's root on the server, such as `text` or `text/menus`. */
 export const FolderPath = s
@@ -186,6 +179,7 @@ export const QuasoConfig = s.object({
     ),
   pluralExclusions: s.array(PluralExclusion).optional(),
   arguments: ArgumentDeclarations.optional(),
+  settings: RepositorySettings.optional(),
   outdated: s
     .enum(["write", "omit"])
     .optional()

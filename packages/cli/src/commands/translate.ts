@@ -14,11 +14,12 @@ import {
   type JobInfo,
 } from "@quaso/core";
 import { flag, option, values } from "../args.ts";
-import { canonical } from "../config.ts";
+import { canonical, hasInstance } from "../config.ts";
 import type { Command, Context } from "../context.ts";
 import { CliError, EXIT, usageError } from "../errors.ts";
 import { resolveFileArgs } from "../files.ts";
 import { jobJson, localFailures, renderJob, waitForJob } from "../jobs.ts";
+import { translateLocally } from "../local.ts";
 import { count, type Output, table } from "../output.ts";
 
 export const translate: Command = {
@@ -35,6 +36,11 @@ export const translate: Command = {
       "job, with its progress on stderr, and lists the strings that failed as " +
       "file › key (lang): reason, with exit code 6. --no-wait only starts the job. --dry-run " +
       "counts the strings and words, and estimates the requests and tokens.",
+    "Without an instance (no QUASO_HOSTNAME and no hostname in the config, or with --local), " +
+      "the CLI translates by itself: it reads the config's settings and the context files, " +
+      "asks the LLM with the key in GEMINI_API_KEY or ANTHROPIC_API_KEY, and writes the " +
+      "translation files. quaso.lock.json records the source text each translation was made " +
+      "for; commit it with them.",
   ],
   options: [
     {
@@ -80,6 +86,13 @@ export const translate: Command = {
       description: "Start the job and exit, without waiting for it",
     },
     {
+      name: "local",
+      type: "boolean",
+      description:
+        "Translate without an instance and write the translation files, even when the " +
+        "config names an instance",
+    },
+    {
       name: "dry-run",
       type: "boolean",
       description: "Count the strings and words, and estimate the requests and tokens",
@@ -92,6 +105,7 @@ export const translate: Command = {
     "quaso translate --dry-run",
     'quaso translate --retranslate --instruction "Address the player informally"',
     "quaso translate --no-wait --json",
+    "GEMINI_API_KEY=… quaso translate --local",
   ],
   async run(ctx: Context) {
     for (const tag of values(ctx.args, "language")) {
@@ -113,15 +127,29 @@ export const translate: Command = {
         ? resolveFileArgs(project, sources, ctx.cwd, named).map((file) => file.server)
         : undefined;
     const dryRun = flag(ctx.args, "dry-run");
+    const instruction = option(ctx.args, "instruction");
+    const model = option(ctx.args, "model");
+    if (flag(ctx.args, "local") || !hasInstance(ctx.env, project)) {
+      if (flag(ctx.args, "no-wait")) {
+        throw usageError("--no-wait needs an instance: without one, the CLI does the translating.");
+      }
+      return translateLocally(ctx, project, sources, {
+        languages: requested.length > 0 ? requested : project.languages,
+        files: named.length > 0 ? resolveFileArgs(project, sources, ctx.cwd, named) : null,
+        retranslate: flag(ctx.args, "retranslate"),
+        qa: flag(ctx.args, "qa"),
+        instruction: instruction?.trim() || undefined,
+        model: model?.trim() || undefined,
+        dryRun,
+      });
+    }
     const request: CreateJobRequest = {
       languages: requested.length > 0 ? requested : project.languages,
     };
     if (files) request.files = files;
     if (flag(ctx.args, "retranslate")) request.retranslate = true;
     if (flag(ctx.args, "qa")) request.qa = true;
-    const instruction = option(ctx.args, "instruction");
     if (instruction !== undefined && instruction.trim() !== "") request.instruction = instruction;
-    const model = option(ctx.args, "model");
     if (model !== undefined && model.trim() !== "") request.model = model.trim();
     if (dryRun) request.dryRun = true;
 
@@ -189,7 +217,7 @@ function withHint(error: unknown, configName: string): unknown {
   return error;
 }
 
-function renderEstimate(out: Output, estimate: JobEstimate): void {
+export function renderEstimate(out: Output, estimate: JobEstimate): void {
   const { dim, yellow } = out.out;
   out.print(yellow("Dry run: nothing was translated."));
   const rows = estimate.languages.map((language) => [

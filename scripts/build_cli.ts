@@ -26,14 +26,17 @@ export const FORBIDDEN = ["child_process", "spawn("];
 /** The first lines of the bundle: the shebang for npm's `bin`, then the licence. */
 export const HEADER = "#!/usr/bin/env node\n// SPDX-License-Identifier: MIT\n";
 
-/** Problems with a bundle's code: forbidden words, and imports that aren't `node:` built-ins. */
+/**
+ * Problems with a bundle's code: forbidden words, and imports that aren't `node:` built-ins.
+ * A method named `require`, such as `permissions.require("upload")`, isn't an import.
+ */
 export function checkBundle(code: string): string[] {
   const problems: string[] = [];
   for (const word of FORBIDDEN) {
     if (code.includes(word)) problems.push(`contains "${word}"`);
   }
   const imports = code.matchAll(
-    /^\s*(?:import|export)\b[^;"'`]*?\bfrom\s*["']([^"']+)["']|^\s*import\s*["']([^"']+)["']|\bimport\(\s*["']([^"']+)["']\s*\)|\brequire\(\s*["']([^"']+)["']\s*\)/gm,
+    /^\s*(?:import|export)\b[^;"'`]*?\bfrom\s*["']([^"']+)["']|^\s*import\s*["']([^"']+)["']|\bimport\(\s*["']([^"']+)["']\s*\)|(?<![.\w$])require\(\s*["']([^"']+)["']\s*\)/gm,
   );
   for (const match of imports) {
     const specifier = match[1] ?? match[2] ?? match[3] ?? match[4];

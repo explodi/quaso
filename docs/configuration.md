@@ -105,10 +105,14 @@ the source checkout and image on the same tested release. See
 ## CLI and build settings
 
 `QUASO_HOSTNAME` and `QUASO_API_KEY` are CLI settings, not server settings; see [the CLI](cli.md).
+The CLI reads `GEMINI_API_KEY` and `ANTHROPIC_API_KEY` only to
+[translate without an instance](translate-without-an-instance.md).
 The project website build accepts `BASE_PATH` and `SITE_REPOSITORY_URL`; see
 [releasing](releasing.md). Project name, languages, plural overrides, translation instructions,
 prompt, request grouping and quality checks are stored in the database and edited in Settings. They
-are not environment variables.
+are not environment variables. A repository can keep many of them in
+[the `settings` field](cli.md#the-settings-field) of its config file; each upload then stores them
+over the values in Settings.
 
 ## Retention settings
 

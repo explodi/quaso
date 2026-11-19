@@ -16,7 +16,7 @@ import { count, formatProblem, type Output, sentenceFragment } from "./output.ts
 export const POLL_INTERVAL_MS = 2_000;
 
 /** Statuses after which a job does nothing more (until someone resumes a paused one). */
-const SETTLED = new Set(["done", "failed", "cancelled", "paused"]);
+export const SETTLED = new Set(["done", "failed", "cancelled", "paused"]);
 
 /** A job the CLI waited for, and its failures with local paths. */
 export interface WaitedJob {

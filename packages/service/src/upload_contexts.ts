@@ -135,7 +135,10 @@ export function planUploadContexts(
     const warning = warningFor(target);
     if (warning !== null) warnings.push(warning);
     const { kind } = target.outcome;
-    if (kind === "set" || kind === "replaced") changes.push({ ...target.change, change: "set" });
+    if (kind === "set") changes.push({ ...target.change, change: "set" });
+    if (kind === "replaced") {
+      changes.push({ ...target.change, change: "set", overwritesEdit: true });
+    }
     if (kind === "cleared") changes.push({ ...target.change, change: "cleared" });
   };
   for (const file of request.files) {

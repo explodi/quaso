@@ -11,6 +11,9 @@ You need a game with [supported JSON or Markdown files](file-formats.md), Node.j
 development computer, and a Quaso instance. The command examples use a POSIX shell, such as Bash
 or Zsh. Replace the example hostname and key with your own values.
 
+For a small project that needs no proofreading, the CLI can translate with no instance at all:
+see [Translate without an instance](translate-without-an-instance.md).
+
 To try the workflow without a public server or a Gemini or Anthropic key, start
 [Quaso Quest](../examples/demo-game/README.md). Its test translator demonstrates the workflow
 without producing real translations.

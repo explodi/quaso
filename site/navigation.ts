@@ -17,6 +17,7 @@ export const NAVIGATION: NavigationGroup[] = [
     title: "Translate your game",
     sources: [
       "add-to-your-game.md",
+      "translate-without-an-instance.md",
       "website.md",
       "variants.md",
       "context-files.md",

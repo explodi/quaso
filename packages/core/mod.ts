@@ -20,6 +20,7 @@ export * from "./src/checks.ts";
 export * from "./src/text.ts";
 export * from "./src/language_catalog.ts";
 export * from "./src/hash.ts";
+export * from "./src/settings.ts";
 export * from "./src/config.ts";
 export * from "./src/api.ts";
 export * from "./src/glossary.ts";

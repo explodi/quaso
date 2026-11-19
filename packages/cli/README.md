@@ -2,8 +2,13 @@
 
 Quaso's command-line interface (CLI) uploads JSON and Markdown source files for **i18next and ICU MessageFormat** projects, downloads translations,
 starts translation jobs, checks progress, and imports existing translations. Commands do not
-prompt for input. JSON output and exit codes support scripts, continuous integration (CI), and AI
-agents.
+prompt for input in scripts: only `quaso upload` asks a question, in a terminal, before it replaces
+settings set on the website. JSON output and exit codes support scripts, continuous integration
+(CI), and AI agents.
+
+A small project needs no instance: with `GEMINI_API_KEY` or `ANTHROPIC_API_KEY` set,
+`npx quaso translate` asks the LLM itself and writes the translation files. See
+[Translate without an instance](../../docs/translate-without-an-instance.md).
 
 For ICU projects, enable **ICU MessageFormat** in the instance's **Settings → Placeholders** before
 uploading. Leave it off for i18next JSON v4. Both use the same CLI commands and file mappings;
