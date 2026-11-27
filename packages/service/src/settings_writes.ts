@@ -31,6 +31,10 @@ import { planQa, type QaRow } from "./translations.ts";
 import { FOLDER_ROWS, type FolderRow } from "./folders.ts";
 import { withRetries } from "./write.ts";
 
+const EVERY_TRANSLATION =
+  "SELECT t.string_id, t.language, t.value, t.qa_errors, t.qa_warnings, s.kind, s.source, s.max_length, s.arguments FROM translations t JOIN strings s ON s.id = t.string_id WHERE s.kind IN ('text', 'plural', 'ordinal')";
+const NO_ROWS = "SELECT 1 AS none WHERE 0";
+
 export interface SettingsWriteOptions {
   model: string;
   now: number;
@@ -44,6 +48,10 @@ export async function updateSettingsAsync(
   options: SettingsWriteOptions,
   extras: SettingsExtras,
 ): Promise<SettingsResult> {
+  // Only a new syntax rechecks the translations. Reading them for any other
+  // change costs a large project its whole text, which can be more than the
+  // database returns in one answer.
+  const rechecksTranslations = request.syntax !== undefined;
   const result = await withRetries(
     sql,
     async () => {
@@ -70,7 +78,7 @@ export async function updateSettingsAsync(
         { sql: "SELECT 1 AS found FROM strings LIMIT 1" },
         { sql: "SELECT term, language, kind, translation, case_sensitive FROM glossary_terms" },
         {
-          sql: "SELECT t.string_id, t.language, t.value, t.qa_errors, t.qa_warnings, s.kind, s.source, s.max_length, s.arguments FROM translations t JOIN strings s ON s.id = t.string_id WHERE s.kind IN ('text', 'plural', 'ordinal')",
+          sql: rechecksTranslations ? EVERY_TRANSLATION : NO_ROWS,
         },
         ...permissionReadStatements(actor),
       ]);

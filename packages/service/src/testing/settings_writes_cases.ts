@@ -120,6 +120,25 @@ export const SETTINGS_WRITE_CASES: { name: string; run(sql: Sql): Promise<void> 
     },
   },
   {
+    name: "a change that is not the syntax reads no translation",
+    async run(sql) {
+      await seed(sql);
+      const read: string[] = [];
+      const recording: Sql = {
+        ...sql,
+        async read(statements) {
+          read.push(...statements.map((statement) => statement.sql));
+          return sql.read(statements);
+        },
+      };
+      await updateSettingsAsync(recording, ADMIN, { name: "Game" }, OPTIONS, EXTRAS);
+      checkEqual(
+        read.filter((statement) => statement.includes("FROM translations")),
+        [],
+      );
+    },
+  },
+  {
     name: "nested settings merge and canonical language context survive storage",
     async run(sql) {
       await seed(sql);
