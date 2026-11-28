@@ -130,6 +130,24 @@ export const BATCH_SQL_CASES: {
     },
   },
   {
+    name: "a read that finds the project changed starts again",
+    async run(makeSql) {
+      const sql = await makeSql();
+      let reads = 0;
+      const read = async () => {
+        reads++;
+        if (reads === 1) throw new RevisionConflict();
+        return { revision: 0, state: null };
+      };
+      await withRetries(sql, read, () => ({
+        statements: [{ sql: "INSERT INTO items (name) VALUES ('again')" }],
+        result: null,
+      }));
+      checkEqual(reads, 2);
+      checkEqual(await sql.read([{ sql: "SELECT name FROM items" }]), [[{ name: "again" }]]);
+    },
+  },
+  {
     name: "read batches cannot write",
     async run(makeSql) {
       const sql = await makeSql();

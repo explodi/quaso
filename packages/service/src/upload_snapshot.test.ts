@@ -3,6 +3,7 @@ import { expect, test } from "vitest";
 import { openAsyncSqlite } from "./adapters/node_async_sqlite.ts";
 import { MIGRATIONS } from "./migrations.ts";
 import { readUploadSnapshot } from "./upload_snapshot.ts";
+import { RevisionConflict } from "./write.ts";
 
 function database() {
   const opened = openAsyncSqlite(":memory:");
@@ -37,7 +38,7 @@ function database() {
   return { ...opened, [Symbol.dispose]: opened.close };
 }
 
-test("upload snapshot reads revision and operation dependencies in one batch", async () => {
+test("upload snapshot reads the project, then a page of its strings' rows", async () => {
   using opened = database();
   let reads = 0;
   const sql = {
@@ -54,7 +55,7 @@ test("upload snapshot reads revision and operation dependencies in one batch", a
     },
     "test-model",
   );
-  expect(reads).toBe(1);
+  expect(reads).toBe(2);
   expect(revision).toBe(7);
   expect(state.hasStrings).toBe(true);
   expect(state.settings.llm.model).toBe("test-model");
@@ -108,4 +109,68 @@ test("upload snapshot checks every active file for renames without a file", asyn
   expect(state.strings.map((row) => row.id)).toStrictEqual([1, 2]);
   expect(state.translations.map((row) => row.string_id)).toStrictEqual([1, 2]);
   expect(state.humanHistory.map((row) => row.string_id)).toStrictEqual([1, 1, 2]);
+});
+
+function countingReads(opened: ReturnType<typeof database>) {
+  const reads: string[][] = [];
+  const sql = {
+    ...opened.sql,
+    read: (statements: Parameters<typeof opened.sql.read>[0]) => {
+      reads.push(statements.map((statement) => statement.sql));
+      return opened.sql.read(statements);
+    },
+  };
+  return { sql, reads };
+}
+
+const BOTH_FILES = {
+  files: [
+    { path: "menu.json", repoPath: "menu.json", content: "{}" },
+    { path: "other.json", repoPath: "other.json", content: "{}" },
+  ],
+};
+
+test("upload snapshot reads one page per string when a page holds one", async () => {
+  using opened = database();
+  const { sql, reads } = countingReads(opened);
+  const { state } = await readUploadSnapshot(sql, BOTH_FILES, "model", { pageStrings: 1 });
+  expect(reads.length).toBe(3);
+  expect(state.translations.map((row) => [row.string_id, row.value])).toStrictEqual([
+    [1, '"Hallo"'],
+    [2, '"Andere"'],
+  ]);
+  expect(state.humanHistory.map((row) => row.string_id)).toStrictEqual([1, 1, 2]);
+});
+
+test("upload snapshot reads no page for an upload that reaches no strings", async () => {
+  using opened = database();
+  const { sql, reads } = countingReads(opened);
+  const { state } = await readUploadSnapshot(sql, { files: [], partial: true }, "model");
+  expect(reads.length).toBe(1);
+  expect(state.translations).toStrictEqual([]);
+});
+
+test("upload snapshot refuses a page read after the project changed", async () => {
+  using opened = database();
+  let pages = 0;
+  const sql = {
+    ...opened.sql,
+    read: async (statements: Parameters<typeof opened.sql.read>[0]) => {
+      const rows = await opened.sql.read(statements);
+      pages++;
+      if (pages === 1) opened.db.exec("UPDATE meta SET value = '8' WHERE key = 'revision'");
+      return rows;
+    },
+  };
+  await expect(readUploadSnapshot(sql, BOTH_FILES, "model", { pageStrings: 1 })).rejects.toThrow(
+    RevisionConflict,
+  );
+});
+
+test("upload snapshot passes extra statements' rows back", async () => {
+  using opened = database();
+  const { extra } = await readUploadSnapshot(opened.sql, { files: [], partial: true }, "model", {
+    extra: [{ sql: "SELECT 42 AS answer" }],
+  });
+  expect(extra).toStrictEqual([[{ answer: 42 }]]);
 });
