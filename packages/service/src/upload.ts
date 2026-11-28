@@ -6,11 +6,7 @@ import type { Context } from "./context.ts";
 import { bumpRevision, transaction } from "./db.ts";
 import type { Clock, Sql } from "./ports.ts";
 import { planUpload } from "./upload_plan.ts";
-import {
-  readUploadSnapshot,
-  uploadReadStatements,
-  uploadSnapshotFromRows,
-} from "./upload_snapshot.ts";
+import { readUploadSnapshot, readUploadSnapshotSync } from "./upload_snapshot.ts";
 import { withRetries } from "./write.ts";
 import { permissionReadStatements, permissionsFromRows } from "./permissions.ts";
 
@@ -27,20 +23,17 @@ export async function uploadForActorAsync(
   return withRetries(
     sql,
     async () => {
-      const statements = uploadReadStatements(request);
       const permissions = permissionReadStatements(actor);
-      const rows = await sql.read([
-        ...statements,
-        ...permissions,
-        {
-          sql: "SELECT name FROM api_tokens WHERE id = ?",
-          params: [actor.type === "token" ? actor.tokenId : null],
-        },
-      ]);
-      permissionsFromRows(
-        actor,
-        rows.slice(statements.length, statements.length + permissions.length),
-      ).require("upload");
+      const snapshot = await readUploadSnapshot(sql, request, options.model, {
+        extra: [
+          ...permissions,
+          {
+            sql: "SELECT name FROM api_tokens WHERE id = ?",
+            params: [actor.type === "token" ? actor.tokenId : null],
+          },
+        ],
+      });
+      permissionsFromRows(actor, snapshot.extra.slice(0, permissions.length)).require("upload");
       const author: Author =
         actor.type === "user"
           ? { type: "user", id: actor.userId, label: null }
@@ -48,10 +41,9 @@ export async function uploadForActorAsync(
             ? {
                 type: "token",
                 id: actor.tokenId,
-                label: (rows.at(-1)?.[0]?.name as string | undefined) ?? null,
+                label: (snapshot.extra.at(-1)?.[0]?.name as string | undefined) ?? null,
               }
             : SYSTEM_AUTHOR;
-      const snapshot = uploadSnapshotFromRows(rows.slice(0, statements.length), options.model);
       return {
         revision: snapshot.revision,
         state: { snapshot: snapshot.state, revision: snapshot.revision, author },
@@ -71,10 +63,7 @@ export function upload(
 ): UploadResult {
   return transaction(ctx.sql, () => {
     const author = authorFor(ctx, actor);
-    const rows = uploadReadStatements(request).map((statement) =>
-      ctx.sql.query(statement.sql, ...(statement.params ?? [])),
-    );
-    const { revision, state } = uploadSnapshotFromRows(rows, ctx.defaultModel);
+    const { revision, state } = readUploadSnapshotSync(ctx.sql, request, ctx.defaultModel);
     const plan = planUpload(state, request, author, revision, ctx.clock(), llmAvailable);
     for (const statement of plan.statements)
       ctx.sql.run(statement.sql, ...(statement.params ?? []));

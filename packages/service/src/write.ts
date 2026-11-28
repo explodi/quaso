@@ -54,15 +54,15 @@ export async function withRetries<State, Result>(
 ): Promise<Result> {
   for (let attempt = 0; attempt < 4; attempt++) {
     const outcome = await inTurn(sql, async () => {
-      const { revision, state } = await read();
-      const { statements, result } = decide(state);
-      if (statements.length === 0) return { committed: true, result };
+      // A read in pages that finds the project changed retries like a stale commit.
       try {
-        await sql.commit(revision, statements);
-        return { committed: true, result };
+        const { revision, state } = await read();
+        const { statements, result } = decide(state);
+        if (statements.length > 0) await sql.commit(revision, statements);
+        return { committed: true as const, result };
       } catch (error) {
         if (!(error instanceof RevisionConflict)) throw error;
-        return { committed: false, result };
+        return { committed: false as const };
       }
     });
     if (outcome.committed) return outcome.result;
